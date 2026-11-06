@@ -227,6 +227,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapComercioEndpoints();
 app.MapMerchantEndpoints();
+app.MapMediaEndpoints();
 
 await app.RunAsync();
 

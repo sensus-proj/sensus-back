@@ -43,6 +43,11 @@ public static class DependencyInjection
             configuration.GetSection(CloudinarySettings.SectionName));
         services.AddSingleton<IProfileImageStorage, CloudinaryImageStorage>();
 
+        // Moderación inteligente de imágenes con OpenAI Omni-Moderation
+        services.Configure<OpenAiSettings>(
+            configuration.GetSection(OpenAiSettings.SectionName));
+        services.AddHttpClient<IImageModerationService, OpenAiImageModerationService>();
+
         // Configuración de MongoDB Atlas
         services.Configure<MongoDbSettings>(
             configuration.GetSection(MongoDbSettings.SectionName));
