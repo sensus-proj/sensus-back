@@ -220,7 +220,7 @@ jobs:
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.exclusions="**/bin/**,**/obj/**,.github/**"
-          /d:sonar.coverage.exclusions="**/bin/**,**/obj/**,**/*.Generated*.cs,**/Properties/**,**/Migration/**,**/Migrations/**,**/Program.cs,**/Persistence/Mongo/**,**/Services/CloudinaryImageStorage.cs,**/Services/HttpMailerEmailSender.cs,**/Services/NominatimGeocodingService.cs,.github/**,**/*.mjs,**/*.js"
+          /d:sonar.coverage.exclusions="**/bin/**,**/obj/**,**/*.Generated*.cs,**/Properties/**,**/Migration/**,**/Migrations/**,**/Program.cs,**/Endpoints/**,**/Persistence/Mongo/**,**/Services/CloudinaryImageStorage.cs,**/Services/HttpMailerEmailSender.cs,**/Services/NominatimGeocodingService.cs,**/Services/OpenAiImageModerationService.cs,**/Services/OpenAiSettings.cs,.github/**,**/*.mjs,**/*.js"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.qualitygate.wait=true
           /d:sonar.verbose=true

@@ -86,4 +86,62 @@ public sealed class ModerateImageCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Approved.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Handle_WhenBase64IsMalformed_ReturnsFailureResult()
+    {
+        // Arrange
+        var command = new ModerateImageCommand("invalid-non-base64-content!@#$");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Media.InvalidBase64");
+    }
+
+    [Fact]
+    public async Task Handle_WhenModerationResultHasNullMessageAndIsApproved_UsesDefaultApprovedMessage()
+    {
+        // Arrange
+        var testBytes = new byte[] { 1 };
+        var command = new ModerateImageCommand(Convert.ToBase64String(testBytes));
+
+        _moderationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(true, null));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Approved.Should().BeTrue();
+        result.Value.Message.Should().Be("Imagen aprobada exitosamente.");
+    }
+
+    [Fact]
+    public async Task Handle_WhenModerationResultHasNullMessageAndIsNotApproved_UsesDefaultRejectedMessage()
+    {
+        // Arrange
+        var testBytes = new byte[] { 2 };
+        var command = new ModerateImageCommand(Convert.ToBase64String(testBytes));
+
+        _moderationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(false, null));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Approved.Should().BeFalse();
+        result.Value.Message.Should().Be("No se pudo subir la imagen por políticas de seguridad.");
+    }
 }
