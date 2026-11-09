@@ -219,8 +219,8 @@ jobs:
           /o:"sensus-proj"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           /d:sonar.host.url="https://sonarcloud.io"
-          /d:sonar.exclusions="**/bin/**,**/obj/**,.github/**"
-          /d:sonar.coverage.exclusions="**/bin/**,**/obj/**,**/*.Generated*.cs,**/Properties/**,**/Migration/**,**/Migrations/**,**/Program.cs,**/Endpoints/**,**/Persistence/Mongo/**,**/Services/CloudinaryImageStorage.cs,**/Services/HttpMailerEmailSender.cs,**/Services/NominatimGeocodingService.cs,**/Services/OpenAiImageModerationService.cs,**/Services/OpenAiSettings.cs,.github/**,**/*.mjs,**/*.js"
+          /d:sonar.exclusions="**/bin/**,**/obj/**,.github/**,infra/**"
+          /d:sonar.coverage.exclusions="**/bin/**,**/obj/**,**/*.Generated*.cs,**/Properties/**,**/Migration/**,**/Migrations/**,**/Program.cs,**/Endpoints/**,**/Persistence/Mongo/**,**/Cache/RedisCacheService.cs,**/Services/CloudinaryImageStorage.cs,**/Services/HttpMailerEmailSender.cs,**/Services/NominatimGeocodingService.cs,**/Services/OpenAiImageModerationService.cs,**/Services/OpenAiSettings.cs,.github/**,infra/**,**/*.mjs,**/*.js"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.qualitygate.wait=true
           /d:sonar.verbose=true
@@ -322,7 +322,7 @@ jobs:
 
       - name: Instalar AWS CDK
         if: steps.check_infra.outputs.exists == 'true'
-        run: npm install -g --ignore-scripts aws-cdk@2.178.2
+        run: npm install -g --ignore-scripts aws-cdk@2.1148.0
 
       - name: cdk synth
         if: steps.check_infra.outputs.exists == 'true'

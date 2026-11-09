@@ -46,15 +46,15 @@ jobs:
             --runtime linux-arm64 \
             --self-contained true \
             -p:PublishSingleFile=true \
-            -p:AssemblyName=bootstrap \
             --output infra/publish
+          mv infra/publish/Sensus.Api infra/publish/bootstrap
           chmod +x infra/publish/bootstrap
 
       - name: Compilar proyecto AWS CDK (Sensus.Infra)
         run: dotnet build infra/src/Sensus.Infra/Sensus.Infra.csproj --configuration Release -warnaserror
 
       - name: Instalar AWS CDK CLI
-        run: npm install -g --ignore-scripts aws-cdk@2.178.2
+        run: npm install -g --ignore-scripts aws-cdk@2.1148.0
 
       - name: Bootstrap de cuenta AWS (idempotente)
         working-directory: infra
