@@ -4,10 +4,12 @@ using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Authentication;
+using Sensus.Infrastructure.Cache;
 using Sensus.Infrastructure.Migration;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 using Sensus.Infrastructure.Services;
+using StackExchange.Redis;
 
 namespace Sensus.Infrastructure;
 
@@ -47,6 +49,26 @@ public static class DependencyInjection
         services.Configure<OpenAiSettings>(
             configuration.GetSection(OpenAiSettings.SectionName));
         services.AddHttpClient<IImageModerationService, OpenAiImageModerationService>();
+
+        // Caché distribuido con Redis (Spec 048)
+        services.Configure<RedisSettings>(
+            configuration.GetSection(RedisSettings.SectionName));
+
+        var redisSection = configuration.GetSection(RedisSettings.SectionName);
+        var redisConn = redisSection["ConnectionString"];
+        var redisEnabled = !bool.TryParse(redisSection["Enabled"], out var enabledVal) || enabledVal;
+
+        if (redisEnabled && !string.IsNullOrWhiteSpace(redisConn))
+        {
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+            {
+                var options = ConfigurationOptions.Parse(redisConn);
+                options.AbortOnConnectFail = false;
+                options.ConnectTimeout = 2000;
+                return ConnectionMultiplexer.Connect(options);
+            });
+        }
+        services.AddSingleton<ICacheService, RedisCacheService>();
 
         // Configuración de MongoDB Atlas
         services.Configure<MongoDbSettings>(

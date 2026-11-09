@@ -1,0 +1,62 @@
+name: CD - Deploy Serverless (AWS CDK Lambda + API Gateway)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno de despliegue (prod / dev)"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+          - dev
+
+concurrency:
+  group: deploy-serverless-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-serverless:
+    name: Despliegue Serverless en AWS con CDK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publicar Sensus.Api como binario bootstrap para Amazon Linux 2023 ARM64
+        run: |
+          dotnet publish src/Sensus.Api/Sensus.Api.csproj \
+            --configuration Release \
+            --runtime linux-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:AssemblyName=bootstrap \
+            --output infra/publish
+          chmod +x infra/publish/bootstrap
+
+      - name: Compilar proyecto AWS CDK (Sensus.Infra)
+        run: dotnet build infra/src/Sensus.Infra/Sensus.Infra.csproj --configuration Release -warnaserror
+
+      - name: Instalar AWS CDK CLI
+        run: npm install -g --ignore-scripts aws-cdk@2.178.2
+
+      - name: Sintetizar plantilla CloudFormation (cdk synth)
+        working-directory: infra
+        run: cdk synth --context environment=${{ inputs.environment || 'prod' }}
+
+      - name: Desplegar stack en AWS (cdk deploy)
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        run: |
+          cdk deploy --require-approval never --context environment=${{ inputs.environment || 'prod' }}

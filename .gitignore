@@ -9,3 +9,5 @@ artifacts/
 # Coverage and test results
 **/coverage.cobertura.xml
 **/*.trx
+infra/cdk.out/
+infra/publish/

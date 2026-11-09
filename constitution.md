@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **1.2.0** |
+| Versión | **1.3.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-10-29 (rutas versionadas, abstracción de proveedores y catálogo de endpoints) |
+| Última enmienda | 2026-11-08 (adopción de Cloudinary como proveedor oficial de almacenamiento y CDN multimedia) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -175,7 +175,7 @@ y el sistema MUST fallar cerrado ante cualquier duda.
   un identificador de correlación por petición.
 - La autorización MUST verificarse en el servidor en cada operación. El cliente MUST NOT ser fuente de
   verdad de permisos ni de identidad.
-- La moderación de contenido MUST ejecutarse **antes** de publicar o persistir el contenido en S3.
+- La moderación de contenido MUST ejecutarse **antes** de publicar o persistir el contenido en Cloudinary.
 - La moderación MUST enviar la imagen y el texto asociado en la misma solicitud (ver §2.4).
 - La moderación MUST ser **fail-closed**: ante error, timeout o respuesta inválida del proveedor, el
   contenido MUST NOT publicarse y MUST quedar en cuarentena.
@@ -264,7 +264,7 @@ como código.
   nivel gratuito.
 - Los límites del nivel gratuito relevantes (invocaciones, GB-segundo, almacenamiento, transferencia)
   MUST documentarse y vigilarse con alarmas.
-- El procesamiento y la entrega de multimedia MUST realizarse con Amazon S3 y Amazon CloudFront.
+- El almacenamiento, optimización y entrega de multimedia MUST realizarse con Cloudinary mediante la abstracción correspondiente en Infrastructure.
 
 **Justificación.** El costo cero es un requisito de producto, no una preferencia. En un modelo de pago
 por uso, un error de configuración se traduce de inmediato en facturación real; IaC es el único control
@@ -332,8 +332,8 @@ son requisitos funcionales del producto.
 | Base de datos | MongoDB | 8.x | Persistencia NoSQL orientada a documentos |
 | Cómputo | AWS Lambda | — | Ejecución serverless |
 | API | AWS API Gateway | — | Exposición RESTful |
-| Almacenamiento | Amazon S3 | — | Contenido multimedia |
-| CDN | Amazon CloudFront | — | Distribución de contenido |
+| Multimedia y CDN | Cloudinary | — | Almacenamiento, transformación y distribución de contenido multimedia |
+| Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
 | Moderación | OpenAI `omni-moderation-latest` | — | Moderación multimodal |
 | Notificaciones push | Abstracción `IPushDispatcher` | — | Despacho de notificaciones; adaptador FCM o SNS seleccionado por configuración |
@@ -346,9 +346,9 @@ de cumplimiento.
 ### 2.2 Prohibiciones explícitas
 
 - Bases de datos relacionales (SQL Server, PostgreSQL, MySQL u otras).
-- Arquitecturas multi-nube. Los proveedores fuera de AWS MUST NOT usarse, con dos excepciones
+- Arquitecturas multi-nube. Los proveedores fuera de AWS MUST NOT usarse, con tres excepciones
   explícitas y acotadas: la moderación de contenido (§2.4) y el adaptador de notificaciones push
-  declarado en §2.1. Cualquier otra dependencia externa MUST justificarse en una enmienda.
+  declarado en §2.1 y el servicio de almacenamiento/CDN multimedia Cloudinary (§2.1). Cualquier otra dependencia externa MUST justificarse en una enmienda.
 - Interfaces de usuario: aplicación móvil, página web o *landing*. El backend MUST limitarse a la API.
 - Visión artificial local o modelos propios de moderación.
 - Pasarelas de pago no contempladas en la especificación base.
@@ -392,7 +392,7 @@ omita el veredicto.
 - Feed social geolocalizado con publicaciones, comentarios, reacciones y reportes.
 - Búsqueda, recomendaciones y alternativas calculadas dentro del backend.
 - Gestión de contenido de usuario con moderación previa.
-- Almacenamiento y entrega de multimedia mediante S3 y CloudFront.
+- Almacenamiento, transformación y entrega de multimedia mediante Cloudinary.
 - Notificaciones push a dispositivos registrados.
 - Consultas de colecciones paginadas e indexadas.
 - Recepción asíncrona de eventos mediante webhooks (capacidad fuera del catálogo vigente, en backlog).
@@ -562,6 +562,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 1.0.0 | 2026-10-28 | Ratificación inicial. Siete principios, restricciones de plataforma, flujo SDD y gobernanza. |
 | 1.1.0 | 2026-10-29 | Identificadores de requisito por spec (`FR-<spec>-<nn>` / `NFR-<spec>-<nn>`); `checklist.md` como cuarto artefacto obligatorio; fase `checklist` y estructura de spec en §3.6; resultados de Constitution Check ampliados para retro-specs. |
 | 1.2.0 | 2026-10-29 | Rutas públicas `/api/v1` con recursos en inglés (§3.5); abstracción de despacho push con adaptadores FCM o SNS (§2.1); excepciones acotadas a proveedores externos (§2.2); alcance funcional alineado al catálogo de 29 endpoints (§2.5). |
+| 1.3.0 | 2026-11-08 | Adopción oficial de Cloudinary para almacenamiento, transformación y CDN multimedia (§2.1, §2.2, P-VI), sustituyendo Amazon S3 y CloudFront. |
 
 ---
 
@@ -572,7 +573,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | Término | Definición |
 |---|---|
 | **ADR** | Registro de decisión de arquitectura. |
-| **CDN** | Red de distribución de contenido; en este proyecto, Amazon CloudFront. |
+| **CDN** | Red de distribución de contenido; en este proyecto, Cloudinary CDN. |
 | **Clean Architecture** | Organización en capas con dependencias dirigidas hacia el dominio. |
 | **CQRS** | Separación de comandos (escritura) y consultas (lectura). |
 | **DTO** | Objeto de transferencia de datos expuesto por la API. |
@@ -595,7 +596,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | AWS Free Tier, costo 0 USD | P-VI |
 | Lambda + API Gateway | P-VI, §2.1 |
 | Aprovisionamiento por IaC | P-VI |
-| S3 + CloudFront | P-VI, §2.1 |
+| Cloudinary (Multimedia y CDN) | P-VI, §2.1 |
 | Indexación y paginación obligatorias | P-VII |
 | Caché de consultas recurrentes | P-VII |
 | CloudWatch como única observabilidad | P-VII |
@@ -656,4 +657,4 @@ Excepciones registradas: [Apéndice E]
 
 ---
 
-**Versión 1.1.0 — Ratificada el 2026-10-28, enmendada el 2026-10-29.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 1.3.0 — Ratificada el 2026-10-28, enmendada el 2026-11-08.** Toda modificación requiere el procedimiento de §4.3.

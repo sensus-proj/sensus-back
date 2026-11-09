@@ -10,19 +10,19 @@
 | Dueño | Por asignar |
 | Dependencias | 022 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ---
 
 ## 1. Contexto y problema
 
-Servir el contenido aprobado a través de CloudFront con caché y control de acceso.
+Servir el contenido aprobado a través de Cloudinary CDN con optimización automática y control de acceso.
 
 ## 2. Alcance
 
 **Incluye**
 
-- Distribución CloudFront
+- Distribución Cloudinary CDN
 - URLs firmadas para contenido privado
 - Cabeceras de caché
 
@@ -40,7 +40,7 @@ Servir el contenido aprobado a través de CloudFront con caché y control de acc
 
 | ID | Requisito | Prioridad |
 |---|---|---|
-| FR-023-01 | Servir multimedia mediante CloudFront | Must |
+| FR-023-01 | Servir multimedia mediante Cloudinary CDN | Must |
 | FR-023-02 | Firmar URLs cuando el contenido sea privado | Must |
 | FR-023-03 | Aplicar cabeceras de caché por tipo de contenido | Should |
 | FR-023-04 | Invalidar caché al retirar contenido | Should |
@@ -50,7 +50,7 @@ Servir el contenido aprobado a través de CloudFront con caché y control de acc
 | ID | Requisito | Métrica objetivo |
 |---|---|---|
 | NFR-023-01 | Latencia de entrega | p95 < 200 ms en caché |
-| NFR-023-02 | Coste | Dentro del Free Tier de CloudFront |
+| NFR-023-02 | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) |
 
 ## 6. Criterios de aceptación
 
@@ -58,7 +58,7 @@ Servir el contenido aprobado a través de CloudFront con caché y control de acc
 
 - **Dado** contenido público aprobado
 - **Cuando** se solicita la URL
-- **Entonces** 200 desde CloudFront
+- **Entonces** 200 desde Cloudinary CDN
 
 ### CA-023-02
 

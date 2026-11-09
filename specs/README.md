@@ -49,8 +49,9 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 042 | [Recomendaciones personalizadas](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 038, 039, 041 |
 | 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 041 |
 | 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Pendiente | 027, 003 |
+| 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
 | 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Pendiente | 009, 010, 011, 012, 013 |
-| 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Pendiente | 010, 024, 026, 032 |
+| 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
 
 ## Estados
 
@@ -68,4 +69,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **46 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 4, Ola 6: 7, Ola 7: 2, Backlog: 1.
+Total: **47 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 4, Ola 6: 7, Ola 7: 3, Backlog: 1.

@@ -7,7 +7,7 @@ Ante conflicto, prevalece la fuente original y después `constitution.md`.
 | Campo | Valor |
 |---|---|
 | Documento | Resumen de arquitectura (no normativo) |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (incluida su referencia a *Load Balancer*) |
 | Fecha | 2026-10-29 |
@@ -34,13 +34,14 @@ Cliente móvil / web
         │                              │
         ├── Sensus.Infrastructure ─────┘
         │        ├── MongoDB 8 (documentos)
-        │        ├── Amazon S3 (multimedia privada)
+        │        ├── Cloudinary (almacenamiento, transformación y CDN)
         │        ├── OpenAI omni-moderation-latest
         │        ├── Amazon SES (recuperación de contraseña)
         │        ├── IPushDispatcher → FCM | SNS
+        │        ├── Redis (caché distribuido TTL / LRU — spec 048)
         │        └── Motor de ranking determinista (Application)
         │
-        ├── Amazon CloudFront ──► S3 (contenido aprobado)
+        ├── Cloudinary CDN ─────► Entrega optimizada de imágenes aprobadas
         └── Amazon CloudWatch (logs, métricas, alarmas)
 ```
 
@@ -52,7 +53,7 @@ Cliente móvil / web
 |---|---|---|---|
 | `Sensus.Domain` | Entidades, invariantes, contratos (interfaces) | Nada | Frameworks, ORMs, SDKs de nube |
 | `Sensus.Application` | Casos de uso CQRS, DTOs, validación de borde, mapeos | Domain | Infrastructure, acceso directo a MongoDB |
-| `Sensus.Infrastructure` | MongoDB, BCrypt, JWT, S3, SES, moderación, push, geolocalización, caché | Application | Reglas de negocio |
+| `Sensus.Infrastructure` | MongoDB, BCrypt, JWT, Cloudinary, SES, moderación, push, geolocalización, caché | Application | Reglas de negocio |
 | `Sensus.Api` | Endpoints, middleware, autenticación HTTP, composición | Application (+ Infrastructure solo en `Program.cs`) | Reglas de negocio, acceso a persistencia |
 
 Dirección de dependencias: `Application → Domain`, `Infrastructure → Application`, `Api → Application`.
@@ -95,7 +96,7 @@ MongoDB 8.x, una base por entorno. Colecciones previstas y sus índices obligato
 | `moderation_decisions` | Veredicto, categorías, puntajes, umbral, acción | Por `contentId` y fecha | 017–019 |
 | `moderation_audit` | Evidencia inmutable (*append-only*) | Por fecha y usuario | 021 |
 | `sanctions` | Sanciones con vigencia | Por `userId` y vigencia | 020 |
-| `media_assets` | Archivo, propietario, estado, clave S3 | Por propietario y estado | 022, 023 |
+| `media_assets` | Archivo, propietario, estado, public_id Cloudinary | Por propietario y estado | 022, 023 |
 | `posts` | Publicación con estado y ubicación | `status` + `createdAt`; `authorId` + `createdAt` | 024, 026 |
 | `comments` | Comentarios por publicación | Compuesto `postId` + `createdAt` | 025 |
 | `reports` | Reportes de contenido | Único `reporterId` + `targetId` + `dayKey` | 040 |
@@ -145,7 +146,7 @@ Detalle en [ADR 0004](../adr/0004-moderacion-multimodal.md).
 | Abuso | Rate limiting por cliente y por endpoint sensible | 013 |
 | Secretos | AWS Secrets Manager o SSM; *user-secrets* en local | 001, 002 |
 | Privacidad | Logs sin PII, sin tokens y sin contenido moderado | 014 |
-| Multimedia | Bucket privado; carga multipart ≤ 4,5 MB validada por firma de bytes | 022, 023 |
+| Multimedia | Cloudinary; firmas de subida SHA-256, carga ≤ 4,5 MB validada por firma de bytes | 022, 023 |
 | Push | `IPushDispatcher` con adaptador FCM o SNS según configuración | 027, 044 |
 | Webhooks | Firma HMAC e idempotencia por `eventId` (backlog) | 028 |
 
@@ -159,8 +160,8 @@ Deuda abierta en [`SECURITY.md`](../../SECURITY.md).
 |---|---|---|
 | Cómputo | AWS Lambda | 1 M de invocaciones y 400 000 GB-s al mes |
 | API | AWS API Gateway | 1 M de llamadas al mes |
-| Multimedia | Amazon S3 | 5 GB de almacenamiento |
-| CDN | Amazon CloudFront | 1 TB de salida al mes |
+| Multimedia y CDN | Cloudinary | 25 créditos mensuales gratuitos (~25 GB / 25k transformaciones) |
+| Caché distribuido | Redis | Instancia administrada o contenedor con evicción LRU (spec 048) |
 | Observabilidad | Amazon CloudWatch | 10 alarmas y 5 GB de logs |
 | Moderación | OpenAI | Sin costo por token; validar política de uso |
 | Push | FCM o SNS (adaptador) | FCM sin costo; SNS dentro del Free Tier |

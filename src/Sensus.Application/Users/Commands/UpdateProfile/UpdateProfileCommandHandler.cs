@@ -11,15 +11,18 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
     private readonly IUserRepository _userRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IProfileImageStorage? _imageStorage;
+    private readonly ICacheService? _cacheService;
 
     public UpdateProfileCommandHandler(
         IUserRepository userRepository,
         ICurrentUserService currentUserService,
-        IProfileImageStorage? imageStorage = null)
+        IProfileImageStorage? imageStorage = null,
+        ICacheService? cacheService = null)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
         _imageStorage = imageStorage;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<UserDto>> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,12 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
         }
 
         await _userRepository.UpdateAsync(user, cancellationToken);
+
+        // Invalidar caché del perfil de usuario (Spec 048)
+        if (_cacheService is not null)
+        {
+            await _cacheService.RemoveAsync($"sensus:users:{userId}:profile", cancellationToken);
+        }
 
         // Limpiar la foto anterior en Cloudinary para no acumular imágenes huérfanas en plan Free
         if (_imageStorage is not null &&

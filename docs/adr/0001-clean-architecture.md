@@ -21,7 +21,7 @@ Organizar la solución en cuatro proyectos con dependencias que apuntan exclusiv
 ```
 Sensus.Domain          Entidades, invariantes, contratos. Sin dependencias externas.
 Sensus.Application     Casos de uso CQRS, DTOs, validación de borde, mapeos.
-Sensus.Infrastructure  MongoDB, BCrypt, JWT, S3, OpenAI, correo, push.
+Sensus.Infrastructure  MongoDB, BCrypt, JWT, Cloudinary, OpenAI, correo, push.
 Sensus.Api             Endpoints, middleware y composición.
 ```
 

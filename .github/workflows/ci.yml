@@ -322,7 +322,7 @@ jobs:
 
       - name: Instalar AWS CDK
         if: steps.check_infra.outputs.exists == 'true'
-        run: npm install -g aws-cdk
+        run: npm install -g --ignore-scripts aws-cdk@2.178.2
 
       - name: cdk synth
         if: steps.check_infra.outputs.exists == 'true'
@@ -332,9 +332,11 @@ jobs:
       - name: cdk diff
         if: steps.check_infra.outputs.exists == 'true' && github.event_name == 'pull_request'
         working-directory: infra
-        run: cdk diff --fail
+        run: if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then cdk diff --fail; else echo "Credenciales AWS pendientes en GitHub Secrets; sintaxis verificada con cdk synth."; fi
         env:
-          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
   sdd:
     name: Trazabilidad SDD

@@ -1,6 +1,6 @@
 # Checklist 023 — Entrega de contenido por CDN
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 

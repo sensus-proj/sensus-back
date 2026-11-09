@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v1.2.0** |
+| Documento normativo | `constitution.md` **v1.3.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
-| Última actualización | 2026-11-04 |
+| Última actualización | 2026-11-08 |
 
 > Este archivo es **operativo**. En caso de conflicto con `constitution.md`, prevalece la constitución y
 > este archivo MUST corregirse en el mismo cambio.
@@ -95,7 +95,7 @@ sensus-back.sln
 src/
   Sensus.Domain/           Entidades, invariantes, contratos. Sin dependencias externas.
   Sensus.Application/      Casos de uso CQRS, DTOs, mapeos, validación de borde.
-  Sensus.Infrastructure/   MongoDB, S3, moderación, correo, push, caché, geolocalización.
+  Sensus.Infrastructure/   MongoDB, Cloudinary, Redis, moderación, correo, push, geolocalización.
   Sensus.Api/              Endpoints, middleware, composición (Program.cs).
 tests/
   Sensus.Application.UnitTests/
@@ -142,7 +142,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 |---|---|---|
 | Reglas de negocio, invariantes, entidades | `Sensus.Domain` | Endpoints, handlers, repositorios |
 | Casos de uso, comandos, consultas, DTOs | `Sensus.Application` | Endpoints |
-| MongoDB, S3, OpenAI, correo, push, caché | `Sensus.Infrastructure` | Domain, Application |
+| MongoDB, Cloudinary, Redis, OpenAI, correo, push | `Sensus.Infrastructure` | Domain, Application |
 | Endpoints, middleware, autenticación HTTP | `Sensus.Api` | — |
 
 ### 7.2 Dependencias
@@ -178,7 +178,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Secretos solo en AWS Secrets Manager o SSM. **Nunca** en código, `.env` versionado, logs ni tests.
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).
 - Logs sin PII, sin tokens y sin contenido moderado. Incluye siempre `correlation-id`.
-- **Moderación obligatoria antes de publicar o guardar en S3**, con imagen **y** texto en la misma
+- **Moderación obligatoria antes de publicar o guardar en Cloudinary**, con imagen **y** texto en la misma
   solicitud.
 - **Fail-closed**: si la moderación falla o expira, el contenido va a cuarentena. Nunca se publica.
 - Umbrales de moderación en configuración; nunca en código. Toda decisión se registra con veredicto,
@@ -201,7 +201,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 
 - Todo recurso se define en `infra/` con AWS CDK en C#. **Prohibido** crear recursos en consola o por CLI.
 - Solo servicios del nivel gratuito. Cómputo exclusivamente Lambda detrás de API Gateway.
-- Multimedia en S3 + CloudFront; observabilidad exclusivamente en CloudWatch.
+- Multimedia en Cloudinary (Tier gratuito); observabilidad exclusivamente en CloudWatch.
 - Todo recurso etiquetado con `project`, `environment`, `owner`.
 - Toda decisión técnica declara su costo mensual estimado y su consumo frente al Free Tier.
 - Si una tarea requiere un servicio con costo, **detente** y solicita aprobación.
@@ -215,7 +215,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 | Regla o invariante de dominio | Unitaria (hoy en `Sensus.Application.UnitTests`; separar en `Sensus.Domain.Tests` cuando aplique) |
 | Endpoint nuevo o modificado | Integración: éxito, entrada inválida, sin autenticación, sin permisos |
 | Persistencia | Integración con Testcontainers contra MongoDB real; nunca dobles que simulen el motor |
-| Integración externa (moderación, correo, push, S3) | Doble que simule fallo, timeout y respuesta malformada |
+| Integración externa (moderación, correo, push, Cloudinary) | Doble que simule fallo, timeout y respuesta malformada |
 | Corrección de defecto | Regresión que falla antes del arreglo |
 
 - Cobertura mínima: **80 %** de líneas en Domain y Application; 60 % recomendado en el resto.
@@ -302,4 +302,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v1.2.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v1.3.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**

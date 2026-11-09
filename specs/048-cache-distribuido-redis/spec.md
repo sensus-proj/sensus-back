@@ -4,13 +4,13 @@
 |---|---|
 | ID | 048 |
 | Slug | `cache-distribuido-redis` |
-| Estado | Pendiente |
+| Estado | Implementado (Core) |
 | Ola | 7 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 010, 024, 026, 032 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ---
 
