@@ -1,8 +1,10 @@
 name: CD - Deploy Serverless (AWS CDK Lambda + API Gateway)
 
 on:
-  push:
-    branches: ["Back_Rodrigo"]
+  workflow_run:
+    workflows: ["CI"]
+    branches: ["main"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       environment:
@@ -22,6 +24,7 @@ jobs:
   deploy-serverless:
     name: Despliegue Serverless en AWS con CDK
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success') }}
     timeout-minutes: 15
 
     env:
@@ -33,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configurar .NET 10
         uses: actions/setup-dotnet@v4

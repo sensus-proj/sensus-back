@@ -1,10 +1,6 @@
-name: CD - Deploy to EC2
+name: CD - Deploy to EC2 (Manual / Legacy)
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    branches: ["main"]
-    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -13,9 +9,8 @@ concurrency:
 
 jobs:
   deploy:
-    name: Despliegue automático en EC2
+    name: Despliegue manual en EC2
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success') }}
     timeout-minutes: 10
 
     steps:
