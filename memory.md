@@ -67,6 +67,7 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D23 | Adopción de Cloudinary como servicio oficial de almacenamiento, transformación y entrega CDN de multimedia | 2026-11-08 | ADR 0010; enmienda constitucional v1.3.0 (§2.1, §2.2, P-VI). Sustituye Amazon S3 y CloudFront; valida la implementación existente de Sprint 1 |
 | D24 | Implementación de Caché Distribuido con Redis (Spec 048) | 2026-11-08 | `ICacheService` en Application, `RedisCacheService` en Infrastructure con `StackExchange.Redis`, fallback graceful a persistencia, TTL por entidad en `appsettings.json` e invalidación integrada en perfil de usuario y comercio. 201 pruebas en verde |
 | D25 | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045) | 2026-11-08 | Hospedaje dual Kestrel/Lambda en `Sensus.Api` (`AddAWSLambdaHosting(LambdaEventSource.HttpApi)`) y stack `SensusInfraStack` en `infra/` con AWS Lambda (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (retención 7 días + alarmas 5xx/errores), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
+| D26 | Despliegue en AWS Serverless (API Gateway HTTP API v2 + AWS Lambda .NET 10 en `us-east-2`) | 2026-11-09 | URL base oficial en producción: `https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/`. Validado con endpoints `/health` (200 OK) y ProblemDetails RFC 7231. Sustituye la IP provisional de EC2 (`18-117-247-171.sslip.io`) y se sincroniza en `NetworkClient.kt` del cliente móvil. |
 
 ---
 
