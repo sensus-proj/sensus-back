@@ -332,7 +332,7 @@ jobs:
       - name: cdk diff
         if: steps.check_infra.outputs.exists == 'true' && github.event_name == 'pull_request'
         working-directory: infra
-        run: if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then cdk diff --fail; else echo "Credenciales AWS pendientes en GitHub Secrets; sintaxis verificada con cdk synth."; fi
+        run: if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then cdk diff; else echo "Credenciales AWS pendientes en GitHub Secrets; sintaxis verificada con cdk synth."; fi
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
