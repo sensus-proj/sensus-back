@@ -1,6 +1,8 @@
 name: CD - Deploy Serverless (AWS CDK Lambda + API Gateway)
 
 on:
+  push:
+    branches: ["Back_Rodrigo"]
   workflow_dispatch:
     inputs:
       environment:
@@ -21,6 +23,12 @@ jobs:
     name: Despliegue Serverless en AWS con CDK
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
 
     steps:
       - name: Checkout
@@ -48,15 +56,23 @@ jobs:
       - name: Instalar AWS CDK CLI
         run: npm install -g --ignore-scripts aws-cdk@2.178.2
 
+      - name: Bootstrap de cuenta AWS (idempotente)
+        working-directory: infra
+        run: cdk bootstrap
+
       - name: Sintetizar plantilla CloudFormation (cdk synth)
         working-directory: infra
         run: cdk synth --context environment=${{ inputs.environment || 'prod' }}
 
       - name: Desplegar stack en AWS (cdk deploy)
         working-directory: infra
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
         run: |
-          cdk deploy --require-approval never --context environment=${{ inputs.environment || 'prod' }}
+          cdk deploy --require-approval never \
+            --context environment=${{ inputs.environment || 'prod' }} \
+            --outputs-file cdk-outputs.json
+          if [ -f cdk-outputs.json ]; then
+            echo "### 🚀 Sensus Serverless Desplegado en AWS" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -77,7 +77,8 @@ public sealed class SensusInfraStack : Stack
             Environment = new Dictionary<string, string>
             {
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
-                ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}"
+                ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
+                ["Redis__Enabled"] = "false"
             }
         });
 

@@ -10,7 +10,10 @@ internal static class Program
 
         var envName = app.Node.TryGetContext("environment") as string ?? "prod";
         var account = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT");
-        var region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "us-east-1";
+        var region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION")
+            ?? System.Environment.GetEnvironmentVariable("AWS_REGION")
+            ?? System.Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION")
+            ?? "us-east-2";
 
         var stack = new SensusInfraStack(app, $"SensusBackendStack-{envName}", new StackProps
         {
