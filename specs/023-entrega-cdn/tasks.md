@@ -6,15 +6,15 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Pendiente |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T023-01 | Implementar: Distribución CloudFront y política de caché en CDK | Infrastructure | `FR-023-01` | — | Pendiente |
+| T023-01 | Implementar: Integración con Cloudinary CDN y configuración de entrega | Infrastructure | `FR-023-01` | — | Pendiente |
 | T023-02 | Implementar: Generación de URLs firmadas | Application | `FR-023-01` | T023-01 | Pendiente |
-| T023-03 | Definir distribución y política de caché | Infrastructure | `FR-023-01` | T023-02 | Pendiente |
+| T023-03 | Configurar transformaciones y optimización en Cloudinary CDN | Infrastructure | `FR-023-01` | T023-02 | Pendiente |
 | T023-04 | Generar URLs firmadas para contenido privado | Application | `FR-023-02` | T023-03 | Pendiente |
 | T023-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-023-01` | T023-04 | Pendiente |
 | T023-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-023-01` | T023-05 | Pendiente |

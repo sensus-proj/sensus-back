@@ -62,7 +62,7 @@ Orden de precedencia: `constitución > spec > plan > tasks > checklist > código
 src/
   Sensus.Domain/           Entidades, invariantes y contratos. Sin dependencias externas.
   Sensus.Application/      Casos de uso CQRS (MediatR), DTOs, validación con FluentValidation.
-  Sensus.Infrastructure/   MongoDB, BCrypt, JWT, S3, moderación, correo, push.
+  Sensus.Infrastructure/   MongoDB, BCrypt, JWT, Cloudinary, moderación, correo, push.
   Sensus.Api/              Endpoints mínimos, middleware y composición (Program.cs).
 tests/
   Sensus.Application.UnitTests/

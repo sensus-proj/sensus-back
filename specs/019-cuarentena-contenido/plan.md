@@ -34,7 +34,7 @@ Retener el contenido no aprobado sin publicarlo y con una política de retenció
 
 ## 6. Costo AWS
 
-S3 dentro del Free Tier; vigilar almacenamiento acumulado.
+Cloudinary dentro del Free Tier; vigilar créditos acumulados.
 
 ## 7. Estrategia de pruebas
 

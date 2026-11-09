@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 2.4.0 · **Actualizado:** 2026-11-04 · **Alineado a:** `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0
+**Version:** 2.8.0 · **Actualizado:** 2026-11-08 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,14 +11,14 @@
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-04 |
+| Última actualización | 2026-11-08 |
 | Fase SDD | `specify` completada — 43 specs activas y 1 en backlog; el SDD convive con el código de Sprint 1 en la rama `SprintOscar` |
 | Rama de trabajo | `SprintOscar`, creada desde `origin/Sprint1` de `sensus-proj/sensus-back`; `Sprint1` de la organización permanece sin modificar |
 | Agente | OpenCode — Big Pickle |
-| Constitución vigente | v1.2.0 (enmendada 2026-10-29) |
-| AGENTS.md vigente | v1.2.0 |
+| Constitución vigente | v1.3.0 (enmendada 2026-11-08) |
+| AGENTS.md vigente | v1.3.0 |
 | Solución .NET | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests); `sensus-back.slnx` retirado |
-| Última tarea completada | Migración a `sensus-proj/sensus-back`: cherry-pick del commit SDD sobre el tip del equipo y resolución de conflictos en `Directory.Build.props` y `.editorconfig`. Verificado: `dotnet build -warnaserror` sin advertencias y 135 pruebas en verde |
+| Última tarea completada | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045, D25) y Caché Distribuido con Redis (Spec 048, D24). Verificado: 201 pruebas superadas, `Sensus.Infra` sintetizado sin warnings, `dotnet format` sin cambios y 47 specs SDD conformes |
 | Restricción activa | Git autorizado **solo** para esta migración (rama `SprintOscar`); cualquier otra operación sigue requiriendo autorización del responsable |
 
 ---
@@ -32,8 +32,8 @@
 | III. CQRS y contratos | Parcial | Hay comandos/handlers y DTOs; faltan OpenAPI unificado y ProblemDetails uniforme (specs 009, 011) |
 | IV. Seguridad y privacidad | Parcial, con brechas | Secreto JWT versionado, CORS abierto, `RequireHttpsMetadata=false`, sin logout (specs 004, 012) |
 | V. Verificación automatizada | Parcial, con brecha medida | 28 pruebas unitarias y 1 archivo de pruebas de arquitectura en verde, pero cobertura real de 25.89 % en Domain y 34.78 % en Application (umbral 80 %); sin pruebas de integración ni pipeline ejecutado |
-| VI. Costo cero e IaC | Sin implementar | No existe `infra/` ni alarmas de presupuesto |
-| VII. Rendimiento y observabilidad | Parcial | `PagedResult` existe sin uso; sin paginación, índices verificados ni `correlation-id` |
+| VI. Costo cero e IaC | Implementado | Proyecto AWS CDK en C# en `infra/` (`SensusInfraStack`, Spec 045): Lambda `.NET 10` (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (7 días retención + alarmas), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
+| VII. Rendimiento y observabilidad | Parcial | `PagedResult` existe sin uso; sin paginación, índices verificados ni `correlation-id`; Caché distribuido Redis implementado (spec 048) con fallback graceful y TTL configurable |
 
 Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Verificado**.
 
@@ -64,6 +64,10 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D18 | Las coordenadas del comercio las aporta el cliente y se validan en el servidor; sin proveedor de geocodificación | 2026-10-29 | Elimina una dependencia externa y cumple §2.2 |
 | D19 | Ranking determinista en `Sensus.Application`, sin servicio de ML externo | 2026-10-29 | ADR 0009; specs 041–043 con métricas medibles |
 | D20 | El repositorio canónico pasa a `sensus-proj/sensus-back`; `Elrorro334/sensus-back` queda como remote `legacy` de solo lectura. El SDD se integra por rama `SprintOscar` y PR a `Sprint1` | 2026-11-04 | `origin` apunta a la organización; `Sprint1` y `main` de la organización no se tocan sin PR |
+| D23 | Adopción de Cloudinary como servicio oficial de almacenamiento, transformación y entrega CDN de multimedia | 2026-11-08 | ADR 0010; enmienda constitucional v1.3.0 (§2.1, §2.2, P-VI). Sustituye Amazon S3 y CloudFront; valida la implementación existente de Sprint 1 |
+| D24 | Implementación de Caché Distribuido con Redis (Spec 048) | 2026-11-08 | `ICacheService` en Application, `RedisCacheService` en Infrastructure con `StackExchange.Redis`, fallback graceful a persistencia, TTL por entidad en `appsettings.json` e invalidación integrada en perfil de usuario y comercio. 201 pruebas en verde |
+| D25 | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045) | 2026-11-08 | Hospedaje dual Kestrel/Lambda en `Sensus.Api` (`AddAWSLambdaHosting(LambdaEventSource.HttpApi)`) y stack `SensusInfraStack` en `infra/` con AWS Lambda (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (retención 7 días + alarmas 5xx/errores), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
+| D26 | Despliegue en AWS Serverless (API Gateway HTTP API v2 + AWS Lambda .NET 10 en `us-east-2`) | 2026-11-09 | URL base oficial en producción: `https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/`. Validado con endpoints `/health` (200 OK) y ProblemDetails RFC 7231. Sustituye la IP provisional de EC2 (`18-117-247-171.sslip.io`) y se sincroniza en `NetworkClient.kt` del cliente móvil. |
 
 ---
 
@@ -71,8 +75,8 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 
 | Artefacto | Ruta | Estado |
 |---|---|---|
-| Constitución | `constitution.md` | Completa, v1.2.0 |
-| Reglas para agentes | `AGENTS.md` | Completo, v1.2.0 |
+| Constitución | `constitution.md` | Completa, v1.3.0 |
+| Reglas para agentes | `AGENTS.md` | Completo, v1.3.0 |
 | Memoria | `memory.md` | Este archivo, v2.1.0 |
 | Plantillas SDD | `specs/_templates/{spec,plan,tasks,checklist}.md` | Completas, alineadas a v1.2.0 |
 | Índice de specs | `specs/README.md` | Completo, 44 specs |
@@ -80,7 +84,7 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | Especificaciones | `specs/001-…` … `specs/044-…` | 44 carpetas con 4 artefactos cada una |
 | Contratos por spec | `specs/NNN-slug/contracts/openapi.yaml` | Solo en specs con endpoints |
 | Arquitectura | `docs/architecture/arquitecturaNva.docx` y `docs/architecture/overview.md` | Completos |
-| ADR | `docs/adr/0001` … `0009` + índice | Completos |
+| ADR | `docs/adr/0001` … `0010` + índice | Completos |
 | Solución .NET | `sensus-back.sln` | Existe; `sensus-back.slnx` duplicado |
 | Infraestructura | `infra/` (CDK) | No existe |
 | Pipeline CI | `.github/workflows/ci.yml` + scripts de validación | Escrito, sin ejecutar |
@@ -164,6 +168,9 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | 2.5.1 | 2026-11-05 | Correcciones de CI: `check-coverage.mjs` fusiona reportes Cobertura por línea (antes los sumaba y contaba 7 veces las mismas líneas, hundiendo el porcentaje a ~42 %); job SonarCloud usa la clave real del proyecto `sensus-proj_sensus-back` (antes `sensus-back`, inexistente), añade `dotnet restore`, corrige la ruta glob del reporte y evita ejecutar `sonarscanner end` si `begin` falló. |
 | 2.5.2 | 2026-11-05 | Quality Gate de SonarCloud: se sustituyó la propiedad inexistente `sonar.cs.dotnet.reportsPaths` por `sonar.cs.opencover.reportsPaths` y el job de Sonar genera el reporte en formato **OpenCover** (`--collect:"XPlat Code Coverage;Format=opencover"`), el recomendado por Sonar para C# con Coverlet, con un paso que verifica que el archivo exista. Se excluyó de cobertura `**/Program.cs` (composition root) y los adaptadores de E/S (`Persistence/Mongo/**`, Cloudinary, correo y geocodificación), y el job de Sonar ejecuta ahora todas las pruebas sobre un servicio MongoDB para maximizar la cobertura de código nuevo. Se eliminaron todos los secretos y credenciales literales: `Program.cs` genera un secreto JWT efímero en Development cuando no hay configuración (y falla con mensaje claro fuera de Development), `appsettings.Development.json` queda sin secreto, `JwtSettingsValidator` ya no mantiene una lista de secretos filtrados y las pruebas usan contraseñas y tokens efímeros. CORS pasa de `AllowAnyOrigin` a una allowlist explícita de orígenes. Pruebas: 190 en verde, `dotnet format` sin cambios. |
 | 2.5.3 | 2026-11-05 | Resolución integral y aprobación de Quality Gate en SonarCloud (PR #7 hacia `Sprint1`): Se resolvieron de raíz las dos condiciones fallidas. 1) **Security Rating C -> A**: Al consultar la API de issues de Sonar, se identificaron dos `MAJOR VULNERABILITY` en `ci.yml` (`githubactions:S6505` por omitir `--ignore-scripts` y `githubactions:S8543` por no anclar la versión de Snyk en npm); se solventó con `npm install -g --ignore-scripts snyk@1.1308.4`. 2) **Coverage on New Code 0.0 % -> Pass**: Se identificaron 29 líneas descubiertas originadas por `check-coverage.mjs` (26 líneas JS de CI evaluadas por Zero Coverage Sensor) y `SqlToMongoMigrationService.cs` (3 líneas no cubiertas por discrepancia de carpeta `Migration/` vs patrón `**/Migrations/**`). Se excluyó `.github/**` de las fuentes de producto de Sonar, se corrigió el patrón a `**/Migration/**` y se escribieron 3 pruebas unitarias exhaustivas en `SqlToMongoMigrationServiceTests.cs` (todas en verde). 3) Se endureció `Program.cs` restringiendo el secreto JWT efímero a `Development` y `Testing`, se eliminó el comentario residual con credencial `'123456789'` y se limpió el disparador de CI para ejecutar exclusivamente sobre `Sprint1` y `main`. Verificado: 9/9 checks en verde (`SonarCloud Code Analysis` en `success`, Quality Gate Passed, `PR mergeable_state: clean`). |
+| 2.6.0 | 2026-11-08 | Adopción oficial de Cloudinary (D23): Enmienda constitucional v1.3.0 (§2.1, §2.2, P-VI), creación de ADR 0010, actualización de overview de arquitectura y specs 019, 022 y 023 para oficializar Cloudinary como proveedor de almacenamiento y CDN multimedia, sustituyendo S3 y CloudFront. |
+| 2.7.0 | 2026-11-08 | Implementación de Spec 048 (Caché distribuido con Redis, D24): Se creó `ICacheService` en `Application.Common.Interfaces` y `RedisCacheService` en `Infrastructure.Cache` utilizando `StackExchange.Redis`, con fallback transparente ante caídas o timeouts (FR-048-11), soporte de TTL por clave y eliminación por prefijo. Se integró lectura en caché e invalidación en `GetProfileQuery`, `UpdateProfileCommandHandler`, `GetMyComercioQuery` y `UpdateMerchantProfileCommandHandler`. Se añadieron configuraciones de Redis en `appsettings.json` y 4 suites de pruebas (`RedisCacheServiceTests`, `GetProfileQueryHandlerTests`, y actualización de `GetMyComercioQueryHandlerTests`). Verificado: 201 pruebas en verde (155 unitarias, 4 arquitectura, 3 E2E, 39 integración), `dotnet format` limpio y 46 specs SDD conformes. |
+| 2.8.0 | 2026-11-08 | Implementación de Spec 045 (Infraestructura Serverless como Código con AWS CDK, D25): Se habilitó hospedaje dual Kestrel/Lambda en `Sensus.Api` (`Amazon.Lambda.AspNetCoreServer.Hosting` con `LambdaEventSource.HttpApi`) y se creó el proyecto `infra/src/Sensus.Infra/Sensus.Infra.csproj` con `infra/cdk.json` y `SensusInfraStack.cs` (AWS Lambda `.NET 10` sobre `PROVIDED_AL2023` `ARM_64`, API Gateway HTTP API v2, CloudWatch Logs con retención de 7 días y alarmas 5xx/errores/throttling, rol IAM de mínimo privilegio con lectura de SSM Parameter Store a costo 0 USD, y presupuesto mensual en AWS Budgets con alerta en 1.00 USD). Se actualizó el job `iac` en `.github/workflows/ci.yml` y se creó `.github/workflows/deploy-serverless.yml`. Verificado: 47 specs SDD conformes, compilación limpia sin warnings y 201 pruebas en verde. |
 
 ---
 

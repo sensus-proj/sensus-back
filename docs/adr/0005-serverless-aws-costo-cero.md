@@ -18,7 +18,7 @@ detección de deriva.
 ## Decisión
 
 - Cómputo exclusivamente **AWS Lambda** detrás de **AWS API Gateway**.
-- Multimedia en **Amazon S3** y entrega mediante **Amazon CloudFront** con bucket privado y URLs firmadas.
+- Multimedia gestionada mediante **Cloudinary** (sustituye S3 y CloudFront según ADR 0010).
 - Observabilidad exclusivamente en **Amazon CloudWatch** (logs, métricas, alarmas).
 - Todo recurso aprovisionado con **AWS CDK en C#** dentro de `infra/`; prohibido crear recursos por
   consola o CLI.

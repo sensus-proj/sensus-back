@@ -50,7 +50,7 @@ Retener el contenido no aprobado sin publicarlo y con una política de retenció
 | ID | Requisito | Métrica objetivo |
 |---|---|---|
 | NFR-019-01 | Retención | Máximo definido en la spec (propuesta: 30 días) |
-| NFR-019-02 | Coste de almacenamiento | Dentro del Free Tier de S3 |
+| NFR-019-02 | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) |
 
 ## 6. Criterios de aceptación
 

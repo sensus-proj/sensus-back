@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 017, 013 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ---
 
@@ -24,7 +24,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 
 - Endpoint multipart POST /api/v1/media/upload
 - Validación de MIME real y tamaño ≤ 4,5 MB
-- Almacenamiento privado en S3
+- Almacenamiento seguro en Cloudinary
 - Asociación con el usuario y el contenido
 - Moderación de la imagen
 
@@ -48,7 +48,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 | FR-022-02 | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must |
 | FR-022-03 | Rechazar archivos mayores a 4,5 MB con 413 | Must |
 | FR-022-04 | Almacenar el archivo de forma privada hasta su aprobación | Must |
-| FR-022-05 | Registrar propietario, estado y clave de S3 | Must |
+| FR-022-05 | Registrar propietario, estado y public_id de Cloudinary | Must |
 | FR-022-06 | Moderar la imagen antes de permitir su uso público | Must |
 | FR-022-07 | Limitar la carga a 20 archivos por usuario y día | Should |
 
@@ -58,7 +58,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 |---|---|---|
 | NFR-022-01 | Tamaño máximo por archivo | 4,5 MB |
 | NFR-022-02 | Latencia de carga | p95 < 2 s para 1 MB |
-| NFR-022-03 | Coste de almacenamiento | Dentro del Free Tier de S3 (5 GB) |
+| NFR-022-03 | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) |
 
 ## 6. Criterios de aceptación
 

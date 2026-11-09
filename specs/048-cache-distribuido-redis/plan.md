@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Borrador |
+| Estado del plan | Aprobado (Implementado) |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ---
 

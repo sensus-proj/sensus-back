@@ -1,0 +1,29 @@
+{
+  "app": "dotnet run --project src/Sensus.Infra/Sensus.Infra.csproj",
+  "watch": {
+    "include": [
+      "src/**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "src/*/obj/**",
+      "src/*/bin/**"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:target-partitions": [
+      "aws",
+      "aws-cn"
+    ],
+    "environment": "prod",
+    "budgetEmail": "alerts@sensus.local",
+    "allowedOrigins": [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://18-117-247-171.sslip.io"
+    ]
+  }
+}

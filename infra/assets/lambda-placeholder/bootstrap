@@ -1,0 +1,3 @@
+#!/bin/sh
+# Placeholder bootstrap for AWS CDK synthesis (cdk synth) in CI when Sensus.Api has not yet been published to infra/publish.
+echo "Sensus.Api Lambda bootstrap placeholder — publish Sensus.Api to infra/publish before cdk deploy."

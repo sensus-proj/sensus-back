@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Comercios.Queries.GetMyComercio;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Entities;
@@ -84,5 +85,32 @@ public class GetMyComercioQueryHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Auth.Unauthorized");
+    }
+
+    [Fact]
+    public async Task Handle_Should_ReturnFromCache_WhenPresentInCache()
+    {
+        var cacheService = Substitute.For<ICacheService>();
+        var cached = new ComercioDto(
+            Guid.NewGuid(),
+            _testUserId,
+            "Comercio Cacheado",
+            "Calle 1",
+            "01234",
+            19.4,
+            -99.1,
+            true,
+            DateTime.UtcNow,
+            new List<HorarioDiaDto>());
+
+        cacheService.GetAsync<ComercioDto>($"sensus:merchants:user:{_testUserId}", Arg.Any<CancellationToken>())
+            .Returns(cached);
+
+        var handlerWithCache = new GetMyComercioQueryHandler(_comercioRepository, _currentUserService, cacheService);
+        var result = await handlerWithCache.Handle(new GetMyComercioQuery(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.NombreComercial.Should().Be("Comercio Cacheado");
+        await _comercioRepository.DidNotReceive().GetByUsuarioIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 }

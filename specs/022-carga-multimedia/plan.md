@@ -6,7 +6,7 @@
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ## 1. Resumen técnico
 
@@ -17,16 +17,16 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 | Capa | Cambio |
 |---|---|
 | Application | UploadMediaCommand y validador de tipo y tamaño |
-| Infrastructure | Cliente S3 y verificación de firma de bytes |
+| Infrastructure | Adaptador Cloudinary y verificación de firma de bytes |
 | Api | Endpoint multipart POST /api/v1/media/upload |
 
 ## 3. Modelo de datos e índices
 
-- media_assets con ownerId, status, s3Key, contentType y createdAt
+- media_assets con ownerId, status, publicId (Cloudinary), contentType y createdAt
 
 ## 4. Seguridad
 
-- Bucket privado
+- Firmas criptográficas SHA-256 para subida segura
 - Validación de MIME real en servidor
 - Sin ejecución de contenido subido
 - Límite de tasa por usuario
@@ -37,7 +37,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 
 ## 6. Costo AWS
 
-S3 dentro del Free Tier (5 GB); vigilar transferencia y número de peticiones.
+Cloudinary dentro del Free Tier (25 créditos mensuales); vigilar consumo y transformaciones.
 
 ## 7. Estrategia de pruebas
 
@@ -69,10 +69,10 @@ Evaluación previa a la implementación.
 
 1. `T022-01` Actualizar y validar el contrato OpenAPI del spec
 2. `T022-02` Implementar: UploadMediaCommand y validador de tipo y tamaño
-3. `T022-03` Implementar: Cliente S3 y verificación de firma de bytes
+3. `T022-03` Implementar: Adaptador Cloudinary y verificación de firma de bytes
 4. `T022-04` Implementar: Endpoint multipart POST /api/v1/media/upload
 5. `T022-05` Validar MIME real por firma de bytes
-6. `T022-06` Implementar el almacenamiento privado en S3
+6. `T022-06` Implementar el almacenamiento seguro en Cloudinary
 7. `T022-07` Probar el límite de 4,5 MB y el 413
 8. `T022-08` Añadir la limpieza de archivos huérfanos
 9. `T022-09` Implementar las pruebas de integración del flujo completo

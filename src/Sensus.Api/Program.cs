@@ -21,7 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 // El secreto JWT nunca se versiona (AGENTS.md §8). En Development se genera uno efímero cuando
 // no está configurado; fuera de Development su ausencia es un error de configuración explícito.
 var configuredSecret = builder.Configuration["JwtSettings:Secret"];
-if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
+var isLambdaRuntime = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
+if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") || isLambdaRuntime))
 {
     configuredSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
     builder.Configuration["JwtSettings:Secret"] = configuredSecret;
@@ -38,6 +39,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // 3. Capa de Presentación / API
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
@@ -193,7 +195,7 @@ app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);
 app.UseRateLimiter();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>

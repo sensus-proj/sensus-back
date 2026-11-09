@@ -127,7 +127,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-019-03` | 019 | FR | Definir y aplicar retención máxima | Must | Pendiente |
 | `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Pendiente |
 | `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Pendiente |
-| `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de S3 | Pendiente |
+| `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
 | `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Pendiente |
 | `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Pendiente |
 | `FR-020-03` | 020 | FR | Registrar motivo, evidencia y responsable | Must | Pendiente |
@@ -144,18 +144,18 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Pendiente |
 | `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Pendiente |
 | `FR-022-04` | 022 | FR | Almacenar el archivo de forma privada hasta su aprobación | Must | Pendiente |
-| `FR-022-05` | 022 | FR | Registrar propietario, estado y clave de S3 | Must | Pendiente |
+| `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Pendiente |
 | `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Pendiente |
 | `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Pendiente |
 | `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Pendiente |
 | `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Pendiente |
-| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de S3 (5 GB) | Pendiente |
-| `FR-023-01` | 023 | FR | Servir multimedia mediante CloudFront | Must | Pendiente |
+| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
+| `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Pendiente |
 | `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Pendiente |
 | `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Pendiente |
 | `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Pendiente |
 | `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Pendiente |
-| `NFR-023-02` | 023 | NFR | Coste | Dentro del Free Tier de CloudFront | Pendiente |
+| `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Pendiente |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Pendiente |
 | `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Pendiente |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Pendiente |
@@ -342,6 +342,21 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Pendiente |
 | `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Pendiente |
 | `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Pendiente |
+| `FR-045-01` | 045 | FR | Habilitar hospedaje dual en `Sensus.Api` con `AddAWSLambdaHosting(LambdaEventSource.HttpApi)` | Must | Implementado |
+| `FR-045-02` | 045 | FR | Crear el proyecto AWS CDK en C# dentro de `infra/` con `cdk.json` funcional | Must | Implementado |
+| `FR-045-03` | 045 | FR | Definir función AWS Lambda con runtime `PROVIDED_AL2023`, arquitectura `ARM_64` y timeout 29 s | Must | Implementado |
+| `FR-045-04` | 045 | FR | Definir AWS API Gateway HTTP API v2 con ruta `$default` integrada a la función Lambda y CORS | Must | Implementado |
+| `FR-045-05` | 045 | FR | Definir `LogGroup` de Amazon CloudWatch con retención de 7 días | Must | Implementado |
+| `FR-045-06` | 045 | FR | Definir alarmas de CloudWatch para errores 5xx y fallos/throttling de Lambda | Must | Implementado |
+| `FR-045-07` | 045 | FR | Definir presupuesto en AWS Budgets (`CfnBudget`) con límite mensual de 1.00 USD | Must | Implementado |
+| `FR-045-08` | 045 | FR | Configurar rol IAM de mínimo privilegio (CloudWatch Logs y lectura SSM Parameter Store) | Must | Implementado |
+| `FR-045-09` | 045 | FR | Aplicar etiquetas obligatorias (`project`, `environment`, `owner`) a todos los recursos | Must | Implementado |
+| `FR-045-10` | 045 | FR | Exponer como `CfnOutput` la URL pública del API Gateway y el ARN de la función Lambda | Must | Implementado |
+| `NFR-045-01` | 045 | NFR | Costo mensual de infraestructura en AWS | 0.00 USD (Free Tier) | Implementado |
+| `NFR-045-02` | 045 | NFR | Tiempo de síntesis (`cdk synth`) en CI | < 60 segundos | Implementado |
+| `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |
+| `NFR-045-04` | 045 | NFR | Privilegios IAM | Mínimo privilegio estricto | Implementado |
+| `NFR-045-05` | 045 | NFR | Compatibilidad con pruebas existentes | 100 % pruebas en verde | Implementado |
 | `FR-047-01` | 047 | FR | El pipeline compila la solución con `-warnaserror` (0 warnings, 0 errores) | Must | Pendiente |
 | `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Pendiente |
 | `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Pendiente |
@@ -377,4 +392,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
 
-Total: **370 requisitos** en 46 specs.
+Total: **385 requisitos** en 47 specs.

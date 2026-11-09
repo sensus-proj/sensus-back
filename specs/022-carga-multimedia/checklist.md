@@ -1,6 +1,6 @@
 # Checklist 022 — Carga de multimedia
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -14,7 +14,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] El bucket nunca es público
+- [ ] La subida en Cloudinary se realiza con firma segura SHA-256
 - [ ] El tipo se valida por firma, no por extensión
 - [ ] El límite de tamaño está probado
 - [ ] La imagen se modera antes de exponerse

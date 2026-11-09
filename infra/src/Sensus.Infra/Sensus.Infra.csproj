@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- AWS CDK utiliza tipos con sufijo Props/Stack y parámetros opcionales por convención de JSII -->
+    <NoWarn>$(NoWarn);CA1711;CA1812;CA1062;CA1308</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.CDK.Lib" Version="2.275.0" />
+    <PackageReference Include="Constructs" Version="10.5.0" />
+  </ItemGroup>
+
+</Project>

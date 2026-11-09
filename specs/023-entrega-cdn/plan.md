@@ -6,17 +6,17 @@
 | Estado del plan | Documenta estado actual con brechas |
 | Versión | 1.0.0 |
 | Constitution Check | FAIL |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ## 1. Resumen técnico
 
-Servir el contenido aprobado a través de CloudFront con caché y control de acceso.
+Servir el contenido aprobado a través de Cloudinary CDN con optimización automática y control de acceso.
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Infrastructure | Distribución CloudFront y política de caché en CDK |
+| Infrastructure | Integración con Cloudinary CDN y generación de firmas |
 | Application | Generación de URLs firmadas |
 
 ## 3. Modelo de datos e índices
@@ -25,8 +25,8 @@ Servir el contenido aprobado a través de CloudFront con caché y control de acc
 
 ## 4. Seguridad
 
-- Firma de URLs
-- Bucket privado como origen
+- Firmas SHA-256 para subidas y operaciones seguras
+- Acceso gestionado por prefijos en Cloudinary
 
 ## 5. Observabilidad y rendimiento
 
@@ -34,7 +34,7 @@ Servir el contenido aprobado a través de CloudFront con caché y control de acc
 
 ## 6. Costo AWS
 
-CloudFront: 1 TB de salida gratuita al mes; vigilar.
+Cloudinary: 25 créditos mensuales gratuitos; vigilar consumo.
 
 ## 7. Estrategia de pruebas
 
@@ -63,7 +63,7 @@ Evaluación previa a la implementación.
 
 ## 10. Orden de implementación
 
-1. `T023-01` Implementar: Distribución CloudFront y política de caché en CDK
+1. `T023-01` Implementar: Integración con Cloudinary CDN y configuración de entrega
 2. `T023-02` Implementar: Generación de URLs firmadas
 3. `T023-03` Definir distribución y política de caché
 4. `T023-04` Generar URLs firmadas para contenido privado
