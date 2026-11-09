@@ -45,7 +45,6 @@ jobs:
             --configuration Release \
             --runtime linux-arm64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
             --output infra/publish
           mv infra/publish/Sensus.Api infra/publish/bootstrap
           chmod +x infra/publish/bootstrap

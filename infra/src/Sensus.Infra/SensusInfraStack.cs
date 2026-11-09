@@ -78,7 +78,8 @@ public sealed class SensusInfraStack : Stack
             {
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
                 ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
-                ["Redis__Enabled"] = "false"
+                ["Redis__Enabled"] = "false",
+                ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
             }
         });
 
@@ -127,7 +128,7 @@ public sealed class SensusInfraStack : Stack
         {
             Principal = new ServicePrincipal("apigateway.amazonaws.com"),
             Action = "lambda:InvokeFunction",
-            SourceArn = $"arn:aws:execute-api:{Region}:{Account}:{httpApi.Ref}/*/*"
+            SourceArn = $"arn:aws:execute-api:{Region}:{Account}:{httpApi.Ref}/*"
         });
 
         // 5. Alarmas de Observabilidad en Amazon CloudWatch (FR-045-06, Spec 015)

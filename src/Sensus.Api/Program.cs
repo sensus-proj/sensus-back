@@ -195,7 +195,7 @@ app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);
 app.UseRateLimiter();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
