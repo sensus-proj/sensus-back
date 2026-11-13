@@ -77,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<IComercioRepository, MongoComercioRepository>();
         services.AddScoped<IPasswordResetTokenRepository, MongoPasswordResetTokenRepository>();
+        services.AddScoped<IOfferRepository, MongoOfferRepository>();
 
         // Servicio de migración de SQL a MongoDB Atlas
         services.AddScoped<SqlToMongoMigrationService>();

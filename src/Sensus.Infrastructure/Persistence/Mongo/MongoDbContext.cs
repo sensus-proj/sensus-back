@@ -47,6 +47,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<PasswordResetTokenDocument>(_settings.PasswordResetTokensCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<OfferDocument> Offers =>
+        _database?.GetCollection<OfferDocument>(_settings.OffersCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     private void ConfigureIndexes()
     {
         if (_database is null) return;
@@ -98,6 +102,31 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: Los índices de tokens ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var offersCollection = _database.GetCollection<OfferDocument>(_settings.OffersCollectionName);
+
+            // Índice compuesto (MerchantId, Status) para inventario y republicación (SE-026, FR-037-01)
+            var merchantStatusKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.MerchantId)
+                .Ascending(o => o.Status);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(merchantStatusKeys));
+
+            // Índice compuesto (Status, EndsAt) para control de vigencia y expiración eficiente (SE-022 a SE-025, NFR-007-02)
+            var statusEndsAtKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.Status)
+                .Ascending(o => o.EndsAt);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(statusEndsAtKeys));
+
+            // Índice geoespacial 2dsphere para búsqueda de ofertas cercanas
+            var offerGeoKeys = Builders<OfferDocument>.IndexKeys.Geo2DSphere(o => o.Ubicacion);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(offerGeoKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de ofertas ya existen o el clúster aún no está disponible.");
         }
     }
 }

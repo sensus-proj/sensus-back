@@ -124,6 +124,7 @@ builder.Services.AddAuthentication(options =>
 // Políticas de Autorización y Rate Limiting
 builder.Services.AddAppAuthorizationPolicies();
 builder.Services.AddSecurityRateLimiting();
+builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 
 // Manejo global de excepciones con ProblemDetails (RFC 7807)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -229,6 +230,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapComercioEndpoints();
 app.MapMerchantEndpoints();
+app.MapOfferEndpoints();
 app.MapMediaEndpoints();
 
 await app.RunAsync();
