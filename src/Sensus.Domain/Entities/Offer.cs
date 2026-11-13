@@ -119,7 +119,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             return Result.Failure<Offer>(Error.Validation("Offer.ExpiredEndDate", "La fecha de vencimiento debe estar en el futuro."));
         }
 
-        var discountedPrice = Math.Round(originalPrice * (1 - (discountPercentage / 100m)), 2);
+        decimal discountedPrice = Math.Round(originalPrice * (1 - (discountPercentage / 100m)), 2);
 
         var offer = new Offer(
             Guid.NewGuid(),

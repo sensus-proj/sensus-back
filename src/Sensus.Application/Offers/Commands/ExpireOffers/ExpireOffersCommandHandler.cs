@@ -25,7 +25,7 @@ public sealed class ExpireOffersCommandHandler : IRequestHandler<ExpireOffersCom
 
     public async Task<Result<ExpireOffersResultDto>> Handle(ExpireOffersCommand request, CancellationToken cancellationToken)
     {
-        var now = _dateTimeProvider.UtcNow;
+        DateTime now = _dateTimeProvider.UtcNow;
         _logger.LogInformation("Iniciando verificación automática de expiración de ofertas a las {NowUtc}", now);
 
         var expiredCount = await _offerRepository.ExpireOffersAsync(now, cancellationToken);
