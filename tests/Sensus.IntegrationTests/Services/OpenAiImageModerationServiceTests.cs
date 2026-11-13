@@ -35,6 +35,7 @@ public sealed class OpenAiImageModerationServiceTests
 
         // Assert
         result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
         result.Message.Should().Be("La imagen no puede estar vacía.");
     }
 
@@ -55,6 +56,7 @@ public sealed class OpenAiImageModerationServiceTests
 
             // Assert
             result.IsApproved.Should().BeTrue();
+            result.Decision.Should().Be("Approved");
             result.Message.Should().Contain("Moderación omitida");
         }
         finally
@@ -80,6 +82,11 @@ public sealed class OpenAiImageModerationServiceTests
                     {
                         ["hate"] = false,
                         ["violence"] = false
+                    },
+                    category_scores = new Dictionary<string, double>
+                    {
+                        ["hate"] = 0.01,
+                        ["violence"] = 0.02
                     }
                 }
             }
@@ -99,6 +106,7 @@ public sealed class OpenAiImageModerationServiceTests
 
         // Assert
         result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
         result.Message.Should().Be("Imagen aprobada.");
     }
 
@@ -138,8 +146,153 @@ public sealed class OpenAiImageModerationServiceTests
 
         // Assert
         result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
         result.Message.Should().Be(OpenAiImageModerationService.PolicyViolationMessage);
         result.FlaggedCategories.Should().Contain("hate");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenCategoryScoresExceedHighThreshold_ReturnsRejected()
+    {
+        // Arrange
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-score-high",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool>
+                    {
+                        ["violence"] = false
+                    },
+                    category_scores = new Dictionary<string, double>
+                    {
+                        ["violence"] = 0.88
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            DefaultHighThreshold = 0.75
+        });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3]);
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
+        result.FlaggedCategories.Should().Contain("violence");
+        result.Message.Should().Be(OpenAiImageModerationService.PolicyViolationMessage);
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenCategoryScoresFallInIntermediateBand_ReturnsQuarantine()
+    {
+        // Arrange
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-score-mid",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool>
+                    {
+                        ["sexual"] = false
+                    },
+                    category_scores = new Dictionary<string, double>
+                    {
+                        ["sexual"] = 0.52
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            DefaultLowThreshold = 0.35,
+            DefaultHighThreshold = 0.75
+        });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3]);
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+        result.FlaggedCategories.Should().Contain("sexual");
+        result.Message.Should().Be(OpenAiImageModerationService.QuarantineMessage);
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenTextContextIsProvided_SendsBothTextAndImageInPayload()
+    {
+        // Arrange
+        string capturedBody = string.Empty;
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-multi",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool>(),
+                    category_scores = new Dictionary<string, double>()
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(req =>
+        {
+            if (req.Content != null)
+            {
+                capturedBody = req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            }
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+            };
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key" });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Oferta de tacos al pastor");
+
+        // Assert
+        result.IsApproved.Should().BeTrue();
+        capturedBody.Should().NotBeEmpty();
+        capturedBody.Should().Contain("Oferta de tacos al pastor");
+        capturedBody.Should().Contain("image_url");
+        capturedBody.Should().Contain("text");
     }
 
     [Fact]
@@ -187,6 +340,7 @@ public sealed class OpenAiImageModerationServiceTests
 
         // Assert
         result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
         result.Message.Should().Be(OpenAiImageModerationService.PolicyViolationMessage);
     }
 }

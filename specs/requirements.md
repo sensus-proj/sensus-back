@@ -117,11 +117,11 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
-| `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Pendiente |
-| `FR-018-02` | 018 | FR | Externalizar los umbrales en configuración | Must | Pendiente |
-| `FR-018-03` | 018 | FR | Registrar qué umbral se aplicó en cada decisión | Must | Pendiente |
-| `FR-018-04` | 018 | FR | Permitir ajustar umbrales sin recompilar | Should | Pendiente |
-| `NFR-018-01` | 018 | NFR | Trazabilidad | 100 % de decisiones con umbral registrado | Pendiente |
+| `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
+| `FR-018-02` | 018 | FR | Externalizar los umbrales en configuración | Must | Implementado |
+| `FR-018-03` | 018 | FR | Registrar qué umbral se aplicó en cada decisión | Must | Implementado |
+| `FR-018-04` | 018 | FR | Permitir ajustar umbrales sin recompilar | Should | Implementado |
+| `NFR-018-01` | 018 | NFR | Trazabilidad | 100 % de decisiones con umbral registrado | Implementado |
 | `FR-019-01` | 019 | FR | Marcar el contenido no aprobado como PendienteRevision | Must | Pendiente |
 | `FR-019-02` | 019 | FR | Impedir el acceso público al contenido en cuarentena | Must | Pendiente |
 | `FR-019-03` | 019 | FR | Definir y aplicar retención máxima | Must | Pendiente |
