@@ -4,6 +4,7 @@ using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Repositories;
+using Sensus.Domain.Entities;
 
 namespace Sensus.Application.Offers.Commands.RepublishOffer;
 
@@ -36,13 +37,13 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
             return Result.Failure<OfferDto>(Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para republicar ofertas."));
         }
 
-        var comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null || !comercio.Activo)
+        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
+        if (comercio is null || !comercio!.Activo)
         {
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
         }
 
-        var offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
+        Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
         if (offer is null)
         {
             return Result.Failure<OfferDto>(Error.NotFound("Offer.NotFound", "La oferta especificada no existe."));
@@ -53,8 +54,8 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.Forbidden", "No tiene autorización para republicar una oferta de otro comercio."));
         }
 
-        var now = _dateTimeProvider.UtcNow;
-        var republishResult = offer.Republish(request.NewStartsAt, request.NewEndsAt, request.NewStock, now);
+        DateTime now = _dateTimeProvider.UtcNow;
+        Result republishResult = offer.Republish(request.NewStartsAt, request.NewEndsAt, request.NewStock, now);
         if (republishResult.IsFailure)
         {
             return Result.Failure<OfferDto>(republishResult.Error);

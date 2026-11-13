@@ -160,4 +160,40 @@ public class RepublishOfferCommandHandlerTests
 
         await _offerRepository.Received(1).UpdateAsync(offer, Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenRepublishFailsDomainValidation()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        // Oferta actualmente publicada (no se puede republicar si está activa)
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            comercio.Id,
+            "Oferta activa",
+            "Desc",
+            100m,
+            20,
+            80m,
+            5,
+            _now.AddHours(-1),
+            _now.AddDays(2),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now.AddHours(-1));
+
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Offer?>(offer));
+
+        var command = new RepublishOfferCommand(offer.Id, _now.AddHours(1), _now.AddDays(2), 10);
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.CannotRepublishActive");
+        await _offerRepository.DidNotReceive().UpdateAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
 }

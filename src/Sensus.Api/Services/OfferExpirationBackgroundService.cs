@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Offers.Commands.ExpireOffers;
+using Sensus.Application.Offers.DTOs;
+using Sensus.Domain.Common;
 
 namespace Sensus.Api.Services;
 
@@ -35,10 +37,10 @@ public sealed class OfferExpirationBackgroundService : BackgroundService
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+                using IServiceScope scope = _scopeFactory.CreateScope();
+                ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
-                var result = await sender.Send(new ExpireOffersCommand(), stoppingToken);
+                Result<ExpireOffersResultDto> result = await sender.Send(new ExpireOffersCommand(), stoppingToken);
                 if (result.IsSuccess && result.Value.ExpiredCount > 0)
                 {
                     _logger.LogInformation("Expiración automática: {Count} ofertas pasaron a estado Expired.", result.Value.ExpiredCount);

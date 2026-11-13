@@ -37,13 +37,13 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             return Result.Failure<OfferDto>(Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para publicar ofertas."));
         }
 
-        var comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
+        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
         if (comercio is null || !comercio.Activo)
         {
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado para publicar ofertas."));
         }
 
-        var offerResult = Offer.Create(
+        Result<Offer> offerResult = Offer.Create(
             comercio.Id,
             request.Title,
             request.Description,
@@ -62,7 +62,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             return Result.Failure<OfferDto>(offerResult.Error);
         }
 
-        var offer = offerResult.Value;
+        Offer offer = offerResult.Value;
         await _offerRepository.AddAsync(offer, cancellationToken);
 
         _logger.LogInformation("Oferta {OfferId} creada exitosamente para el comercio {ComercioId}. Vigencia hasta {EndsAtUtc}",

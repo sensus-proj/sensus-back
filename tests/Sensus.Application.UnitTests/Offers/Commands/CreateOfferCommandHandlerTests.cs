@@ -98,4 +98,28 @@ public class CreateOfferCommandHandlerTests
 
         await _offerRepository.Received(1).AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFailure_WhenOfferCreateFailsDomainValidation()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        // Fecha de fin en el pasado respecto a _now
+        var command = new CreateOfferCommand(
+            "Combo Inválido",
+            "Descripción válida",
+            100m,
+            10,
+            5,
+            _now.AddDays(-2),
+            _now.AddDays(-1));
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ExpiredEndDate");
+        await _offerRepository.DidNotReceive().AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
 }

@@ -250,4 +250,481 @@ public class OfferTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Offer.CannotRepublishActive");
     }
+
+    [Fact]
+    public void Create_ShouldFail_WhenMerchantIdIsEmpty()
+    {
+        var result = Offer.Create(
+            Guid.Empty,
+            "Título válido",
+            "Descripción válida",
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.MerchantIdRequired");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("AB")]
+    public void Create_ShouldFail_WhenTitleIsTooShortOrEmpty(string title)
+    {
+        var result = Offer.Create(
+            _merchantId,
+            title,
+            "Descripción válida",
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidTitle");
+    }
+
+    [Fact]
+    public void Create_ShouldFail_WhenTitleIsTooLong()
+    {
+        var longTitle = new string('A', 101);
+        var result = Offer.Create(
+            _merchantId,
+            longTitle,
+            "Descripción válida",
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidTitle");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("1234")]
+    public void Create_ShouldFail_WhenDescriptionIsTooShortOrEmpty(string desc)
+    {
+        var result = Offer.Create(
+            _merchantId,
+            "Título válido",
+            desc,
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidDescription");
+    }
+
+    [Fact]
+    public void Create_ShouldFail_WhenDescriptionIsTooLong()
+    {
+        var longDesc = new string('D', 501);
+        var result = Offer.Create(
+            _merchantId,
+            "Título válido",
+            longDesc,
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidDescription");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-10)]
+    public void Create_ShouldFail_WhenOriginalPriceIsZeroOrNegative(decimal price)
+    {
+        var result = Offer.Create(
+            _merchantId,
+            "Título válido",
+            "Descripción válida",
+            price,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidOriginalPrice");
+    }
+
+    [Fact]
+    public void Create_ShouldFail_WhenEndsAtIsInThePast()
+    {
+        var result = Offer.Create(
+            _merchantId,
+            "Título válido",
+            "Descripción válida",
+            100m,
+            10,
+            5,
+            _now.AddDays(-2),
+            _now.AddHours(-1),
+            nowUtc: _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ExpiredEndDate");
+    }
+
+    [Fact]
+    public void Expire_ShouldReturnSuccess_WhenOfferIsAlreadyExpired()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Ya expirada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Expired,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        var result = offer.Expire(_now);
+
+        result.IsSuccess.Should().BeTrue();
+        offer.Status.Should().Be(OfferStatus.Expired);
+    }
+
+    [Fact]
+    public void Republish_ShouldFail_WhenNewEndsAtIsBeforeNewStartsAt()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Expirada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Expired,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        var result = offer.Republish(_now.AddDays(2), _now.AddDays(1), 10, _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidValidityDates");
+    }
+
+    [Fact]
+    public void Republish_ShouldFail_WhenNewEndsAtIsInThePast()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Expirada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Expired,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        var result = offer.Republish(_now.AddDays(-2), _now.AddHours(-1), 10, _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ExpiredEndDate");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Republish_ShouldFail_WhenNewStockIsLessThanOne(int stock)
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Expirada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Expired,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        var result = offer.Republish(_now.AddHours(1), _now.AddDays(2), stock, _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidStock");
+    }
+
+    [Fact]
+    public void Republish_ShouldSucceed_WhenOfferIsArchived()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Archivada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Archived,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        var newStartsAt = _now.AddHours(1);
+        var newEndsAt = _now.AddDays(3);
+        var result = offer.Republish(newStartsAt, newEndsAt, 20, _now);
+
+        result.IsSuccess.Should().BeTrue();
+        offer.Status.Should().Be(OfferStatus.Published);
+        offer.Stock.Should().Be(20);
+        offer.StartsAt.Should().Be(newStartsAt);
+        offer.EndsAt.Should().Be(newEndsAt);
+    }
+
+    [Fact]
+    public void Pause_ShouldSucceed_WhenOfferIsPublished()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Publicada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now);
+
+        var result = offer.Pause(_now);
+
+        result.IsSuccess.Should().BeTrue();
+        offer.Status.Should().Be(OfferStatus.Paused);
+    }
+
+    [Fact]
+    public void Pause_ShouldFail_WhenOfferIsNotPublished()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Pausada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            OfferStatus.Paused,
+            null,
+            null,
+            null,
+            _now);
+
+        var result = offer.Pause(_now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.CannotPause");
+    }
+
+    [Fact]
+    public void Resume_ShouldSucceed_WhenOfferIsPausedAndNotExpired()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Pausada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(-1),
+            _now.AddDays(2),
+            OfferStatus.Paused,
+            null,
+            null,
+            null,
+            _now.AddHours(-1));
+
+        var result = offer.Resume(_now);
+
+        result.IsSuccess.Should().BeTrue();
+        offer.Status.Should().Be(OfferStatus.Published);
+    }
+
+    [Fact]
+    public void Resume_ShouldFail_WhenOfferIsNotPaused()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Publicada",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now);
+
+        var result = offer.Resume(_now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.CannotResume");
+    }
+
+    [Fact]
+    public void Resume_ShouldTransitionToExpiredAndFail_WhenOfferVigencyPassed()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Pausada que ya venció",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddDays(-3),
+            _now.AddHours(-1), // vencida
+            OfferStatus.Paused,
+            null,
+            null,
+            null,
+            _now.AddDays(-3));
+
+        var result = offer.Resume(_now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.OfferExpired");
+        offer.Status.Should().Be(OfferStatus.Expired);
+    }
+
+    [Fact]
+    public void Archive_ShouldSetStatusToArchived()
+    {
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Por archivar",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now);
+
+        var result = offer.Archive(_now);
+
+        result.IsSuccess.Should().BeTrue();
+        offer.Status.Should().Be(OfferStatus.Archived);
+    }
+
+    [Fact]
+    public void IsActive_ShouldReturnExpectedBooleans()
+    {
+        var validOffer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            _merchantId,
+            "Activa",
+            "Descripción",
+            100m,
+            10,
+            90m,
+            5,
+            _now.AddHours(-1),
+            _now.AddHours(5),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now.AddHours(-1));
+
+        validOffer.IsActive(_now).Should().BeTrue();
+
+        // Sin stock
+        var zeroStockOffer = Offer.Reconstitute(
+            Guid.NewGuid(), _merchantId, "Sin stock", "Desc", 100m, 10, 90m, 0,
+            _now.AddHours(-1), _now.AddHours(5), OfferStatus.Published, null, null, null, _now.AddHours(-1));
+        zeroStockOffer.IsActive(_now).Should().BeFalse();
+
+        // Aún no inicia
+        var futureOffer = Offer.Reconstitute(
+            Guid.NewGuid(), _merchantId, "Futura", "Desc", 100m, 10, 90m, 5,
+            _now.AddHours(2), _now.AddHours(5), OfferStatus.Published, null, null, null, _now);
+        futureOffer.IsActive(_now).Should().BeFalse();
+
+        // Ya expiró
+        var expiredOffer = Offer.Reconstitute(
+            Guid.NewGuid(), _merchantId, "Expirada", "Desc", 100m, 10, 90m, 5,
+            _now.AddDays(-2), _now.AddHours(-1), OfferStatus.Published, null, null, null, _now.AddDays(-2));
+        expiredOffer.IsActive(_now).Should().BeFalse();
+
+        // Estado Paused
+        var pausedOffer = Offer.Reconstitute(
+            Guid.NewGuid(), _merchantId, "Pausada", "Desc", 100m, 10, 90m, 5,
+            _now.AddHours(-1), _now.AddHours(5), OfferStatus.Paused, null, null, null, _now.AddHours(-1));
+        pausedOffer.IsActive(_now).Should().BeFalse();
+    }
 }

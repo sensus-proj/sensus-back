@@ -28,11 +28,11 @@ public sealed class ExpireOffersCommandHandler : IRequestHandler<ExpireOffersCom
         DateTime now = _dateTimeProvider.UtcNow;
         _logger.LogInformation("Iniciando verificación automática de expiración de ofertas a las {NowUtc}", now);
 
-        var expiredCount = await _offerRepository.ExpireOffersAsync(now, cancellationToken);
+        int expiredCount = await _offerRepository.ExpireOffersAsync(now, cancellationToken);
 
         _logger.LogInformation("Proceso de vigencia finalizado. Se marcaron {Count} ofertas como Expired.", expiredCount);
 
-        var result = new ExpireOffersResultDto(expiredCount, now);
+        ExpireOffersResultDto result = new(expiredCount, now);
         return Result.Success(result);
     }
 }

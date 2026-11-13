@@ -77,7 +77,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         double? longitude = null,
         DateTime? nowUtc = null)
     {
-        var now = nowUtc ?? DateTime.UtcNow;
+        DateTime now = nowUtc ?? DateTime.UtcNow;
 
         if (merchantId == Guid.Empty)
         {
@@ -121,7 +121,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
 
         decimal discountedPrice = Math.Round(originalPrice * (1 - (discountPercentage / 100m)), 2);
 
-        var offer = new Offer(
+        Offer offer = new(
             Guid.NewGuid(),
             merchantId,
             title.Trim(),
@@ -162,7 +162,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         DateTime createdAtUtc,
         DateTime? lastModifiedAtUtc = null)
     {
-        var offer = new Offer(
+        Offer offer = new(
             id,
             merchantId,
             title,
