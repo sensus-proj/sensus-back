@@ -13,6 +13,7 @@ namespace Sensus.IntegrationTests.Services;
 public sealed class OpenAiImageModerationServiceTests
 {
     private readonly ILogger<OpenAiImageModerationService> _logger = Substitute.For<ILogger<OpenAiImageModerationService>>();
+    private static readonly string[] WeaponsCategory = ["weapons"];
 
     private sealed class DelegatingMockHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
     {
@@ -342,5 +343,140 @@ public sealed class OpenAiImageModerationServiceTests
         result.IsApproved.Should().BeFalse();
         result.Decision.Should().Be("Rejected");
         result.Message.Should().Be(OpenAiImageModerationService.PolicyViolationMessage);
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WithGpt4oMini_WhenWeaponDetected_ReturnsRejected()
+    {
+        // Arrange
+        var chatContent = JsonSerializer.Serialize(new
+        {
+            decision = "Rejected",
+            reason = "Se detectó presencia de un arma de fuego.",
+            flagged_categories = WeaponsCategory,
+            category_scores = new Dictionary<string, double> { ["weapons"] = 0.95 }
+        });
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = chatContent
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini" });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Oferta de pistola 9mm");
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
+        result.Message.Should().Be("Se detectó presencia de un arma de fuego.");
+        result.FlaggedCategories.Should().Contain("weapons");
+        result.CategoryScores.Should().ContainKey("weapons");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WithGpt4oMini_WhenCleanProduct_ReturnsApproved()
+    {
+        // Arrange
+        var chatContent = JsonSerializer.Serialize(new
+        {
+            decision = "Approved",
+            reason = "Producto comercial seguro.",
+            flagged_categories = Array.Empty<string>(),
+            category_scores = new Dictionary<string, double> { ["weapons"] = 0.0, ["hate"] = 0.0 }
+        });
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = chatContent
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini" });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Hamburguesa clásica");
+
+        // Assert
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+        result.Message.Should().Be("Imagen aprobada.");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WithGpt4oMini_WhenSuspicious_ReturnsQuarantine()
+    {
+        // Arrange
+        var chatContent = JsonSerializer.Serialize(new
+        {
+            decision = "Quarantine",
+            reason = "Objeto sospechoso similar a réplica.",
+            flagged_categories = WeaponsCategory,
+            category_scores = new Dictionary<string, double> { ["weapons"] = 0.45 }
+        });
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = chatContent
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini" });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Juguete de colección");
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+        result.Message.Should().Be("Objeto sospechoso similar a réplica.");
+        result.FlaggedCategories.Should().Contain("weapons");
     }
 }
