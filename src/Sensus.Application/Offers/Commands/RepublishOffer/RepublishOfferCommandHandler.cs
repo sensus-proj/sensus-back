@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
-using Sensus.Domain.Repositories;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.RepublishOffer;
 

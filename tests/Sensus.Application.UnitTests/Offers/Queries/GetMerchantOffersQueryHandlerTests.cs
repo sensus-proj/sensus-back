@@ -18,6 +18,8 @@ public class GetMerchantOffersQueryHandlerTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly DateTime _now = new(2026, 11, 12, 12, 0, 0, DateTimeKind.Utc);
 
+    private static readonly string[] ExpectedTitles = { "Oferta 1", "Oferta 2" };
+
     public GetMerchantOffersQueryHandlerTests()
     {
         _offerRepository = Substitute.For<IOfferRepository>();
@@ -73,7 +75,7 @@ public class GetMerchantOffersQueryHandlerTests
     public async Task Handle_ShouldReturnForbidden_WhenMerchantIsNotActive()
     {
         var comercio = Comercio.Create(_userId, "Comercio Inactivo", "Calle 123", "06000", 19.4, -99.1).Value;
-        comercio.Desactivar();
+        comercio.Deactivate();
 
         _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Comercio?>(comercio));
@@ -104,7 +106,7 @@ public class GetMerchantOffersQueryHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(2);
-        result.Value.Select(o => o.Title).Should().Contain(new[] { "Oferta 1", "Oferta 2" });
+        result.Value.Select(o => o.Title).Should().Contain(ExpectedTitles);
     }
 
     [Fact]
@@ -128,8 +130,8 @@ public class GetMerchantOffersQueryHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(1);
-        result.Value.First().Title.Should().Be("Oferta Publicada");
-        result.Value.First().Status.Should().Be("Published");
+        result.Value[0].Title.Should().Be("Oferta Publicada");
+        result.Value[0].Status.Should().Be("Published");
     }
 
     [Fact]
