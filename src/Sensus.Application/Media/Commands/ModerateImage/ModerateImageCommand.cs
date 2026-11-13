@@ -9,4 +9,5 @@ namespace Sensus.Application.Media.Commands.ModerateImage;
 /// </summary>
 public sealed record ModerateImageCommand(
     string ImageBase64,
-    string? ContentType = "image/jpeg") : IRequest<Result<ModerateImageResponseDto>>;
+    string? ContentType = "image/jpeg",
+    string? TextContext = null) : IRequest<Result<ModerateImageResponseDto>>;

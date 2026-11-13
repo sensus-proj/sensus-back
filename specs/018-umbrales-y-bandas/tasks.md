@@ -5,21 +5,21 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Pendiente |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado | Implementado |
+| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T018-01 | Implementar: Política de bandas como regla de negocio | Domain | `FR-018-01` | — | Pendiente |
-| T018-02 | Implementar: Evaluación y decisión | Application | `FR-018-01` | T018-01 | Pendiente |
-| T018-03 | Implementar: Configuración de umbrales por entorno | Infraestructura | `FR-018-01` | T018-02 | Pendiente |
-| T018-04 | Modelar la política de bandas | Domain | `FR-018-01` | T018-03 | Pendiente |
-| T018-05 | Externalizar umbrales por entorno | Infraestructura | `FR-018-02` | T018-04 | Pendiente |
-| T018-06 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-018-01` | T018-05 | Pendiente |
-| T018-07 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-018-01` | T018-06 | Pendiente |
-| T018-08 | Registrar evidencias del Constitution Check | Docs | `FR-018-01` | T018-07 | Pendiente |
+| T018-01 | Implementar: Política de bandas como regla de negocio | Application | `FR-018-01` | — | Completada |
+| T018-02 | Implementar: Evaluación y decisión | Application | `FR-018-01` | T018-01 | Completada |
+| T018-03 | Implementar: Configuración de umbrales por entorno | Infraestructura | `FR-018-01` | T018-02 | Completada |
+| T018-04 | Modelar la política de bandas | Application | `FR-018-01` | T018-03 | Completada |
+| T018-05 | Externalizar umbrales por entorno | Infraestructura | `FR-018-02` | T018-04 | Completada |
+| T018-06 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-018-01` | T018-05 | Completada |
+| T018-07 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-018-01` | T018-06 | Completada |
+| T018-08 | Registrar evidencias del Constitution Check | Docs | `FR-018-01` | T018-07 | Completada |
 
 ## Notas de ejecución
 

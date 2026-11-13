@@ -27,8 +27,9 @@ public sealed class ModerateImageCommandHandlerTests
         _moderationService.ModerateImageBytesAsync(
                 Arg.Any<byte[]>(),
                 Arg.Any<string>(),
+                Arg.Any<string?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new ImageModerationResult(true, "Aprobada"));
+            .Returns(new ImageModerationResult(true, "Aprobada", null, "Approved"));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -36,6 +37,7 @@ public sealed class ModerateImageCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Approved.Should().BeTrue();
+        result.Value.Decision.Should().Be("Approved");
         result.Value.Message.Should().Be("Aprobada");
     }
 
@@ -52,8 +54,9 @@ public sealed class ModerateImageCommandHandlerTests
         _moderationService.ModerateImageBytesAsync(
                 Arg.Any<byte[]>(),
                 Arg.Any<string>(),
+                Arg.Any<string?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new ImageModerationResult(false, "No se pudo subir la imagen por políticas de seguridad.", ExpectedFlaggedCategories));
+            .Returns(new ImageModerationResult(false, "No se pudo subir la imagen por políticas de seguridad.", ExpectedFlaggedCategories, "Rejected"));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -61,8 +64,63 @@ public sealed class ModerateImageCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Approved.Should().BeFalse();
+        result.Value.Decision.Should().Be("Rejected");
         result.Value.Message.Should().Be("No se pudo subir la imagen por políticas de seguridad.");
         result.Value.FlaggedCategories.Should().Contain("hate");
+    }
+
+    [Fact]
+    public async Task Handle_WhenImageIsInQuarantineBand_ReturnsQuarantineResult()
+    {
+        // Arrange
+        var testBytes = new byte[] { 50, 60, 70 };
+        var base64 = Convert.ToBase64String(testBytes);
+        var command = new ModerateImageCommand(base64);
+
+        var scores = new Dictionary<string, double> { ["sexual"] = 0.45 };
+        _moderationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(
+                IsApproved: false,
+                Message: "Enviado a cuarentena",
+                FlaggedCategories: ["sexual"],
+                Decision: "Quarantine",
+                CategoryScores: scores));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Approved.Should().BeFalse();
+        result.Value.Decision.Should().Be("Quarantine");
+        result.Value.CategoryScores.Should().ContainKey("sexual");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTextContextIsProvided_PassesTextContextToModerationService()
+    {
+        // Arrange
+        var testBytes = new byte[] { 7, 8, 9 };
+        var base64 = Convert.ToBase64String(testBytes);
+        var command = new ModerateImageCommand(base64, "image/jpeg", "Oferta especial de sushi 2x1");
+
+        _moderationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Is("image/jpeg"),
+                Arg.Is("Oferta especial de sushi 2x1"),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(true, "Aprobada", null, "Approved"));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Approved.Should().BeTrue();
     }
 
     [Fact]
@@ -76,6 +134,7 @@ public sealed class ModerateImageCommandHandlerTests
         _moderationService.ModerateImageBytesAsync(
                 Arg.Is<byte[]>(b => b.SequenceEqual(testBytes)),
                 Arg.Is("image/png"),
+                Arg.Any<string?>(),
                 Arg.Any<CancellationToken>())
             .Returns(new ImageModerationResult(true));
 
@@ -111,6 +170,7 @@ public sealed class ModerateImageCommandHandlerTests
         _moderationService.ModerateImageBytesAsync(
                 Arg.Any<byte[]>(),
                 Arg.Any<string>(),
+                Arg.Any<string?>(),
                 Arg.Any<CancellationToken>())
             .Returns(new ImageModerationResult(true, null));
 
@@ -133,6 +193,7 @@ public sealed class ModerateImageCommandHandlerTests
         _moderationService.ModerateImageBytesAsync(
                 Arg.Any<byte[]>(),
                 Arg.Any<string>(),
+                Arg.Any<string?>(),
                 Arg.Any<CancellationToken>())
             .Returns(new ImageModerationResult(false, null));
 
