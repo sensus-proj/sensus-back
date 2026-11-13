@@ -56,4 +56,26 @@ public class MediaEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         dto.Should().NotBeNull();
         dto!.Approved.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Moderate_WithTextContext_ShouldReturnOkWithDecision()
+    {
+        var tokenGenerator = _factory.Services.GetRequiredService<IJwtTokenGenerator>();
+        var (guestToken, _) = tokenGenerator.GenerateGuestToken();
+
+        var command = new ModerateImageCommand(Convert.ToBase64String([1, 2, 3, 4]), "image/jpeg", "Hamburguesa doble con queso");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/media/moderate")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<ModerateImageResponseDto>();
+        dto.Should().NotBeNull();
+        dto!.Approved.Should().BeTrue();
+        dto.Decision.Should().Be("Approved");
+    }
 }

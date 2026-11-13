@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 2.8.0 · **Actualizado:** 2026-11-08 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
+**Version:** 2.9.0 · **Actualizado:** 2026-11-12 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,14 +11,14 @@
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-08 |
+| Última actualización | 2026-11-12 |
 | Fase SDD | `specify` completada — 43 specs activas y 1 en backlog; el SDD convive con el código de Sprint 1 en la rama `SprintOscar` |
 | Rama de trabajo | `SprintOscar`, creada desde `origin/Sprint1` de `sensus-proj/sensus-back`; `Sprint1` de la organización permanece sin modificar |
 | Agente | OpenCode — Big Pickle |
 | Constitución vigente | v1.3.0 (enmendada 2026-11-08) |
 | AGENTS.md vigente | v1.3.0 |
 | Solución .NET | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests); `sensus-back.slnx` retirado |
-| Última tarea completada | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045, D25) y Caché Distribuido con Redis (Spec 048, D24). Verificado: 201 pruebas superadas, `Sensus.Infra` sintetizado sin warnings, `dotnet format` sin cambios y 47 specs SDD conformes |
+| Última tarea completada | Implementación de Moderación Inteligente Multimodal con Bandas y Umbrales (Spec 018 / 017, D27). Verificado: 226 pruebas superadas, dotnet format sin cambios, análisis granular de category_scores, contexto multimodal (imagen + texto) y fail-closed integral |
 | Restricción activa | Git autorizado **solo** para esta migración (rama `SprintOscar`); cualquier otra operación sigue requiriendo autorización del responsable |
 
 ---
@@ -68,6 +68,7 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D24 | Implementación de Caché Distribuido con Redis (Spec 048) | 2026-11-08 | `ICacheService` en Application, `RedisCacheService` en Infrastructure con `StackExchange.Redis`, fallback graceful a persistencia, TTL por entidad en `appsettings.json` e invalidación integrada en perfil de usuario y comercio. 201 pruebas en verde |
 | D25 | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045) | 2026-11-08 | Hospedaje dual Kestrel/Lambda en `Sensus.Api` (`AddAWSLambdaHosting(LambdaEventSource.HttpApi)`) y stack `SensusInfraStack` en `infra/` con AWS Lambda (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (retención 7 días + alarmas 5xx/errores), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
 | D26 | Despliegue en AWS Serverless (API Gateway HTTP API v2 + AWS Lambda .NET 10 en `us-east-2`) | 2026-11-09 | URL base oficial en producción: `https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/`. Validado con endpoints `/health` (200 OK) y ProblemDetails RFC 7231. Sustituye la IP provisional de EC2 (`18-117-247-171.sslip.io`) y se sincroniza en `NetworkClient.kt` del cliente móvil. |
+| D27 | Moderación Inteligente Multimodal y Bandas de Decisión (Spec 018 / 017) | 2026-11-12 | Análisis granular de `category_scores` de `omni-moderation-latest`, evaluación multimodal conjunta (imagen + texto contextual), bandas configurables en `appsettings.json` (Aprobado, Cuarentena, Rechazo) por categoría y fail-closed integral. 226 pruebas en verde |
 
 ---
 
