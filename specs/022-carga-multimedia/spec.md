@@ -4,7 +4,7 @@
 |---|---|
 | ID | 022 |
 | Slug | `carga-multimedia` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

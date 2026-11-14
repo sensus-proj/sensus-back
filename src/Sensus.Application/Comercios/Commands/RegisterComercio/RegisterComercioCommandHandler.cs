@@ -74,6 +74,15 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         var (latitud, longitud) = geocodeResult.Value;
 
         var now = _dateTimeProvider.UtcNow;
+
+        var categoria = MerchantCategoryCatalog.Default;
+        if (!string.IsNullOrWhiteSpace(request.Categoria) &&
+            !MerchantCategoryCatalog.TryParse(request.Categoria, out categoria))
+        {
+            return Result.Failure<RegisterComercioResponseDto>(
+                Error.Validation("Comercio.CategoriaInvalida", "La categoría del comercio no pertenece al catálogo."));
+        }
+
         var comercioResult = Comercio.Create(
             usuarioId,
             request.NombreComercial,
@@ -81,7 +90,8 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
             request.CodigoPostal,
             latitud,
             longitud,
-            now);
+            now,
+            categoria);
 
         if (comercioResult.IsFailure)
         {

@@ -14,10 +14,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] Un token pertenece a un solo usuario
-- [ ] Los tokens inválidos se eliminan
-- [ ] El envío no falla si no hay dispositivos
-- [ ] El SDK del proveedor no sale de Infrastructure
+- [x] Un token pertenece a un solo usuario
+- [x] Los tokens inválidos se eliminan
+- [x] El envío no falla si no hay dispositivos
+- [x] El SDK del proveedor no sale de Infrastructure
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -44,12 +44,12 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
 | Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 

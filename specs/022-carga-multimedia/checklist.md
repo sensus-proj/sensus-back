@@ -14,10 +14,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] La subida en Cloudinary se realiza con firma segura SHA-256
-- [ ] El tipo se valida por firma, no por extensión
-- [ ] El límite de tamaño está probado
-- [ ] La imagen se modera antes de exponerse
+- [x] La subida en Cloudinary se realiza con firma segura SHA-256
+- [x] El tipo se valida por firma, no por extensión
+- [x] El límite de tamaño está probado
+- [x] La imagen se modera antes de exponerse
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -44,12 +44,12 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
 | Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 

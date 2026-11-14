@@ -8,6 +8,8 @@ public static class SecurityExtensions
 {
     public const string AuthStrictPolicy = "auth-strict";
     public const string RecoverPolicy = "recover";
+    public const string ReadHeavyPolicy = "read-heavy";
+    public const string SensitiveWritePolicy = "sensitive-write";
 
     public const string RegisteredUserPolicy = "RegisteredUser";
     public const string MerchantOnlyPolicy = "MerchantOnly";
@@ -42,6 +44,34 @@ public static class SecurityExtensions
                     {
                         PermitLimit = 5,
                         Window = TimeSpan.FromMinutes(15),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+
+            options.AddPolicy(ReadHeavyPolicy, httpContext =>
+            {
+                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: clientIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+
+            options.AddPolicy(SensitiveWritePolicy, httpContext =>
+            {
+                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: clientIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 30,
+                        Window = TimeSpan.FromMinutes(1),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0
                     });

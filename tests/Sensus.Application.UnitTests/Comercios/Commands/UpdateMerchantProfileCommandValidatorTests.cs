@@ -61,4 +61,37 @@ public class UpdateMerchantProfileCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateMerchantProfileCommand.Direccion));
     }
+
+    [Fact]
+    public void Validate_ShouldPass_WhenCategoriaBelongsToCatalog()
+    {
+        var command = new UpdateMerchantProfileCommand(
+            "Mi Tiendita",
+            "Av. Insurgentes Sur 1234",
+            "03100",
+            null,
+            "Farmacias");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("NoExiste")]
+    [InlineData("999")]
+    public void Validate_ShouldFail_WhenCategoriaIsNotInCatalog(string categoria)
+    {
+        var command = new UpdateMerchantProfileCommand(
+            "Mi Tiendita",
+            "Av. Insurgentes Sur 1234",
+            "03100",
+            null,
+            categoria);
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateMerchantProfileCommand.Categoria));
+    }
 }

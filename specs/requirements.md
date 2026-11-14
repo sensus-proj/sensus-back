@@ -1,4 +1,4 @@
-# Registro de requisitos
+﻿# Registro de requisitos
 
 Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>` y `NFR-<spec>-<nn>`.
 
@@ -50,13 +50,13 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-006-01` | 006 | NFR | Latencia de consulta | p95 < 300 ms | Implementado |
 | `FR-007-01` | 007 | FR | Listar ofertas publicadas dentro de un radio de la ubicación enviada | Must | Pendiente |
 | `FR-007-02` | 007 | FR | Excluir ofertas vencidas, pausadas, archivadas o sin stock | Must | Pendiente |
-| `FR-007-03` | 007 | FR | Filtrar por categoría del catálogo | Should | Pendiente |
+| `FR-007-03` | 007 | FR | Filtrar por categoría del catálogo | Should | Implementado |
 | `FR-007-04` | 007 | FR | Aplicar pageSize 20 por defecto y 100 máximo | Must | Pendiente |
 | `FR-007-05` | 007 | FR | Ordenar por distancia ascendente y desempatar por fecha de publicación | Must | Pendiente |
 | `FR-007-06` | 007 | FR | Limitar el radio a 50 km y rechazar valores fuera de rango | Must | Pendiente |
 | `FR-007-07` | 007 | FR | Devolver la distancia en metros junto a cada oferta | Should | Pendiente |
-| `FR-007-08` | 007 | FR | Aceptar un radio de 1 a 5 km para el usuario registrado y rechazar valores fuera de ese rango | Must | Pendiente |
-| `FR-007-09` | 007 | FR | Aplicar un radio máximo estricto de 2 km para el usuario invitado | Must | Pendiente |
+| `FR-007-08` | 007 | FR | Aceptar un radio de 1 a 5 km para el usuario registrado y rechazar valores fuera de ese rango | Must | Implementado |
+| `FR-007-09` | 007 | FR | Aplicar un radio máximo estricto de 2 km para el usuario invitado | Must | Implementado |
 | `NFR-007-01` | 007 | NFR | Latencia del listado | p95 < 500 ms | Pendiente |
 | `NFR-007-02` | 007 | NFR | Consulta geoespacial | Sin recorrido completo de colección (índice 2dsphere) | Pendiente |
 | `FR-008-01` | 008 | FR | Eliminar el grupo de rutas /api/v1/comercio | Must | Pendiente |
@@ -140,16 +140,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Pendiente |
 | `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Pendiente |
 | `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Pendiente |
-| `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Pendiente |
-| `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Pendiente |
-| `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Pendiente |
-| `FR-022-04` | 022 | FR | Almacenar el archivo de forma privada hasta su aprobación | Must | Pendiente |
-| `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Pendiente |
-| `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Pendiente |
-| `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Pendiente |
-| `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Pendiente |
-| `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Pendiente |
-| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
+| `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Implementado |
+| `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Implementado |
+| `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Implementado |
+| `FR-022-04` | 022 | FR | Almacenar el archivo de forma privada hasta su aprobación | Must | Implementado |
+| `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Implementado |
+| `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Implementado |
+| `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Implementado |
+| `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Implementado |
+| `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Implementado |
+| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Implementado |
 | `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Pendiente |
 | `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Pendiente |
 | `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Pendiente |
@@ -181,16 +181,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
 | `NFR-026-02` | 026 | NFR | Índice | Compuesto por status + location + createdAt | Pendiente |
-| `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Pendiente |
-| `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Pendiente |
-| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Pendiente |
-| `FR-027-04` | 027 | FR | Seleccionar el adaptador FCM o SNS por configuración | Must | Pendiente |
-| `FR-027-05` | 027 | FR | Eliminar tokens rechazados por el proveedor | Must | Pendiente |
-| `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Pendiente |
-| `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Pendiente |
-| `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Pendiente |
-| `NFR-027-02` | 027 | NFR | Latencia de despacho | p95 < 2 s | Pendiente |
-| `NFR-027-03` | 027 | NFR | Acoplamiento al proveedor | Cero referencias al SDK fuera de Infrastructure | Pendiente |
+| `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
+| `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
+| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Implementado |
+| `FR-027-04` | 027 | FR | Seleccionar el adaptador FCM o SNS por configuración | Must | Implementado |
+| `FR-027-05` | 027 | FR | Eliminar tokens rechazados por el proveedor | Must | Implementado |
+| `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Implementado |
+| `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Implementado |
+| `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Implementado |
+| `NFR-027-02` | 027 | NFR | Latencia de despacho | p95 < 2 s | Implementado |
+| `NFR-027-03` | 027 | NFR | Acoplamiento al proveedor | Cero referencias al SDK fuera de Infrastructure | Implementado |
 | `FR-028-01` | 028 | FR | Exponer un endpoint de recepción de eventos | Must | Backlog |
 | `FR-028-02` | 028 | FR | Verificar la firma del emisor | Must | Backlog |
 | `FR-028-03` | 028 | FR | Garantizar idempotencia por eventId | Must | Backlog |
@@ -220,31 +220,31 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-030-03` | 030 | NFR | Trazabilidad | Toda eliminación registrada sin PII | Pendiente |
 | `FR-031-01` | 031 | FR | Actualizar los datos editables del comercio propio | Must | Pendiente |
 | `FR-031-02` | 031 | FR | Recalcular location y geohash cuando cambien las coordenadas | Must | Pendiente |
-| `FR-031-03` | 031 | FR | Validar categoría del catálogo y rangos de coordenadas | Must | Pendiente |
+| `FR-031-03` | 031 | FR | Validar categoría del catálogo y rangos de coordenadas | Must | Implementado |
 | `FR-031-04` | 031 | FR | Rechazar la edición sobre comercios ajenos con 403 | Must | Pendiente |
 | `FR-031-05` | 031 | FR | Registrar quién cambió qué y cuándo | Should | Pendiente |
 | `FR-031-06` | 031 | FR | Mantener las ofertas publicadas sin cambios de identificador | Must | Pendiente |
 | `NFR-031-01` | 031 | NFR | Latencia de actualización | p95 < 600 ms | Pendiente |
 | `NFR-031-02` | 031 | NFR | Consistencia espacial | 100 % de comercios con location válida | Pendiente |
-| `FR-032-01` | 032 | FR | Devolver el detalle de una oferta visible con comercio, vigencia, stock y precio | Must | Pendiente |
-| `FR-032-02` | 032 | FR | Responder 404 si la oferta no existe o no es visible | Must | Pendiente |
-| `FR-032-03` | 032 | FR | Registrar una vista por usuario, oferta y día | Must | Pendiente |
-| `FR-032-04` | 032 | FR | Responder 204 a la vista sin revelar datos internos | Must | Pendiente |
-| `FR-032-05` | 032 | FR | Indicar si el usuario ya tiene un apartado activo sobre la oferta | Should | Pendiente |
-| `FR-032-06` | 032 | FR | No permitir vistas sobre ofertas archivadas | Must | Pendiente |
-| `NFR-032-01` | 032 | NFR | Latencia del detalle | p95 < 350 ms | Pendiente |
-| `NFR-032-02` | 032 | NFR | Sobrecarga de la vista | < 100 ms y sin bloquear la respuesta | Pendiente |
-| `FR-033-01` | 033 | FR | Crear un apartado descontando stock de forma atómica | Must | Pendiente |
-| `FR-033-02` | 033 | FR | Rechazar el apartado si no hay stock o la oferta no es visible | Must | Pendiente |
-| `FR-033-03` | 033 | FR | Permitir un solo apartado activo por usuario y oferta | Must | Pendiente |
-| `FR-033-04` | 033 | FR | Generar un código firmado con claimId, offerId y expiración, y su imagen QR | Must | Pendiente |
-| `FR-033-05` | 033 | FR | Caducar el apartado a las 24 horas y devolver el stock | Must | Pendiente |
-| `FR-033-06` | 033 | FR | Exponer POST /api/v1/offers/claims/{code}/redeem para el comerciante propietario | Must | Pendiente |
-| `FR-033-07` | 033 | FR | Marcar el canje como usado y rechazar un segundo canje del mismo código | Must | Pendiente |
-| `FR-033-08` | 033 | FR | Impedir que un comerciante canjee códigos de otro comercio | Must | Pendiente |
-| `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Pendiente |
-| `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Pendiente |
-| `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Pendiente |
+| `FR-032-01` | 032 | FR | Devolver el detalle de una oferta visible con comercio, vigencia, stock y precio | Must | Implementado |
+| `FR-032-02` | 032 | FR | Responder 404 si la oferta no existe o no es visible | Must | Implementado |
+| `FR-032-03` | 032 | FR | Registrar una vista por usuario, oferta y día | Must | Implementado |
+| `FR-032-04` | 032 | FR | Responder 204 a la vista sin revelar datos internos | Must | Implementado |
+| `FR-032-05` | 032 | FR | Indicar si el usuario ya tiene un apartado activo sobre la oferta | Should | Implementado |
+| `FR-032-06` | 032 | FR | No permitir vistas sobre ofertas archivadas | Must | Implementado |
+| `NFR-032-01` | 032 | NFR | Latencia del detalle | p95 < 350 ms | Implementado |
+| `NFR-032-02` | 032 | NFR | Sobrecarga de la vista | < 100 ms y sin bloquear la respuesta | Implementado |
+| `FR-033-01` | 033 | FR | Crear un apartado descontando stock de forma atómica | Must | Implementado |
+| `FR-033-02` | 033 | FR | Rechazar el apartado si no hay stock o la oferta no es visible | Must | Implementado |
+| `FR-033-03` | 033 | FR | Permitir un solo apartado activo por usuario y oferta | Must | Implementado |
+| `FR-033-04` | 033 | FR | Generar un código firmado con claimId, offerId y expiración, y su imagen QR | Must | Implementado |
+| `FR-033-05` | 033 | FR | Caducar el apartado a las 24 horas y devolver el stock | Must | Implementado |
+| `FR-033-06` | 033 | FR | Exponer POST /api/v1/offers/claims/{code}/redeem para el comerciante propietario | Must | Implementado |
+| `FR-033-07` | 033 | FR | Marcar el canje como usado y rechazar un segundo canje del mismo código | Must | Implementado |
+| `FR-033-08` | 033 | FR | Impedir que un comerciante canjee códigos de otro comercio | Must | Implementado |
+| `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Implementado |
+| `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Implementado |
+| `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Implementado |
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Pendiente |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Pendiente |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Pendiente |
@@ -334,14 +334,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Pendiente |
 | `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Pendiente |
 | `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Pendiente |
-| `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Pendiente |
-| `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Pendiente |
-| `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Pendiente |
-| `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Pendiente |
-| `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Pendiente |
-| `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Pendiente |
-| `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Pendiente |
-| `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Pendiente |
+| `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Implementado |
+| `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Implementado |
+| `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Implementado |
+| `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Implementado |
+| `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Implementado |
+| `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Implementado |
+| `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Implementado |
+| `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Implementado |
 | `FR-045-01` | 045 | FR | Habilitar hospedaje dual en `Sensus.Api` con `AddAWSLambdaHosting(LambdaEventSource.HttpApi)` | Must | Implementado |
 | `FR-045-02` | 045 | FR | Crear el proyecto AWS CDK en C# dentro de `infra/` con `cdk.json` funcional | Must | Implementado |
 | `FR-045-03` | 045 | FR | Definir función AWS Lambda con runtime `PROVIDED_AL2023`, arquitectura `ARM_64` y timeout 29 s | Must | Implementado |

@@ -1,0 +1,9 @@
+# Configuración de Gitleaks para Sensus Backend
+# Excluye suites de pruebas y especificaciones donde se utilizan valores sintéticos / mocks.
+
+[allowlist]
+description = "Permitir claves sintéticas y valores de prueba en suites de tests y specs"
+paths = [
+    '''tests/.*''',
+    '''specs/.*'''
+]

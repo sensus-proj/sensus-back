@@ -1,10 +1,10 @@
-# Spec 032 — Detalle de oferta y contador de vistas
+﻿# Spec 032 — Detalle de oferta y contador de vistas
 
 | Campo | Valor |
 |---|---|
 | ID | 032 |
 | Slug | `detalle-oferta-y-vistas` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

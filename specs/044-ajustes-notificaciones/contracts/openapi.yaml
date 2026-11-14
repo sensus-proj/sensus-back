@@ -1,26 +1,107 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 044 Ajustes de notificaciones"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 044. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato para obtener y actualizar las preferencias de notificación del usuario:
+    pushEnabled, offerAlerts, socialAlerts y radiusKm (Spec 044).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/users/settings:
     get:
-      summary: "Borrador de GET /api/v1/users/settings"
+      summary: Obtiene las preferencias de notificación del usuario
+      operationId: getNotificationSettings
       security: [{ bearerAuth: [] }]
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Preferencias de notificación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, pushEnabled, offerAlerts, socialAlerts, radiusKm, createdAtUtc]
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  pushEnabled:
+                    type: boolean
+                  offerAlerts:
+                    type: boolean
+                  socialAlerts:
+                    type: boolean
+                  radiusKm:
+                    type: integer
+                    minimum: 1
+                    maximum: 50
+                  createdAtUtc:
+                    type: string
+                    format: date-time
+                  updatedAtUtc:
+                    type: string
+                    format: date-time
+        '401':
+          description: No autenticado
+        '403':
+          description: Usuario invitado no permitido
+        '404':
+          description: Preferencias no encontradas
     put:
-      summary: "Borrador de PUT /api/v1/users/settings"
+      summary: Actualiza las preferencias de notificación del usuario
+      operationId: updateNotificationSettings
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pushEnabled:
+                  type: boolean
+                offerAlerts:
+                  type: boolean
+                socialAlerts:
+                  type: boolean
+                radiusKm:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Preferencias actualizadas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, pushEnabled, offerAlerts, socialAlerts, radiusKm, createdAtUtc]
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  pushEnabled:
+                    type: boolean
+                  offerAlerts:
+                    type: boolean
+                  socialAlerts:
+                    type: boolean
+                  radiusKm:
+                    type: integer
+                  createdAtUtc:
+                    type: string
+                    format: date-time
+                  updatedAtUtc:
+                    type: string
+                    format: date-time
+        '400':
+          description: Solicitud inválida (radiusKm fuera de rango)
+        '401':
+          description: No autenticado
+        '403':
+          description: Usuario invitado no permitido
+        '404':
+          description: Preferencias no encontradas
 components:
   securitySchemes:
     bearerAuth:

@@ -1,32 +1,94 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 033 Apartado de oferta con código QR"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 033. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato del apartado con reserva atómica de stock y código firmado con HMAC de un solo uso
+    (FR-033-01 a FR-033-08). El QR es el propio payload firmado; el cliente lo renderiza. Solo se
+    persiste el hash SHA-256 del código.
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers/{id}/claim:
     post:
-      summary: "Borrador de POST /api/v1/offers/{id}/claim"
+      summary: Aparta una unidad de la oferta y devuelve el código firmado
+      operationId: claimOffer
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200':
+          description: Apartado creado con código de un solo uso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClaimOfferResult' }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '403': { description: La sesión de invitado no puede apartar }
+        '409': { description: Oferta no disponible, sin stock o ya existe un apartado activo }
+        '429': { description: Límite de peticiones excedido }
   /api/v1/offers/claims/{code}/redeem:
     post:
-      summary: "Borrador de POST /api/v1/offers/claims/{code}/redeem"
+      summary: Canjea un código de apartado
+      operationId: redeemClaim
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200':
+          description: Apartado canjeado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedeemClaimResult' }
+        '400': { description: Código inválido, alterado o vencido }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '403': { description: El usuario no tiene comercio activo o el código es de otro comercio }
+        '404': { description: No existe el apartado asociado al código }
+        '409': { description: El apartado ya fue canjeado o expiró }
+        '429': { description: Límite de peticiones excedido }
+  /api/v1/offers/claims/expire-check:
+    post:
+      summary: Dispara la expiración de apartados vencidos y libera stock
+      operationId: triggerClaimExpiration
+      responses:
+        '200':
+          description: Resultado de la expiración
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpireClaimsResult' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    ClaimOfferResult:
+      type: object
+      required: [claimId, offerId, code, qrPayload, expiresAtUtc]
+      properties:
+        claimId: { type: string, format: uuid }
+        offerId: { type: string, format: uuid }
+        code: { type: string, description: "Código firmado v1.<claimId>.<offerId>.<exp>.<firma>" }
+        qrPayload: { type: string, description: "Contenido que el cliente renderiza como QR" }
+        expiresAtUtc: { type: string, format: date-time }
+    RedeemClaimResult:
+      type: object
+      required: [claimId, offerId, merchantId, redeemedAtUtc]
+      properties:
+        claimId: { type: string, format: uuid }
+        offerId: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        redeemedAtUtc: { type: string, format: date-time }
+    ExpireClaimsResult:
+      type: object
+      required: [expiredCount, returnedUnits, executedAtUtc]
+      properties:
+        expiredCount: { type: integer }
+        returnedUnits: { type: integer }
+        executedAtUtc: { type: string, format: date-time }

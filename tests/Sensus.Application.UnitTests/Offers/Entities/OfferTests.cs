@@ -727,4 +727,149 @@ public class OfferTests
             _now.AddHours(-1), _now.AddHours(5), OfferStatus.Paused, null, null, null, _now.AddHours(-1));
         pausedOffer.IsActive(_now).Should().BeFalse();
     }
+
+    [Fact]
+    public void Update_ShouldIncrementVersionAndReturnContentChanged_WhenDataIsValid()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            null,
+            null,
+            _now).Value;
+
+        offer.Version.Should().Be(1);
+
+        var result = offer.Update(
+            "Título modificado",
+            "Descripción original",
+            120m,
+            20,
+            15,
+            _now.AddHours(2),
+            _now.AddDays(3),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now.AddMinutes(5));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeTrue("porque el título cambió");
+        offer.Version.Should().Be(2);
+        offer.Title.Should().Be("Título modificado");
+        offer.OriginalPrice.Should().Be(120m);
+        offer.DiscountPercentage.Should().Be(20);
+        offer.DiscountedPrice.Should().Be(96m);
+        offer.Stock.Should().Be(15);
+    }
+
+    [Fact]
+    public void Update_ShouldReturnFalseForContentChanged_WhenOnlyPricingOrDatesChange()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            null,
+            null,
+            _now).Value;
+
+        var result = offer.Update(
+            "Título original",
+            "Descripción original",
+            150m,
+            30,
+            20,
+            _now.AddHours(2),
+            _now.AddDays(4),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now.AddMinutes(10));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeFalse("porque ni el título, ni la descripción ni la imagen cambiaron");
+        offer.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void Update_ShouldFail_WhenVersionMismatch()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            null,
+            null,
+            _now).Value;
+
+        var result = offer.Update(
+            "Título modificado",
+            "Descripción original",
+            100m,
+            10,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 5,
+            _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.VersionConflict");
+    }
+
+    [Fact]
+    public void Update_ShouldFail_WhenStockIsLessThanActiveClaims()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            null,
+            null,
+            _now).Value;
+
+        var result = offer.Update(
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            stock: 2,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            null,
+            activeClaimCount: 5,
+            expectedVersion: 1,
+            _now);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.StockBelowActiveClaims");
+    }
 }

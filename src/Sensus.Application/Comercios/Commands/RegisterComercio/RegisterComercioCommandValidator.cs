@@ -1,4 +1,5 @@
 using FluentValidation;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Application.Comercios.Commands.RegisterComercio;
 
@@ -22,5 +23,9 @@ public sealed class RegisterComercioCommandValidator : AbstractValidator<Registe
         RuleFor(x => x.CodigoPostal)
             .NotEmpty().WithMessage("El código postal es obligatorio.")
             .Matches(@"^[0-9a-zA-Z\s\-]{4,10}$").WithMessage("El código postal no tiene un formato válido (entre 4 y 10 caracteres alfanuméricos).");
+
+        RuleFor(x => x.Categoria)
+            .Must(c => string.IsNullOrWhiteSpace(c) || MerchantCategoryCatalog.TryParse(c, out _))
+            .WithMessage($"La categoría debe pertenecer al catálogo: {string.Join(", ", MerchantCategoryCatalog.Names)}.");
     }
 }

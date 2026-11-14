@@ -51,6 +51,12 @@ public sealed class OfferDocument
     [BsonElement("imageUrl")]
     public string? ImageUrl { get; set; }
 
+    [BsonElement("viewCount")]
+    public int ViewCount { get; set; }
+
+    [BsonElement("version")]
+    public int Version { get; set; } = 1;
+
     [BsonElement("latitude")]
     public double? Latitude { get; set; }
 
@@ -88,7 +94,9 @@ public sealed class OfferDocument
             Latitude,
             Longitude,
             CreatedAtUtc,
-            LastModifiedAtUtc);
+            LastModifiedAtUtc,
+            ViewCount,
+            Version);
     }
 
     public static OfferDocument FromDomain(Offer offer)
@@ -115,6 +123,8 @@ public sealed class OfferDocument
             ImageUrl = offer.ImageUrl,
             Latitude = offer.Latitude,
             Longitude = offer.Longitude,
+            ViewCount = offer.ViewCount,
+            Version = offer.Version,
             Ubicacion = geoPoint,
             CreatedAtUtc = offer.CreatedAtUtc,
             LastModifiedAtUtc = offer.LastModifiedAtUtc

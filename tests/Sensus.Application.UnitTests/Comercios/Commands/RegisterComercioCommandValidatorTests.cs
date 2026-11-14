@@ -61,4 +61,41 @@ public class RegisterComercioCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(RegisterComercioCommand.CodigoPostal));
     }
+
+    [Fact]
+    public void Validate_Should_BeValid_WhenCategoriaBelongsToCatalog()
+    {
+        var command = new RegisterComercioCommand(
+            "Mi Tienda",
+            "Av. Principal 123",
+            "06000",
+            "Restaurantes");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_Should_BeValid_WhenCategoriaIsOmitted()
+    {
+        var command = new RegisterComercioCommand("Mi Tienda", "Av. Principal 123", "06000");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("NoExiste")]
+    [InlineData("999")]
+    public void Validate_Should_Fail_WhenCategoriaIsNotInCatalog(string categoria)
+    {
+        var command = new RegisterComercioCommand("Mi Tienda", "Av. Principal 123", "06000", categoria);
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(RegisterComercioCommand.Categoria));
+    }
 }

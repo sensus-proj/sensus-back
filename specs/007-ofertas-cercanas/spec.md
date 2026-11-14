@@ -1,10 +1,10 @@
-# Spec 007 — Ofertas cercanas
+﻿# Spec 007 — Ofertas cercanas
 
 | Campo | Valor |
 |---|---|
 | ID | 007 |
 | Slug | `ofertas-cercanas` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
