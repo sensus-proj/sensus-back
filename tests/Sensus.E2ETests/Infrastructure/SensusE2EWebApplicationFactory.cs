@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Repositories;
+using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.TestKit.Fakes;
 
 namespace Sensus.E2ETests.Infrastructure;
@@ -12,6 +13,7 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 {
     public InMemoryUserRepository UserRepository { get; } = new();
     public InMemoryComercioRepository ComercioRepository { get; } = new();
+    public InMemoryOfferRepository OfferRepository { get; } = new();
     public InMemoryPasswordResetTokenRepository PasswordResetTokenRepository { get; } = new();
     public FakeProfileImageStorage FakeImageStorage { get; } = new();
     public FakeDateTimeProvider FakeClock { get; } = new();
@@ -24,11 +26,16 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.PostConfigure<MongoDbSettings>(settings => settings.ConnectionString = string.Empty);
+
             services.RemoveAll<IUserRepository>();
             services.AddSingleton<IUserRepository>(UserRepository);
 
             services.RemoveAll<IComercioRepository>();
             services.AddSingleton<IComercioRepository>(ComercioRepository);
+
+            services.RemoveAll<IOfferRepository>();
+            services.AddSingleton<IOfferRepository>(OfferRepository);
 
             services.RemoveAll<IPasswordResetTokenRepository>();
             services.AddSingleton<IPasswordResetTokenRepository>(PasswordResetTokenRepository);
