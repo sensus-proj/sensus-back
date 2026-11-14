@@ -9,15 +9,17 @@ public class HmacClaimCodeServiceTests
 {
     private static readonly DateTime Now = new(2026, 11, 13, 12, 0, 0, DateTimeKind.Utc);
 
-    private static HmacClaimCodeService CreateService(string secret = "test-secret-with-enough-entropy-123456")
+    private static HmacClaimCodeService CreateService(string secret)
     {
+        // Se pasa el secreto explícitamente; no hay valor por defecto que filtre gitleaks.
+        // El test "Constructor_ShouldFail_WhenSecretIsMissing" usa secret=" " para validar validación.
         return new HmacClaimCodeService(Options.Create(new ClaimCodeSettings { Secret = secret }));
     }
 
     [Fact]
     public void Generate_ThenValidate_ShouldReturnOriginalPayload()
     {
-        HmacClaimCodeService service = CreateService();
+        HmacClaimCodeService service = CreateService("test-secret-with-enough-entropy-123456");
         Guid claimId = Guid.NewGuid();
         Guid offerId = Guid.NewGuid();
 
@@ -33,7 +35,7 @@ public class HmacClaimCodeServiceTests
     [Fact]
     public void TryValidate_ShouldRejectTamperedCode()
     {
-        HmacClaimCodeService service = CreateService();
+        HmacClaimCodeService service = CreateService("test-secret-with-enough-entropy-123456");
         ClaimCode generated = service.Generate(Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(24));
         string tampered = generated.Code[..^1] + (generated.Code[^1] == 'A' ? 'B' : 'A');
 
@@ -43,7 +45,7 @@ public class HmacClaimCodeServiceTests
     [Fact]
     public void TryValidate_ShouldRejectCodeSignedWithAnotherSecret()
     {
-        ClaimCode generated = CreateService().Generate(Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(24));
+        ClaimCode generated = CreateService("test-secret-with-enough-entropy-123456").Generate(Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(24));
 
         CreateService("another-secret-with-different-entropy-987").TryValidate(generated.Code, Now, out _)
             .Should().BeFalse();
@@ -52,7 +54,7 @@ public class HmacClaimCodeServiceTests
     [Fact]
     public void TryValidate_ShouldRejectExpiredCode()
     {
-        HmacClaimCodeService service = CreateService();
+        HmacClaimCodeService service = CreateService("test-secret-with-enough-entropy-123456");
         ClaimCode generated = service.Generate(Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(1));
 
         service.TryValidate(generated.Code, Now.AddHours(2), out _).Should().BeFalse();
@@ -64,13 +66,13 @@ public class HmacClaimCodeServiceTests
     [InlineData("v1.a.b.c.d")]
     public void TryValidate_ShouldRejectMalformedCode(string code)
     {
-        CreateService().TryValidate(code, Now, out _).Should().BeFalse();
+        CreateService("test-secret-with-enough-entropy-123456").TryValidate(code, Now, out _).Should().BeFalse();
     }
 
     [Fact]
     public void CodeHash_ShouldBeDeterministicAndNotStorePlainCode()
     {
-        HmacClaimCodeService service = CreateService();
+        HmacClaimCodeService service = CreateService("test-secret-with-enough-entropy-123456");
         ClaimCode generated = service.Generate(Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(24));
 
         string first = service.ComputeHash(generated.Code);

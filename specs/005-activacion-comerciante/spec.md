@@ -97,8 +97,8 @@ Permitir que un usuario con cuenta unificada active el rol comercial creando el 
 - Depende de: 001, 002
 - La categoría del local (`Categoria`) se modela como `MerchantCategory` en la entidad `Comercio`
   (no en `Offer`) y se persiste en `comercios.categoria` con índice propio para el filtro de
-  `FR-007-03`. Es opcional en la solicitud y toma `Otros` cuando se omite, de modo que los
-  documentos y clientes previos siguen siendo válidos.
+  consulta por categoría. Es opcional en la solicitud y toma `Otros` cuando se omite, de modo que
+  los documentos y clientes previos siguen siendo válidos.
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 
