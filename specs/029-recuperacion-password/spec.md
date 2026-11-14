@@ -4,7 +4,7 @@
 |---|---|
 | ID | 029 |
 | Slug | `recuperacion-password` |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Ola | 1 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

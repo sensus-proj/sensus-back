@@ -4,7 +4,7 @@
 |---|---|
 | ID | 008 |
 | Slug | `retiro-endpoints-legacy` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

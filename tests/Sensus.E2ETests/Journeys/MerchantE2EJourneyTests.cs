@@ -83,7 +83,7 @@ public class MerchantE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFact
         updatedComercio.Horarios.Should().HaveCount(3);
 
         // 5. SE-008: Búsqueda de proximidad encuentra el comercio con sus nuevas coordenadas
-        using var nearbyReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/comercios/nearby?lat=19.434000&lng=-99.135000&radioMetros=1000");
+        using var nearbyReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/nearby?lat=19.434000&lng=-99.135000&radioMetros=1000");
         nearbyReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", merchantToken);
         var nearbyRes = await _client.SendAsync(nearbyReq);
         nearbyRes.StatusCode.Should().Be(HttpStatusCode.OK);

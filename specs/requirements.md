@@ -59,13 +59,13 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-007-09` | 007 | FR | Aplicar un radio máximo estricto de 2 km para el usuario invitado | Must | Implementado |
 | `NFR-007-01` | 007 | NFR | Latencia del listado | p95 < 500 ms | Pendiente |
 | `NFR-007-02` | 007 | NFR | Consulta geoespacial | Sin recorrido completo de colección (índice 2dsphere) | Pendiente |
-| `FR-008-01` | 008 | FR | Eliminar el grupo de rutas /api/v1/comercio | Must | Pendiente |
-| `FR-008-02` | 008 | FR | Eliminar el alias /api/v1/comercios | Must | Pendiente |
-| `FR-008-03` | 008 | FR | Devolver 404 en las rutas retiradas | Must | Pendiente |
-| `FR-008-04` | 008 | FR | Actualizar README, Sensus.Api.http y OpenAPI | Must | Pendiente |
-| `FR-008-05` | 008 | FR | No dejar referencias a rutas en español en el código | Must | Pendiente |
-| `NFR-008-01` | 008 | NFR | Rutas duplicadas | Cero en el contrato OpenAPI | Pendiente |
-| `NFR-008-02` | 008 | NFR | Cobertura del contrato | 100 % de rutas bajo /api/v1 en inglés | Pendiente |
+| `FR-008-01` | 008 | FR | Eliminar el grupo de rutas /api/v1/comercio | Must | Implementado |
+| `FR-008-02` | 008 | FR | Eliminar el alias /api/v1/comercios | Must | Implementado |
+| `FR-008-03` | 008 | FR | Devolver 404 en las rutas retiradas | Must | Implementado |
+| `FR-008-04` | 008 | FR | Actualizar README, Sensus.Api.http y OpenAPI | Must | Implementado |
+| `FR-008-05` | 008 | FR | No dejar referencias a rutas en español en el código | Must | Implementado |
+| `NFR-008-01` | 008 | NFR | Rutas duplicadas | Cero en el contrato OpenAPI | Implementado |
+| `NFR-008-02` | 008 | NFR | Cobertura del contrato | 100 % de rutas bajo /api/v1 en inglés | Implementado |
 | `FR-009-01` | 009 | FR | Toda respuesta de error usa ProblemDetails | Must | Pendiente |
 | `FR-009-02` | 009 | FR | Incluir traceId o correlationId en cada error | Must | Pendiente |
 | `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Pendiente |
@@ -99,14 +99,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-014-04` | 014 | FR | Registrar método, ruta, estado y duración | Should | Pendiente |
 | `NFR-014-01` | 014 | NFR | Campos obligatorios | timestamp, level, correlationId, message | Pendiente |
 | `NFR-014-02` | 014 | NFR | Sobrecarga | < 5 ms | Pendiente |
-| `FR-015-01` | 015 | FR | Publicar métricas de latencia, errores y throttling | Must | Pendiente |
-| `FR-015-02` | 015 | FR | Definir alarmas en IaC con umbrales explícitos | Must | Pendiente |
-| `FR-015-03` | 015 | FR | Notificar alarmas a un canal definido | Should | Pendiente |
+| `FR-015-01` | 015 | FR | Publicar métricas de latencia, errores y throttling | Must | Implementado |
+| `FR-015-02` | 015 | FR | Definir alarmas en IaC con umbrales explícitos | Must | Implementado |
+| `FR-015-03` | 015 | FR | Notificar alarmas a un canal definido | Should | Implementado |
 | `NFR-015-01` | 015 | NFR | Coste de alarmas | Dentro del Free Tier (10 alarmas) | Pendiente |
 | `NFR-015-02` | 015 | NFR | Latencia de detección | < 5 min | Pendiente |
-| `FR-016-01` | 016 | FR | Exponer /health/live sin dependencias externas | Must | Pendiente |
-| `FR-016-02` | 016 | FR | Exponer /health/ready verificando MongoDB | Must | Pendiente |
-| `FR-016-03` | 016 | FR | No exponer cadenas de conexión ni versiones | Must | Pendiente |
+| `FR-016-01` | 016 | FR | Exponer /health/live sin dependencias externas | Must | Implementado |
+| `FR-016-02` | 016 | FR | Exponer /health/ready verificando MongoDB | Must | Implementado |
+| `FR-016-03` | 016 | FR | No exponer cadenas de conexión ni versiones | Must | Implementado |
 | `NFR-016-01` | 016 | NFR | Latencia de readiness | < 500 ms | Pendiente |
 | `FR-017-01` | 017 | FR | Enviar imagen y texto en la misma solicitud de moderación | Must | Pendiente |
 | `FR-017-02` | 017 | FR | Consumir omni-moderation-latest con tiempo de espera acotado | Must | Pendiente |
@@ -122,10 +122,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-018-03` | 018 | FR | Registrar qué umbral se aplicó en cada decisión | Must | Implementado |
 | `FR-018-04` | 018 | FR | Permitir ajustar umbrales sin recompilar | Should | Implementado |
 | `NFR-018-01` | 018 | NFR | Trazabilidad | 100 % de decisiones con umbral registrado | Implementado |
-| `FR-019-01` | 019 | FR | Marcar el contenido no aprobado como PendienteRevision | Must | Pendiente |
-| `FR-019-02` | 019 | FR | Impedir el acceso público al contenido en cuarentena | Must | Pendiente |
-| `FR-019-03` | 019 | FR | Definir y aplicar retención máxima | Must | Pendiente |
-| `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Pendiente |
+| `FR-019-01` | 019 | FR | Marcar el contenido no aprobado como PendienteRevision | Must | Implementado |
+| `FR-019-02` | 019 | FR | Impedir el acceso público al contenido en cuarentena | Must | Implementado |
+| `FR-019-03` | 019 | FR | Definir y aplicar retención máxima | Must | Implementado |
+| `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Parcial |
 | `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Pendiente |
 | `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
 | `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Pendiente |
@@ -199,10 +199,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-028-01` | 028 | NFR | Latencia de respuesta | p95 < 500 ms | Backlog |
 | `NFR-028-02` | 028 | NFR | Duplicados procesados | Cero efectos duplicados | Backlog |
 | `FR-029-01` | 029 | FR | Exponer POST /api/v1/auth/recover y responder 202 siempre | Must | Pendiente |
-| `FR-029-02` | 029 | FR | Generar token de 32 bytes, almacenar solo su hash y caducarlo en 30 minutos | Must | Pendiente |
+| `FR-029-02` | 029 | FR | Generar token de 32 bytes, almacenar solo su hash y caducarlo en 30 minutos | Must | Parcial |
 | `FR-029-03` | 029 | FR | Invalidar tokens anteriores del mismo usuario al emitir uno nuevo | Must | Pendiente |
 | `FR-029-04` | 029 | FR | Enviar el enlace por correo mediante Amazon SES | Must | Pendiente |
-| `FR-029-05` | 029 | FR | Exponer POST /api/v1/auth/recover/confirm para fijar la nueva contraseña | Must | Pendiente |
+| `FR-029-05` | 029 | FR | Exponer POST /api/v1/auth/recover/confirm para fijar la nueva contraseña | Must | Implementado |
 | `FR-029-06` | 029 | FR | Rechazar tokens expirados, ya usados o inexistentes con 400 | Must | Pendiente |
 | `FR-029-07` | 029 | FR | Revocar todas las sesiones activas tras el cambio de contraseña | Must | Pendiente |
 | `NFR-029-01` | 029 | NFR | Latencia de solicitud | p95 < 700 ms | Pendiente |
@@ -377,13 +377,13 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
 | `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
 | `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Pendiente |
-| `FR-048-04` | 048 | FR | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must | Pendiente |
-| `FR-048-05` | 048 | FR | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must | Pendiente |
+| `FR-048-04` | 048 | FR | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must | Implementado |
+| `FR-048-05` | 048 | FR | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must | Implementado |
 | `FR-048-06` | 048 | FR | Cachear respuestas de `GET /feed/nearby` con TTL configurable | Must | Pendiente |
-| `FR-048-07` | 048 | FR | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must | Pendiente |
+| `FR-048-07` | 048 | FR | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must | Implementado |
 | `FR-048-08` | 048 | FR | Invalidar caché de feed al crear, actualizar o eliminar una publicación | Must | Pendiente |
 | `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Pendiente |
-| `FR-048-10` | 048 | FR | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must | Pendiente |
+| `FR-048-10` | 048 | FR | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must | Implementado |
 | `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Pendiente |
 | `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Pendiente |
 | `NFR-048-01` | 048 | NFR | Latencia de lectura con caché | p95 < 300 ms | Pendiente |

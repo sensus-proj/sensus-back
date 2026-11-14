@@ -17,7 +17,6 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         MapAuthGroup(app.MapGroup("/api/v1/auth"), isV1: true);
-        MapAuthGroup(app.MapGroup("/api/auth"), isV1: false); // Alias sin prefijo v1 para compatibilidad
 
         return app;
     }
@@ -139,6 +138,23 @@ public static class AuthEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         if (isV1) reset.WithName("ResetPassword");
+
+        // FR-029-05: ruta canónica de confirmación; /reset-password se mantiene como alias para la app móvil vigente.
+        var confirm = group.MapPost("/recover/confirm", async (
+            [FromBody] ResetPasswordCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireRateLimiting(SecurityExtensions.RecoverPolicy)
+        .WithSummary("FR-029-05: Confirma la recuperación fijando la nueva contraseña con el token de un solo uso")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) confirm.WithName("ConfirmPasswordRecovery");
 
         // Verificación de sesión / Perfil actual autenticado
         var me = group.MapGet("/me", (ClaimsPrincipal user) =>

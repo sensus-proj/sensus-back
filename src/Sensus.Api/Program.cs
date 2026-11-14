@@ -126,6 +126,7 @@ builder.Services.AddAppAuthorizationPolicies();
 builder.Services.AddSecurityRateLimiting();
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
+builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
 
 // Manejo global de excepciones con ProblemDetails (RFC 7807)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -165,7 +166,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddOpenApi();
 
 // Health Checks
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<Sensus.Api.Health.MongoReadinessHealthCheck>("mongodb", tags: ["ready"]);
 
 // Configuración de CORS segura con allowlist explícita (nunca AllowAnyOrigin)
 const string SensusCorsPolicy = "SensusCorsPolicy";
@@ -224,12 +226,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Endpoint de verificación de salud
-app.MapHealthChecks("/health");
+// FR-016-01: liveness (sin dependencias externas) y /health como alias compatible.
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+// FR-016-02: readiness; responde 503 si MongoDB no está disponible.
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 // Registro de endpoints
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
-app.MapComercioEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();

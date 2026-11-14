@@ -107,4 +107,59 @@ public sealed class MediaAssetTests
         asset.Status.Should().Be(MediaAssetStatus.Approved);
         asset.SecureUrl.Should().Be(originalUrl);
     }
+
+    [Fact]
+    public void Release_FromQuarantined_ShouldApprove()
+    {
+        var asset = MediaAsset.Create(Guid.NewGuid(), "public-id", "https://example.com/img.jpg", "image/jpeg", MediaAssetStatus.Quarantined, DateTime.UtcNow);
+
+        bool released = asset.Release();
+
+        released.Should().BeTrue();
+        asset.Status.Should().Be(MediaAssetStatus.Approved);
+    }
+
+    [Theory]
+    [InlineData(MediaAssetStatus.Pending)]
+    [InlineData(MediaAssetStatus.Approved)]
+    [InlineData(MediaAssetStatus.Rejected)]
+    public void Release_FromOtherStatus_ShouldNotChangeStatus(MediaAssetStatus status)
+    {
+        var asset = MediaAsset.Create(Guid.NewGuid(), "public-id", "https://example.com/img.jpg", "image/jpeg", status, DateTime.UtcNow);
+
+        bool released = asset.Release();
+
+        released.Should().BeFalse();
+        asset.Status.Should().Be(status);
+    }
+
+    [Fact]
+    public void IsQuarantineExpired_WhenQuarantinedBeyondRetention_ShouldBeTrue()
+    {
+        var created = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        var asset = MediaAsset.Create(Guid.NewGuid(), "public-id", "https://example.com/img.jpg", "image/jpeg", MediaAssetStatus.Quarantined, created);
+
+        asset.IsQuarantineExpired(created.AddDays(30), TimeSpan.FromDays(30)).Should().BeTrue();
+        asset.IsQuarantineExpired(created.AddDays(29), TimeSpan.FromDays(30)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsQuarantineExpired_WhenNotQuarantined_ShouldBeFalse()
+    {
+        var created = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        var asset = MediaAsset.Create(Guid.NewGuid(), "public-id", "https://example.com/img.jpg", "image/jpeg", MediaAssetStatus.Approved, created);
+
+        asset.IsQuarantineExpired(created.AddDays(90), TimeSpan.FromDays(30)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Purge_ShouldRejectAndClearUrl()
+    {
+        var asset = MediaAsset.Create(Guid.NewGuid(), "public-id", "https://example.com/img.jpg", "image/jpeg", MediaAssetStatus.Quarantined, DateTime.UtcNow);
+
+        asset.Purge();
+
+        asset.Status.Should().Be(MediaAssetStatus.Rejected);
+        asset.SecureUrl.Should().BeNull();
+    }
 }

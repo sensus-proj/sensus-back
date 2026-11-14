@@ -54,7 +54,7 @@ public class GuestModeE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFac
 
         // 2. SE-008: Consultar comercios cercanos solicitando radio de 5,000 metros
         // El servidor DEBE aplicar la política de límite estricto de 2,000 metros para Invitado
-        using var nearbyReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/comercios/nearby?lat=19.432608&lng=-99.133208&radioMetros=5000");
+        using var nearbyReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/nearby?lat=19.432608&lng=-99.133208&radioMetros=5000");
         nearbyReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
         var nearbyRes = await _client.SendAsync(nearbyReq);
         nearbyRes.StatusCode.Should().Be(HttpStatusCode.OK);

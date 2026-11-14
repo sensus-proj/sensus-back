@@ -43,4 +43,31 @@ public sealed class MongoMediaAssetRepository : IMediaAssetRepository
 
         return (int)await _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
     }
+
+    public async Task<IReadOnlyList<MediaAsset>> GetQuarantinedCreatedBeforeAsync(
+        DateTime cutoffUtc,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<MediaAssetDocument> filter = Builders<MediaAssetDocument>.Filter.And(
+            Builders<MediaAssetDocument>.Filter.Eq(d => d.Status, (int)MediaAssetStatus.Quarantined),
+            Builders<MediaAssetDocument>.Filter.Lt(d => d.CreatedAtUtc, cutoffUtc));
+
+        List<MediaAssetDocument> documents = await _collection
+            .Find(filter)
+            .SortBy(d => d.CreatedAtUtc)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task UpdateAsync(MediaAsset mediaAsset, CancellationToken cancellationToken = default)
+    {
+        MediaAssetDocument document = MediaAssetDocument.FromDomain(mediaAsset);
+        await _collection.ReplaceOneAsync(
+            Builders<MediaAssetDocument>.Filter.Eq(d => d.Id, document.Id),
+            document,
+            cancellationToken: cancellationToken);
+    }
 }

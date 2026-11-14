@@ -14,17 +14,20 @@ public sealed class ExpireClaimsCommandHandler : IRequestHandler<ExpireClaimsCom
     private readonly IOfferRepository _offerRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ExpireClaimsCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
 
     public ExpireClaimsCommandHandler(
         IOfferClaimRepository offerClaimRepository,
         IOfferRepository offerRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<ExpireClaimsCommandHandler> logger)
+        ILogger<ExpireClaimsCommandHandler> logger,
+        ICacheService? cacheService = null)
     {
         _offerClaimRepository = offerClaimRepository;
         _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<ExpireClaimsResultDto>> Handle(
@@ -53,6 +56,11 @@ public sealed class ExpireClaimsCommandHandler : IRequestHandler<ExpireClaimsCom
                     group.Key,
                     units);
             }
+        }
+
+        if (returnedUnits > 0)
+        {
+            await _cacheService.InvalidateAsync(null, cancellationToken);
         }
 
         _logger.LogInformation(

@@ -2,9 +2,12 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.Apigatewayv2;
 using Amazon.CDK.AWS.Budgets;
 using Amazon.CDK.AWS.CloudWatch;
+using Amazon.CDK.AWS.CloudWatch.Actions;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
+using Amazon.CDK.AWS.SNS;
+using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
 
 namespace Sensus.Infra;
@@ -132,7 +135,17 @@ public sealed class SensusInfraStack : Stack
         });
 
         // 5. Alarmas de Observabilidad en Amazon CloudWatch (FR-045-06, Spec 015)
-        _ = new Alarm(this, "SensusLambdaErrorsAlarm", new AlarmProps
+        // FR-015-03: canal de notificación único (SNS con suscripción por correo) para todas las alarmas.
+        var alarmEmail = Node.TryGetContext("alarmEmail") as string ?? budgetEmail;
+        var alarmTopic = new Topic(this, "SensusAlarmTopic", new TopicProps
+        {
+            TopicName = $"sensus-alarms-{envName}",
+            DisplayName = "Alarmas de Sensus Backend"
+        });
+        alarmTopic.AddSubscription(new EmailSubscription(alarmEmail));
+        var alarmAction = new SnsAction(alarmTopic);
+
+        var errorsAlarm = new Alarm(this, "SensusLambdaErrorsAlarm", new AlarmProps
         {
             AlarmName = $"sensus-lambda-errors-{envName}",
             AlarmDescription = "Alerta cuando la funcion Lambda de Sensus registra errores de ejecucion",
@@ -147,7 +160,7 @@ public sealed class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        _ = new Alarm(this, "SensusLambdaThrottlesAlarm", new AlarmProps
+        var throttlesAlarm = new Alarm(this, "SensusLambdaThrottlesAlarm", new AlarmProps
         {
             AlarmName = $"sensus-lambda-throttles-{envName}",
             AlarmDescription = "Alerta cuando la funcion Lambda de Sensus sufre throttling",
@@ -162,7 +175,7 @@ public sealed class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        _ = new Alarm(this, "SensusApi5xxAlarm", new AlarmProps
+        var api5xxAlarm = new Alarm(this, "SensusApi5xxAlarm", new AlarmProps
         {
             AlarmName = $"sensus-http-api-5xx-{envName}",
             AlarmDescription = "Alerta cuando AWS API Gateway devuelve respuestas 5xx en Sensus Backend",
@@ -182,6 +195,27 @@ public sealed class SensusInfraStack : Stack
             ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
+
+        // FR-015-01: latencia p95 de la función Lambda (el timeout configurado es de 29 s).
+        var latencyAlarm = new Alarm(this, "SensusLambdaLatencyAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-lambda-latency-p95-{envName}",
+            AlarmDescription = "Alerta cuando la latencia p95 de la funcion Lambda de Sensus supera los 3 segundos",
+            Metric = apiFunction.MetricDuration(new MetricOptions
+            {
+                Period = Duration.Minutes(5),
+                Statistic = "p95"
+            }),
+            Threshold = 3000,
+            EvaluationPeriods = 2,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+
+        foreach (var alarm in new[] { errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm })
+        {
+            alarm.AddAlarmAction(alarmAction);
+        }
 
         // 6. Presupuesto Mensual en AWS Budgets con Alarma de Costo (FR-045-07, Principio VI)
         _ = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps

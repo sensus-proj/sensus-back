@@ -29,7 +29,7 @@ Construida con **.NET 10 (LTS)** y **C# 14** sobre **MongoDB 8.x**, con **Clean 
 | Aspecto | Estado |
 |---|---|
 | Autenticación (`register`, `login`) | Implementado (001, 002); falta alinear `GET /users/profile` (003) |
-| Comercios (`POST /comercios`, `GET /comercios/me`) | Implementado con rutas en español; el contrato vigente es `/merchants` (005, 006, 008) |
+| Comercios (`/api/v1/merchants/*`) | Implementado; rutas legacy en español retiradas (005, 006, 008) |
 | Ofertas, apartado con QR, inventario | Especificado, sin implementar (007, 032–037) |
 | Feed social, favoritos, reportes | Especificado, sin implementar (024–026, 038–040) |
 | Búsqueda y recomendaciones | Especificado, sin implementar (041–043) |
@@ -128,11 +128,11 @@ dotnet user-secrets --project src/Sensus.Api set "MongoDbSettings:ConnectionStri
 | `POST` | `/api/v1/auth/register` | igual | Pública | [001](specs/001-registro-usuario/spec.md) |
 | `POST` | `/api/v1/auth/login` | igual | Pública | [002](specs/002-inicio-sesion/spec.md) |
 | `GET` | `/api/v1/auth/me` | `GET /api/v1/users/profile` | JWT | [003](specs/003-perfil-usuario/spec.md) |
-| `POST` | `/api/v1/comercios` | `POST /api/v1/merchants/activate` | JWT | [005](specs/005-activacion-comerciante/spec.md) |
-| `GET` | `/api/v1/comercios/me` | `GET /api/v1/merchants/me` | JWT | [006](specs/006-consulta-mi-comercio/spec.md) |
+| `POST` | `/api/v1/merchants/activate` | igual | JWT | [005](specs/005-activacion-comerciante/spec.md) |
+| `GET` | `/api/v1/merchants/me` | igual | JWT | [006](specs/006-consulta-mi-comercio/spec.md) |
 
-Las rutas legacy `/api/v1/comercio/registro`, `/api/v1/comercio/mi-comercio` y los alias en español se
-retiran en el spec [008](specs/008-retiro-endpoints-legacy/spec.md).
+Las rutas legacy `/api/v1/comercio/*`, `/api/v1/comercios/*` y los alias sin `/v1` se retiraron
+(spec [008](specs/008-retiro-endpoints-legacy/spec.md)); responden 404.
 
 El catálogo completo —29 endpoints en 8 módulos— está mapeado en
 [`specs/README.md`](specs/README.md). Los ejemplos de invocación viven en

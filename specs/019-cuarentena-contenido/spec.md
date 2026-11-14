@@ -4,7 +4,7 @@
 |---|---|
 | ID | 019 |
 | Slug | `cuarentena-contenido` |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

@@ -4,7 +4,7 @@
 |---|---|
 | ID | 015 |
 | Slug | `metricas-y-alarmas` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

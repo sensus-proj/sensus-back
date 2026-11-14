@@ -12,18 +12,18 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 005 | [Activación del rol comercial](005-activacion-comerciante/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 001, 002 |
 | 006 | [Consulta de mi comercio](006-consulta-mi-comercio/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 005 |
 | 007 | [Ofertas cercanas](007-ofertas-cercanas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 005, 010, 034 |
-| 008 | [Retiro de endpoints legacy](008-retiro-endpoints-legacy/spec.md) | Plataforma | Nuevo | 6 | Pendiente | 001, 005, 006 |
+| 008 | [Retiro de endpoints legacy](008-retiro-endpoints-legacy/spec.md) | Plataforma | Nuevo | 6 | Implementado | 001, 005, 006 |
 | 009 | [Errores uniformes con ProblemDetails](009-errores-problemdetails/spec.md) | Plataforma | Nuevo | 0 | Parcial | Ninguna |
 | 010 | [Paginación estándar](010-paginacion-estandar/spec.md) | Plataforma | Nuevo | 0 | Parcial | 009 |
 | 011 | [Contrato OpenAPI](011-contrato-openapi/spec.md) | Plataforma | Nuevo | 0 | Parcial | 009, 010 |
 | 012 | [CORS y HTTPS por entorno](012-cors-y-https/spec.md) | Seguridad | Nuevo | 6 | Pendiente | Ninguna |
 | 013 | [Control de tasa de peticiones](013-rate-limiting/spec.md) | Seguridad | Nuevo | 6 | Pendiente | 012 |
 | 014 | [Logs estructurados y correlación](014-logs-estructurados-correlacion/spec.md) | Observabilidad | Nuevo | 6 | Pendiente | 009 |
-| 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Pendiente | 014 |
-| 016 | [Health checks](016-health-checks/spec.md) | Observabilidad | Nuevo | 6 | Parcial | 014 |
+| 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
+| 016 | [Health checks](016-health-checks/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
 | 017 | [Moderación multimodal de contenido](017-moderacion-multimodal/spec.md) | Moderación | Nuevo | 4 | Pendiente | 009, 022 |
 | 018 | [Umbrales y bandas de decisión](018-umbrales-y-bandas/spec.md) | Moderación | Nuevo | 4 | Implementado | 017 |
-| 019 | [Cuarentena de contenido](019-cuarentena-contenido/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 018 |
+| 019 | [Cuarentena de contenido](019-cuarentena-contenido/spec.md) | Moderación | Nuevo | 4 | Parcial | 017, 018 |
 | 020 | [Sanciones y baneo de usuario](020-sanciones-y-baneo/spec.md) | Moderación | Nuevo | 4 | Pendiente | 018, 019 |
 | 021 | [Auditoría de moderación](021-auditoria-moderacion/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 020 |
 | 022 | [Carga de multimedia](022-carga-multimedia/spec.md) | Multimedia | Nuevo | 4 | Implementado | 017, 013 |
@@ -33,7 +33,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 007, 010 |
 | 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Implementado | 003, 013 |
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
-| 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 001, 004, 013 |
+| 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Parcial | 001, 004, 013 |
 | 030 | [Eliminación de cuenta y datos](030-eliminacion-cuenta/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 003, 004, 020 |
 | 031 | [Edición del perfil de comercio](031-edicion-perfil-comercio/spec.md) | Comercios | Nuevo | 2 | Implementado | 005, 006 |
 | 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007 |

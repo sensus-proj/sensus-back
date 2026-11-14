@@ -16,7 +16,6 @@ public static class MediaEndpoints
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder app)
     {
         MapMediaGroup(app.MapGroup("/api/v1/media"), isV1: true);
-        MapMediaGroup(app.MapGroup("/api/media"), isV1: false);
 
         return app;
     }

@@ -55,7 +55,7 @@ public sealed class GetMyComercioQueryHandler : IRequestHandler<GetMyComercioQue
         var dto = comercio.ToDto();
         if (_cacheService is not null)
         {
-            await _cacheService.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(30), cancellationToken);
+            await _cacheService.SetForEntityAsync(cacheKey, dto, "MyComercio", cancellationToken);
         }
 
         return Result.Success(dto);

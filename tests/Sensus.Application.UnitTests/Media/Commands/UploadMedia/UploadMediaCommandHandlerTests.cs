@@ -106,6 +106,8 @@ public sealed class UploadMediaCommandHandlerTests
         result.Value.Status.Should().Be("Approved");
         result.Value.MediaId.Should().NotBe(Guid.Empty);
         result.Value.PublicId.Should().Be("public-id-123");
+        result.Value.SecureUrl.Should().Be("https://cloudinary.com/img.jpg");
+        await _mediaStorage.DidNotReceive().DeleteImageAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _mediaAssetRepository.Received(1).AddAsync(Arg.Any<MediaAsset>(), Arg.Any<CancellationToken>());
     }
 
@@ -130,6 +132,11 @@ public sealed class UploadMediaCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be("Quarantined");
         result.Value.ModerationDecision.Should().Be("Quarantine");
+        result.Value.SecureUrl.Should().BeNull();
+        await _mediaStorage.DidNotReceive().DeleteImageAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _mediaAssetRepository.Received(1).AddAsync(
+            Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Quarantined && a.SecureUrl != null),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -153,5 +160,10 @@ public sealed class UploadMediaCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be("Rejected");
         result.Value.ModerationDecision.Should().Be("Rejected");
+        result.Value.SecureUrl.Should().BeNull();
+        await _mediaStorage.Received(1).DeleteImageAsync("public-id-123", Arg.Any<CancellationToken>());
+        await _mediaAssetRepository.Received(1).AddAsync(
+            Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Rejected && a.SecureUrl == null),
+            Arg.Any<CancellationToken>());
     }
 }
