@@ -24,21 +24,21 @@ public sealed class MongoNotificationSettingsRepository : INotificationSettingsR
 
     public async Task<NotificationSettings?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<NotificationSettingsDocument>.Filter.Eq(d => d.UserId, userId);
-        var document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+        FilterDefinition<NotificationSettingsDocument> filter = Builders<NotificationSettingsDocument>.Filter.Eq(d => d.UserId, userId);
+        NotificationSettingsDocument? document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
         return document?.ToDomain();
     }
 
     public async Task AddAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
-        var document = NotificationSettingsDocument.FromDomain(settings);
+        NotificationSettingsDocument document = NotificationSettingsDocument.FromDomain(settings);
         await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 
     public async Task UpdateAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
-        var document = NotificationSettingsDocument.FromDomain(settings);
-        var filter = Builders<NotificationSettingsDocument>.Filter.Eq(d => d.UserId, settings.UserId);
+        NotificationSettingsDocument document = NotificationSettingsDocument.FromDomain(settings);
+        FilterDefinition<NotificationSettingsDocument> filter = Builders<NotificationSettingsDocument>.Filter.Eq(d => d.UserId, settings.UserId);
         await _collection.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
     }
 }

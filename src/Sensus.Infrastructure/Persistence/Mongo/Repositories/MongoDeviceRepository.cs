@@ -24,52 +24,52 @@ public sealed class MongoDeviceRepository : IDeviceRepository
 
     public async Task AddAsync(Device device, CancellationToken cancellationToken = default)
     {
-        var document = DeviceDocument.FromDomain(device);
+        DeviceDocument document = DeviceDocument.FromDomain(device);
         await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 
     public async Task<Device?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<DeviceDocument>.Filter.Eq(d => d.Token, token);
-        var document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.Eq(d => d.Token, token);
+        DeviceDocument? document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
         return document?.ToDomain();
     }
 
     public async Task<Device?> GetByUserAndDeviceIdAsync(Guid userId, string deviceId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<DeviceDocument>.Filter.And(
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.And(
             Builders<DeviceDocument>.Filter.Eq(d => d.UserId, userId),
             Builders<DeviceDocument>.Filter.Eq(d => d.DeviceId, deviceId));
-        var document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+        DeviceDocument? document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
         return document?.ToDomain();
     }
 
     public async Task<Device?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<DeviceDocument>.Filter.Eq(d => d.Id, id);
-        var document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.Eq(d => d.Id, id);
+        DeviceDocument? document = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
         return document?.ToDomain();
     }
 
     public async Task UpdateAsync(Device device, CancellationToken cancellationToken = default)
     {
-        var document = DeviceDocument.FromDomain(device);
-        var filter = Builders<DeviceDocument>.Filter.Eq(d => d.Id, device.Id);
+        DeviceDocument document = DeviceDocument.FromDomain(device);
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.Eq(d => d.Id, device.Id);
         await _collection.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
     }
 
     public async Task<bool> ExistsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<DeviceDocument>.Filter.Eq(d => d.UserId, userId);
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.Eq(d => d.UserId, userId);
         return await _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken) > 0;
     }
 
     public async Task<List<Device>> GetActiveByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<DeviceDocument>.Filter.And(
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.And(
             Builders<DeviceDocument>.Filter.Eq(d => d.UserId, userId),
             Builders<DeviceDocument>.Filter.Eq(d => d.IsActive, true));
-        var documents = await _collection.Find(filter).ToListAsync(cancellationToken);
+        List<DeviceDocument> documents = await _collection.Find(filter).ToListAsync(cancellationToken);
         return documents.Select(d => d.ToDomain()).ToList();
     }
 }

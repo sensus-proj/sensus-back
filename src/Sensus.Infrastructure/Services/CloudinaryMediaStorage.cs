@@ -44,16 +44,16 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
 
         try
         {
-            var timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var folder = $"sensus/media/{ownerId}";
+            long timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string folder = $"sensus/media/{ownerId}";
 
             // Cadena canónica para firma en orden alfabético
-            var toSign = $"folder={folder}&timestamp={timestampSeconds}{_settings.ApiSecret}";
-            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            string toSign = $"folder={folder}&timestamp={timestampSeconds}{_settings.ApiSecret}";
+            byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
+            string signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
-            using var content = new MultipartFormDataContent();
-            using var fileContent = new ByteArrayContent(imageBytes);
+            using MultipartFormDataContent content = new();
+            using ByteArrayContent fileContent = new ByteArrayContent(imageBytes);
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
             content.Add(fileContent, "file", $"upload-{ownerId}-{timestampSeconds}.{GetExtension(contentType)}");
             content.Add(new StringContent(_settings.ApiKey), "api_key");
@@ -61,20 +61,20 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
             content.Add(new StringContent(folder), "folder");
             content.Add(new StringContent(signature), "signature");
 
-            var uploadUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/upload";
-            using var response = await SharedHttpClient.PostAsync(uploadUrl, content, cancellationToken);
+            string uploadUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/upload";
+            using HttpResponseMessage response = await SharedHttpClient.PostAsync(uploadUrl, content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Error al subir imagen a Cloudinary (HTTP {StatusCode}): {ErrorBody}", response.StatusCode, errorBody);
                 return Result.Failure<MediaUploadResult>(
                     Error.Failure("Media.UploadFailed", "No se pudo subir la imagen al almacenamiento."));
             }
 
-            var responseJson = await response.Content.ReadFromJsonAsync<CloudinaryUploadResponse>(cancellationToken);
-            var publicId = responseJson?.PublicId ?? string.Empty;
-            var secureUrl = responseJson?.SecureUrl;
+            CloudinaryUploadResponse? responseJson = await response.Content.ReadFromJsonAsync<CloudinaryUploadResponse>(cancellationToken);
+            string publicId = responseJson?.PublicId ?? string.Empty;
+            string? secureUrl = responseJson?.SecureUrl;
 
             _logger.LogInformation("Imagen subida a Cloudinary: PublicId={PublicId}, OwnerId={OwnerId}", publicId, ownerId);
 
@@ -111,12 +111,12 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
 
         try
         {
-            var timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var toSign = $"public_id={publicId}&timestamp={timestampSeconds}{_settings.ApiSecret}";
-            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            long timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string toSign = $"public_id={publicId}&timestamp={timestampSeconds}{_settings.ApiSecret}";
+            byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
+            string signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
-            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            using FormUrlEncodedContent content = new(new Dictionary<string, string>
             {
                 ["public_id"] = publicId,
                 ["api_key"] = _settings.ApiKey,
@@ -124,8 +124,8 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
                 ["signature"] = signature
             });
 
-            var destroyUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/destroy";
-            using var response = await SharedHttpClient.PostAsync(destroyUrl, content, cancellationToken);
+            string destroyUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/destroy";
+            using HttpResponseMessage response = await SharedHttpClient.PostAsync(destroyUrl, content, cancellationToken);
             _logger.LogInformation("Imagen '{PublicId}' eliminada de Cloudinary (HTTP {StatusCode}).", publicId, (int)response.StatusCode);
             return response.IsSuccessStatusCode;
         }

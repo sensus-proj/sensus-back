@@ -37,7 +37,7 @@ public sealed class NotificationSettings : BaseEntity
 
     public static NotificationSettings CreateDefaults(Guid userId)
     {
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         return new NotificationSettings(
             Guid.NewGuid(),
             userId,

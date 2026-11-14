@@ -24,19 +24,19 @@ public sealed class GetNotificationSettingsQueryHandler : IRequestHandler<GetNot
         GetNotificationSettingsQuery request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUser.UserId;
-        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+        string? userId = _currentUser.UserId;
+        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out Guid parsedUserId))
         {
             return Result.Failure<NotificationSettingsDto>(
                 Error.Unauthorized("Settings.Unauthenticated", "Usuario no autenticado."));
         }
 
-        var settings = await _settingsRepository.GetByUserIdAsync(parsedUserId, cancellationToken);
+        NotificationSettings? settings = await _settingsRepository.GetByUserIdAsync(parsedUserId, cancellationToken);
 
         // Si no existe, devolver valores por defecto (FR-044-05)
         if (settings is null)
         {
-            var defaults = NotificationSettings.CreateDefaults(parsedUserId);
+            NotificationSettings defaults = NotificationSettings.CreateDefaults(parsedUserId);
             await _settingsRepository.AddAsync(defaults, cancellationToken);
 
             return Result.Success(new NotificationSettingsDto(

@@ -10,6 +10,7 @@ using Sensus.Application.Users.Commands.UpdateProfile;
 using Sensus.Application.Users.DTOs;
 using Sensus.Application.Users.Queries.GetNotificationSettings;
 using Sensus.Application.Users.Queries.GetProfile;
+using Sensus.Domain.Common;
 
 namespace Sensus.Api.Endpoints;
 
@@ -28,11 +29,11 @@ public static class UserEndpoints
         group.WithTags("Usuarios y Perfil (SE-006 / SE-009)");
 
         // SE-006: Obtener información del perfil
-        var getProfile = group.MapGet("/profile", async (
+        RouteHandlerBuilder getProfile = group.MapGet("/profile", async (
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new GetProfileQuery(), ct);
+            Result<UserDto> result = await sender.Send(new GetProfileQuery(), ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -45,12 +46,12 @@ public static class UserEndpoints
         if (isV1) getProfile.WithName("GetProfile");
 
         // SE-006: Actualizar información personal
-        var updateProfile = group.MapPut("/profile", async (
+        RouteHandlerBuilder updateProfile = group.MapPut("/profile", async (
             [FromBody] UpdateProfileCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(command, ct);
+            Result<UserDto> result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -64,11 +65,11 @@ public static class UserEndpoints
         if (isV1) updateProfile.WithName("UpdateProfile");
 
         // SE-006: Solicitar firma de subida para Cloudinary
-        var photoSignature = group.MapPost("/photo-signature", async (
+        RouteHandlerBuilder photoSignature = group.MapPost("/photo-signature", async (
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new GeneratePhotoSignatureCommand(), ct);
+            Result<CloudinarySignatureResponse> result = await sender.Send(new GeneratePhotoSignatureCommand(), ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -80,12 +81,12 @@ public static class UserEndpoints
         if (isV1) photoSignature.WithName("GeneratePhotoSignature");
 
         // Spec 027: Registro de token de dispositivo para notificaciones push
-        var registerDevice = group.MapPut("/device-token", async (
+        RouteHandlerBuilder registerDevice = group.MapPut("/device-token", async (
             [FromBody] RegisterDeviceCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(command, ct);
+            Result<DeviceTokenResponseDto> result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -98,11 +99,11 @@ public static class UserEndpoints
         if (isV1) registerDevice.WithName("RegisterDevice");
 
         // Spec 044: Obtener preferencias de notificación del usuario
-        var getSettings = group.MapGet("/settings", async (
+        RouteHandlerBuilder getSettings = group.MapGet("/settings", async (
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new GetNotificationSettingsQuery(), ct);
+            Result<NotificationSettingsDto> result = await sender.Send(new GetNotificationSettingsQuery(), ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -115,12 +116,12 @@ public static class UserEndpoints
         if (isV1) getSettings.WithName("GetNotificationSettings");
 
         // Spec 044: Actualizar preferencias de notificación del usuario
-        var updateSettings = group.MapPut("/settings", async (
+        RouteHandlerBuilder updateSettings = group.MapPut("/settings", async (
             [FromBody] UpdateNotificationSettingsCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(command, ct);
+            Result<NotificationSettingsDto> result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
@@ -134,12 +135,12 @@ public static class UserEndpoints
         if (isV1) updateSettings.WithName("UpdateNotificationSettings");
 
         // SE-009: Eliminación definitiva de cuenta y datos asociados
-        var deleteAccount = group.MapDelete("/account", async (
+        RouteHandlerBuilder deleteAccount = group.MapDelete("/account", async (
             [FromBody] DeleteAccountCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(command, ct);
+            Result result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)

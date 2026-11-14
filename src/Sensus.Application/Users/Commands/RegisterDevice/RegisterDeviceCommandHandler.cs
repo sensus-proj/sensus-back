@@ -31,19 +31,19 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
         RegisterDeviceCommand request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUser.UserId;
-        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+        string? userId = _currentUser.UserId;
+        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out Guid parsedUserId))
         {
             return Result.Failure<DeviceTokenResponseDto>(
                 Error.Unauthorized("Device.Unauthenticated", "Usuario no autenticado."));
         }
 
         // Validar el token con el proveedor antes de registrar (FR-027-03, FR-027-05)
-        var tokenValid = await _pushDispatcher.ValidateTokenAsync(request.Token, cancellationToken);
+        bool tokenValid = await _pushDispatcher.ValidateTokenAsync(request.Token, cancellationToken);
         if (!tokenValid)
         {
             // El token es inválido, se elimina si existía (FR-027-05)
-            var existingByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
+            Device? existingByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
             if (existingByToken is not null)
             {
                 existingByToken.Deactivate();
@@ -55,7 +55,7 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
         }
 
         // Buscar si ya existe un dispositivo con este deviceId para este usuario (FR-027-02)
-        var existing = await _deviceRepository.GetByUserAndDeviceIdAsync(parsedUserId, request.DeviceId, cancellationToken);
+        Device? existing = await _deviceRepository.GetByUserAndDeviceIdAsync(parsedUserId, request.DeviceId, cancellationToken);
 
         if (existing is not null)
         {
@@ -75,7 +75,7 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
         }
 
         // Verificar si el token ya pertenece a otro usuario y reasignar (FR-027-06)
-        var deviceByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
+        Device? deviceByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
         if (deviceByToken is not null && deviceByToken.UserId != parsedUserId)
         {
             // Reasignar: desactivar para el usuario anterior
@@ -84,7 +84,7 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
         }
 
         // Crear nuevo dispositivo (FR-027-01)
-        var device = Device.Create(
+        Device device = Device.Create(
             parsedUserId,
             request.DeviceId,
             request.Platform,

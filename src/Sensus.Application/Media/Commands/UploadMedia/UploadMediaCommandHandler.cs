@@ -35,16 +35,16 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         UploadMediaCommand request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUser.UserId;
-        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+        string? userId = _currentUser.UserId;
+        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out Guid parsedUserId))
         {
             return Result.Failure<UploadMediaResponseDto>(
                 Error.Unauthorized("Media.Unauthenticated", "Usuario no autenticado."));
         }
 
         // Verificar límite diario de 20 archivos por usuario (FR-022-07)
-        var todayUtc = _dateTimeProvider.UtcNow.Date;
-        var uploadsToday = await _mediaAssetRepository.CountByUserAndDateAsync(parsedUserId, todayUtc, cancellationToken);
+        DateTime todayUtc = _dateTimeProvider.UtcNow.Date;
+        int uploadsToday = await _mediaAssetRepository.CountByUserAndDateAsync(parsedUserId, todayUtc, cancellationToken);
         if (uploadsToday >= 20)
         {
             return Result.Failure<UploadMediaResponseDto>(
@@ -52,7 +52,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         }
 
         // Subir a Cloudinary de forma privada (hasta aprobación) (FR-022-04)
-        var uploadResult = await _mediaStorage.UploadImageAsync(
+        Result<MediaUploadResult> uploadResult = await _mediaStorage.UploadImageAsync(
             request.ImageBytes,
             request.ContentType,
             parsedUserId,
@@ -64,19 +64,19 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         }
 
         // Moderar la imagen antes de exponerla públicamente (FR-022-06)
-        var moderationResult = await _moderationService.ModerateImageBytesAsync(
+        ImageModerationResult moderationResult = await _moderationService.ModerateImageBytesAsync(
             request.ImageBytes,
             request.ContentType,
             request.TextContext,
             cancellationToken);
 
-        var status = moderationResult.IsApproved
+        MediaAssetStatus status = moderationResult.IsApproved
             ? MediaAssetStatus.Approved
             : moderationResult.Decision == "Quarantine"
                 ? MediaAssetStatus.Quarantined
                 : MediaAssetStatus.Rejected;
 
-        var mediaAsset = MediaAsset.Create(
+        MediaAsset mediaAsset = MediaAsset.Create(
             parsedUserId,
             uploadResult.Value.PublicId,
             uploadResult.Value.SecureUrl,
@@ -86,7 +86,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
 
         await _mediaAssetRepository.AddAsync(mediaAsset, cancellationToken);
 
-        var dto = new UploadMediaResponseDto(
+        UploadMediaResponseDto dto = new UploadMediaResponseDto(
             MediaId: mediaAsset.Id,
             PublicId: mediaAsset.PublicId,
             SecureUrl: mediaAsset.SecureUrl,

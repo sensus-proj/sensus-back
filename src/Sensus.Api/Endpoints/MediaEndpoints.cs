@@ -5,6 +5,7 @@ using Sensus.Api.Extensions;
 using Sensus.Application.Media.Commands.ModerateImage;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
+using Sensus.Domain.Common;
 
 namespace Sensus.Api.Endpoints;
 
@@ -26,7 +27,7 @@ public static class MediaEndpoints
             .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy);
 
         // Spec 022: Subida de imagen con validación, almacenamiento privado y moderación
-        var upload = group.MapPost("/upload", async (
+        RouteHandlerBuilder upload = group.MapPost("/upload", async (
             [FromForm] IFormFile? file,
             [FromForm] string? textContext,
             ISender sender,
@@ -53,7 +54,7 @@ public static class MediaEndpoints
                 });
             }
 
-            var contentType = file.ContentType;
+            string contentType = file.ContentType;
             // Validar que el content type sea uno permitido
             if (!_allowedMediaTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
             {
@@ -65,16 +66,16 @@ public static class MediaEndpoints
                 });
             }
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new();
             await file.CopyToAsync(ms, ct);
-            var imageBytes = ms.ToArray();
+            byte[] imageBytes = ms.ToArray();
 
-            var command = new UploadMediaCommand(imageBytes, contentType, textContext);
-            var result = await sender.Send(command, ct);
+            UploadMediaCommand command = new UploadMediaCommand(imageBytes, contentType, textContext);
+            Result<UploadMediaResponseDto> result = await sender.Send(command, ct);
 
             if (result.IsFailure)
             {
-                var statusCode = result.Error.Type switch
+                int statusCode = result.Error.Type switch
                 {
                     Domain.Common.ErrorType.Validation => StatusCodes.Status400BadRequest,
                     Domain.Common.ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
@@ -90,8 +91,8 @@ public static class MediaEndpoints
                 });
             }
 
-            var dto = result.Value;
-            var statusCodeSuccess = dto.Status == "Approved"
+            UploadMediaResponseDto dto = result.Value;
+            int statusCodeSuccess = dto.Status == "Approved"
                 ? StatusCodes.Status201Created
                 : StatusCodes.Status202Accepted;
 
@@ -108,12 +109,12 @@ public static class MediaEndpoints
 
         if (isV1) upload.WithName("UploadMedia");
 
-        var moderate = group.MapPost("/moderate", async (
+        RouteHandlerBuilder moderate = group.MapPost("/moderate", async (
             [FromBody] ModerateImageCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(command, ct);
+            Result<ModerateImageResponseDto> result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .WithSummary("Valida imágenes mediante OpenAI Omni-Moderation detectando contenido inapropiado antes de su almacenamiento")

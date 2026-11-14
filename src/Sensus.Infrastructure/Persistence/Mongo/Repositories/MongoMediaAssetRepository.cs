@@ -24,7 +24,7 @@ public sealed class MongoMediaAssetRepository : IMediaAssetRepository
 
     public async Task AddAsync(MediaAsset mediaAsset, CancellationToken cancellationToken = default)
     {
-        var document = MediaAssetDocument.FromDomain(mediaAsset);
+        MediaAssetDocument document = MediaAssetDocument.FromDomain(mediaAsset);
         await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 
@@ -33,10 +33,10 @@ public sealed class MongoMediaAssetRepository : IMediaAssetRepository
         DateTime dateUtc,
         CancellationToken cancellationToken = default)
     {
-        var startOfDay = dateUtc.Date;
-        var endOfDay = startOfDay.AddDays(1);
+        DateTime startOfDay = dateUtc.Date;
+        DateTime endOfDay = startOfDay.AddDays(1);
 
-        var filter = Builders<MediaAssetDocument>.Filter.And(
+        FilterDefinition<MediaAssetDocument> filter = Builders<MediaAssetDocument>.Filter.And(
             Builders<MediaAssetDocument>.Filter.Eq(d => d.OwnerId, userId),
             Builders<MediaAssetDocument>.Filter.Gte(d => d.CreatedAtUtc, startOfDay),
             Builders<MediaAssetDocument>.Filter.Lt(d => d.CreatedAtUtc, endOfDay));

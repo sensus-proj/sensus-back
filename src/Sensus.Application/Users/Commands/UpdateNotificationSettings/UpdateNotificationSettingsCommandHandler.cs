@@ -25,14 +25,14 @@ public sealed class UpdateNotificationSettingsCommandHandler : IRequestHandler<U
         UpdateNotificationSettingsCommand request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUser.UserId;
-        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+        string? userId = _currentUser.UserId;
+        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out Guid parsedUserId))
         {
             return Result.Failure<NotificationSettingsDto>(
                 Error.Unauthorized("Settings.Unauthenticated", "Usuario no autenticado."));
         }
 
-        var settings = await _settingsRepository.GetByUserIdAsync(parsedUserId, cancellationToken);
+        NotificationSettings? settings = await _settingsRepository.GetByUserIdAsync(parsedUserId, cancellationToken);
 
         // Si no existe, crear con valores por defecto y luego actualizar (FR-044-05)
         if (settings is null)
