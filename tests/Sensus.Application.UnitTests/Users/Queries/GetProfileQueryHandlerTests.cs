@@ -79,10 +79,10 @@ public sealed class GetProfileQueryHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.NombreCompleto.Should().Be("DB User");
 
-        await _cacheService.Received(1).SetAsync(
+        await _cacheService.Received(1).SetForEntityAsync(
             $"sensus:users:{userId}:profile",
             Arg.Is<UserDto>(d => d.NombreCompleto == "DB User"),
-            Arg.Any<TimeSpan>(),
+            "UserProfile",
             Arg.Any<CancellationToken>());
     }
 }

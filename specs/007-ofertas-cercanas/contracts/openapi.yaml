@@ -1,22 +1,110 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 007 Ofertas cercanas"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 007. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato de la consulta geoespacial de ofertas publicadas. El radio se resuelve en servidor:
+    invitado ≤ 2 km (FR-007-09), usuario registrado 1–5 km (FR-007-08) y tope técnico de 50 km
+    (FR-007-06). La categoría pertenece al comercio (FR-007-03).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers/nearby:
     get:
-      summary: "Borrador de GET /api/v1/offers/nearby"
+      summary: Lista ofertas publicadas cerca de la ubicación enviada
+      operationId: getNearbyOffers
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, minimum: -180, maximum: 180 }
+        - name: radiusKm
+          in: query
+          required: false
+          description: Radio en kilómetros. Invitado se limita a 2 km; registrado debe estar entre 1 y 5.
+          schema: { type: number, exclusiveMinimum: 0, maximum: 50, default: 2 }
+        - name: category
+          in: query
+          required: false
+          description: Categoría del comercio (catálogo MerchantCategory).
+          schema:
+            type: string
+            enum:
+              - Otros
+              - Restaurantes
+              - Cafeterias
+              - Supermercados
+              - Farmacias
+              - Moda
+              - Tecnologia
+              - Hogar
+              - Belleza
+              - Deportes
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200':
+          description: Página de ofertas ordenadas por distancia
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, totalCount, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/NearbyOffer' }
+                  totalCount: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        '400': { description: Parámetros inválidos o radio fuera de rango }
         '401': { description: No autenticado }
+        '429': { description: Límite de peticiones excedido }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    NearbyOffer:
+      type: object
+      required:
+        - id
+        - merchantId
+        - merchantName
+        - category
+        - title
+        - originalPrice
+        - discountPercentage
+        - discountedPrice
+        - stock
+        - startsAt
+        - endsAt
+        - distanceMeters
+      properties:
+        id: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+        category: { type: string }
+        title: { type: string }
+        description: { type: string }
+        originalPrice: { type: number }
+        discountPercentage: { type: integer }
+        discountedPrice: { type: number }
+        stock: { type: integer }
+        imageUrl: { type: [string, 'null'] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        distanceMeters: { type: number }

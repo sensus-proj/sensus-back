@@ -58,7 +58,7 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            "/api/v1/comercios/nearby?lat=19.4326&lng=-99.1332&radioMetros=5000"); // Pide 5000m
+            "/api/v1/merchants/nearby?lat=19.4326&lng=-99.1332&radioMetros=5000"); // Pide 5000m
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
 
         // Act
@@ -83,7 +83,7 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
 
         var command = new RegisterComercioCommand("Intento Comercio", "Calle 1", "01000");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/comercios")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/merchants/activate")
         {
             Content = JsonContent.Create(command)
         };

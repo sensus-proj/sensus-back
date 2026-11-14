@@ -1,19 +1,65 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 027 Registro de dispositivo para push"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 027. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato para registrar o actualizar el token de dispositivo de un usuario para
+    notificaciones push. Valida plataforma y token, y reasigna tokens entre usuarios
+    cuando sea necesario (Spec 027).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/users/device-token:
     put:
-      summary: "Borrador de PUT /api/v1/users/device-token"
+      summary: Registra o actualiza el token de dispositivo del usuario para push
+      operationId: registerDevice
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, platform, token]
+              properties:
+                deviceId:
+                  type: string
+                  description: Identificador único del dispositivo
+                platform:
+                  type: string
+                  enum: [Android, iOS, Web]
+                  description: Plataforma del dispositivo
+                token:
+                  type: string
+                  description: Token de push (FCM o SNS)
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Token registrado o actualizado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deviceId, platform, token, isActive, registeredAtUtc, message]
+                properties:
+                  deviceId:
+                    type: string
+                  platform:
+                    type: string
+                  token:
+                    type: string
+                  isActive:
+                    type: boolean
+                  registeredAtUtc:
+                    type: string
+                    format: date-time
+                  message:
+                    type: string
+        '400':
+          description: Solicitud inválida (token inválido, plataforma no soportada)
+        '401':
+          description: No autenticado
+        '403':
+          description: Usuario invitado no permitido
 components:
   securitySchemes:
     bearerAuth:

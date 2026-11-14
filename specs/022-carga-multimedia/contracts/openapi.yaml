@@ -1,19 +1,76 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 022 Carga de multimedia"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 022. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato para la subida de imágenes mediante multipart/form-data. Valida tipo MIME real
+    y tamaño (máx. 4,5 MB), almacena en Cloudinary de forma privada y aplica moderación
+    con OpenAI omni-moderation-latest antes de exponer el contenido públicamente (Spec 022).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/media/upload:
     post:
-      summary: "Borrador de POST /api/v1/media/upload"
+      summary: Sube una imagen, valida tipo y tamaño, almacena en Cloudinary y modera
+      operationId: uploadMedia
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Imagen JPEG, PNG o WebP (máx. 4,5 MB)
+                textContext:
+                  type: string
+                  description: Texto asociado para moderación multimodal
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '201':
+          description: Imagen subida y aprobada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mediaId, publicId, status, contentType, moderationDecision, createdAtUtc]
+                properties:
+                  mediaId:
+                    type: string
+                    format: uuid
+                  publicId:
+                    type: string
+                  secureUrl:
+                    type: string
+                  status:
+                    type: string
+                    enum: [Pending, Approved, Quarantined, Rejected]
+                  contentType:
+                    type: string
+                  moderationDecision:
+                    type: string
+                  moderationMessage:
+                    type: string
+                  flaggedCategories:
+                    type: array
+                    items:
+                      type: string
+                  createdAtUtc:
+                    type: string
+                    format: date-time
+        '202':
+          description: Imagen subida pero en moderación (cuarentena o pendiente)
+        '400':
+          description: Solicitud inválida (formato o tipo no permitido)
+        '401':
+          description: No autenticado
+        '413':
+          description: Archivo demasiado grande (máx. 4,5 MB)
+        '429':
+          description: Límite de peticiones excedido (20 por usuario y día)
 components:
   securitySchemes:
     bearerAuth:

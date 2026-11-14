@@ -1,10 +1,10 @@
-# Spec 033 — Apartado de oferta con código QR
+﻿# Spec 033 — Apartado de oferta con código QR
 
 | Campo | Valor |
 |---|---|
 | ID | 033 |
 | Slug | `apartado-con-qr` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

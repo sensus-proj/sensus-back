@@ -4,7 +4,7 @@
 |---|---|
 | ID | 015 |
 | Slug | `metricas-y-alarmas` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -82,7 +82,7 @@ Medir latencia, errores y saturación, con alarmas definidas como código.
 
 ## 10. Preguntas abiertas
 
-- ¿Dónde se notifican las alarmas: correo, Slack o SNS?
+- ~~¿Dónde se notifican las alarmas: correo, Slack o SNS?~~ Resuelta: tema SNS `sensus-alarms-<env>` con suscripción por correo (contexto CDK `alarmEmail`).
 
 ## 11. Trazabilidad
 

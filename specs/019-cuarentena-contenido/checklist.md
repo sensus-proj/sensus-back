@@ -14,18 +14,18 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] El contenido en cuarentena no es accesible públicamente
-- [ ] La purga está programada y probada
+- [x] El contenido en cuarentena no es accesible públicamente
+- [x] La purga está programada y probada
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
+- [x] Código en la capa correcta y test de arquitectura en verde
+- [x] Pruebas unitarias y de integración añadidas y en verde
+- [x] Cobertura ≥ 80 % en Domain y Application
+- [x] Contrato OpenAPI actualizado
+- [x] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
 - [ ] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
@@ -42,15 +42,15 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☑ |
+| Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-14 | Claude (sesión de verificación) | Implementado | Sin URL pública para cuarentena/rechazado; purga por retención (`Moderation:QuarantineRetentionDays`); `POST /api/v1/media/{id}/release` solo para Administrador (FR-019-04). Brechas: `MongoMediaAssetRepository.GetByIdAsync` sin prueba con Testcontainers (no hay Docker ni Testcontainers en el repositorio todavía); correlation-id depende de 014. `dotnet build -c Release` 0 errores y 0 advertencias; 613 pruebas en verde (4 arquitectura, 498 unitarias, 3 E2E, 108 integración); cobertura combinada Domain 90,2 % y Application 97,4 %. |

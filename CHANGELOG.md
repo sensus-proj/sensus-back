@@ -13,6 +13,14 @@ Todos los cambios relevantes se documentan aquí. El formato sigue
 
 ### Añadido
 
+- Cierre de specs parciales de la rama `sprint3_oscar` (sin verificar aún con `dotnet build`/`dotnet test`):
+  - 008: contrato único `/api/v1/merchants` (`activate`, `me`, `profile`, `nearby`); se retiran `/comercio`, `/comercios` y los alias sin `/v1`.
+  - 016: `/health/live` y `/health/ready` (readiness con ping a MongoDB); `/health` se mantiene como liveness.
+  - 019: el contenido en cuarentena o rechazado no expone URL; el rechazado se elimina de Cloudinary; purga por retención
+    (`Moderation:QuarantineRetentionDays`, 30 por defecto).
+  - 029: `POST /api/v1/auth/recover/confirm` (`/auth/reset-password` queda como alias).
+  - 015: tema SNS con suscripción por correo (`alarmEmail`) y alarma de latencia p95 de Lambda.
+  - 048: caché de detalle y cercanas de ofertas con invalidación en escrituras; TTL por entidad desde `appsettings.json`.
 - Gobernanza del proyecto: `constitution.md` v1.2.0, `AGENTS.md` v1.2.0 y `memory.md` v2.1.0.
 - Metodología SDD con 44 especificaciones en `specs/` (43 activas y 1 en backlog), cada una con `spec.md`,
   `plan.md`, `tasks.md` y `checklist.md`.

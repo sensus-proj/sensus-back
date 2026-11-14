@@ -1,4 +1,5 @@
 using Sensus.Domain.Common;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Events;
 using Sensus.Domain.ValueObjects;
 
@@ -19,6 +20,7 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
     public double Longitud { get; private set; }
     public bool Activo { get; private set; }
     public DateTime FechaRegistro { get; private set; }
+    public MerchantCategory Categoria { get; private set; } = MerchantCategoryCatalog.Default;
 
     public IReadOnlyCollection<HorarioDia> Horarios => _horarios.AsReadOnly();
 
@@ -35,7 +37,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         string codigoPostal,
         double latitud,
         double longitud,
-        DateTime fechaRegistro) : base(id)
+        DateTime fechaRegistro,
+        MerchantCategory categoria) : base(id)
     {
         UsuarioId = usuarioId;
         NombreComercial = nombreComercial;
@@ -45,7 +48,49 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         Longitud = longitud;
         Activo = true;
         FechaRegistro = fechaRegistro;
+        Categoria = categoria;
         CreatedAtUtc = fechaRegistro;
+    }
+
+    /// <summary>
+    /// Reconstruye un comercio desde persistencia sin emitir eventos de dominio ni revalidar
+    /// datos ya persistidos. Uso exclusivo de la capa de infraestructura.
+    /// </summary>
+    public static Comercio Reconstitute(
+        Guid id,
+        Guid usuarioId,
+        string nombreComercial,
+        string direccion,
+        string codigoPostal,
+        double latitud,
+        double longitud,
+        bool activo,
+        DateTime fechaRegistro,
+        MerchantCategory categoria,
+        IEnumerable<HorarioDia>? horarios = null)
+    {
+        var comercio = new Comercio(
+            id,
+            usuarioId,
+            nombreComercial,
+            direccion,
+            codigoPostal,
+            latitud,
+            longitud,
+            fechaRegistro,
+            categoria);
+
+        if (!activo)
+        {
+            comercio.Deactivate();
+        }
+
+        if (horarios is not null)
+        {
+            comercio._horarios.AddRange(horarios);
+        }
+
+        return comercio;
     }
 
     /// <summary>
@@ -58,7 +103,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         string codigoPostal,
         double latitud,
         double longitud,
-        DateTime? fechaRegistro = null)
+        DateTime? fechaRegistro = null,
+        MerchantCategory categoria = MerchantCategory.Otros)
     {
         if (usuarioId == Guid.Empty)
         {
@@ -84,6 +130,12 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
                 Error.Validation("Comercio.CodigoPostalVacio", "El código postal es obligatorio."));
         }
 
+        if (!Enum.IsDefined(categoria))
+        {
+            return Result.Failure<Comercio>(
+                Error.Validation("Comercio.CategoriaInvalida", "La categoría del comercio no pertenece al catálogo."));
+        }
+
         var registrationDate = fechaRegistro ?? DateTime.UtcNow;
 
         var comercio = new Comercio(
@@ -94,7 +146,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
             codigoPostal.Trim(),
             latitud,
             longitud,
-            registrationDate);
+            registrationDate,
+            categoria);
 
         comercio.AddDomainEvent(new ComercioRegisteredDomainEvent(comercio.Id, comercio.UsuarioId, comercio.NombreComercial));
 
@@ -124,7 +177,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         string direccion,
         string codigoPostal,
         double latitud,
-        double longitud)
+        double longitud,
+        MerchantCategory? categoria = null)
     {
         if (string.IsNullOrWhiteSpace(nombreComercial))
         {
@@ -144,11 +198,22 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
                 Error.Validation("Comercio.CodigoPostalVacio", "El código postal no puede estar vacío."));
         }
 
+        if (categoria.HasValue && !Enum.IsDefined(categoria.Value))
+        {
+            return Result.Failure(
+                Error.Validation("Comercio.CategoriaInvalida", "La categoría del comercio no pertenece al catálogo."));
+        }
+
         NombreComercial = nombreComercial.Trim();
         Direccion = direccion.Trim();
         CodigoPostal = codigoPostal.Trim();
         Latitud = latitud;
         Longitud = longitud;
+
+        if (categoria.HasValue)
+        {
+            Categoria = categoria.Value;
+        }
 
         return Result.Success();
     }

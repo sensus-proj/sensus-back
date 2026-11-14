@@ -4,12 +4,12 @@
 |---|---|
 | ID | 019 |
 | Slug | `cuarentena-contenido` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 017, 018 |
-| Versión | 1.1.0 |
+| Versión | 1.2.0 |
 | Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
 
 ---
@@ -72,11 +72,29 @@ Retener el contenido no aprobado sin publicarlo y con una política de retenció
 - **Cuando** se libera
 - **Entonces** pasa a publicado
 
+### CA-019-04
+
+- **Dado** un activo que no está en cuarentena (aprobado, rechazado o pendiente)
+- **Cuando** un administrador intenta liberarlo
+- **Entonces** 409 `Media.NotQuarantined` y el activo no cambia
+
+### CA-019-05
+
+- **Dado** un usuario sin rol Administrador o sin token
+- **Cuando** llama al endpoint de liberación
+- **Entonces** 403 o 401 respectivamente
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
-| — | — | — |
+| `POST` | `/api/v1/media/{id}/release` | JWT con rol `Administrador` (política `AdminOnly`), rate limit `sensitive-write` |
+
+Respuestas: `200` con `{ mediaId, status, secureUrl, releasedAtUtc }`; `401`, `403`, `404` (activo inexistente
+o `id` no es GUID), `409` (no está en cuarentena) y `429`, todas como `ProblemDetails`. Contrato completo en
+[`contracts/openapi.yaml`](contracts/openapi.yaml).
+
+La retención máxima (NFR-019-01) se configura en `Moderation:QuarantineRetentionDays` (30 días por defecto).
 
 ## 8. Dependencias y supuestos
 

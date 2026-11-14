@@ -8,10 +8,13 @@ public static class SecurityExtensions
 {
     public const string AuthStrictPolicy = "auth-strict";
     public const string RecoverPolicy = "recover";
+    public const string ReadHeavyPolicy = "read-heavy";
+    public const string SensitiveWritePolicy = "sensitive-write";
 
     public const string RegisteredUserPolicy = "RegisteredUser";
     public const string MerchantOnlyPolicy = "MerchantOnly";
     public const string GuestOrRegisteredPolicy = "GuestOrRegistered";
+    public const string AdminOnlyPolicy = "AdminOnly";
 
     public static IServiceCollection AddSecurityRateLimiting(this IServiceCollection services)
     {
@@ -46,6 +49,34 @@ public static class SecurityExtensions
                         QueueLimit = 0
                     });
             });
+
+            options.AddPolicy(ReadHeavyPolicy, httpContext =>
+            {
+                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: clientIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+
+            options.AddPolicy(SensitiveWritePolicy, httpContext =>
+            {
+                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: clientIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 30,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
         });
 
         return services;
@@ -73,6 +104,15 @@ public static class SecurityExtensions
             options.AddPolicy(GuestOrRegisteredPolicy, policy =>
             {
                 policy.RequireAuthenticatedUser();
+            });
+
+            // FR-019-04: acciones de moderación manual reservadas al rol Administrador.
+            options.AddPolicy(AdminOnlyPolicy, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(RoleType.Administrador);
+                policy.RequireAssertion(ctx =>
+                    !ctx.User.IsInRole(RoleType.Invitado));
             });
         });
 

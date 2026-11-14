@@ -2,6 +2,7 @@ using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Common;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 using Sensus.Domain.ValueObjects;
 
@@ -73,7 +74,8 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
             request.Direccion,
             request.CodigoPostal,
             latitud,
-            longitud);
+            longitud,
+            ParseCategoria(request.Categoria));
 
         if (updateResult.IsFailure)
         {
@@ -125,5 +127,15 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
         }
 
         return Result.Success(comercio.ToDto());
+    }
+
+    private static MerchantCategory? ParseCategoria(string? categoria)
+    {
+        if (string.IsNullOrWhiteSpace(categoria))
+        {
+            return null;
+        }
+
+        return MerchantCategoryCatalog.TryParse(categoria, out var parsed) ? parsed : null;
     }
 }

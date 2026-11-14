@@ -14,19 +14,19 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] No quedan referencias a /api/v1/comercio ni /api/v1/comercios
-- [ ] El archivo .http usa solo rutas vigentes
-- [ ] El OpenAPI no contiene rutas en español
+- [x] No quedan referencias a /api/v1/comercio ni /api/v1/comercios
+- [x] El archivo .http usa solo rutas vigentes
+- [x] El OpenAPI no contiene rutas en español
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
+- [x] Código en la capa correcta y test de arquitectura en verde
+- [x] Pruebas unitarias y de integración añadidas y en verde
+- [x] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
+- [x] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
 - [ ] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
@@ -43,15 +43,15 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☑ |
 | Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-14 | Claude (sesión de verificación) | Implementado | Rutas legacy en español y alias sin `/v1` retirados; `ComercioEndpoints.cs` (código muerto) eliminado; `RetiredLegacyRoutes_ShouldReturnNotFound` verifica 404. Spec sin `contracts/openapi.yaml` propio. Brecha: logs con correlation-id dependen de la spec 014 (pendiente). `dotnet build -c Release` 0 errores y 0 advertencias; 613 pruebas en verde (4 arquitectura, 498 unitarias, 3 E2E, 108 integración); cobertura combinada Domain 90,2 % y Application 97,4 %. |

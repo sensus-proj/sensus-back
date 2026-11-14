@@ -72,7 +72,8 @@ public class RegisterComercioCommandHandlerTests
         var command = new RegisterComercioCommand(
             "Mi Tienda Express",
             "Av. Principal 123",
-            "03940");
+            "03940",
+            "Supermercados");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -85,6 +86,7 @@ public class RegisterComercioCommandHandlerTests
         result.Value.Comercio.NombreComercial.Should().Be("Mi Tienda Express");
         result.Value.Comercio.Latitud.Should().Be(19.432608);
         result.Value.Comercio.Longitud.Should().Be(-99.133209);
+        result.Value.Comercio.Categoria.Should().Be("Supermercados");
         result.Value.Token.Should().Be("token_with_comerciante");
 
         // Verify dynamic update in repository
@@ -141,5 +143,26 @@ public class RegisterComercioCommandHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("User.NotFound");
+    }
+
+    [Fact]
+    public async Task Handle_Should_ReturnValidationError_WhenCategoryIsNotInCatalog()
+    {
+        // Arrange
+        var user = User.Create("Oscar", "oscar@sensus.com", "hash", true, DateTime.UtcNow).Value;
+        _userRepository.GetByIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(user);
+        _comercioRepository.ExistsByUsuarioIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(false);
+        _geocodingService.GeocodeAddressAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((19.432608, -99.133209));
+
+        var command = new RegisterComercioCommand("Tienda", "Direccion 123", "03940", "NoExiste");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Comercio.CategoriaInvalida");
+        await _comercioRepository.DidNotReceive().AddAsync(Arg.Any<Comercio>(), Arg.Any<CancellationToken>());
     }
 }

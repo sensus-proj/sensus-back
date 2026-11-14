@@ -51,6 +51,51 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferDocument>(_settings.OffersCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<OfferClaimDocument> OfferClaims =>
+        _database?.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferViewDocument> OfferViews =>
+        _database?.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<MediaAssetDocument> MediaAssets =>
+        _database?.GetCollection<MediaAssetDocument>(_settings.MediaAssetsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<DeviceDocument> Devices =>
+        _database?.GetCollection<DeviceDocument>(_settings.DevicesCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<NotificationSettingsDocument> NotificationSettings =>
+        _database?.GetCollection<NotificationSettingsDocument>(_settings.NotificationSettingsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    /// <summary>
+    /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
+    /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
+    /// </summary>
+    public async Task<bool> PingAsync(CancellationToken cancellationToken = default)
+    {
+        if (_database is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _database.RunCommandAsync<MongoDB.Bson.BsonDocument>(
+                new MongoDB.Bson.BsonDocument("ping", 1),
+                cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "El ping a MongoDB falló durante la verificación de readiness.");
+            return false;
+        }
+    }
+
     private void ConfigureIndexes()
     {
         if (_database is null) return;
@@ -80,6 +125,10 @@ public sealed class MongoDbContext
             // Índice geoespacial 2dsphere para consultas geográficas
             var geoIndexKeys = Builders<ComercioDocument>.IndexKeys.Geo2DSphere(c => c.Ubicacion);
             comerciosCollection.Indexes.CreateOne(new CreateIndexModel<ComercioDocument>(geoIndexKeys));
+
+            // Índice por categoría para el filtro de ofertas cercanas (FR-007-03)
+            var categoryIndexKeys = Builders<ComercioDocument>.IndexKeys.Ascending(c => c.Categoria);
+            comerciosCollection.Indexes.CreateOne(new CreateIndexModel<ComercioDocument>(categoryIndexKeys));
         }
         catch (Exception ex)
         {
@@ -127,6 +176,108 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: Los índices de ofertas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var claimsCollection = _database.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName);
+
+            // Un solo apartado activo por usuario y oferta (FR-033-03).
+            var activeClaimKeys = Builders<OfferClaimDocument>.IndexKeys
+                .Ascending(c => c.UserId)
+                .Ascending(c => c.OfferId);
+            var activeClaimOptions = new CreateIndexOptions<OfferClaimDocument>
+            {
+                Unique = true,
+                PartialFilterExpression = Builders<OfferClaimDocument>.Filter.Eq(
+                    c => c.Status,
+                    Sensus.Domain.Enums.OfferClaimStatus.Active.ToString())
+            };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(activeClaimKeys, activeClaimOptions));
+
+            // El hash del código es único (FR-033-04).
+            var codeHashKeys = Builders<OfferClaimDocument>.IndexKeys.Ascending(c => c.CodeHash);
+            var codeHashOptions = new CreateIndexOptions { Unique = true };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(codeHashKeys, codeHashOptions));
+
+            // Índice para el job de expiración y purga 30 días después de vencer (FR-033-05).
+            var expiresKeys = Builders<OfferClaimDocument>.IndexKeys.Ascending(c => c.ExpiresAtUtc);
+            var expiresOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(expiresKeys, expiresOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de apartados ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var viewsCollection = _database.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName);
+
+            // Una sola vista por usuario, oferta y día (FR-032-03, CA-032-04).
+            var viewKeys = Builders<OfferViewDocument>.IndexKeys
+                .Ascending(v => v.UserId)
+                .Ascending(v => v.OfferId)
+                .Ascending(v => v.ViewedOn);
+            var viewOptions = new CreateIndexOptions { Unique = true };
+            viewsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferViewDocument>(viewKeys, viewOptions));
+
+            // Purga de vistas con 180 días de antigüedad (plan del spec 032).
+            var viewTtlKeys = Builders<OfferViewDocument>.IndexKeys.Ascending(v => v.CreatedAtUtc);
+            var viewTtlOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(180) };
+            viewsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferViewDocument>(viewTtlKeys, viewTtlOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de vistas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice por propietario y fecha para el límite diario de cargas (FR-022-07)
+            var mediaOwnerDateKeys = Builders<MediaAssetDocument>.IndexKeys
+                .Ascending(d => d.OwnerId)
+                .Ascending(d => d.CreatedAtUtc);
+            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(mediaOwnerDateKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de media assets ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice único por token de dispositivo (FR-027-02)
+            var deviceTokenKeys = Builders<DeviceDocument>.IndexKeys.Ascending(d => d.Token);
+            var deviceTokenOptions = new CreateIndexOptions<DeviceDocument> { Unique = true };
+            Devices.Indexes.CreateOne(new CreateIndexModel<DeviceDocument>(deviceTokenKeys, deviceTokenOptions));
+
+            // Índice compuesto por userId + deviceId para reasignación (FR-027-06)
+            var deviceUserDeviceKeys = Builders<DeviceDocument>.IndexKeys
+                .Ascending(d => d.UserId)
+                .Ascending(d => d.DeviceId);
+            Devices.Indexes.CreateOne(new CreateIndexModel<DeviceDocument>(deviceUserDeviceKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de dispositivos ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice único por usuario para preferencias de notificación (FR-044-01)
+            var settingsUserKeys = Builders<NotificationSettingsDocument>.IndexKeys.Ascending(d => d.UserId);
+            var settingsUserOptions = new CreateIndexOptions<NotificationSettingsDocument> { Unique = true };
+            NotificationSettings.Indexes.CreateOne(new CreateIndexModel<NotificationSettingsDocument>(settingsUserKeys, settingsUserOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de preferencias de notificación ya existen o el clúster aún no está disponible.");
         }
     }
 }

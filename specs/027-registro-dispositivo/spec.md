@@ -4,7 +4,7 @@
 |---|---|
 | ID | 027 |
 | Slug | `registro-dispositivo` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

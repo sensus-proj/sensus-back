@@ -1,10 +1,10 @@
-# Spec 031 — Edición del perfil de comercio
+﻿# Spec 031 — Edición del perfil de comercio
 
 | Campo | Valor |
 |---|---|
 | ID | 031 |
 | Slug | `edicion-perfil-comercio` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -90,6 +90,11 @@ Permitir que el comerciante actualice los datos de su local y recalcule sus coor
 ## 8. Dependencias y supuestos
 
 - Depende de: 005, 006
+- La categoría (`Categoria`) pertenece al comercio, no a la oferta, y se persiste en `comercios`
+  como cadena del catálogo `MerchantCategory`. Los clientes que no envían `Categoria` conservan la
+  actual; los documentos previos sin el campo se leen como `Otros` (compatibilidad hacia atrás).
+- El campo opcional `Categoria` de `PUT /api/v1/merchants/profile` se valida contra el catálogo y un
+  valor fuera de él responde 400 (CA-031-04).
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 

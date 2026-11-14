@@ -4,7 +4,7 @@
 |---|---|
 | ID | 044 |
 | Slug | `ajustes-notificaciones` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

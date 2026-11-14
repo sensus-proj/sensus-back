@@ -34,6 +34,37 @@ public class SecurityPipelineTests : IClassFixture<CustomWebApplicationFactory>
         response.Headers.Contains("Referrer-Policy").Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("/api/v1/comercios/nearby?lat=19.4&lng=-99.1")]
+    [InlineData("/api/v1/comercio/mi-comercio")]
+    [InlineData("/api/merchants/profile")]
+    [InlineData("/api/auth/me")]
+    public async Task RetiredLegacyRoutes_ShouldReturnNotFound(string route)
+    {
+        var response = await _client.GetAsync(route);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task LivenessEndpoint_ShouldReturnOk_WithoutExternalDependencies()
+    {
+        var response = await _client.GetAsync("/health/live");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ReadinessEndpoint_ShouldReturnServiceUnavailable_WhenMongoIsNotAvailable()
+    {
+        // El factory de pruebas no configura MongoDB, por lo que la readiness debe fallar sin exponer detalles.
+        var response = await _client.GetAsync("/health/ready");
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("mongodb://");
+    }
+
     [Fact]
     public async Task MeEndpoint_ShouldSucceed_WhenTokenHasMatchingSecurityStamp()
     {

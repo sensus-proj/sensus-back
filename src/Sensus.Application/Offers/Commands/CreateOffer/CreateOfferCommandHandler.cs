@@ -15,19 +15,22 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
-        ILogger<CreateOfferCommandHandler> logger)
+        ILogger<CreateOfferCommandHandler> logger,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -64,6 +67,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
 
         Offer offer = offerResult.Value;
         await _offerRepository.AddAsync(offer, cancellationToken);
+        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
         _logger.LogInformation("Oferta {OfferId} creada exitosamente para el comercio {ComercioId}. Vigencia hasta {EndsAtUtc}",
             offer.Id, comercio.Id, offer.EndsAt);

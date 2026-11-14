@@ -4,7 +4,7 @@
 |---|---|
 | ID | 048 |
 | Slug | `cache-distribuido-redis` |
-| Estado | Implementado (Core) |
+| Estado | Parcial |
 | Ola | 7 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

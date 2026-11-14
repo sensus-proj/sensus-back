@@ -10,4 +10,5 @@ namespace Sensus.Application.Comercios.Commands.RegisterComercio;
 public sealed record RegisterComercioCommand(
     string NombreComercial,
     string Direccion,
-    string CodigoPostal) : IRequest<Result<RegisterComercioResponseDto>>;
+    string CodigoPostal,
+    string? Categoria = null) : IRequest<Result<RegisterComercioResponseDto>>;
