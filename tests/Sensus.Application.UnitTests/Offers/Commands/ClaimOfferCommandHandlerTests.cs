@@ -1,6 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.ClaimOffer;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -18,6 +19,7 @@ public class ClaimOfferCommandHandlerTests
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
     private readonly IClaimCodeService _claimCodeService = Substitute.For<IClaimCodeService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly ClaimOfferCommandHandler _handler;
 
     public ClaimOfferCommandHandlerTests()
@@ -32,7 +34,8 @@ public class ClaimOfferCommandHandlerTests
             _offerClaimRepository,
             _currentUserService,
             _claimCodeService,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _cacheService);
     }
 
     [Fact]
@@ -59,6 +62,9 @@ public class ClaimOfferCommandHandlerTests
         await _offerClaimRepository.Received(1).TryAddAsync(
             Arg.Is<OfferClaim>(c => c.CodeHash == "hash" && c.UserId == UserId),
             Arg.Any<CancellationToken>());
+
+        await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offer.Id), Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -16,6 +17,7 @@ public class CreateOfferCommandHandlerTests
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly CreateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -37,7 +39,8 @@ public class CreateOfferCommandHandlerTests
             _comercioRepository,
             _currentUserService,
             _dateTimeProvider,
-            _logger);
+            _logger,
+            _cacheService);
     }
 
     [Fact]
@@ -97,6 +100,9 @@ public class CreateOfferCommandHandlerTests
         result.Value.Status.Should().Be(OfferStatus.Published.ToString());
 
         await _offerRepository.Received(1).AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+
+        await _cacheService.Received(1).RemoveAsync(Arg.Is<string>(k => k.StartsWith("sensus:offers:detail:")), Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
     }
 
     [Fact]

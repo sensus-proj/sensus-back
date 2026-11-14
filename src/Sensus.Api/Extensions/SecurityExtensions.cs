@@ -14,6 +14,7 @@ public static class SecurityExtensions
     public const string RegisteredUserPolicy = "RegisteredUser";
     public const string MerchantOnlyPolicy = "MerchantOnly";
     public const string GuestOrRegisteredPolicy = "GuestOrRegistered";
+    public const string AdminOnlyPolicy = "AdminOnly";
 
     public static IServiceCollection AddSecurityRateLimiting(this IServiceCollection services)
     {
@@ -103,6 +104,15 @@ public static class SecurityExtensions
             options.AddPolicy(GuestOrRegisteredPolicy, policy =>
             {
                 policy.RequireAuthenticatedUser();
+            });
+
+            // FR-019-04: acciones de moderación manual reservadas al rol Administrador.
+            options.AddPolicy(AdminOnlyPolicy, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(RoleType.Administrador);
+                policy.RequireAssertion(ctx =>
+                    !ctx.User.IsInRole(RoleType.Invitado));
             });
         });
 

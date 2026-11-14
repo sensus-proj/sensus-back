@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Media.Commands.ModerateImage;
+using Sensus.Application.Media.Commands.ReleaseQuarantinedMedia;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
 using Sensus.Domain.Common;
@@ -16,6 +17,27 @@ public static class MediaEndpoints
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder app)
     {
         MapMediaGroup(app.MapGroup("/api/v1/media"), isV1: true);
+
+        // Spec 019 / FR-019-04: liberación manual de contenido en cuarentena por un administrador.
+        app.MapPost("/api/v1/media/{id:guid}/release", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            Result<ReleasedMediaDto> result = await sender.Send(new ReleaseQuarantinedMediaCommand(id), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.AdminOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithTags("Moderación Multimedia (OpenAI Omni-Moderation)")
+        .WithName("ReleaseQuarantinedMedia")
+        .WithSummary("Spec 019: Libera un activo en cuarentena tras su revisión manual por un administrador")
+        .Produces<ReleasedMediaDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         return app;
     }

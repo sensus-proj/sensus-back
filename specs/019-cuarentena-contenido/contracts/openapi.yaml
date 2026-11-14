@@ -1,0 +1,91 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 019 Cuarentena de contenido"
+  version: 1.0.0
+  description: >
+    Liberación manual de un activo multimedia en cuarentena tras su revisión por un administrador
+    (FR-019-04). El contenido en cuarentena o rechazado nunca expone su URL pública (FR-019-02).
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/media/{id}/release:
+    post:
+      summary: Libera un activo en cuarentena y lo marca como aprobado
+      operationId: releaseQuarantinedMedia
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Activo liberado; ya expone su URL pública
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleasedMedia'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: El usuario no tiene el rol Administrador o es invitado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: El activo no existe o el identificador no es un GUID
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: El activo no está en cuarentena (Media.NotQuarantined)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Problem:
+      description: Error estándar RFC 7807
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  schemas:
+    ReleasedMedia:
+      type: object
+      required: [mediaId, status, releasedAtUtc]
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Approved]
+        secureUrl:
+          type: [string, 'null']
+        releasedAtUtc:
+          type: string
+          format: date-time
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

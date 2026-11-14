@@ -102,7 +102,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-015-01` | 015 | FR | Publicar métricas de latencia, errores y throttling | Must | Implementado |
 | `FR-015-02` | 015 | FR | Definir alarmas en IaC con umbrales explícitos | Must | Implementado |
 | `FR-015-03` | 015 | FR | Notificar alarmas a un canal definido | Should | Implementado |
-| `NFR-015-01` | 015 | NFR | Coste de alarmas | Dentro del Free Tier (10 alarmas) | Pendiente |
+| `NFR-015-01` | 015 | NFR | Coste de alarmas | Dentro del Free Tier (10 alarmas) | Implementado |
 | `NFR-015-02` | 015 | NFR | Latencia de detección | < 5 min | Pendiente |
 | `FR-016-01` | 016 | FR | Exponer /health/live sin dependencias externas | Must | Implementado |
 | `FR-016-02` | 016 | FR | Exponer /health/ready verificando MongoDB | Must | Implementado |
@@ -125,8 +125,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-019-01` | 019 | FR | Marcar el contenido no aprobado como PendienteRevision | Must | Implementado |
 | `FR-019-02` | 019 | FR | Impedir el acceso público al contenido en cuarentena | Must | Implementado |
 | `FR-019-03` | 019 | FR | Definir y aplicar retención máxima | Must | Implementado |
-| `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Parcial |
-| `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Pendiente |
+| `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Implementado |
+| `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Implementado |
 | `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
 | `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Pendiente |
 | `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Pendiente |

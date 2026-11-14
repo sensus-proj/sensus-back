@@ -20,6 +20,9 @@ namespace Sensus.Infra;
 /// </summary>
 public sealed class SensusInfraStack : Stack
 {
+    /// <summary>Espacio de nombres de las métricas de aplicación; coincide con <c>Observability:Metrics:Namespace</c>.</summary>
+    public const string AppMetricsNamespace = "Sensus/Api";
+
     public SensusInfraStack(Construct scope, string id, IStackProps? props = null)
         : base(scope, id, props)
     {
@@ -82,6 +85,8 @@ public sealed class SensusInfraStack : Stack
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
                 ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
                 ["Redis__Enabled"] = "false",
+                ["Observability__Metrics__Enabled"] = "true",
+                ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
                 ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
             }
         });
@@ -212,10 +217,66 @@ public sealed class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        foreach (var alarm in new[] { errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm })
+        // FR-015-01: métricas de aplicación publicadas por la API con Embedded Metric Format (sin dimensiones,
+        // 3 métricas personalizadas dentro de las 10 gratuitas). Se extraen del grupo de logs sin llamadas a la API.
+        var appLatencyMetric = new Metric(new MetricProps
+        {
+            Namespace = AppMetricsNamespace,
+            MetricName = "RequestLatency",
+            Period = Duration.Minutes(5),
+            Statistic = "p95"
+        });
+        var appServerErrorsMetric = new Metric(new MetricProps
+        {
+            Namespace = AppMetricsNamespace,
+            MetricName = "ServerErrors",
+            Period = Duration.Minutes(5),
+            Statistic = "Sum"
+        });
+        var appThrottledMetric = new Metric(new MetricProps
+        {
+            Namespace = AppMetricsNamespace,
+            MetricName = "Throttled",
+            Period = Duration.Minutes(5),
+            Statistic = "Sum"
+        });
+
+        // FR-015-02: rate limiting de la API (429) sostenido, señal de abuso o de umbrales mal calibrados.
+        var appThrottledAlarm = new Alarm(this, "SensusAppThrottledAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-app-throttled-{envName}",
+            AlarmDescription = "Alerta cuando el rate limiting de la API rechaza 50 o mas solicitudes en 5 minutos",
+            Metric = appThrottledMetric,
+            Threshold = 50,
+            EvaluationPeriods = 1,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+
+        // NFR-015-01: 5 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
+        foreach (var alarm in new[] { errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm })
         {
             alarm.AddAlarmAction(alarmAction);
         }
+
+        // Panel mínimo de operación (alcance de la Spec 015); CloudWatch incluye 3 paneles gratuitos.
+        var dashboard = new Dashboard(this, "SensusOperationsDashboard", new DashboardProps
+        {
+            DashboardName = $"sensus-operations-{envName}"
+        });
+        dashboard.AddWidgets(
+            new GraphWidget(new GraphWidgetProps
+            {
+                Title = "Latencia p95 (ms)",
+                Left = [appLatencyMetric, apiFunction.MetricDuration(new MetricOptions { Period = Duration.Minutes(5), Statistic = "p95" })],
+                Width = 12
+            }),
+            new GraphWidget(new GraphWidgetProps
+            {
+                Title = "Errores y throttling",
+                Left = [appServerErrorsMetric, appThrottledMetric, apiFunction.MetricErrors(), apiFunction.MetricThrottles()],
+                Width = 12
+            }));
 
         // 6. Presupuesto Mensual en AWS Budgets con Alarma de Costo (FR-045-07, Principio VI)
         _ = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps

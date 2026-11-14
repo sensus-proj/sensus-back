@@ -194,6 +194,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Pipeline HTTP
+// FR-015-01: las métricas envuelven todo el pipeline para medir la latencia completa y el estado final.
+app.UseMiddleware<Sensus.Api.Middlewares.RequestMetricsMiddleware>();
 app.UseExceptionHandler();
 app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);

@@ -28,6 +28,15 @@ public sealed class MongoMediaAssetRepository : IMediaAssetRepository
         await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 
+    public async Task<MediaAsset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        MediaAssetDocument? document = await _collection
+            .Find(Builders<MediaAssetDocument>.Filter.Eq(d => d.Id, id))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return document?.ToDomain();
+    }
+
     public async Task<int> CountByUserAndDateAsync(
         Guid userId,
         DateTime dateUtc,
