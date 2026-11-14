@@ -38,6 +38,7 @@ public sealed class ModerateImageCommandHandler : IRequestHandler<ModerateImageC
         var result = await _moderationService.ModerateImageBytesAsync(
             bytes,
             request.ContentType ?? "image/jpeg",
+            request.TextContext,
             cancellationToken);
 
         var dto = new ModerateImageResponseDto(
@@ -45,7 +46,9 @@ public sealed class ModerateImageCommandHandler : IRequestHandler<ModerateImageC
             Message: result.Message ?? (result.IsApproved
                 ? "Imagen aprobada exitosamente."
                 : "No se pudo subir la imagen por políticas de seguridad."),
-            FlaggedCategories: result.FlaggedCategories);
+            FlaggedCategories: result.FlaggedCategories,
+            Decision: result.Decision,
+            CategoryScores: result.CategoryScores);
 
         return Result.Success(dto);
     }

@@ -22,7 +22,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Pendiente | 014 |
 | 016 | [Health checks](016-health-checks/spec.md) | Observabilidad | Nuevo | 6 | Parcial | 014 |
 | 017 | [Moderación multimodal de contenido](017-moderacion-multimodal/spec.md) | Moderación | Nuevo | 4 | Pendiente | 009, 022 |
-| 018 | [Umbrales y bandas de decisión](018-umbrales-y-bandas/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017 |
+| 018 | [Umbrales y bandas de decisión](018-umbrales-y-bandas/spec.md) | Moderación | Nuevo | 4 | Implementado | 017 |
 | 019 | [Cuarentena de contenido](019-cuarentena-contenido/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 018 |
 | 020 | [Sanciones y baneo de usuario](020-sanciones-y-baneo/spec.md) | Moderación | Nuevo | 4 | Pendiente | 018, 019 |
 | 021 | [Auditoría de moderación](021-auditoria-moderacion/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 020 |
