@@ -25,6 +25,9 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// <summary>Contador acumulado de vistas deduplicadas por usuario y día (FR-032-03).</summary>
     public int ViewCount { get; private set; }
 
+    /// <summary>Versión de la entidad para control de concurrencia optimista (FR-035-05).</summary>
+    public int Version { get; private set; } = 1;
+
     // Constructor privado para persistencia / deserialización
     private Offer() : base()
     {
@@ -164,7 +167,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         double? longitude,
         DateTime createdAtUtc,
         DateTime? lastModifiedAtUtc = null,
-        int viewCount = 0)
+        int viewCount = 0,
+        int version = 1)
     {
         Offer offer = new(
             id,
@@ -184,10 +188,96 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             createdAtUtc)
         {
             LastModifiedAtUtc = lastModifiedAtUtc,
-            ViewCount = viewCount
+            ViewCount = viewCount,
+            Version = version
         };
 
         return offer;
+    }
+
+    /// <summary>
+    /// Actualiza los campos editables de la oferta con control de concurrencia optimista y validación de apartados activos (Spec 035, FR-035-01 a FR-035-07).
+    /// Devuelve <c>true</c> en caso de éxito si el contenido visible (título, descripción o imagen) cambió y requiere re-moderación.
+    /// </summary>
+    public Result<bool> Update(
+        string title,
+        string description,
+        decimal originalPrice,
+        int discountPercentage,
+        int stock,
+        DateTime startsAt,
+        DateTime endsAt,
+        string? imageUrl,
+        int activeClaimCount,
+        int expectedVersion,
+        DateTime nowUtc)
+    {
+        if (expectedVersion != Version)
+        {
+            return Result.Failure<bool>(Error.Conflict("Offer.VersionConflict", "La oferta fue modificada concurrentemente por otra solicitud."));
+        }
+
+        if (stock < activeClaimCount)
+        {
+            return Result.Failure<bool>(Error.Conflict("Offer.StockBelowActiveClaims", $"El stock no puede ser inferior a los {activeClaimCount} apartados activos."));
+        }
+
+        if (string.IsNullOrWhiteSpace(title) || title.Trim().Length is < 3 or > 100)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidTitle", "El título de la oferta debe tener entre 3 y 100 caracteres."));
+        }
+
+        if (string.IsNullOrWhiteSpace(description) || description.Trim().Length is < 5 or > 500)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidDescription", "La descripción de la oferta debe tener entre 5 y 500 caracteres."));
+        }
+
+        if (originalPrice <= 0)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidOriginalPrice", "El precio original debe ser mayor a 0."));
+        }
+
+        if (discountPercentage is < 1 or > 90)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidDiscount", "El porcentaje de descuento debe estar entre 1% y 90%."));
+        }
+
+        if (stock < 1)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidStock", "El stock de la oferta debe ser de al menos 1 unidad."));
+        }
+
+        if (endsAt <= startsAt)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.InvalidValidityDates", "La fecha de fin de vigencia debe ser posterior a la fecha de inicio."));
+        }
+
+        if (endsAt <= nowUtc)
+        {
+            return Result.Failure<bool>(Error.Validation("Offer.ExpiredEndDate", "La fecha de vencimiento debe estar en el futuro."));
+        }
+
+        string trimmedTitle = title.Trim();
+        string trimmedDescription = description.Trim();
+        string? trimmedImageUrl = imageUrl?.Trim();
+
+        bool contentChanged = !string.Equals(Title, trimmedTitle, StringComparison.Ordinal) ||
+                              !string.Equals(Description, trimmedDescription, StringComparison.Ordinal) ||
+                              !string.Equals(ImageUrl, trimmedImageUrl, StringComparison.Ordinal);
+
+        Title = trimmedTitle;
+        Description = trimmedDescription;
+        OriginalPrice = originalPrice;
+        DiscountPercentage = discountPercentage;
+        DiscountedPrice = Math.Round(originalPrice * (1 - (discountPercentage / 100m)), 2);
+        Stock = stock;
+        StartsAt = startsAt.ToUniversalTime();
+        EndsAt = endsAt.ToUniversalTime();
+        ImageUrl = trimmedImageUrl;
+        Version++;
+        LastModifiedAtUtc = nowUtc;
+
+        return Result.Success(contentChanged);
     }
 
     /// <summary>

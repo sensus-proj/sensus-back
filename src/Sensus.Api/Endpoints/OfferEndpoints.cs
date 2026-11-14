@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Models;
+using Sensus.Application.Offers.Commands.ChangeOfferStatus;
 using Sensus.Application.Offers.Commands.ClaimOffer;
 using Sensus.Application.Offers.Commands.CreateOffer;
 using Sensus.Application.Offers.Commands.ExpireClaims;
@@ -9,6 +10,7 @@ using Sensus.Application.Offers.Commands.ExpireOffers;
 using Sensus.Application.Offers.Commands.RedeemClaim;
 using Sensus.Application.Offers.Commands.RegisterOfferView;
 using Sensus.Application.Offers.Commands.RepublishOffer;
+using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
 using Sensus.Application.Offers.Queries.GetNearbyOffers;
@@ -45,6 +47,59 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        // Spec 035: Edición de una oferta existente con control de concurrencia optimista
+        offersGroup.MapPut("/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateOfferBody body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new UpdateOfferCommand(
+                id,
+                body.Title,
+                body.Description,
+                body.OriginalPrice,
+                body.DiscountPercentage,
+                body.Stock,
+                body.StartsAt,
+                body.EndsAt,
+                body.ImageUrl,
+                body.ExpectedVersion);
+
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
+        .WithName("UpdateOffer")
+        .WithSummary("Spec 035: Edita una oferta existente con control de concurrencia y re-moderación")
+        .Produces<OfferDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // Spec 036: Cambio de estado del ciclo de vida (Published, Paused, Archived)
+        offersGroup.MapPut("/{id:guid}/status", async (
+            Guid id,
+            [FromBody] ChangeOfferStatusBody body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new ChangeOfferStatusCommand(id, body.NewStatus);
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
+        .WithName("ChangeOfferStatus")
+        .WithSummary("Spec 036: Cambia el estado del ciclo de vida de una oferta (Published, Paused, Archived)")
+        .Produces<OfferDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
 
         // SE-026 y Spec 036: Republicación rápida de ofertas pasadas (Expiradas / Archivadas)
         offersGroup.MapPost("/{id:guid}/republish", async (
@@ -232,3 +287,16 @@ public sealed record RepublishOfferBody(
     DateTime NewStartsAt,
     DateTime NewEndsAt,
     int NewStock);
+
+public sealed record UpdateOfferBody(
+    string Title,
+    string Description,
+    decimal OriginalPrice,
+    int DiscountPercentage,
+    int Stock,
+    DateTime StartsAt,
+    DateTime EndsAt,
+    string? ImageUrl,
+    int ExpectedVersion);
+
+public sealed record ChangeOfferStatusBody(string NewStatus);

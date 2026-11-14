@@ -2,11 +2,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Authentication;
 using Sensus.Infrastructure.Cache;
 using Sensus.Infrastructure.Migration;
 using Sensus.Infrastructure.Persistence.Mongo;
+using Sensus.Infrastructure.Persistence.Mongo.Documents;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 using Sensus.Infrastructure.Services;
 using StackExchange.Redis;
@@ -85,6 +87,17 @@ public static class DependencyInjection
         services.Configure<ClaimCodeSettings>(
             configuration.GetSection(ClaimCodeSettings.SectionName));
         services.AddSingleton<IClaimCodeService, HmacClaimCodeService>();
+
+        // Almacenamiento multimedia en Cloudinary (Spec 022)
+        services.AddSingleton<IMediaStorage, CloudinaryMediaStorage>();
+        services.AddScoped<IMediaAssetRepository, MongoMediaAssetRepository>();
+
+        // Registro de dispositivos para push (Spec 027)
+        services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
+        services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
+
+        // Preferencias de notificación (Spec 044)
+        services.AddScoped<INotificationSettingsRepository, MongoNotificationSettingsRepository>();
 
         // Servicio de migración de SQL a MongoDB Atlas
         services.AddScoped<SqlToMongoMigrationService>();

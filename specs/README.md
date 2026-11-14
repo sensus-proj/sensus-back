@@ -26,12 +26,12 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 019 | [Cuarentena de contenido](019-cuarentena-contenido/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 018 |
 | 020 | [Sanciones y baneo de usuario](020-sanciones-y-baneo/spec.md) | Moderación | Nuevo | 4 | Pendiente | 018, 019 |
 | 021 | [Auditoría de moderación](021-auditoria-moderacion/spec.md) | Moderación | Nuevo | 4 | Pendiente | 017, 020 |
-| 022 | [Carga de multimedia](022-carga-multimedia/spec.md) | Multimedia | Nuevo | 4 | Pendiente | 017, 013 |
+| 022 | [Carga de multimedia](022-carga-multimedia/spec.md) | Multimedia | Nuevo | 4 | Implementado | 017, 013 |
 | 023 | [Entrega de contenido por CDN](023-entrega-cdn/spec.md) | Multimedia | Nuevo | 4 | Pendiente | 022 |
 | 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Pendiente | 017, 022 |
 | 025 | [Comentarios del feed](025-comentarios/spec.md) | Contenido | Nuevo | 3 | Pendiente | 017, 024, 010 |
 | 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 007, 010 |
-| 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Pendiente | 003, 013 |
+| 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Implementado | 003, 013 |
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
 | 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 001, 004, 013 |
 | 030 | [Eliminación de cuenta y datos](030-eliminacion-cuenta/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 003, 004, 020 |
@@ -48,7 +48,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 010, 011 |
 | 042 | [Recomendaciones personalizadas](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 038, 039, 041 |
 | 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 041 |
-| 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Pendiente | 027, 003 |
+| 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Implementado | 027, 003 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
 | 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Pendiente | 009, 010, 011, 012, 013 |
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |

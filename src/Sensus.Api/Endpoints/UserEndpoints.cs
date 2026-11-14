@@ -4,8 +4,11 @@ using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.GeneratePhotoSignature;
+using Sensus.Application.Users.Commands.RegisterDevice;
+using Sensus.Application.Users.Commands.UpdateNotificationSettings;
 using Sensus.Application.Users.Commands.UpdateProfile;
 using Sensus.Application.Users.DTOs;
+using Sensus.Application.Users.Queries.GetNotificationSettings;
 using Sensus.Application.Users.Queries.GetProfile;
 
 namespace Sensus.Api.Endpoints;
@@ -75,6 +78,60 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden);
 
         if (isV1) photoSignature.WithName("GeneratePhotoSignature");
+
+        // Spec 027: Registro de token de dispositivo para notificaciones push
+        var registerDevice = group.MapPut("/device-token", async (
+            [FromBody] RegisterDeviceCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .WithSummary("Spec 027: Registra o actualiza el token de dispositivo del usuario para notificaciones push")
+        .Produces<DeviceTokenResponseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        if (isV1) registerDevice.WithName("RegisterDevice");
+
+        // Spec 044: Obtener preferencias de notificación del usuario
+        var getSettings = group.MapGet("/settings", async (
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetNotificationSettingsQuery(), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .WithSummary("Spec 044: Obtiene las preferencias de notificación del usuario autenticado")
+        .Produces<NotificationSettingsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        if (isV1) getSettings.WithName("GetNotificationSettings");
+
+        // Spec 044: Actualizar preferencias de notificación del usuario
+        var updateSettings = group.MapPut("/settings", async (
+            [FromBody] UpdateNotificationSettingsCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .WithSummary("Spec 044: Actualiza las preferencias de notificación del usuario autenticado")
+        .Produces<NotificationSettingsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        if (isV1) updateSettings.WithName("UpdateNotificationSettings");
 
         // SE-009: Eliminación definitiva de cuenta y datos asociados
         var deleteAccount = group.MapDelete("/account", async (

@@ -32,6 +32,15 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
         return document?.ToDomain();
     }
 
+    public async Task<int> GetActiveClaimCountAsync(Guid offerId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<OfferClaimDocument>.Filter.And(
+            Builders<OfferClaimDocument>.Filter.Eq(c => c.OfferId, offerId),
+            Builders<OfferClaimDocument>.Filter.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+
+        return (int)await _context.OfferClaims.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+    }
+
     public async Task<OfferClaim?> GetActiveByUserAndOfferAsync(
         Guid userId,
         Guid offerId,

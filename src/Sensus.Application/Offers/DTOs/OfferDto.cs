@@ -19,4 +19,5 @@ public sealed record OfferDto(
     double? Latitude,
     double? Longitude,
     DateTime CreatedAtUtc,
-    DateTime? LastModifiedAtUtc);
+    DateTime? LastModifiedAtUtc,
+    int Version = 1);

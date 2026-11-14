@@ -15,6 +15,15 @@ public interface IOfferRepository
     Task UpdateAsync(Offer offer, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Actualiza la oferta verificando que la versión coincida para concurrencia optimista (FR-035-05).
+    /// Devuelve <c>false</c> si la versión en la base de datos no coincide o la oferta no existe.
+    /// </summary>
+    Task<bool> UpdateWithVersionCheckAsync(
+        Offer offer,
+        int expectedVersion,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Transición masiva y atómica en MongoDB para expirar ofertas cuya fecha de fin ya transcurrió (Sustituto de Trigger/SQL Job).
     /// </summary>
     Task<int> ExpireOffersAsync(DateTime nowUtc, CancellationToken cancellationToken = default);

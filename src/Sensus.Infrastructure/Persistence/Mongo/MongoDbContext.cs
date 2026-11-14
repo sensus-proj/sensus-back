@@ -59,6 +59,18 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<MediaAssetDocument> MediaAssets =>
+        _database?.GetCollection<MediaAssetDocument>(_settings.MediaAssetsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<DeviceDocument> Devices =>
+        _database?.GetCollection<DeviceDocument>(_settings.DevicesCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<NotificationSettingsDocument> NotificationSettings =>
+        _database?.GetCollection<NotificationSettingsDocument>(_settings.NotificationSettingsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     private void ConfigureIndexes()
     {
         if (_database is null) return;
@@ -198,6 +210,49 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: Los índices de vistas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice por propietario y fecha para el límite diario de cargas (FR-022-07)
+            var mediaOwnerDateKeys = Builders<MediaAssetDocument>.IndexKeys
+                .Ascending(d => d.OwnerId)
+                .Ascending(d => d.CreatedAtUtc);
+            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(mediaOwnerDateKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de media assets ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice único por token de dispositivo (FR-027-02)
+            var deviceTokenKeys = Builders<DeviceDocument>.IndexKeys.Ascending(d => d.Token);
+            var deviceTokenOptions = new CreateIndexOptions<DeviceDocument> { Unique = true };
+            Devices.Indexes.CreateOne(new CreateIndexModel<DeviceDocument>(deviceTokenKeys, deviceTokenOptions));
+
+            // Índice compuesto por userId + deviceId para reasignación (FR-027-06)
+            var deviceUserDeviceKeys = Builders<DeviceDocument>.IndexKeys
+                .Ascending(d => d.UserId)
+                .Ascending(d => d.DeviceId);
+            Devices.Indexes.CreateOne(new CreateIndexModel<DeviceDocument>(deviceUserDeviceKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de dispositivos ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índice único por usuario para preferencias de notificación (FR-044-01)
+            var settingsUserKeys = Builders<NotificationSettingsDocument>.IndexKeys.Ascending(d => d.UserId);
+            var settingsUserOptions = new CreateIndexOptions<NotificationSettingsDocument> { Unique = true };
+            NotificationSettings.Indexes.CreateOne(new CreateIndexModel<NotificationSettingsDocument>(settingsUserKeys, settingsUserOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de preferencias de notificación ya existen o el clúster aún no está disponible.");
         }
     }
 }

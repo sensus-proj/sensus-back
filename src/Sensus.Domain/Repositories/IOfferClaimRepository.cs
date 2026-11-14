@@ -9,6 +9,11 @@ public interface IOfferClaimRepository
 {
     Task<OfferClaim?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Cuenta los apartados activos asociados a una oferta (FR-035-04, FR-036-04).
+    /// </summary>
+    Task<int> GetActiveClaimCountAsync(Guid offerId, CancellationToken cancellationToken = default);
+
     Task<OfferClaim?> GetActiveByUserAndOfferAsync(
         Guid userId,
         Guid offerId,

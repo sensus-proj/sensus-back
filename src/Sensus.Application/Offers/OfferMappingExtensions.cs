@@ -23,6 +23,7 @@ public static class OfferMappingExtensions
             offer.Latitude,
             offer.Longitude,
             offer.CreatedAtUtc,
-            offer.LastModifiedAtUtc);
+            offer.LastModifiedAtUtc,
+            offer.Version);
     }
 }

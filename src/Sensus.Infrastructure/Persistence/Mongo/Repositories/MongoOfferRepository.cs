@@ -53,6 +53,20 @@ public sealed class MongoOfferRepository : IOfferRepository
         await _context.Offers.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
     }
 
+    public async Task<bool> UpdateWithVersionCheckAsync(
+        Offer offer,
+        int expectedVersion,
+        CancellationToken cancellationToken = default)
+    {
+        var document = OfferDocument.FromDomain(offer);
+        var filter = Builders<OfferDocument>.Filter.And(
+            Builders<OfferDocument>.Filter.Eq(o => o.Id, offer.Id),
+            Builders<OfferDocument>.Filter.Eq(o => o.Version, expectedVersion));
+
+        var result = await _context.Offers.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
+
     /// <summary>
     /// Transición masiva y atómica en MongoDB para expirar ofertas cuya vigencia finalizó.
     /// Reemplaza la necesidad de Triggers o SQL Agent Jobs aprovechando el índice compuesto (Status, EndsAt).
@@ -281,7 +295,8 @@ public sealed class MongoOfferRepository : IOfferRepository
             GetNullableDouble(document, "longitude"),
             document["createdAtUtc"].ToUniversalTime(),
             GetNullableDate(document, "lastModifiedAtUtc"),
-            GetInt32(document, "viewCount"));
+            GetInt32(document, "viewCount"),
+            GetInt32(document, "version") == 0 ? 1 : GetInt32(document, "version"));
 
         return new NearbyOfferHit(
             offer,

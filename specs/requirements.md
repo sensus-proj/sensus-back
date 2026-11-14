@@ -140,16 +140,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Pendiente |
 | `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Pendiente |
 | `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Pendiente |
-| `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Pendiente |
-| `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Pendiente |
-| `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Pendiente |
-| `FR-022-04` | 022 | FR | Almacenar el archivo de forma privada hasta su aprobación | Must | Pendiente |
-| `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Pendiente |
-| `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Pendiente |
-| `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Pendiente |
-| `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Pendiente |
-| `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Pendiente |
-| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
+| `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Implementado |
+| `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Implementado |
+| `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Implementado |
+| `FR-022-04` | 022 | FR | Almacenar el archivo de forma privada hasta su aprobación | Must | Implementado |
+| `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Implementado |
+| `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Implementado |
+| `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Implementado |
+| `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Implementado |
+| `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Implementado |
+| `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Implementado |
 | `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Pendiente |
 | `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Pendiente |
 | `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Pendiente |
@@ -181,16 +181,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
 | `NFR-026-02` | 026 | NFR | Índice | Compuesto por status + location + createdAt | Pendiente |
-| `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Pendiente |
-| `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Pendiente |
-| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Pendiente |
-| `FR-027-04` | 027 | FR | Seleccionar el adaptador FCM o SNS por configuración | Must | Pendiente |
-| `FR-027-05` | 027 | FR | Eliminar tokens rechazados por el proveedor | Must | Pendiente |
-| `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Pendiente |
-| `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Pendiente |
-| `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Pendiente |
-| `NFR-027-02` | 027 | NFR | Latencia de despacho | p95 < 2 s | Pendiente |
-| `NFR-027-03` | 027 | NFR | Acoplamiento al proveedor | Cero referencias al SDK fuera de Infrastructure | Pendiente |
+| `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
+| `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
+| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Implementado |
+| `FR-027-04` | 027 | FR | Seleccionar el adaptador FCM o SNS por configuración | Must | Implementado |
+| `FR-027-05` | 027 | FR | Eliminar tokens rechazados por el proveedor | Must | Implementado |
+| `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Implementado |
+| `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Implementado |
+| `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Implementado |
+| `NFR-027-02` | 027 | NFR | Latencia de despacho | p95 < 2 s | Implementado |
+| `NFR-027-03` | 027 | NFR | Acoplamiento al proveedor | Cero referencias al SDK fuera de Infrastructure | Implementado |
 | `FR-028-01` | 028 | FR | Exponer un endpoint de recepción de eventos | Must | Backlog |
 | `FR-028-02` | 028 | FR | Verificar la firma del emisor | Must | Backlog |
 | `FR-028-03` | 028 | FR | Garantizar idempotencia por eventId | Must | Backlog |
@@ -334,14 +334,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Pendiente |
 | `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Pendiente |
 | `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Pendiente |
-| `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Pendiente |
-| `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Pendiente |
-| `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Pendiente |
-| `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Pendiente |
-| `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Pendiente |
-| `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Pendiente |
-| `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Pendiente |
-| `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Pendiente |
+| `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Implementado |
+| `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Implementado |
+| `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Implementado |
+| `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Implementado |
+| `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Implementado |
+| `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Implementado |
+| `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Implementado |
+| `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Implementado |
 | `FR-045-01` | 045 | FR | Habilitar hospedaje dual en `Sensus.Api` con `AddAWSLambdaHosting(LambdaEventSource.HttpApi)` | Must | Implementado |
 | `FR-045-02` | 045 | FR | Crear el proyecto AWS CDK en C# dentro de `infra/` con `cdk.json` funcional | Must | Implementado |
 | `FR-045-03` | 045 | FR | Definir función AWS Lambda con runtime `PROVIDED_AL2023`, arquitectura `ARM_64` y timeout 29 s | Must | Implementado |

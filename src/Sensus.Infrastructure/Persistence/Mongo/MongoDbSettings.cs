@@ -12,4 +12,7 @@ public sealed class MongoDbSettings
     public string OffersCollectionName { get; set; } = "offers";
     public string OfferClaimsCollectionName { get; set; } = "offer_claims";
     public string OfferViewsCollectionName { get; set; } = "offer_views";
+    public string MediaAssetsCollectionName { get; set; } = "media_assets";
+    public string DevicesCollectionName { get; set; } = "devices";
+    public string NotificationSettingsCollectionName { get; set; } = "notification_settings";
 }

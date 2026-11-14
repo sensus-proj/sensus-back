@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 2.9.0 · **Actualizado:** 2026-11-13 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
+**Version:** 3.0.0 · **Actualizado:** 2026-11-13 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -14,5 +14,5 @@
 | **Constitución vigente** | v1.3.0 (enmendada 2026-11-08) |
 | **AGENTS.md vigente** | v1.3.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests); `sensus-back.slnx` retirado |
-| **Última tarea completada** | Specs 007 (ofertas cercanas), 032 (detalle y vistas) y 033 (apartado con QR) implementadas y verificadas: 337 pruebas unitarias y 78 de integración en verde, `dotnet build -warnaserror` y `dotnet format --verify-no-changes` sin cambios. Spec 018 moderación multimodal implementada con 226 pruebas superadas |
+| **Última tarea completada** | Specs 007, 032 y 033 implementadas y verificadas (337 pruebas unitarias y 78 de integración en verde). Spec 018 implementada con 226 pruebas superadas. **Además**: Specs 022 (media upload), 027 (device-token push) y 044 (notification settings) implementadas y verificadas: 375 pruebas unitarias en verde, 4 pruebas de arquitectura en verde, `dotnet build -warnaserror` y `dotnet format --verify-no-changes` sin cambios. Endpoints implementados: POST /api/v1/media/upload, PUT /api/v1/users/device-token, GET+PUT /api/v1/users/settings. specs/README.md y requirements.md actualizados. No hay secretos hardcodeados. |
 | **Restricción activa** | Git autorizado **solo** para la rama `sprint3_oscar`; commit y push requieren confirmación explícita del responsable |
