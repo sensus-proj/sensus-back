@@ -872,4 +872,42 @@ public class OfferTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Offer.StockBelowActiveClaims");
     }
+
+    [Fact]
+    public void Create_AndUpdate_ShouldPersistOptionalProductCategory()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Bolillo recién horneado",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            null,
+            20.0536,
+            -99.3436,
+            _now,
+            "Panadería").Value;
+
+        offer.Category.Should().Be("Panadería");
+
+        var updated = offer.Update(
+            "Bolillo recién horneado",
+            "Pan artesanal del día",
+            20m,
+            25,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now,
+            "Abarrotes");
+
+        updated.IsSuccess.Should().BeTrue();
+        offer.Category.Should().Be("Abarrotes");
+    }
 }

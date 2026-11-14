@@ -32,6 +32,14 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
+      MongoDbSettings__ConnectionString: ${{ secrets.MONGODB_CONNECTION_STRING || secrets.MONGO_URI }}
+      JwtSettings__Secret: ${{ secrets.JWT_SECRET }}
+      ClaimCodeSettings__Secret: ${{ secrets.CLAIM_CODE_SECRET }}
+      Cloudinary__CloudName: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      Cloudinary__ApiKey: ${{ secrets.CLOUDINARY_API_KEY }}
+      Cloudinary__ApiSecret: ${{ secrets.CLOUDINARY_API_SECRET }}
+      OpenAiSettings__ApiKey: ${{ secrets.OPENAI_API_KEY }}
+      MailerSettings__ApiKey: ${{ secrets.MAILER_API_KEY }}
 
     steps:
       - name: Checkout

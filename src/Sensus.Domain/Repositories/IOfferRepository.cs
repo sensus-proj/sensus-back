@@ -65,4 +65,14 @@ public interface IOfferRepository
     Task<bool> IncrementViewCountAsync(
         Guid offerId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sincroniza las coordenadas geográficas de las ofertas existentes de un comercio cuando este
+    /// actualiza su ubicación.
+    /// </summary>
+    Task UpdateMerchantLocationAsync(
+        Guid merchantId,
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

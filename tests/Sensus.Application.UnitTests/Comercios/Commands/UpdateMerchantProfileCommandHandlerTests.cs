@@ -171,4 +171,76 @@ public class UpdateMerchantProfileCommandHandlerTests
         result.Value.Categoria.Should().Be("Belleza");
         existingComercio.Categoria.Should().Be(MerchantCategory.Belleza);
     }
+
+    [Fact]
+    public async Task Handle_ShouldUseExplicitCoordinates_AndSkipGeocoding_WhenProvided()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        var existingComercio = Comercio.Create(userId, "Tienda", "Direccion Vieja 1", "01000", 19.0, -99.0).Value;
+        _comercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(existingComercio);
+
+        var command = new UpdateMerchantProfileCommand(
+            "Tienda Actualizada",
+            "Av. Nueva 25",
+            "42800",
+            null,
+            null,
+            20.056789,
+            -99.341234);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Latitud.Should().Be(20.056789);
+        result.Value.Longitud.Should().Be(-99.341234);
+        await _geocodingService.DidNotReceiveWithAnyArgs().GeocodeAddressAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSyncOfferLocationsAndInvalidateCache_WhenDependenciesProvided()
+    {
+        // Arrange
+        var cacheService = Substitute.For<ICacheService>();
+        var offerRepository = Substitute.For<IOfferRepository>();
+        var handler = new UpdateMerchantProfileCommandHandler(
+            _comercioRepository,
+            _currentUserService,
+            _geocodingService,
+            cacheService,
+            offerRepository);
+
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        var existingComercio = Comercio.Create(userId, "Tienda", "Direccion Vieja 1", "01000", 19.0, -99.0).Value;
+        _comercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(existingComercio);
+
+        var command = new UpdateMerchantProfileCommand(
+            "Tienda Actualizada",
+            "Av. Nueva 25",
+            "42800",
+            null,
+            null,
+            20.123456,
+            -99.654321);
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        await offerRepository.Received(1).UpdateMerchantLocationAsync(
+            existingComercio.Id,
+            20.123456,
+            -99.654321,
+            Arg.Any<CancellationToken>());
+        await cacheService.Received(1).RemoveAsync($"sensus:merchants:user:{userId}", Arg.Any<CancellationToken>());
+        await cacheService.Received(1).RemoveAsync($"sensus:merchants:{existingComercio.Id}", Arg.Any<CancellationToken>());
+        await cacheService.Received(1).RemoveByPrefixAsync("sensus:offers:nearby:", Arg.Any<CancellationToken>());
+    }
 }

@@ -20,4 +20,5 @@ public sealed record OfferDto(
     double? Longitude,
     DateTime CreatedAtUtc,
     DateTime? LastModifiedAtUtc,
-    int Version = 1);
+    int Version = 1,
+    string? Category = null);

@@ -18,13 +18,18 @@ using Sensus.Infrastructure.Migration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Carga opcional de configuración local privada (ignorada en Git) para credenciales de MongoDB Atlas y llaves locales
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
+
 // El secreto JWT nunca se versiona (AGENTS.md §8). En Development se genera uno efímero cuando
 // no está configurado; fuera de Development su ausencia es un error de configuración explícito.
 var configuredSecret = builder.Configuration["JwtSettings:Secret"];
 var isLambdaRuntime = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
 if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") || isLambdaRuntime))
 {
-    configuredSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
+    var seedBytes = Encoding.UTF8.GetBytes($"Sensus.JwtKey.Deterministic.{builder.Environment.EnvironmentName}");
+    configuredSecret = Convert.ToBase64String(SHA384.HashData(seedBytes));
     builder.Configuration["JwtSettings:Secret"] = configuredSecret;
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {

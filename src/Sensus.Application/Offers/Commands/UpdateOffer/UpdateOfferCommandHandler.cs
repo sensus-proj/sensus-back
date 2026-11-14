@@ -74,7 +74,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
             request.ImageUrl,
             activeClaimsCount,
             request.ExpectedVersion,
-            now);
+            now,
+            request.Category);
 
         if (updateResult.IsFailure)
         {
