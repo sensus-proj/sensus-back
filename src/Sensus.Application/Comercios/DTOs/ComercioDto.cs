@@ -22,4 +22,5 @@ public sealed record ComercioDto(
     double Longitud,
     bool Activo,
     DateTime FechaRegistro,
-    IReadOnlyList<HorarioDiaDto>? Horarios = null);
+    IReadOnlyList<HorarioDiaDto>? Horarios = null,
+    string Categoria = "Otros");

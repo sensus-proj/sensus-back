@@ -5,6 +5,7 @@ using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.UnitTests.Comercios.Commands;
@@ -135,5 +136,39 @@ public class UpdateMerchantProfileCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Unprocessable);
         await _comercioRepository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldUpdateCategory_WhenCategoryIsProvided()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        var existingComercio = Comercio.Create(
+            userId,
+            "Tienda",
+            "Calle Misma 100",
+            "01000",
+            19.5,
+            -99.5).Value;
+
+        _comercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>())
+            .Returns(existingComercio);
+
+        var command = new UpdateMerchantProfileCommand(
+            "Tienda",
+            "Calle Misma 100",
+            "01000",
+            null,
+            "Belleza");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Categoria.Should().Be("Belleza");
+        existingComercio.Categoria.Should().Be(MerchantCategory.Belleza);
     }
 }

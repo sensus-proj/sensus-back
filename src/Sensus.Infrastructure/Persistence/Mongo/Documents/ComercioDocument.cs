@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver.GeoJsonObjectModel;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.ValueObjects;
 
 namespace Sensus.Infrastructure.Persistence.Mongo.Documents;
@@ -59,6 +60,10 @@ public sealed class ComercioDocument
     [BsonElement("fechaRegistro")]
     public DateTime FechaRegistro { get; set; }
 
+    [BsonElement("categoria")]
+    [BsonRepresentation(BsonType.String)]
+    public MerchantCategory Categoria { get; set; } = MerchantCategoryCatalog.Default;
+
     [BsonElement("horarios")]
     public List<HorarioDiaDocument> Horarios { get; set; } = [];
 
@@ -76,6 +81,7 @@ public sealed class ComercioDocument
             Ubicacion = GeoJson.Point(GeoJson.Geographic(comercio.Longitud, comercio.Latitud)),
             Activo = comercio.Activo,
             FechaRegistro = comercio.FechaRegistro,
+            Categoria = comercio.Categoria,
             Horarios = comercio.Horarios.Select(h => new HorarioDiaDocument
             {
                 Dia = h.Dia,
@@ -88,45 +94,35 @@ public sealed class ComercioDocument
 
     public Comercio ToDomain()
     {
-        var comercio = Comercio.Create(
+        var domainHorarios = new List<HorarioDia>();
+        foreach (HorarioDiaDocument h in Horarios)
+        {
+            if (h.EstaCerrado)
+            {
+                domainHorarios.Add(HorarioDia.Cerrado(h.Dia).Value);
+            }
+            else if (TimeOnly.TryParse(h.HoraApertura, CultureInfo.InvariantCulture, out var ap) &&
+                     TimeOnly.TryParse(h.HoraCierre, CultureInfo.InvariantCulture, out var ci))
+            {
+                var res = HorarioDia.Abierto(h.Dia, ap, ci);
+                if (res.IsSuccess)
+                {
+                    domainHorarios.Add(res.Value);
+                }
+            }
+        }
+
+        return Comercio.Reconstitute(
+            Id,
             UsuarioId,
             NombreComercial,
             Direccion,
             CodigoPostal,
             Latitud,
             Longitud,
-            FechaRegistro).Value;
-
-        typeof(Comercio).GetProperty("Id")?.SetValue(comercio, Id);
-
-        if (!Activo)
-        {
-            comercio.Deactivate();
-        }
-
-        if (Horarios.Count > 0)
-        {
-            var domainHorarios = new List<HorarioDia>();
-            foreach (var h in Horarios)
-            {
-                if (h.EstaCerrado)
-                {
-                    domainHorarios.Add(HorarioDia.Cerrado(h.Dia).Value);
-                }
-                else if (TimeOnly.TryParse(h.HoraApertura, CultureInfo.InvariantCulture, out var ap) &&
-                         TimeOnly.TryParse(h.HoraCierre, CultureInfo.InvariantCulture, out var ci))
-                {
-                    var res = HorarioDia.Abierto(h.Dia, ap, ci);
-                    if (res.IsSuccess)
-                    {
-                        domainHorarios.Add(res.Value);
-                    }
-                }
-            }
-            comercio.UpdateHorarios(domainHorarios);
-        }
-
-        comercio.ClearDomainEvents();
-        return comercio;
+            Activo,
+            FechaRegistro,
+            Categoria,
+            domainHorarios);
     }
 }

@@ -10,4 +10,6 @@ public sealed class MongoDbSettings
     public string ComerciosCollectionName { get; set; } = "comercios";
     public string PasswordResetTokensCollectionName { get; set; } = "password_reset_tokens";
     public string OffersCollectionName { get; set; } = "offers";
+    public string OfferClaimsCollectionName { get; set; } = "offer_claims";
+    public string OfferViewsCollectionName { get; set; } = "offer_views";
 }

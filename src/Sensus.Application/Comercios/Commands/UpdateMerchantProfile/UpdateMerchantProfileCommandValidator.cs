@@ -1,4 +1,5 @@
 using FluentValidation;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
 
@@ -21,5 +22,9 @@ public sealed class UpdateMerchantProfileCommandValidator : AbstractValidator<Up
         RuleFor(x => x.CodigoPostal)
             .NotEmpty().WithMessage("El código postal es obligatorio.")
             .Matches(@"^\d{5}$").WithMessage("El código postal debe contener exactamente 5 dígitos numéricos.");
+
+        RuleFor(x => x.Categoria)
+            .Must(c => string.IsNullOrWhiteSpace(c) || MerchantCategoryCatalog.TryParse(c, out _))
+            .WithMessage($"La categoría debe pertenecer al catálogo: {string.Join(", ", MerchantCategoryCatalog.Names)}.");
     }
 }

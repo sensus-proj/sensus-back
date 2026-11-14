@@ -1,32 +1,90 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 032 Detalle de oferta y contador de vistas"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 032. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >
+    Contrato del detalle de oferta y del registro de vistas deduplicado por usuario, oferta y día
+    (FR-032-01 a FR-032-06). Las ofertas archivadas o inexistentes responden 404 uniforme.
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers/{id}:
     get:
-      summary: "Borrador de GET /api/v1/offers/{id}"
+      summary: Detalle completo de una oferta visible
+      operationId: getOfferDetail
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200':
+          description: Detalle de la oferta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferDetail' }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '404': { description: La oferta no existe, está archivada o el comercio no está activo }
+        '429': { description: Límite de peticiones excedido }
   /api/v1/offers/{id}/view:
     post:
-      summary: "Borrador de POST /api/v1/offers/{id}/view"
+      summary: Registra una vista por usuario, oferta y día
+      operationId: registerOfferView
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
-        '204': { description: Sin contenido }
-        '400': { description: Solicitud inválida }
+        '204': { description: Vista registrada o ya existente para el día (idempotente) }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '404': { description: La oferta no existe o está archivada }
+        '429': { description: Límite de peticiones excedido }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferDetail:
+      type: object
+      required:
+        - id
+        - merchantId
+        - merchantName
+        - category
+        - title
+        - originalPrice
+        - discountPercentage
+        - discountedPrice
+        - stock
+        - status
+        - startsAt
+        - endsAt
+        - viewCount
+        - hasActiveClaim
+      properties:
+        id: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+        merchantAddress: { type: string }
+        category: { type: string }
+        title: { type: string }
+        description: { type: string }
+        originalPrice: { type: number }
+        discountPercentage: { type: integer }
+        discountedPrice: { type: number }
+        stock: { type: integer }
+        status: { type: string }
+        imageUrl: { type: [string, 'null'] }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        viewCount: { type: integer }
+        hasActiveClaim: { type: boolean }
+        createdAtUtc: { type: string, format: date-time }
+        lastModifiedAtUtc: { type: [string, 'null'], format: date-time }

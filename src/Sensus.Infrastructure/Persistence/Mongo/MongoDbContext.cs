@@ -51,6 +51,14 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferDocument>(_settings.OffersCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<OfferClaimDocument> OfferClaims =>
+        _database?.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferViewDocument> OfferViews =>
+        _database?.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     private void ConfigureIndexes()
     {
         if (_database is null) return;
@@ -80,6 +88,10 @@ public sealed class MongoDbContext
             // Índice geoespacial 2dsphere para consultas geográficas
             var geoIndexKeys = Builders<ComercioDocument>.IndexKeys.Geo2DSphere(c => c.Ubicacion);
             comerciosCollection.Indexes.CreateOne(new CreateIndexModel<ComercioDocument>(geoIndexKeys));
+
+            // Índice por categoría para el filtro de ofertas cercanas (FR-007-03)
+            var categoryIndexKeys = Builders<ComercioDocument>.IndexKeys.Ascending(c => c.Categoria);
+            comerciosCollection.Indexes.CreateOne(new CreateIndexModel<ComercioDocument>(categoryIndexKeys));
         }
         catch (Exception ex)
         {
@@ -127,6 +139,65 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: Los índices de ofertas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var claimsCollection = _database.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName);
+
+            // Un solo apartado activo por usuario y oferta (FR-033-03).
+            var activeClaimKeys = Builders<OfferClaimDocument>.IndexKeys
+                .Ascending(c => c.UserId)
+                .Ascending(c => c.OfferId);
+            var activeClaimOptions = new CreateIndexOptions<OfferClaimDocument>
+            {
+                Unique = true,
+                PartialFilterExpression = Builders<OfferClaimDocument>.Filter.Eq(
+                    c => c.Status,
+                    Sensus.Domain.Enums.OfferClaimStatus.Active.ToString())
+            };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(activeClaimKeys, activeClaimOptions));
+
+            // El hash del código es único (FR-033-04).
+            var codeHashKeys = Builders<OfferClaimDocument>.IndexKeys.Ascending(c => c.CodeHash);
+            var codeHashOptions = new CreateIndexOptions { Unique = true };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(codeHashKeys, codeHashOptions));
+
+            // Índice para el job de expiración y purga 30 días después de vencer (FR-033-05).
+            var expiresKeys = Builders<OfferClaimDocument>.IndexKeys.Ascending(c => c.ExpiresAtUtc);
+            var expiresOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) };
+            claimsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferClaimDocument>(expiresKeys, expiresOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de apartados ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var viewsCollection = _database.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName);
+
+            // Una sola vista por usuario, oferta y día (FR-032-03, CA-032-04).
+            var viewKeys = Builders<OfferViewDocument>.IndexKeys
+                .Ascending(v => v.UserId)
+                .Ascending(v => v.OfferId)
+                .Ascending(v => v.ViewedOn);
+            var viewOptions = new CreateIndexOptions { Unique = true };
+            viewsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferViewDocument>(viewKeys, viewOptions));
+
+            // Purga de vistas con 180 días de antigüedad (plan del spec 032).
+            var viewTtlKeys = Builders<OfferViewDocument>.IndexKeys.Ascending(v => v.CreatedAtUtc);
+            var viewTtlOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(180) };
+            viewsCollection.Indexes.CreateOne(
+                new CreateIndexModel<OfferViewDocument>(viewTtlKeys, viewTtlOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de vistas ya existen o el clúster aún no está disponible.");
         }
     }
 }

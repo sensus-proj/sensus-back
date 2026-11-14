@@ -22,6 +22,9 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
 
+    /// <summary>Contador acumulado de vistas deduplicadas por usuario y día (FR-032-03).</summary>
+    public int ViewCount { get; private set; }
+
     // Constructor privado para persistencia / deserialización
     private Offer() : base()
     {
@@ -160,7 +163,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         double? latitude,
         double? longitude,
         DateTime createdAtUtc,
-        DateTime? lastModifiedAtUtc = null)
+        DateTime? lastModifiedAtUtc = null,
+        int viewCount = 0)
     {
         Offer offer = new(
             id,
@@ -179,7 +183,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             longitude,
             createdAtUtc)
         {
-            LastModifiedAtUtc = lastModifiedAtUtc
+            LastModifiedAtUtc = lastModifiedAtUtc,
+            ViewCount = viewCount
         };
 
         return offer;
@@ -291,4 +296,36 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// </summary>
     public bool IsActive(DateTime nowUtc) =>
         Status == OfferStatus.Published && nowUtc >= StartsAt && nowUtc < EndsAt && Stock > 0;
+
+    /// <summary>
+    /// Devuelve unidades al inventario cuando un apartado expira o no puede completarse
+    /// (FR-033-05, NFR-033-02).
+    /// </summary>
+    public Result ReturnStock(int units)
+    {
+        if (units <= 0)
+        {
+            return Result.Failure(
+                Error.Validation("Offer.InvalidReturnUnits", "Las unidades a devolver deben ser mayores a 0."));
+        }
+
+        Stock += units;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Incrementa el contador de vistas cuando la deduplicación diaria confirma una vista nueva
+    /// (FR-032-03, CA-032-03 y CA-032-04).
+    /// </summary>
+    public Result RegisterView()
+    {
+        if (Status == OfferStatus.Archived)
+        {
+            return Result.Failure(
+                Error.Conflict("Offer.ArchivedNotViewable", "No se registran vistas sobre ofertas archivadas."));
+        }
+
+        ViewCount++;
+        return Result.Success();
+    }
 }

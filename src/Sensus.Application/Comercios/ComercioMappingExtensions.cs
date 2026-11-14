@@ -24,6 +24,7 @@ public static class ComercioMappingExtensions
             comercio.Longitud,
             comercio.Activo,
             comercio.FechaRegistro,
-            horariosDto);
+            horariosDto,
+            comercio.Categoria.ToString());
     }
 }

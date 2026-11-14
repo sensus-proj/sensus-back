@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 2.8.0 · **Actualizado:** 2026-11-08 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
+**Version:** 2.9.0 · **Actualizado:** 2026-11-13 · **Alineado a:** `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,15 +11,15 @@
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-08 |
-| Fase SDD | `specify` completada — 43 specs activas y 1 en backlog; el SDD convive con el código de Sprint 1 en la rama `SprintOscar` |
-| Rama de trabajo | `SprintOscar`, creada desde `origin/Sprint1` de `sensus-proj/sensus-back`; `Sprint1` de la organización permanece sin modificar |
-| Agente | OpenCode — Big Pickle |
+| Última actualización | 2026-11-13 |
+| Fase SDD | `implement` en curso para specs 007, 032 y 033 (ofertas cercanas, detalle con vistas y apartado con QR) en la rama `sprint3_oscar` (PR #14) |
+| Rama de trabajo | `sprint3_oscar` (hereda `Sprint1`); sin commits ni push de esta sesión |
+| Agente | OpenCode — DeepSeek V4.1 Flash |
 | Constitución vigente | v1.3.0 (enmendada 2026-11-08) |
 | AGENTS.md vigente | v1.3.0 |
 | Solución .NET | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests); `sensus-back.slnx` retirado |
-| Última tarea completada | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045, D25) y Caché Distribuido con Redis (Spec 048, D24). Verificado: 201 pruebas superadas, `Sensus.Infra` sintetizado sin warnings, `dotnet format` sin cambios y 47 specs SDD conformes |
-| Restricción activa | Git autorizado **solo** para esta migración (rama `SprintOscar`); cualquier otra operación sigue requiriendo autorización del responsable |
+| Última tarea completada | Specs 007 (ofertas cercanas), 032 (detalle y vistas) y 033 (apartado con QR) implementadas y verificadas: 337 pruebas unitarias y 78 de integración en verde, `dotnet build -warnaserror` y `dotnet format --verify-no-changes` sin cambios |
+| Restricción activa | Git autorizado **solo** para la rama `sprint3_oscar`; commit y push requieren confirmación explícita del responsable |
 
 ---
 
@@ -69,6 +69,8 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D25 | Implementación de Infraestructura Serverless como Código con AWS CDK en C# (Spec 045) | 2026-11-08 | Hospedaje dual Kestrel/Lambda en `Sensus.Api` (`AddAWSLambdaHosting(LambdaEventSource.HttpApi)`) y stack `SensusInfraStack` en `infra/` con AWS Lambda (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (retención 7 días + alarmas 5xx/errores), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
 | D26 | Despliegue en AWS Serverless (API Gateway HTTP API v2 + AWS Lambda .NET 10 en `us-east-2`) | 2026-11-09 | URL base oficial en producción: `https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/`. Validado con endpoints `/health` (200 OK) y ProblemDetails RFC 7231. Sustituye la IP provisional de EC2 (`18-117-247-171.sslip.io`) y se sincroniza en `NetworkClient.kt` del cliente móvil. |
 | D27 | Equivalencia MongoDB/Clean Architecture para SE-022 a SE-026 (Expiración automática y republicación de ofertas) | 2026-11-12 | Implementado en rama `sprint3_oscar`: Entidad `Offer`, control automático de vigencia en MongoDB sin triggers SQL, índice compuesto `{ status: 1, endsAt: 1 }`, actualización por lotes `ExpireOffersCommand`, republicación rápida `RepublishOfferCommand` y servicio en segundo plano `OfferExpirationBackgroundService`. |
+| D28 | La categoría comercial pertenece al comercio (`Comercio.Categoria`), no a la oferta | 2026-11-13 | Catálogo `MerchantCategory` (`Otros` = 0 como valor por defecto) en `Sensus.Domain.Enums`, persistido en `comercios.categoria` con índice simple y resuelto en `FR-007-03` con `$lookup`. Campo opcional en registro y edición de perfil; los documentos previos se leen como `Otros`. |
+| D29 | El código QR del apartado es un payload firmado con HMAC, renderizado por el cliente | 2026-11-13 | `HmacClaimCodeService` firma `v1.<claimId>.<offerId>.<exp>.<firma>` con HMAC-SHA256 y comparación `FixedTimeEquals`; solo se persiste el hash SHA-256. No se añade dependencia de generación de imágenes. |
 
 ---
 
@@ -129,17 +131,18 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 
 ## F. Próximos pasos
 
-1. Revisar y fusionar `SprintOscar` → `Sprint1` mediante PR en `sensus-proj/sensus-back`.
-2. Regularizar el código de Sprint 1 contra el SDD: specs retroactivas para recuperación de contraseña
+1. Confirmar autorización para `commit`/`push` de la rama `sprint3_oscar` y actualizar el PR #14.
+2. Medir cobertura del código nuevo (objetivo ≥ 90 %) y revisar el Quality Gate de SonarCloud del PR.
+3. Unificar los contratos de 007, 032 y 033 en el OpenAPI agregado cuando exista (spec 011).
+4. Regularizar el código de Sprint 1 contra el SDD: specs retroactivas para recuperación de contraseña
    (029), modo invitado, eliminación de cuenta (030), perfil de comercio (031) y almacenamiento de imagen
    de perfil (022/023).
-3. Ejecutar la ola 0: 009–011 (errores, paginación y OpenAPI) antes de tocar endpoints.
-4. Rotar el secreto JWT y purgar el historial; hasta entonces el escaneo de secretos de CI puede fallar.
-5. Medir cobertura real y elevarla al 80 % en Domain y Application.
-6. Ejecutar la ola 1 (001–003, 029, 030) y después la ola 2 (005–007, 031–037).
-7. Renombrar las rutas implementadas a `/api/v1/merchants` y `/api/v1/users/profile`; retirar legacy en la
-   ola 6 (spec 008).
-8. Inicializar `infra/` con CDK y la alarma de presupuesto; activar el job `iac` del pipeline.
+5. Rotar el secreto JWT y el de `ClaimCodeSettings` en cada entorno; ambos deben resolverse por variable
+   de entorno o AWS Secrets Manager.
+6. Ejecutar la ola 0: 009–011 (errores, paginación y OpenAPI) antes de tocar más endpoints.
+7. Ejecutar la ola 1 (001–003, 029, 030) y continuar la ola 2 (034–037).
+8. Renombrar las rutas legacy a `/api/v1/merchants` y `/api/v1/users/profile`; retirarlas en la ola 6.
+9. Verificar `$geoNear` con `explain` contra un MongoDB real (Testcontainers) cuando Docker esté disponible.
 
 ---
 
@@ -172,6 +175,7 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | 2.6.0 | 2026-11-08 | Adopción oficial de Cloudinary (D23): Enmienda constitucional v1.3.0 (§2.1, §2.2, P-VI), creación de ADR 0010, actualización de overview de arquitectura y specs 019, 022 y 023 para oficializar Cloudinary como proveedor de almacenamiento y CDN multimedia, sustituyendo S3 y CloudFront. |
 | 2.7.0 | 2026-11-08 | Implementación de Spec 048 (Caché distribuido con Redis, D24): Se creó `ICacheService` en `Application.Common.Interfaces` y `RedisCacheService` en `Infrastructure.Cache` utilizando `StackExchange.Redis`, con fallback transparente ante caídas o timeouts (FR-048-11), soporte de TTL por clave y eliminación por prefijo. Se integró lectura en caché e invalidación en `GetProfileQuery`, `UpdateProfileCommandHandler`, `GetMyComercioQuery` y `UpdateMerchantProfileCommandHandler`. Se añadieron configuraciones de Redis en `appsettings.json` y 4 suites de pruebas (`RedisCacheServiceTests`, `GetProfileQueryHandlerTests`, y actualización de `GetMyComercioQueryHandlerTests`). Verificado: 201 pruebas en verde (155 unitarias, 4 arquitectura, 3 E2E, 39 integración), `dotnet format` limpio y 46 specs SDD conformes. |
 | 2.8.0 | 2026-11-08 | Implementación de Spec 045 (Infraestructura Serverless como Código con AWS CDK, D25): Se habilitó hospedaje dual Kestrel/Lambda en `Sensus.Api` (`Amazon.Lambda.AspNetCoreServer.Hosting` con `LambdaEventSource.HttpApi`) y se creó el proyecto `infra/src/Sensus.Infra/Sensus.Infra.csproj` con `infra/cdk.json` y `SensusInfraStack.cs` (AWS Lambda `.NET 10` sobre `PROVIDED_AL2023` `ARM_64`, API Gateway HTTP API v2, CloudWatch Logs con retención de 7 días y alarmas 5xx/errores/throttling, rol IAM de mínimo privilegio con lectura de SSM Parameter Store a costo 0 USD, y presupuesto mensual en AWS Budgets con alerta en 1.00 USD). Se actualizó el job `iac` en `.github/workflows/ci.yml` y se creó `.github/workflows/deploy-serverless.yml`. Verificado: 47 specs SDD conformes, compilación limpia sin warnings y 201 pruebas en verde. |
+| 2.9.0 | 2026-11-13 | Implementación de las specs 007, 032 y 033 y traslado de la categoría al comercio (D26). **007**: `NearbyOffersRadiusPolicy` (invitado ≤ 2 km, registrado 1–5 km, tope 50 km), `GetNearbyOffersQuery` + validador + handler, `IOfferRepository.GetNearbyAsync` con `$geoNear` + `$lookup` a `comercios` + `$facet`, endpoint `GET /api/v1/offers/nearby` con política `GuestOrRegistered` y rate limiting de lectura. **033**: `OfferClaim` (Active/Redeemed/Expired), reserva y devolución atómica de stock, `IOfferClaimRepository` con canje atómico e índice único parcial, `HmacClaimCodeService` (HMAC-SHA256, `FixedTimeEquals`, solo hash SHA-256 persistido), endpoints `POST /offers/{id}/claim`, `POST /offers/claims/{code}/redeem` y `POST /offers/claims/expire-check`, y job `OfferClaimExpirationBackgroundService`. **032**: `OfferView` deduplicada por usuario+oferta+día con índice único y TTL de 180 días, `Offer.ViewCount`/`RegisterView`, `GetOfferDetailQuery`, `RegisterOfferViewCommand`, endpoints `GET /offers/{id}` y `POST /offers/{id}/view` con 204 idempotente y 404 uniforme. Verificado: 337 pruebas unitarias y 78 de integración en verde, `dotnet build -warnaserror` y `dotnet format --verify-no-changes` limpios. |
 
 ---
 

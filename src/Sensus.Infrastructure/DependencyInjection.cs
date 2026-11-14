@@ -78,6 +78,13 @@ public static class DependencyInjection
         services.AddScoped<IComercioRepository, MongoComercioRepository>();
         services.AddScoped<IPasswordResetTokenRepository, MongoPasswordResetTokenRepository>();
         services.AddScoped<IOfferRepository, MongoOfferRepository>();
+        services.AddScoped<IOfferClaimRepository, MongoOfferClaimRepository>();
+        services.AddScoped<IOfferViewRepository, MongoOfferViewRepository>();
+
+        // Firma HMAC de códigos de apartado (spec 033)
+        services.Configure<ClaimCodeSettings>(
+            configuration.GetSection(ClaimCodeSettings.SectionName));
+        services.AddSingleton<IClaimCodeService, HmacClaimCodeService>();
 
         // Servicio de migración de SQL a MongoDB Atlas
         services.AddScoped<SqlToMongoMigrationService>();

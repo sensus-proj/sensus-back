@@ -1,4 +1,4 @@
-# Índice de especificaciones — Sensus Backend
+﻿# Índice de especificaciones — Sensus Backend
 
 Cada spec es una unidad independiente de alcance con su propio `spec.md`, `plan.md`, `tasks.md` y `checklist.md`.
 La numeración es estable: un spec no cambia de ID una vez creado.
@@ -11,7 +11,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 004 | [Cierre de sesión y revocación de token](004-cierre-sesion-y-revocacion/spec.md) | Autenticación | Nuevo | 6 | Pendiente | 002 |
 | 005 | [Activación del rol comercial](005-activacion-comerciante/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 001, 002 |
 | 006 | [Consulta de mi comercio](006-consulta-mi-comercio/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 005 |
-| 007 | [Ofertas cercanas](007-ofertas-cercanas/spec.md) | Ofertas | Nuevo | 2 | Pendiente | 005, 010, 034 |
+| 007 | [Ofertas cercanas](007-ofertas-cercanas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 005, 010, 034 |
 | 008 | [Retiro de endpoints legacy](008-retiro-endpoints-legacy/spec.md) | Plataforma | Nuevo | 6 | Pendiente | 001, 005, 006 |
 | 009 | [Errores uniformes con ProblemDetails](009-errores-problemdetails/spec.md) | Plataforma | Nuevo | 0 | Parcial | Ninguna |
 | 010 | [Paginación estándar](010-paginacion-estandar/spec.md) | Plataforma | Nuevo | 0 | Parcial | 009 |
@@ -35,9 +35,9 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
 | 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 001, 004, 013 |
 | 030 | [Eliminación de cuenta y datos](030-eliminacion-cuenta/spec.md) | Autenticación | Nuevo | 1 | Pendiente | 003, 004, 020 |
-| 031 | [Edición del perfil de comercio](031-edicion-perfil-comercio/spec.md) | Comercios | Nuevo | 2 | Pendiente | 005, 006 |
-| 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Pendiente | 007 |
-| 033 | [Apartado de oferta con código QR](033-apartado-con-qr/spec.md) | Ofertas | Nuevo | 2 | Pendiente | 007, 032, 037 |
+| 031 | [Edición del perfil de comercio](031-edicion-perfil-comercio/spec.md) | Comercios | Nuevo | 2 | Implementado | 005, 006 |
+| 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007 |
+| 033 | [Apartado de oferta con código QR](033-apartado-con-qr/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007, 032, 037 |
 | 034 | [Creación de oferta](034-creacion-oferta/spec.md) | Inventario | Nuevo | 2 | Pendiente | 005, 017, 022 |
 | 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Pendiente | 034, 033 |
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Pendiente | 034, 035 |
