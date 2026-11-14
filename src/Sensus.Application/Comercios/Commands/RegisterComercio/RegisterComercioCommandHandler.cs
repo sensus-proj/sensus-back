@@ -60,18 +60,22 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
                 Error.Conflict("Comercio.AlreadyExists", "El usuario ya posee un comercio activo registrado."));
         }
 
-        // Geocodificación (SE-003: Latitud/Longitud para GeoJSON)
-        var geocodeResult = await _geocodingService.GeocodeAddressAsync(
+        // Resolución de coordenadas (cliente opcional validado o geocodificación de respaldo)
+        var coordsResult = await ComercioCoordinateHelper.ResolveAsync(
+            request.Latitud,
+            request.Longitud,
+            shouldGeocodeIfMissing: true,
             request.Direccion,
             request.CodigoPostal,
+            _geocodingService,
             cancellationToken);
 
-        if (geocodeResult.IsFailure)
+        if (coordsResult.IsFailure)
         {
-            return Result.Failure<RegisterComercioResponseDto>(geocodeResult.Error);
+            return Result.Failure<RegisterComercioResponseDto>(coordsResult.Error);
         }
 
-        var (latitud, longitud) = geocodeResult.Value;
+        var (latitud, longitud) = coordsResult.Value!.Value;
 
         var now = _dateTimeProvider.UtcNow;
 

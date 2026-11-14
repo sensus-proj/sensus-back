@@ -21,18 +21,32 @@ public sealed class MongoDbContext
         _settings = settings.Value;
         _logger = logger;
 
-        if (string.IsNullOrWhiteSpace(_settings.ConnectionString))
+        var resolvedConnectionString = ResolveConnectionString(_settings.ConnectionString);
+        if (string.IsNullOrWhiteSpace(resolvedConnectionString))
         {
             _logger.LogWarning("MongoDB ConnectionString no está configurada.");
             _database = null;
         }
         else
         {
-            var client = new MongoClient(_settings.ConnectionString);
+            _settings.ConnectionString = resolvedConnectionString;
+            var client = new MongoClient(resolvedConnectionString);
             _database = client.GetDatabase(_settings.DatabaseName);
         }
 
         ConfigureIndexes();
+    }
+
+    private static string? ResolveConnectionString(string? configured)
+    {
+        if (!string.IsNullOrWhiteSpace(configured) && !configured.StartsWith("${", StringComparison.Ordinal))
+        {
+            return configured;
+        }
+
+        return Environment.GetEnvironmentVariable("MongoDbSettings__ConnectionString")
+               ?? Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")
+               ?? Environment.GetEnvironmentVariable("MONGO_URI");
     }
 
     public IMongoCollection<UserDocument> Users =>

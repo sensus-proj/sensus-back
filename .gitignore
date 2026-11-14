@@ -11,3 +11,10 @@ artifacts/
 **/*.trx
 infra/cdk.out/
 infra/publish/
+
+# Private local configuration & credentials (never commit)
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.json
+.env
+.env.*

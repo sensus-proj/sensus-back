@@ -43,7 +43,7 @@ public static class MerchantEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status409Conflict);
 
-        // SE-004 / Spec 006: Consulta de datos del comercio propio
+        // SE-004 / Spec 006: Consulta de datos del comercio propio (CA-006-03 devuelve 404 si el usuario no tiene comercio)
         group.MapGet("/me", async (
             ISender sender,
             CancellationToken ct) =>
@@ -51,7 +51,7 @@ public static class MerchantEndpoints
             var result = await sender.Send(new GetMyComercioQuery(), ct);
             return result.ToHttpResult();
         })
-        .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
         .WithName("GetMyMerchant")
         .WithSummary("SE-004: Obtiene los datos del comercio propio del usuario autenticado")
         .Produces<ComercioDto>(StatusCodes.Status200OK)

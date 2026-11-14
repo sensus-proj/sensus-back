@@ -17,4 +17,5 @@ public sealed record UpdateOfferCommand(
     DateTime StartsAt,
     DateTime EndsAt,
     string? ImageUrl,
-    int ExpectedVersion) : IRequest<Result<OfferDto>>;
+    int ExpectedVersion,
+    string? Category = null) : IRequest<Result<OfferDto>>;

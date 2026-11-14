@@ -68,6 +68,39 @@ public sealed class SensusInfraStack : Stack
         // Sin VPC ni NAT Gateway para garantizar costo 0.00 USD y salida directa a MongoDB Atlas, Cloudinary y OpenAI.
         var assetPath = ResolveLambdaAssetPath();
 
+        var lambdaEnv = new Dictionary<string, string>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Production",
+            ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
+            ["Redis__Enabled"] = "false",
+            ["Observability__Metrics__Enabled"] = "true",
+            ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
+            ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
+        };
+
+        string[] passthroughKeys =
+        [
+            "MongoDbSettings__ConnectionString",
+            "MONGODB_CONNECTION_STRING",
+            "MONGO_URI",
+            "JwtSettings__Secret",
+            "ClaimCodeSettings__Secret",
+            "Cloudinary__CloudName",
+            "Cloudinary__ApiKey",
+            "Cloudinary__ApiSecret",
+            "OpenAiSettings__ApiKey",
+            "MailerSettings__ApiKey"
+        ];
+
+        foreach (var key in passthroughKeys)
+        {
+            var val = System.Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrWhiteSpace(val))
+            {
+                lambdaEnv[key] = val;
+            }
+        }
+
         var apiFunction = new Function(this, "SensusApiFunction", new FunctionProps
         {
             FunctionName = $"sensus-api-{envName}",
@@ -80,15 +113,7 @@ public sealed class SensusInfraStack : Stack
             MemorySize = 512,
             Timeout = Duration.Seconds(29),
             LogGroup = apiLogGroup,
-            Environment = new Dictionary<string, string>
-            {
-                ["ASPNETCORE_ENVIRONMENT"] = "Production",
-                ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
-                ["Redis__Enabled"] = "false",
-                ["Observability__Metrics__Enabled"] = "true",
-                ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
-                ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
-            }
+            Environment = lambdaEnv
         });
 
         // 4. AWS API Gateway v2 — HTTP API con integración proxy hacia la Lambda y CORS (FR-045-04)

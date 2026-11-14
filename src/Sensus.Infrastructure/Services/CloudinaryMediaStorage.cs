@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
@@ -16,13 +17,23 @@ namespace Sensus.Infrastructure.Services;
 public sealed class CloudinaryMediaStorage : IMediaStorage
 {
     private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private readonly HttpClient _httpClient;
     private readonly CloudinarySettings _settings;
     private readonly ILogger<CloudinaryMediaStorage> _logger;
 
     public CloudinaryMediaStorage(
         IOptions<CloudinarySettings> settings,
         ILogger<CloudinaryMediaStorage> logger)
+        : this(SharedHttpClient, settings, logger)
     {
+    }
+
+    internal CloudinaryMediaStorage(
+        HttpClient httpClient,
+        IOptions<CloudinarySettings> settings,
+        ILogger<CloudinaryMediaStorage> logger)
+    {
+        _httpClient = httpClient;
         _settings = settings.Value;
         _logger = logger;
     }
@@ -62,7 +73,7 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
             content.Add(new StringContent(signature), "signature");
 
             string uploadUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/upload";
-            using HttpResponseMessage response = await SharedHttpClient.PostAsync(uploadUrl, content, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.PostAsync(uploadUrl, content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -75,6 +86,13 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
             CloudinaryUploadResponse? responseJson = await response.Content.ReadFromJsonAsync<CloudinaryUploadResponse>(cancellationToken);
             string publicId = responseJson?.PublicId ?? string.Empty;
             string? secureUrl = responseJson?.SecureUrl;
+
+            if (string.IsNullOrWhiteSpace(publicId))
+            {
+                _logger.LogError("Cloudinary respondió sin public_id para OwnerId={OwnerId}.", ownerId);
+                return Result.Failure<MediaUploadResult>(
+                    Error.Failure("Media.InvalidResponse", "Respuesta inválida del almacenamiento multimedia."));
+            }
 
             _logger.LogInformation("Imagen subida a Cloudinary: PublicId={PublicId}, OwnerId={OwnerId}", publicId, ownerId);
 
@@ -125,7 +143,7 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
             });
 
             string destroyUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/destroy";
-            using HttpResponseMessage response = await SharedHttpClient.PostAsync(destroyUrl, content, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.PostAsync(destroyUrl, content, cancellationToken);
             _logger.LogInformation("Imagen '{PublicId}' eliminada de Cloudinary (HTTP {StatusCode}).", publicId, (int)response.StatusCode);
             return response.IsSuccessStatusCode;
         }
@@ -149,7 +167,10 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
 
     private sealed class CloudinaryUploadResponse
     {
+        [JsonPropertyName("public_id")]
         public string? PublicId { get; set; }
+
+        [JsonPropertyName("secure_url")]
         public string? SecureUrl { get; set; }
     }
 }
