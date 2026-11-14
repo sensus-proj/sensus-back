@@ -58,7 +58,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             request.ImageUrl,
             comercio.Latitud,
             comercio.Longitud,
-            _dateTimeProvider.UtcNow);
+            _dateTimeProvider.UtcNow,
+            request.Category);
 
         if (offerResult.IsFailure)
         {

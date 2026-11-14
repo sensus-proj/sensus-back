@@ -27,5 +27,7 @@ public sealed class RegisterComercioCommandValidator : AbstractValidator<Registe
         RuleFor(x => x.Categoria)
             .Must(c => string.IsNullOrWhiteSpace(c) || MerchantCategoryCatalog.TryParse(c, out _))
             .WithMessage($"La categoría debe pertenecer al catálogo: {string.Join(", ", MerchantCategoryCatalog.Names)}.");
+
+        ComercioCoordinateHelper.AddCoordinateValidationRules(this, x => x.Latitud, x => x.Longitud);
     }
 }

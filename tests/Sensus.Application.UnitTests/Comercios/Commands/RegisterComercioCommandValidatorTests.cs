@@ -98,4 +98,35 @@ public class RegisterComercioCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(RegisterComercioCommand.Categoria));
     }
+
+    [Fact]
+    public void Validate_Should_BeValid_WhenValidCoordinatesAreProvided()
+    {
+        var command = new RegisterComercioCommand("Mi Tienda", "Av. Principal 123", "06000", null, 20.056789, -99.341234);
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(91.0, -99.1)]
+    [InlineData(-91.0, -99.1)]
+    [InlineData(19.4, 181.0)]
+    [InlineData(19.4, -181.0)]
+    public void Validate_Should_Fail_WhenCoordinatesAreOutOfRange(double lat, double lng)
+    {
+        var command = new RegisterComercioCommand("Mi Tienda", "Av. Principal 123", "06000", null, lat, lng);
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_Should_Fail_WhenOnlyOneCoordinateIsProvided()
+    {
+        var command = new RegisterComercioCommand("Mi Tienda", "Av. Principal 123", "06000", null, 19.4326, null);
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+    }
 }

@@ -18,4 +18,6 @@ public sealed record NearbyOfferDto(
     string? ImageUrl,
     DateTime StartsAt,
     DateTime EndsAt,
-    double DistanceMeters);
+    double DistanceMeters,
+    double? Latitude = null,
+    double? Longitude = null);

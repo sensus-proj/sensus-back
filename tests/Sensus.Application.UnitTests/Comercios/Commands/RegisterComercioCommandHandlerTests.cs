@@ -165,4 +165,57 @@ public class RegisterComercioCommandHandlerTests
         result.Error.Code.Should().Be("Comercio.CategoriaInvalida");
         await _comercioRepository.DidNotReceive().AddAsync(Arg.Any<Comercio>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_Should_UseClientCoordinates_AndSkipGeocoding_WhenProvided()
+    {
+        // Arrange
+        var user = User.Create("Beto", "beto@sensus.com", "hashed_pw", true, DateTime.UtcNow).Value;
+        typeof(User).GetProperty("Id")?.SetValue(user, _testUserId);
+        _userRepository.GetByIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(user);
+        _comercioRepository.ExistsByUsuarioIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(false);
+        _jwtTokenGenerator.GenerateToken(Arg.Any<User>()).Returns(("token_merchant", DateTime.UtcNow.AddHours(24)));
+
+        var command = new RegisterComercioCommand(
+            "Tienda del Centro",
+            "Calle Hidalgo 10",
+            "42800",
+            null,
+            20.056789123,
+            -99.341234987);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Comercio.Latitud.Should().Be(20.056789);
+        result.Value.Comercio.Longitud.Should().Be(-99.341235);
+        await _geocodingService.DidNotReceive().GeocodeAddressAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(95.0, -99.1, "Comercio.LatitudInvalida")]
+    [InlineData(19.4, -185.0, "Comercio.LongitudInvalida")]
+    [InlineData(19.4, null, "Comercio.CoordenadasIncompletas")]
+    public async Task Handle_Should_ReturnValidationError_WhenCoordinatesAreInvalidOrIncomplete(
+        double? lat,
+        double? lng,
+        string expectedErrorCode)
+    {
+        // Arrange
+        var user = User.Create("Beto", "beto@sensus.com", "hashed_pw", true, DateTime.UtcNow).Value;
+        _userRepository.GetByIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(user);
+        _comercioRepository.ExistsByUsuarioIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var command = new RegisterComercioCommand("Tienda", "Calle Hidalgo 10", "42800", null, lat, lng);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be(expectedErrorCode);
+        await _comercioRepository.DidNotReceive().AddAsync(Arg.Any<Comercio>(), Arg.Any<CancellationToken>());
+    }
 }

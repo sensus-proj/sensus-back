@@ -24,10 +24,11 @@ Permitir que un usuario con cuenta unificada active el rol comercial creando el 
 
 - Alta del perfil comercial sobre una cuenta existente
 - Categoría del catálogo
-- Dirección y coordenadas aportadas por el cliente
+- Dirección, código postal y coordenadas opcionales aportadas por el cliente (mapa interactivo), con respaldo de geocodificación cuando se omiten coordenadas
 - Cálculo de GeoJSON y geohash
 - Un comercio activo por usuario
 - Asignación del rol Merchant
+- Exposición canónica en `POST /api/v1/merchants/activate` (rutas legacy retiradas en spec 008)
 
 **No incluye**
 

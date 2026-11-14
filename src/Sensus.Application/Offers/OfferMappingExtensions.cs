@@ -24,6 +24,7 @@ public static class OfferMappingExtensions
             offer.Longitude,
             offer.CreatedAtUtc,
             offer.LastModifiedAtUtc,
-            offer.Version);
+            offer.Version,
+            offer.Category);
     }
 }

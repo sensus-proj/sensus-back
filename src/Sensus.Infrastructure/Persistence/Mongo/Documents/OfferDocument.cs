@@ -51,6 +51,9 @@ public sealed class OfferDocument
     [BsonElement("imageUrl")]
     public string? ImageUrl { get; set; }
 
+    [BsonElement("category")]
+    public string? Category { get; set; }
+
     [BsonElement("viewCount")]
     public int ViewCount { get; set; }
 
@@ -96,7 +99,8 @@ public sealed class OfferDocument
             CreatedAtUtc,
             LastModifiedAtUtc,
             ViewCount,
-            Version);
+            Version,
+            Category);
     }
 
     public static OfferDocument FromDomain(Offer offer)
@@ -121,6 +125,7 @@ public sealed class OfferDocument
             EndsAt = offer.EndsAt,
             Status = offer.Status.ToString(),
             ImageUrl = offer.ImageUrl,
+            Category = offer.Category,
             Latitude = offer.Latitude,
             Longitude = offer.Longitude,
             ViewCount = offer.ViewCount,
