@@ -163,6 +163,50 @@ public class GetOfferDetailQueryHandlerTests
             .GetActiveByUserAndOfferAsync(default, default, default);
     }
 
+    [Fact]
+    public async Task Handle_WhenCacheMiss_ShouldStoreDetailWithOffersEntityTtl()
+    {
+        ICacheService cache = Substitute.For<ICacheService>();
+        var handler = new GetOfferDetailQueryHandler(_offerRepository, _comercioRepository, _offerClaimRepository, _currentUserService, cache);
+        Offer offer = BuildOffer();
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
+        _comercioRepository.GetByIdAsync(offer.MerchantId, Arg.Any<CancellationToken>()).Returns(BuildComercio(offer.MerchantId));
+        cache.GetAsync<Sensus.Application.Offers.DTOs.OfferDetailDto>(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((Sensus.Application.Offers.DTOs.OfferDetailDto?)null);
+
+        var result = await handler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await cache.Received(1).SetForEntityAsync(
+            $"sensus:offers:detail:{offer.Id}",
+            Arg.Any<Sensus.Application.Offers.DTOs.OfferDetailDto>(),
+            "Offers",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenCacheHit_ShouldNotQueryRepositories()
+    {
+        ICacheService cache = Substitute.For<ICacheService>();
+        var handler = new GetOfferDetailQueryHandler(_offerRepository, _comercioRepository, _offerClaimRepository, _currentUserService, cache);
+        Offer offer = BuildOffer();
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
+        _comercioRepository.GetByIdAsync(offer.MerchantId, Arg.Any<CancellationToken>()).Returns(BuildComercio(offer.MerchantId));
+
+        Sensus.Application.Offers.DTOs.OfferDetailDto? captured = null;
+        cache.GetAsync<Sensus.Application.Offers.DTOs.OfferDetailDto>(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_ => captured);
+        await cache.SetForEntityAsync(Arg.Any<string>(), Arg.Do<Sensus.Application.Offers.DTOs.OfferDetailDto>(d => captured = d), Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        await handler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+        _offerRepository.ClearReceivedCalls();
+
+        var second = await handler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+
+        second.IsSuccess.Should().BeTrue();
+        await _offerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
     private static Offer BuildOffer(int viewCount = 0)
     {
         Offer offer = Offer.Create(

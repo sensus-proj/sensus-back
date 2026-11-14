@@ -43,3 +43,9 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **V. Verificación automatizada** — PASS (201 pruebas pasando)
 - [x] **VI. Costo cero e IaC** — PASS (Opción dentro de Free Tier / Fail-graceful)
 - [x] **VII. Rendimiento y observabilidad** — PASS (Reducción de latencia en consultas frecuentes)
+
+## E. Registro
+
+| Fecha | Responsable | Resultado | Observaciones |
+|---|---|---|---|
+| 2026-11-14 | Claude (sesión de verificación) | Parcial | Caché de `GET /offers/{id}` y `/offers/nearby` con TTL `Redis:TtlByEntityMinutes:Offers` e invalidación en crear, editar, estado, republicar, apartar y expirar; pruebas en `OfferCacheTests` y handlers. Pendiente: feed (FR-048-06/08, depende de 024–026), health check del caché (FR-048-12) y pruebas con Redis real (T048-17). `dotnet build -c Release` 0 errores y 0 advertencias; 613 pruebas en verde (4 arquitectura, 498 unitarias, 3 E2E, 108 integración); cobertura combinada Domain 90,2 % y Application 97,4 %. |

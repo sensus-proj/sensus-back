@@ -14,19 +14,19 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] Cada alarma tiene umbral y destinatario
-- [ ] El panel mínimo está versionado
-- [ ] El costo está dentro del Free Tier
+- [x] Cada alarma tiene umbral y destinatario
+- [x] El panel mínimo está versionado
+- [x] El costo está dentro del Free Tier
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
+- [x] Código en la capa correcta y test de arquitectura en verde
+- [x] Pruebas unitarias y de integración añadidas y en verde
+- [x] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
 - [ ] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
 - [ ] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
@@ -43,15 +43,15 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☑ |
 | Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-14 | Claude (sesión de verificación) | Implementado | Métricas EMF `Sensus/Api` (`RequestLatency`, `ServerErrors`, `Throttled`; 3 de 10 gratuitas) con `RequestMetricsMiddleware`; 5 alarmas (10 gratuitas) con aviso por SNS/correo; panel `sensus-operations-<env>` (3 gratuitos). Síntesis CDK verificada fuera del repositorio. Brechas: `cdk diff` no ejecutado (sin CLI ni credenciales en la sesión); correlation-id depende de 014. `dotnet build -c Release` 0 errores y 0 advertencias; 613 pruebas en verde (4 arquitectura, 498 unitarias, 3 E2E, 108 integración); cobertura combinada Domain 90,2 % y Application 97,4 %. |

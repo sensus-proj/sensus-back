@@ -76,10 +76,17 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
                 ? MediaAssetStatus.Quarantined
                 : MediaAssetStatus.Rejected;
 
+        // FR-019-02: el contenido rechazado se elimina del almacenamiento y no conserva URL; el que queda en
+        // cuarentena conserva la URL solo de forma interna para una eventual liberación (FR-019-04).
+        if (status == MediaAssetStatus.Rejected)
+        {
+            await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
+        }
+
         MediaAsset mediaAsset = MediaAsset.Create(
             parsedUserId,
             uploadResult.Value.PublicId,
-            uploadResult.Value.SecureUrl,
+            status == MediaAssetStatus.Rejected ? null : uploadResult.Value.SecureUrl,
             request.ContentType,
             status,
             _dateTimeProvider.UtcNow);
@@ -89,7 +96,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         UploadMediaResponseDto dto = new UploadMediaResponseDto(
             MediaId: mediaAsset.Id,
             PublicId: mediaAsset.PublicId,
-            SecureUrl: mediaAsset.SecureUrl,
+            SecureUrl: mediaAsset.Status == MediaAssetStatus.Approved ? mediaAsset.SecureUrl : null,
             Status: mediaAsset.Status.ToString(),
             ContentType: mediaAsset.ContentType,
             ModerationDecision: moderationResult.Decision,

@@ -20,59 +20,79 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
     private readonly IComercioRepository _comercioRepository;
     private readonly IOfferClaimRepository _offerClaimRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICacheService? _cacheService;
 
     public GetOfferDetailQueryHandler(
         IOfferRepository offerRepository,
         IComercioRepository comercioRepository,
         IOfferClaimRepository offerClaimRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _offerClaimRepository = offerClaimRepository;
         _currentUserService = currentUserService;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<OfferDetailDto>> Handle(
         GetOfferDetailQuery request,
         CancellationToken cancellationToken)
     {
-        Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null || offer.Status == OfferStatus.Archived)
+        // FR-048-04: el detalle común a todos los usuarios se cachea; el indicador de apartado activo
+        // depende de la persona autenticada y se calcula siempre en cada solicitud.
+        string cacheKey = OfferCacheKeys.Detail(request.OfferId);
+        OfferDetailDto? detail = _cacheService is null
+            ? null
+            : await _cacheService.GetAsync<OfferDetailDto>(cacheKey, cancellationToken);
+
+        if (detail is null)
         {
-            return Result.Failure<OfferDetailDto>(NotFound());
+            Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
+            if (offer is null || offer.Status == OfferStatus.Archived)
+            {
+                return Result.Failure<OfferDetailDto>(NotFound());
+            }
+
+            Comercio? comercio = await _comercioRepository.GetByIdAsync(offer.MerchantId, cancellationToken);
+            if (comercio is null || !comercio.Activo)
+            {
+                return Result.Failure<OfferDetailDto>(NotFound());
+            }
+
+            detail = new OfferDetailDto(
+                offer.Id,
+                offer.MerchantId,
+                comercio.NombreComercial,
+                comercio.Direccion,
+                comercio.Categoria.ToString(),
+                offer.Title,
+                offer.Description,
+                offer.OriginalPrice,
+                offer.DiscountPercentage,
+                offer.DiscountedPrice,
+                offer.Stock,
+                offer.Status.ToString(),
+                offer.ImageUrl,
+                offer.Latitude,
+                offer.Longitude,
+                offer.StartsAt,
+                offer.EndsAt,
+                offer.ViewCount,
+                false,
+                offer.CreatedAtUtc,
+                offer.LastModifiedAtUtc);
+
+            if (_cacheService is not null)
+            {
+                await _cacheService.SetForEntityAsync(cacheKey, detail, OfferCacheKeys.EntityName, cancellationToken);
+            }
         }
 
-        Comercio? comercio = await _comercioRepository.GetByIdAsync(offer.MerchantId, cancellationToken);
-        if (comercio is null || !comercio.Activo)
-        {
-            return Result.Failure<OfferDetailDto>(NotFound());
-        }
+        bool hasActiveClaim = await HasActiveClaimAsync(request.OfferId, cancellationToken);
 
-        bool hasActiveClaim = await HasActiveClaimAsync(offer.Id, cancellationToken);
-
-        return Result.Success(new OfferDetailDto(
-            offer.Id,
-            offer.MerchantId,
-            comercio.NombreComercial,
-            comercio.Direccion,
-            comercio.Categoria.ToString(),
-            offer.Title,
-            offer.Description,
-            offer.OriginalPrice,
-            offer.DiscountPercentage,
-            offer.DiscountedPrice,
-            offer.Stock,
-            offer.Status.ToString(),
-            offer.ImageUrl,
-            offer.Latitude,
-            offer.Longitude,
-            offer.StartsAt,
-            offer.EndsAt,
-            offer.ViewCount,
-            hasActiveClaim,
-            offer.CreatedAtUtc,
-            offer.LastModifiedAtUtc));
+        return Result.Success(detail with { HasActiveClaim = hasActiveClaim });
     }
 
     private async Task<bool> HasActiveClaimAsync(Guid offerId, CancellationToken cancellationToken)

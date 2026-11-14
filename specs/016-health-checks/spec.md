@@ -4,7 +4,7 @@
 |---|---|
 | ID | 016 |
 | Slug | `health-checks` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

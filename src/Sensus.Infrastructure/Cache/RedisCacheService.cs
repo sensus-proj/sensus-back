@@ -104,6 +104,11 @@ public sealed class RedisCacheService : ICacheService
         }
     }
 
+    public Task SetForEntityAsync<T>(string key, T value, string entityName, CancellationToken cancellationToken = default)
+    {
+        return SetAsync(key, value, _settings.GetTtlForEntity(entityName), cancellationToken);
+    }
+
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))

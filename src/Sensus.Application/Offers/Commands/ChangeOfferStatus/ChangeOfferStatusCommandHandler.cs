@@ -17,6 +17,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ChangeOfferStatusCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
 
     public ChangeOfferStatusCommandHandler(
         IOfferRepository offerRepository,
@@ -24,7 +25,8 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
-        ILogger<ChangeOfferStatusCommandHandler> logger)
+        ILogger<ChangeOfferStatusCommandHandler> logger,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -32,6 +34,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<OfferDto>> Handle(ChangeOfferStatusCommand request, CancellationToken cancellationToken)
@@ -101,6 +104,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         }
 
         await _offerRepository.UpdateAsync(offer, cancellationToken);
+        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
         _logger.LogInformation(
             "Oferta {OfferId} transicionada de {PreviousStatus} a {NewStatus} por el comercio {ComercioId} a las {NowUtc}.",

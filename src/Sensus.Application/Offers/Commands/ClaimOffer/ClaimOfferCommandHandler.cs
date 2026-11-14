@@ -14,19 +14,22 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
     private readonly ICurrentUserService _currentUserService;
     private readonly IClaimCodeService _claimCodeService;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICacheService? _cacheService;
 
     public ClaimOfferCommandHandler(
         IOfferRepository offerRepository,
         IOfferClaimRepository offerClaimRepository,
         ICurrentUserService currentUserService,
         IClaimCodeService claimCodeService,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
         _currentUserService = currentUserService;
         _claimCodeService = claimCodeService;
         _dateTimeProvider = dateTimeProvider;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<ClaimOfferResultDto>> Handle(
@@ -91,6 +94,8 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
             return Result.Failure<ClaimOfferResultDto>(
                 Error.Conflict("OfferClaim.AlreadyActive", "Ya tiene un apartado activo para esta oferta."));
         }
+
+        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
         return Result.Success(new ClaimOfferResultDto(
             claim.Id,

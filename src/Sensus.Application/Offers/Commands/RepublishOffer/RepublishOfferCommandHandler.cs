@@ -15,19 +15,22 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<RepublishOfferCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
 
     public RepublishOfferCommandHandler(
         IOfferRepository offerRepository,
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
-        ILogger<RepublishOfferCommandHandler> logger)
+        ILogger<RepublishOfferCommandHandler> logger,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<OfferDto>> Handle(RepublishOfferCommand request, CancellationToken cancellationToken)
@@ -62,6 +65,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         }
 
         await _offerRepository.UpdateAsync(offer, cancellationToken);
+        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
         _logger.LogInformation("Oferta {OfferId} republicada exitosamente por el comercio {ComercioId}. Nueva vigencia hasta {EndsAtUtc}",
             offer.Id, comercio.Id, offer.EndsAt);

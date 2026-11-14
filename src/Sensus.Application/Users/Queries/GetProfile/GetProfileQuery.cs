@@ -51,7 +51,7 @@ public sealed class GetProfileQueryHandler : IRequestHandler<GetProfileQuery, Re
         var dto = user.ToDto();
         if (_cacheService is not null)
         {
-            await _cacheService.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(15), cancellationToken);
+            await _cacheService.SetForEntityAsync(cacheKey, dto, "UserProfile", cancellationToken);
         }
 
         return Result.Success(dto);

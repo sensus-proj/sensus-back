@@ -71,6 +71,31 @@ public sealed class MongoDbContext
         _database?.GetCollection<NotificationSettingsDocument>(_settings.NotificationSettingsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    /// <summary>
+    /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
+    /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
+    /// </summary>
+    public async Task<bool> PingAsync(CancellationToken cancellationToken = default)
+    {
+        if (_database is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _database.RunCommandAsync<MongoDB.Bson.BsonDocument>(
+                new MongoDB.Bson.BsonDocument("ping", 1),
+                cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "El ping a MongoDB falló durante la verificación de readiness.");
+            return false;
+        }
+    }
+
     private void ConfigureIndexes()
     {
         if (_database is null) return;

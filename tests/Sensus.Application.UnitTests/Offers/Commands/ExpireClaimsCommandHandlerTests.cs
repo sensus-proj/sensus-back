@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.ExpireClaims;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -19,6 +20,7 @@ public class ExpireClaimsCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ILogger<ExpireClaimsCommandHandler> _logger =
         Substitute.For<ILogger<ExpireClaimsCommandHandler>>();
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly ExpireClaimsCommandHandler _handler;
 
     public ExpireClaimsCommandHandlerTests()
@@ -28,7 +30,8 @@ public class ExpireClaimsCommandHandlerTests
             _offerClaimRepository,
             _offerRepository,
             _dateTimeProvider,
-            _logger);
+            _logger,
+            _cacheService);
     }
 
     [Fact]
@@ -49,6 +52,9 @@ public class ExpireClaimsCommandHandlerTests
         result.Value.ExpiredCount.Should().Be(2);
         result.Value.ReturnedUnits.Should().Be(2);
         await _offerRepository.Received(1).ReturnStockAsync(OfferId, 2, Arg.Any<CancellationToken>());
+
+        await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+        await _cacheService.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -82,6 +88,8 @@ public class ExpireClaimsCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.ExpiredCount.Should().Be(0);
         result.Value.ReturnedUnits.Should().Be(0);
+
+        await _cacheService.DidNotReceiveWithAnyArgs().RemoveByPrefixAsync(default!, default);
     }
 
     private static OfferClaim BuildExpiredClaim()

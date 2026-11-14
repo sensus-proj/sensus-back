@@ -19,7 +19,6 @@ public static class UserEndpoints
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder app)
     {
         MapUserGroup(app.MapGroup("/api/v1/users"), isV1: true);
-        MapUserGroup(app.MapGroup("/api/users"), isV1: false); // Alias de compatibilidad
 
         return app;
     }

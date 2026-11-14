@@ -16,6 +16,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
 
     public UpdateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -23,7 +24,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
-        ILogger<UpdateOfferCommandHandler> logger)
+        ILogger<UpdateOfferCommandHandler> logger,
+        ICacheService? cacheService = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -31,6 +33,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<OfferDto>> Handle(UpdateOfferCommand request, CancellationToken cancellationToken)
@@ -91,6 +94,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         {
             return Result.Failure<OfferDto>(Error.Conflict("Offer.VersionConflict", "La oferta fue modificada concurrentemente por otra solicitud."));
         }
+
+        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
         _logger.LogInformation("Oferta {OfferId} actualizada exitosamente a la versión {Version} por el comercio {ComercioId}.",
             offer.Id, offer.Version, comercio.Id);

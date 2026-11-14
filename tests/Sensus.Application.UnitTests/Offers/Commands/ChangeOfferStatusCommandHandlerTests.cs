@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.ChangeOfferStatus;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -17,6 +18,7 @@ public class ChangeOfferStatusCommandHandlerTests
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ChangeOfferStatusCommandHandler> _logger;
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly ChangeOfferStatusCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -40,7 +42,8 @@ public class ChangeOfferStatusCommandHandlerTests
             _comercioRepository,
             _currentUserService,
             _dateTimeProvider,
-            _logger);
+            _logger,
+            _cacheService);
     }
 
     [Fact]
@@ -153,6 +156,9 @@ public class ChangeOfferStatusCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be("Paused");
         await _offerRepository.Received(1).UpdateAsync(offer, Arg.Any<CancellationToken>());
+
+        await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offer.Id), Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
     }
 
     [Fact]

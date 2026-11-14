@@ -7,6 +7,7 @@ using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Authentication;
 using Sensus.Infrastructure.Cache;
 using Sensus.Infrastructure.Migration;
+using Sensus.Infrastructure.Observability;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
@@ -23,6 +24,16 @@ public static class DependencyInjection
     {
         // Servicios base
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
+        // Métricas de aplicación en CloudWatch con Embedded Metric Format (Spec 015, FR-015-01)
+        services.Configure<MetricsSettings>(configuration.GetSection(MetricsSettings.SectionName));
+        services.AddSingleton<IRequestMetricsPublisher>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedMetricsPublisher(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
+                : new NoOpRequestMetricsPublisher();
+        });
 
         // Autenticación, BCrypt y JWT
         services.AddSingleton<IPasswordHasher, PasswordHasher>();

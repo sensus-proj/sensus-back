@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -17,6 +18,7 @@ public class UpdateOfferCommandHandlerTests
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly UpdateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -40,7 +42,8 @@ public class UpdateOfferCommandHandlerTests
             _comercioRepository,
             _currentUserService,
             _dateTimeProvider,
-            _logger);
+            _logger,
+            _cacheService);
     }
 
     [Fact]
@@ -320,6 +323,9 @@ public class UpdateOfferCommandHandlerTests
 
         await _offerRepository.Received(1)
             .UpdateWithVersionCheckAsync(Arg.Is<Offer>(o => o.Version == 2), 1, Arg.Any<CancellationToken>());
+
+        await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offer.Id), Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
     }
 
     private UpdateOfferCommand CreateValidCommand(Guid offerId, int expectedVersion = 1) =>

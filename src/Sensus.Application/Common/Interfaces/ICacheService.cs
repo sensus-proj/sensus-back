@@ -18,6 +18,12 @@ public interface ICacheService
     Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Guarda un elemento en caché usando el TTL configurado para la entidad (appsettings: Redis:TtlByEntityMinutes).
+    /// Evita TTL hardcodeados en la capa de aplicación (FR-048-10).
+    /// </summary>
+    Task SetForEntityAsync<T>(string key, T value, string entityName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Elimina una clave del caché.
     /// </summary>
     Task RemoveAsync(string key, CancellationToken cancellationToken = default);
