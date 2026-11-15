@@ -5,26 +5,26 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Pendiente |
+| Estado | Completada |
 | Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T047-01 | Reestructurar `ci.yml`: separar integración en job propio con `services.mongo` | DevOps | `FR-047-03` | — | Pendiente |
-| T047-02 | Agregar job `snyk-security` con `snyk test --severity-threshold=high` bloqueante | DevOps | `FR-047-04` | T047-01 | Pendiente |
-| T047-03 | Agregar job `sonarcloud` con calidad gate bloqueante | DevOps | `FR-047-05` | T047-01 | Pendiente |
-| T047-04 | Agregar job `mutation-testing` con `dotnet-stryker` (advisory) | DevOps | `FR-047-06` | T047-01 | Pendiente |
-| T047-05 | Crear `stryker-config.json` para mutación en `Sensus.Application.UnitTests` | DevOps | `FR-047-06` | — | Pendiente |
-| T047-06 | Eliminar `continue-on-error: true` de cobertura y gitleaks | DevOps | `FR-047-07` | T047-01 | Pendiente |
-| T047-07 | Verificar que secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) usen `${{ secrets.* }}` | Seguridad | `FR-047-12` | T047-01 | Pendiente |
-| T047-08 | Crear skill `quality-gates-sensus` con gates locales y CI | Documentación | `FR-047-08` | — | Pendiente |
-| T047-09 | Actualizar `agents/security-reviewer.md` con checklist Snyk/SonarCloud | Documentación | `FR-047-04` | — | Pendiente |
-| T047-10 | Actualizar `agents/test-qa.md` con comandos de gates CI | Documentación | `FR-047-08` | — | Pendiente |
-| T047-11 | Ejecutar localmente: `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, `check-specs.mjs specs` | Verificación | `FR-047-01`, `FR-047-09`, `FR-047-10` | T047-01 | Pendiente |
-| T047-12 | Actualizar `specs/README.md` y `specs/requirements.md` con spec 047 | Docs | `FR-047-01` | T047-11 | Pendiente |
-| T047-13 | Registrar evidencias del Constitution Check | Docs | `FR-047-01` | T047-12 | Pendiente |
+| T047-01 | Reestructurar `ci.yml`: separar integración en job propio con `services.mongo` | DevOps | `FR-047-03` | — | Completada |
+| T047-02 | Agregar job `snyk-security` con `snyk test --severity-threshold=high` bloqueante | DevOps | `FR-047-04` | T047-01 | Completada |
+| T047-03 | Agregar job `sonarcloud` con calidad gate bloqueante | DevOps | `FR-047-05` | T047-01 | Completada |
+| T047-04 | Agregar job `mutation-testing` con `dotnet-stryker` (advisory) | DevOps | `FR-047-06` | T047-01 | Completada |
+| T047-05 | Crear `stryker-config.json` para mutación en `Sensus.Application.UnitTests` | DevOps | `FR-047-06` | — | Completada |
+| T047-06 | Eliminar `continue-on-error: true` de cobertura y gitleaks | DevOps | `FR-047-07` | T047-01 | Completada |
+| T047-07 | Verificar que secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) usen `${{ secrets.* }}` | Seguridad | `FR-047-12` | T047-01 | Completada |
+| T047-08 | Crear skill `quality-gates-sensus` con gates locales y CI | Documentación | `FR-047-08` | — | Completada |
+| T047-09 | Actualizar `agents/security-reviewer.md` con checklist Snyk/SonarCloud | Documentación | `FR-047-04` | — | Completada |
+| T047-10 | Actualizar `agents/test-qa.md` con comandos de gates CI | Documentación | `FR-047-08` | — | Completada |
+| T047-11 | Ejecutar localmente: `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, `check-specs.mjs specs` | Verificación | `FR-047-01`, `FR-047-09`, `FR-047-10` | T047-01 | Completada |
+| T047-12 | Actualizar `specs/README.md` y `specs/requirements.md` con spec 047 | Docs | `FR-047-01` | T047-11 | Completada |
+| T047-13 | Registrar evidencias del Constitution Check | Docs | `FR-047-01` | T047-12 | Completada |
 
 ## Notas de ejecución
 

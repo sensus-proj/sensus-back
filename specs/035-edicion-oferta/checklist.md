@@ -7,38 +7,38 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## A. Antes de empezar (Definition of Ready)
 
 - [ ] La spec 035 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
+- [x] Los requisitos tienen identificador y criterio medible
 - [ ] Las dependencias están resueltas: 034, 033
-- [ ] El alcance y las exclusiones están declarados
+- [x] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
-- [ ] El propietario se valida en el servidor
-- [ ] La versión evita sobrescrituras
+- [x] El propietario se valida en el servidor
+- [x] La versión evita sobrescrituras
 - [ ] El contenido cambiado vuelve a moderarse
-- [ ] El stock respeta los apartados activos
+- [x] El stock respeta los apartados activos
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
+- [x] Código en la capa correcta y test de arquitectura en verde
 - [ ] Pruebas unitarias y de integración añadidas y en verde
 - [ ] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
 - [ ] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [ ] **IV. Seguridad y privacidad** — BRECHA: la edición de texto o imagen no vuelve a moderarse (FR-035-03, FR-035-07)
+- [ ] **V. Verificación automatizada** — BRECHA: sin pruebas de integración del endpoint
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS
 
 ## E. Evidencia
 
@@ -55,4 +55,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-15 | Equipo Sensus | PARCIAL | `PUT /api/v1/offers/{id}` con 403 por propietario, 409 por versión y stock ≥ apartados activos. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |

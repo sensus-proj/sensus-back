@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **1.3.0** |
+| Versión | **1.4.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-08 (adopción de Cloudinary como proveedor oficial de almacenamiento y CDN multimedia) |
+| Última enmienda | 2026-11-13 (habilitación del asistente generativo Sensi como cuarta excepción de proveedor externo; §2.1, §2.2, §2.4 y §2.5) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -336,6 +336,7 @@ son requisitos funcionales del producto.
 | Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
 | Moderación | OpenAI `omni-moderation-latest` | — | Moderación multimodal |
+| Asistente generativo | OpenAI, modelo de chat fijado por configuración | — | Redacción conversacional del asistente y selección dentro de candidatos recuperados (Spec 046) |
 | Notificaciones push | Abstracción `IPushDispatcher` | — | Despacho de notificaciones; adaptador FCM o SNS seleccionado por configuración |
 | IaC | AWS CDK (C#) | — | Aprovisionamiento de recursos |
 | Pruebas | xUnit, FluentAssertions, Testcontainers, NetArchTest | — | Unitarias, integración, arquitectura |
@@ -346,11 +347,14 @@ de cumplimiento.
 ### 2.2 Prohibiciones explícitas
 
 - Bases de datos relacionales (SQL Server, PostgreSQL, MySQL u otras).
-- Arquitecturas multi-nube. Los proveedores fuera de AWS MUST NOT usarse, con tres excepciones
-  explícitas y acotadas: la moderación de contenido (§2.4) y el adaptador de notificaciones push
-  declarado en §2.1 y el servicio de almacenamiento/CDN multimedia Cloudinary (§2.1). Cualquier otra dependencia externa MUST justificarse en una enmienda.
+- Arquitecturas multi-nube. Los proveedores fuera de AWS MUST NOT usarse, con cuatro excepciones
+  explícitas y acotadas: la moderación de contenido (§2.4), el adaptador de notificaciones push
+  declarado en §2.1, el servicio de almacenamiento/CDN multimedia Cloudinary (§2.1) y el proveedor
+  generativo del asistente conversacional (§2.1 y §2.4). Cualquier otra dependencia externa MUST
+  justificarse en una enmienda.
 - Interfaces de usuario: aplicación móvil, página web o *landing*. El backend MUST limitarse a la API.
 - Visión artificial local o modelos propios de moderación.
+- Acceso del proveedor generativo a la base de datos, a credenciales o a herramientas de ejecución.
 - Pasarelas de pago no contempladas en la especificación base.
 - Servicios de AWS fuera del nivel gratuito.
 - Recursos aprovisionados manualmente en consola.
@@ -383,6 +387,15 @@ omita el veredicto.
 | Umbrales | Externalizados en configuración, por entorno, registrados con cada decisión |
 | Fallo del proveedor | Cuarentena del contenido; nunca publicación |
 
+La moderación aplica además al asistente conversacional, aunque su contenido no se publique: el
+mensaje de la persona MUST moderarse antes de enviarse al proveedor generativo y el texto generado
+MUST moderarse antes de devolverse. Ante error, timeout, cuota agotada o respuesta inválida de
+cualquiera de los dos proveedores, MUST NOT entregarse texto generado.
+
+El proveedor generativo MUST recibir únicamente el mensaje y un conjunto cerrado de candidatos
+recuperado de forma determinista. Toda referencia fuera de ese conjunto MUST descartarse. Los importes
+y totales MUST calcularse en el backend y MUST NOT tomarse de la respuesta del proveedor.
+
 ### 2.5 Alcance funcional del backend
 
 - API RESTful autenticada para clientes móviles y web.
@@ -391,6 +404,8 @@ omita el veredicto.
 - Inventario de ofertas por comerciante con ciclo de vida explícito.
 - Feed social geolocalizado con publicaciones, comentarios, reacciones y reportes.
 - Búsqueda, recomendaciones y alternativas calculadas dentro del backend.
+- Asistente conversacional de paquetes por presupuesto, con recuperación determinista y redacción
+  generativa acotada.
 - Gestión de contenido de usuario con moderación previa.
 - Almacenamiento, transformación y entrega de multimedia mediante Cloudinary.
 - Notificaciones push a dispositivos registrados.
@@ -563,6 +578,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 1.1.0 | 2026-10-29 | Identificadores de requisito por spec (`FR-<spec>-<nn>` / `NFR-<spec>-<nn>`); `checklist.md` como cuarto artefacto obligatorio; fase `checklist` y estructura de spec en §3.6; resultados de Constitution Check ampliados para retro-specs. |
 | 1.2.0 | 2026-10-29 | Rutas públicas `/api/v1` con recursos en inglés (§3.5); abstracción de despacho push con adaptadores FCM o SNS (§2.1); excepciones acotadas a proveedores externos (§2.2); alcance funcional alineado al catálogo de 29 endpoints (§2.5). |
 | 1.3.0 | 2026-11-08 | Adopción oficial de Cloudinary para almacenamiento, transformación y CDN multimedia (§2.1, §2.2, P-VI), sustituyendo Amazon S3 y CloudFront. |
+| 1.4.0 | 2026-11-13 | Habilitación del asistente generativo Sensi: cuarta excepción de proveedor externo y alta en el stack autorizado (§2.1, §2.2); moderación de entrada y salida generativa, prohibición de acceso del proveedor a datos, credenciales y herramientas, y cálculo de importes en el backend (§2.2, §2.4); alcance funcional ampliado (§2.5); excepción a P-VI registrada en el Apéndice E. Deriva de ADR 0011 y Spec 046. |
 
 ---
 
@@ -653,8 +669,8 @@ Excepciones registradas: [Apéndice E]
 
 | ID | Principio | Alcance | Justificación | Responsable | Expira | Estado |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — |
+| EX-001 | VI | Costo variable del proveedor generativo del asistente conversacional (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual, límite de tokens por solicitud, límite de mensajes por persona y día, caché y alarma de facturación (`NFR-046-02`) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
 
 ---
 
-**Versión 1.3.0 — Ratificada el 2026-10-28, enmendada el 2026-11-08.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 1.4.0 — Ratificada el 2026-10-28, enmendada el 2026-11-13.** Toda modificación requiere el procedimiento de §4.3.

@@ -28,10 +28,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-003-06` | 003 | FR | Aceptar solo avatares subidos por el propio usuario y aprobados | Must | Implementado |
 | `NFR-003-01` | 003 | NFR | Latencia de consulta | p95 < 300 ms | Implementado |
 | `NFR-003-02` | 003 | NFR | Latencia de actualización | p95 < 500 ms | Implementado |
-| `FR-004-01` | 004 | FR | Exponer POST /api/v1/auth/logout autenticado | Must | Pendiente |
-| `FR-004-02` | 004 | FR | Registrar el jti revocado con TTL igual a la expiración del token | Must | Pendiente |
-| `FR-004-03` | 004 | FR | Rechazar cualquier petición con token revocado | Must | Pendiente |
-| `FR-004-04` | 004 | FR | Responder 204 aunque el token ya estuviera revocado | Should | Pendiente |
+| `FR-004-01` | 004 | FR | Exponer POST /api/v1/auth/logout autenticado | Must | Implementado |
+| `FR-004-02` | 004 | FR | Registrar el jti revocado con TTL igual a la expiración del token | Must | Parcial |
+| `FR-004-03` | 004 | FR | Rechazar cualquier petición con token revocado | Must | Implementado |
+| `FR-004-04` | 004 | FR | Responder 204 aunque el token ya estuviera revocado | Should | Implementado |
 | `NFR-004-01` | 004 | NFR | Efectividad de la revocación | < 1 s desde el logout | Pendiente |
 | `NFR-004-02` | 004 | NFR | Sobrecarga por petición | < 50 ms | Pendiente |
 | `FR-005-01` | 005 | FR | Activar el rol comercial sobre la cuenta autenticada | Must | Implementado |
@@ -81,16 +81,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-011-03` | 011 | FR | Validar el documento en CI y fallar ante cambios incompatibles | Must | Pendiente |
 | `FR-011-04` | 011 | FR | Versionar el contrato junto con la API | Should | Pendiente |
 | `NFR-011-01` | 011 | NFR | Cobertura del contrato | 100 % de endpoints publicados | Pendiente |
-| `FR-012-01` | 012 | FR | Definir orígenes permitidos por configuración y entorno | Must | Pendiente |
-| `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Pendiente |
-| `FR-012-03` | 012 | FR | Redirigir a HTTPS fuera de desarrollo | Must | Pendiente |
-| `FR-012-04` | 012 | FR | Habilitar HSTS en producción | Should | Pendiente |
+| `FR-012-01` | 012 | FR | Definir orígenes permitidos por configuración y entorno | Must | Implementado |
+| `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Implementado |
+| `FR-012-03` | 012 | FR | Redirigir a HTTPS fuera de desarrollo | Must | Implementado |
+| `FR-012-04` | 012 | FR | Habilitar HSTS en producción | Should | Implementado |
 | `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Pendiente |
-| `FR-013-01` | 013 | FR | Limitar peticiones por IP | Must | Pendiente |
+| `FR-013-01` | 013 | FR | Limitar peticiones por IP | Must | Implementado |
 | `FR-013-02` | 013 | FR | Limitar peticiones por usuario autenticado | Must | Pendiente |
 | `FR-013-03` | 013 | FR | Responder 429 con Retry-After | Must | Pendiente |
 | `FR-013-04` | 013 | FR | Configurar umbrales por entorno sin recompilar | Must | Pendiente |
-| `FR-013-05` | 013 | FR | Aplicar límites más estrictos en autenticación | Should | Pendiente |
+| `FR-013-05` | 013 | FR | Aplicar límites más estrictos en autenticación | Should | Implementado |
 | `NFR-013-01` | 013 | NFR | Sobrecarga del limitador | < 10 ms por petición | Pendiente |
 | `NFR-013-02` | 013 | NFR | Disponibilidad ante picos | Sin degradar a 5xx | Pendiente |
 | `FR-014-01` | 014 | FR | Emitir logs en JSON estructurado | Must | Pendiente |
@@ -108,12 +108,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-016-02` | 016 | FR | Exponer /health/ready verificando MongoDB | Must | Implementado |
 | `FR-016-03` | 016 | FR | No exponer cadenas de conexión ni versiones | Must | Implementado |
 | `NFR-016-01` | 016 | NFR | Latencia de readiness | < 500 ms | Pendiente |
-| `FR-017-01` | 017 | FR | Enviar imagen y texto en la misma solicitud de moderación | Must | Pendiente |
-| `FR-017-02` | 017 | FR | Consumir omni-moderation-latest con tiempo de espera acotado | Must | Pendiente |
-| `FR-017-03` | 017 | FR | Interpretar flagged, categories y category_scores de las seis subcategorías | Must | Pendiente |
-| `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Pendiente |
-| `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Pendiente |
-| `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Pendiente |
+| `FR-017-01` | 017 | FR | Enviar imagen y texto en la misma solicitud de moderación | Must | Implementado |
+| `FR-017-02` | 017 | FR | Consumir omni-moderation-latest con tiempo de espera acotado | Must | Implementado |
+| `FR-017-03` | 017 | FR | Interpretar flagged, categories y category_scores de las seis subcategorías | Must | Implementado |
+| `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
+| `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
+| `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
 | `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
@@ -208,12 +208,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-029-01` | 029 | NFR | Latencia de solicitud | p95 < 700 ms | Pendiente |
 | `NFR-029-02` | 029 | NFR | Enumeración de cuentas | Cero diferencia de respuesta entre correo existente e inexistente | Pendiente |
 | `NFR-029-03` | 029 | NFR | Límite de solicitudes | 3 por correo y hora | Pendiente |
-| `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Pendiente |
-| `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Pendiente |
-| `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Pendiente |
-| `FR-030-04` | 030 | FR | Purgar los datos personales a los 30 días mediante proceso programado | Must | Pendiente |
+| `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado |
+| `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Parcial |
+| `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado |
+| `FR-030-04` | 030 | FR | Purgar los datos personales a los 30 días mediante proceso programado | Must | Parcial |
 | `FR-030-05` | 030 | FR | Anonimizar publicaciones y comentarios del usuario en lugar de conservarlos asociados | Must | Pendiente |
-| `FR-030-06` | 030 | FR | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must | Pendiente |
+| `FR-030-06` | 030 | FR | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must | Implementado |
 | `FR-030-07` | 030 | FR | Conservar la auditoría de moderación anonimizada durante 90 días | Must | Pendiente |
 | `NFR-030-01` | 030 | NFR | Efectividad del bloqueo | < 1 s desde la eliminación | Pendiente |
 | `NFR-030-02` | 030 | NFR | Purga | 100 % de cuentas marcadas, en ≤ 31 días | Pendiente |
@@ -245,38 +245,38 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Implementado |
 | `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Implementado |
 | `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Implementado |
-| `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Pendiente |
-| `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Pendiente |
-| `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Pendiente |
+| `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
+| `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
+| `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
 | `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Pendiente |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
-| `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Pendiente |
+| `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
 | `NFR-034-01` | 034 | NFR | Latencia de creación | p95 < 1 s sin moderación | Pendiente |
 | `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Pendiente |
-| `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Pendiente |
-| `FR-035-02` | 035 | FR | Rechazar la edición de ofertas de otro comercio con 403 | Must | Pendiente |
+| `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Implementado |
+| `FR-035-02` | 035 | FR | Rechazar la edición de ofertas de otro comercio con 403 | Must | Implementado |
 | `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Pendiente |
-| `FR-035-04` | 035 | FR | Impedir reducir el stock por debajo de los apartados activos | Must | Pendiente |
-| `FR-035-05` | 035 | FR | Rechazar ediciones concurrentes con 409 usando version | Must | Pendiente |
-| `FR-035-06` | 035 | FR | No cambiar el identificador ni los apartados existentes | Must | Pendiente |
+| `FR-035-04` | 035 | FR | Impedir reducir el stock por debajo de los apartados activos | Must | Implementado |
+| `FR-035-05` | 035 | FR | Rechazar ediciones concurrentes con 409 usando version | Must | Implementado |
+| `FR-035-06` | 035 | FR | No cambiar el identificador ni los apartados existentes | Must | Implementado |
 | `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Pendiente |
 | `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Pendiente |
 | `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Pendiente |
-| `FR-036-01` | 036 | FR | Cambiar el estado de una oferta propia entre Published, Paused y Archived | Must | Pendiente |
-| `FR-036-02` | 036 | FR | Rechazar transiciones no permitidas con 409 | Must | Pendiente |
-| `FR-036-03` | 036 | FR | Ocultar de inmediato las ofertas pausadas o archivadas | Must | Pendiente |
-| `FR-036-04` | 036 | FR | Impedir archivar una oferta con apartados activos | Must | Pendiente |
-| `FR-036-05` | 036 | FR | Publicar solo ofertas con moderación aprobada y stock disponible | Must | Pendiente |
-| `FR-036-06` | 036 | FR | Registrar estado anterior, nuevo estado, actor y fecha | Must | Pendiente |
+| `FR-036-01` | 036 | FR | Cambiar el estado de una oferta propia entre Published, Paused y Archived | Must | Implementado |
+| `FR-036-02` | 036 | FR | Rechazar transiciones no permitidas con 409 | Must | Implementado |
+| `FR-036-03` | 036 | FR | Ocultar de inmediato las ofertas pausadas o archivadas | Must | Implementado |
+| `FR-036-04` | 036 | FR | Impedir archivar una oferta con apartados activos | Must | Implementado |
+| `FR-036-05` | 036 | FR | Publicar solo ofertas con moderación aprobada y stock disponible | Must | Parcial |
+| `FR-036-06` | 036 | FR | Registrar estado anterior, nuevo estado, actor y fecha | Must | Parcial |
 | `NFR-036-01` | 036 | NFR | Efectividad del cambio | < 2 s en la consulta de cercanía | Pendiente |
 | `NFR-036-02` | 036 | NFR | Auditoría | 100 % de transiciones registradas | Pendiente |
-| `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Pendiente |
-| `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Pendiente |
+| `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Implementado |
+| `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Implementado |
 | `FR-037-03` | 037 | FR | Incluir apartados activos, canjes y vistas por oferta | Must | Pendiente |
 | `FR-037-04` | 037 | FR | Aplicar pageSize 20 por defecto y 100 máximo | Must | Pendiente |
-| `FR-037-05` | 037 | FR | Ordenar por fecha de creación descendente | Must | Pendiente |
-| `FR-037-06` | 037 | FR | Impedir ver ofertas de otros comercios | Must | Pendiente |
+| `FR-037-05` | 037 | FR | Ordenar por fecha de creación descendente | Must | Implementado |
+| `FR-037-06` | 037 | FR | Impedir ver ofertas de otros comercios | Must | Implementado |
 | `NFR-037-01` | 037 | NFR | Latencia del listado | p95 < 600 ms | Pendiente |
 | `NFR-037-02` | 037 | NFR | Costo del agregado | Sin recorrido completo por oferta | Pendiente |
 | `FR-038-01` | 038 | FR | Alternar el favorito del usuario autenticado sobre una oferta visible | Must | Pendiente |
@@ -357,22 +357,46 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |
 | `NFR-045-04` | 045 | NFR | Privilegios IAM | Mínimo privilegio estricto | Implementado |
 | `NFR-045-05` | 045 | NFR | Compatibilidad con pruebas existentes | 100 % pruebas en verde | Implementado |
-| `FR-047-01` | 047 | FR | El pipeline compila la solución con `-warnaserror` (0 warnings, 0 errores) | Must | Pendiente |
-| `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Pendiente |
-| `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Pendiente |
-| `FR-047-04` | 047 | FR | Ejecuta Snyk `test` con severidad ≥ high como paso bloqueante | Must | Pendiente |
-| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante | Must | Pendiente |
-| `FR-047-06` | 047 | FR | Ejecuta Stryker.NET pruebas de mutación como paso advisory | Should | Pendiente |
-| `FR-047-07` | 047 | FR | Ejecuta gitleaks escaneo de secretos como paso bloqueante | Must | Pendiente |
-| `FR-047-08` | 047 | FR | Verifica cobertura ≥ 80 % en `Sensus.Domain` y `Sensus.Application` como paso bloqueante | Must | Pendiente |
-| `FR-047-09` | 047 | FR | Ejecuta `dotnet format --verify-no-changes` como paso bloqueante | Must | Pendiente |
-| `FR-047-10` | 047 | FR | Ejecuta `check-specs.mjs specs` para validar 4 artefactos por spec | Must | Pendiente |
-| `FR-047-11` | 047 | FR | Ejecuta `cdk synth` y `cdk diff` en PR cuando exista `infra/` | Should | Pendiente |
-| `FR-047-12` | 047 | FR | Los secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) solo como GitHub Secrets, nunca en YAML | Must | Pendiente |
+| `FR-046-01` | 046 | FR | Crear una conversación o devolver la activa de la persona autenticada | Must | Pendiente |
+| `FR-046-02` | 046 | FR | Rechazar con 401 sin JWT válido y con 403 las sesiones invitadas | Must | Pendiente |
+| `FR-046-03` | 046 | FR | Moderar el mensaje de la persona antes de enviarlo al proveedor generativo, fail-closed | Must | Pendiente |
+| `FR-046-04` | 046 | FR | Recuperar las ofertas candidatas de forma determinista, sin intervención del proveedor generativo | Must | Pendiente |
+| `FR-046-05` | 046 | FR | Interpretar el presupuesto del mensaje y rechazar montos no positivos o no interpretables | Must | Pendiente |
+| `FR-046-06` | 046 | FR | Calcular el paquete y recalcular su total en el backend sin exceder el presupuesto | Must | Pendiente |
+| `FR-046-07` | 046 | FR | Descartar toda oferta cuyo identificador no pertenezca al conjunto de candidatos | Must | Pendiente |
+| `FR-046-08` | 046 | FR | Moderar el texto generado antes de devolverlo, fail-closed | Must | Pendiente |
+| `FR-046-09` | 046 | FR | Excluir ofertas vencidas, pausadas, sin existencias o de comercios inactivos | Must | Pendiente |
+| `FR-046-10` | 046 | FR | Persistir los mensajes de la conversación y devolverlos paginados | Must | Pendiente |
+| `FR-046-11` | 046 | FR | Limitar tokens por solicitud y mensajes por persona y día, con valores configurables | Must | Pendiente |
+| `FR-046-12` | 046 | FR | Resolver la clave del proveedor generativo desde AWS Secrets Manager | Must | Pendiente |
+| `FR-046-13` | 046 | FR | No registrar en logs el contenido del mensaje, el texto generado ni PII | Must | Pendiente |
+| `FR-046-14` | 046 | FR | Degradar a paquete determinista con redacción fija ante fallo, cuota agotada o timeout | Must | Pendiente |
+| `FR-046-15` | 046 | FR | Purgar las conversaciones y sus mensajes al eliminar la cuenta | Must | Pendiente |
+| `FR-046-16` | 046 | FR | Desactivar el entrenamiento del proveedor sobre los datos enviados | Must | Pendiente |
+| `FR-046-17` | 046 | FR | Reutilizar la respuesta en caché ante solicitudes equivalentes dentro del TTL configurado | Should | Pendiente |
+| `NFR-046-01` | 046 | NFR | Latencia de respuesta del asistente | p95 < 8 s; espera máxima 30 s | Pendiente |
+| `NFR-046-02` | 046 | NFR | Costo mensual del proveedor generativo | Techo 1.00 USD con alarma al 80 % | Pendiente |
+| `NFR-046-03` | 046 | NFR | Exactitud del paquete | 100 % con suma ≤ presupuesto | Pendiente |
+| `NFR-046-04` | 046 | NFR | Ofertas inexistentes en la respuesta | 0 | Pendiente |
+| `NFR-046-05` | 046 | NFR | Respuestas entregadas sin moderar | 0 | Pendiente |
+| `NFR-046-06` | 046 | NFR | Disponibilidad ante caída del proveedor generativo | 100 % con degradación determinista | Pendiente |
+| `NFR-046-07` | 046 | NFR | PII o contenido de prompts en logs | 0 | Pendiente |
+| `FR-047-01` | 047 | FR | El pipeline compila la solución con `-warnaserror` (0 warnings, 0 errores) | Must | Implementado |
+| `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Implementado |
+| `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Implementado |
+| `FR-047-04` | 047 | FR | Ejecuta Snyk `test` con severidad ≥ high como paso bloqueante | Must | Implementado |
+| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante | Must | Implementado |
+| `FR-047-06` | 047 | FR | Ejecuta Stryker.NET pruebas de mutación como paso advisory | Should | Implementado |
+| `FR-047-07` | 047 | FR | Ejecuta gitleaks escaneo de secretos como paso bloqueante | Must | Implementado |
+| `FR-047-08` | 047 | FR | Verifica cobertura ≥ 80 % en `Sensus.Domain` y `Sensus.Application` como paso bloqueante | Must | Implementado |
+| `FR-047-09` | 047 | FR | Ejecuta `dotnet format --verify-no-changes` como paso bloqueante | Must | Implementado |
+| `FR-047-10` | 047 | FR | Ejecuta `check-specs.mjs specs` para validar 4 artefactos por spec | Must | Implementado |
+| `FR-047-11` | 047 | FR | Ejecuta `cdk synth` y `cdk diff` en PR cuando exista `infra/` | Should | Implementado |
+| `FR-047-12` | 047 | FR | Los secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) solo como GitHub Secrets, nunca en YAML | Must | Implementado |
 | `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Pendiente |
-| `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Pendiente |
-| `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Pendiente |
-| `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Pendiente |
+| `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Implementado |
+| `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Implementado |
+| `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Implementado |
 | `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Pendiente |
 | `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
 | `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
@@ -392,4 +416,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
 
-Total: **385 requisitos** en 47 specs.
+Total: **411 requisitos** en 48 specs.

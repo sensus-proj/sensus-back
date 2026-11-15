@@ -7,39 +7,39 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## A. Antes de empezar (Definition of Ready)
 
 - [ ] La spec 017 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
+- [x] Los requisitos tienen identificador y criterio medible
 - [ ] Las dependencias están resueltas: 009, 022
-- [ ] El alcance y las exclusiones están declarados
+- [x] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
-- [ ] Imagen y texto viajan en la misma solicitud
+- [x] Imagen y texto viajan en la misma solicitud
 - [ ] Ningún camino permite publicar sin veredicto
-- [ ] El timeout está probado
-- [ ] La clave no está en el repositorio
+- [x] El timeout está probado
+- [x] La clave no está en el repositorio
 - [ ] No existe endpoint público de moderación
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
+- [x] Código en la capa correcta y test de arquitectura en verde
+- [x] Pruebas unitarias y de integración añadidas y en verde
 - [ ] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
 - [ ] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [ ] **III. CQRS y contratos** — BRECHA: existe el endpoint público `POST /api/v1/media/moderate`, contrario a FR-017-07
+- [ ] **IV. Seguridad y privacidad** — BRECHA: ante fallo o timeout se rechaza en lugar de enviar a cuarentena; la oferta acepta `ImageUrl` sin verificar que proviene de un MediaAsset aprobado
+- [x] **V. Verificación automatizada** — PASS
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS
 
 ## E. Evidencia
 
@@ -56,4 +56,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-15 | Equipo Sensus | PARCIAL | `OpenAiImageModerationService` con omni-moderation y modo visión, timeout configurable y fail-closed. La moderación ocurre en la carga (`UploadMediaCommandHandler`). Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |

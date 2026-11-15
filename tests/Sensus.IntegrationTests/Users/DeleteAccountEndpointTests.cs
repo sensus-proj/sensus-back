@@ -24,7 +24,68 @@ public class DeleteAccountEndpointTests : IClassFixture<CustomWebApplicationFact
         _factory.UserRepository.ClearReceivedCalls();
         _factory.ComercioRepository.ClearReceivedCalls();
         _factory.PasswordResetTokenRepository.ClearReceivedCalls();
+        _factory.OfferRepository.ClearReceivedCalls();
     }
+
+    // Regresión FR-030-06 / CA-030-05: al eliminar una cuenta comercial sus ofertas no deben quedar visibles.
+    [Fact]
+    public async Task DeleteAccount_ShouldArchiveMerchantOffers_WhenAccountOwnsMerchant()
+    {
+        // Arrange
+        var passwordHasher = _factory.Services.GetRequiredService<IPasswordHasher>();
+        var rawPassword = $"Sensus-{Guid.NewGuid():N}-Aa1#";
+
+        var user = User.Create(
+            "Merchant to Delete",
+            $"merchant.{Guid.NewGuid():N}@sensus.com",
+            passwordHasher.HashPassword(rawPassword),
+            true,
+            DateTime.UtcNow).Value;
+
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        var comercio = Comercio.Create(user.Id, "Abarrotes Prueba", "Calle 1", "42800", 20.05, -99.34).Value;
+        _factory.ComercioRepository.GetByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(comercio);
+
+        Offer published = BuildOffer(comercio.Id);
+        Offer paused = BuildOffer(comercio.Id);
+        paused.Pause(DateTime.UtcNow).IsSuccess.Should().BeTrue();
+        _factory.OfferRepository.GetByMerchantIdAsync(comercio.Id, Arg.Any<CancellationToken>())
+            .Returns(new List<Offer> { published, paused });
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/users/account")
+        {
+            Content = JsonContent.Create(new DeleteAccountCommand(rawPassword))
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateTokenForUser(user));
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        published.Status.Should().Be(OfferStatus.Archived);
+        paused.Status.Should().Be(OfferStatus.Archived);
+        await _factory.OfferRepository.Received(1).UpdateAsync(published, Arg.Any<CancellationToken>());
+        await _factory.OfferRepository.Received(1).UpdateAsync(paused, Arg.Any<CancellationToken>());
+    }
+
+    private static Offer BuildOffer(Guid merchantId) =>
+        Offer.Create(
+            merchantId,
+            "Combo despensa",
+            "Arroz y frijol en oferta",
+            100m,
+            20,
+            5,
+            DateTime.UtcNow.AddHours(-1),
+            DateTime.UtcNow.AddDays(1),
+            null,
+            20.05,
+            -99.34,
+            DateTime.UtcNow).Value;
 
     private string CreateTokenForUser(User user)
     {

@@ -15,6 +15,7 @@ cambiarla se crea una nueva que la sustituya y se marca la anterior como `Sustit
 | [0008](0008-rutas-versionadas-ingles.md) | Rutas `/api/v1` con recursos en inglés y acciones como subrecurso | Aceptada | 2026-10-29 |
 | [0009](0009-ranking-determinista.md) | Ranking determinista en el backend, sin servicio de ML externo | Aceptada | 2026-10-29 |
 | [0010](0010-multimedia-cloudinary.md) | Adopción de Cloudinary para almacenamiento, transformación y entrega CDN de multimedia | Aceptada | 2026-11-08 |
+| [0011](0011-asistente-generativo-sensi.md) | Asistente generativo Sensi con recuperación determinista en el backend | Aceptada | 2026-11-13 |
 
 ---
 
