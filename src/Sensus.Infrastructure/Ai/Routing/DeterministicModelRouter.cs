@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Enums;
+using Sensus.Infrastructure.Ai.Guardrails;
 using Sensus.Infrastructure.Services;
 
 namespace Sensus.Infrastructure.Ai.Routing;
@@ -16,11 +17,26 @@ public sealed class DeterministicModelRouter : IAiModelRouter
 
     private static readonly Regex ComplexSignalsRegex = new(
         @"(?i)\b(comparar?|optimizar?|combinar?|itinerario|paquete\s+completo|presupuesto\s+distribuido|plan(?:ear)?|diseñ(?:a|ar)|cena\s+para|varias\s+opciones|menú\s+completo|recomiéndame\s+varios|armar\s+un\s+combo)\b",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled, GuardrailRegex.Timeout);
 
     public DeterministicModelRouter(IOptions<OpenAiSettings> settings)
     {
         _settings = settings.Value;
+    }
+
+    /// <summary>
+    /// Si la clasificación agota el tiempo, se elige el nivel rápido (más barato) en lugar del de razonamiento.
+    /// </summary>
+    private static bool HasComplexSignals(string prompt)
+    {
+        try
+        {
+            return ComplexSignalsRegex.IsMatch(prompt);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return false;
+        }
     }
 
     public AiRoutingDecision RouteInitialTurn(string prompt, bool allowReasoning = true)
@@ -49,7 +65,7 @@ public sealed class DeterministicModelRouter : IAiModelRouter
         }
 
         // Criterio 1: Palabras clave explícitas de razonamiento u optimización multi-paso
-        if (ComplexSignalsRegex.IsMatch(trimmed))
+        if (HasComplexSignals(trimmed))
         {
             return new AiRoutingDecision(
                 reasoningModel,

@@ -20,6 +20,9 @@ namespace Sensus.Application.Ai.Commands.SendMessage;
 /// </summary>
 public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageCommand, Result<AiTurnResponseDto>>
 {
+    /// <summary>Límite de ejecución de la extracción de presupuesto (mitigación de ReDoS, regla S6444).</summary>
+    private static readonly TimeSpan BudgetRegexTimeout = TimeSpan.FromSeconds(1);
+
     private readonly ICurrentUserService _currentUserService;
     private readonly IUserRepository _userRepository;
     private readonly IAiConversationRepository _conversationRepository;
@@ -571,10 +574,20 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             return null;
         }
 
-        var match = System.Text.RegularExpressions.Regex.Match(
-            message,
-            @"(?:\$|presupuesto\s+(?:de\s+)?|con\s+)(?<amount>\d+(?:\.\d{1,2})?)\s*(?:pesos|mxn|\$)?",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        System.Text.RegularExpressions.Match match;
+        try
+        {
+            match = System.Text.RegularExpressions.Regex.Match(
+                message,
+                @"(?:\$|presupuesto\s+(?:de\s+)?|con\s+)(?<amount>\d+(?:\.\d{1,2})?)\s*(?:pesos|mxn|\$)?",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                BudgetRegexTimeout);
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            // Sin presupuesto confiable no se arma paquete; el backend nunca inventa un monto.
+            return null;
+        }
 
         if (match.Success &&
             decimal.TryParse(

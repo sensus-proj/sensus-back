@@ -11,10 +11,10 @@ public sealed class HardRuleLeakDetector : IHardRuleLeakDetector
 {
     private static readonly Regex[] ForbiddenLeakPatterns = new[]
     {
-        new Regex(@"(?i)\b(openai|chatgpt|gpt-?4o?|gpt-?3\.?5|claude|gemini|deepseek|llama|anthropic)\b", RegexOptions.Compiled),
-        new Regex(@"(?i)\b(large language model|modelo de lenguaje|llm|base model|modelo base)\b", RegexOptions.Compiled),
-        new Regex(@"(?i)\b(mi\s+prompt\s+de\s+sistema|my\s+system\s+prompt|mis\s+instrucciones\s+internas|mis\s+reglas\s+del\s+sistema)\b", RegexOptions.Compiled),
-        new Regex(@"<\/?(contexto|developer|system)[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+        new Regex(@"(?i)\b(openai|chatgpt|gpt-?4o?|gpt-?3\.?5|claude|gemini|deepseek|llama|anthropic)\b", RegexOptions.Compiled, GuardrailRegex.Timeout),
+        new Regex(@"(?i)\b(large language model|modelo de lenguaje|llm|base model|modelo base)\b", RegexOptions.Compiled, GuardrailRegex.Timeout),
+        new Regex(@"(?i)\b(mi\s+prompt\s+de\s+sistema|my\s+system\s+prompt|mis\s+instrucciones\s+internas|mis\s+reglas\s+del\s+sistema)\b", RegexOptions.Compiled, GuardrailRegex.Timeout),
+        new Regex(@"<\/?(contexto|developer|system)[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase, GuardrailRegex.Timeout)
     };
 
     public bool ContainsForbiddenLeaks(string outputText)
@@ -24,12 +24,20 @@ public sealed class HardRuleLeakDetector : IHardRuleLeakDetector
             return false;
         }
 
-        foreach (var pattern in ForbiddenLeakPatterns)
+        try
         {
-            if (pattern.IsMatch(outputText))
+            foreach (var pattern in ForbiddenLeakPatterns)
             {
-                return true;
+                if (pattern.IsMatch(outputText))
+                {
+                    return true;
+                }
             }
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // Fail-closed: si no se puede verificar la salida, se trata como fuga y se sustituye por la respuesta segura.
+            return true;
         }
 
         return false;
