@@ -10,21 +10,25 @@ namespace Sensus.Infrastructure.Ai.Budget;
 /// <summary>
 /// Guardián de presupuesto mensual y cuota diaria por usuario para Sensi IA (FR-046-13, NFR-046-02, EX-001).
 /// Aplica límite mensual total (5.00 USD), sub-techo reasoning (3.00 USD), alerta al 80% (4.00 USD)
-/// y cuota diaria (20 mensajes/usuario) mediante operaciones atómicas en Redis (INCRBYFLOAT/INCR).
-/// Si Redis no está disponible, opera en modo fail-closed para proteger el presupuesto.
+/// y cuota diaria (20 mensajes/usuario) mediante contadores atómicos en <see cref="IBudgetCounterStore"/>
+/// (Amazon DynamoDB, Spec 049). Si el almacén no está disponible, falla o expira, opera en modo
+/// fail-closed para proteger el presupuesto.
 /// </summary>
 public sealed class AiBudgetGuard : IAiBudgetGuard
 {
-    private readonly ICacheService _cacheService;
+    private static readonly TimeSpan MonthlyCounterTtl = TimeSpan.FromDays(45);
+    private static readonly TimeSpan DailyCounterTtl = TimeSpan.FromDays(2);
+
+    private readonly IBudgetCounterStore _store;
     private readonly SensiSettings _settings;
     private readonly ILogger<AiBudgetGuard> _logger;
 
     public AiBudgetGuard(
-        ICacheService cacheService,
+        IBudgetCounterStore store,
         IOptions<OpenAiSettings> settings,
         ILogger<AiBudgetGuard> logger)
     {
-        _cacheService = cacheService;
+        _store = store;
         _settings = settings.Value.Sensi;
         _logger = logger;
     }
@@ -34,16 +38,22 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         decimal estimatedCostUsd,
         CancellationToken cancellationToken = default)
     {
-        // Fail-closed si Redis no está disponible para evitar arranques en frío sin techo en Lambda
-        if (!_cacheService.IsAvailable)
+        // Fail-closed si el almacén no está disponible para evitar arranques en frío sin techo en Lambda
+        if (!_store.IsAvailable)
         {
-            _logger.LogWarning("Redis no está disponible. Operando en modo fail-closed para proteger el presupuesto EX-001.");
+            _logger.LogWarning("El almacén de contadores no está disponible. Operando en modo fail-closed para proteger el presupuesto EX-001.");
             return false;
         }
 
         // 1. Validar cuota diaria del usuario
-        var todayCount = await GetTodayMessageCountAsync(userId, cancellationToken);
-        if (todayCount >= _settings.DailyMessageLimitPerUser)
+        var todayCount = await _store.GetAsync(GetDailyCountKey(userId), cancellationToken);
+        if (todayCount is null)
+        {
+            _logger.LogWarning("No fue posible leer la cuota diaria de Sensi IA. Operando en modo fail-closed (EX-001).");
+            return false;
+        }
+
+        if (todayCount.Value >= _settings.DailyMessageLimitPerUser)
         {
             _logger.LogWarning(
                 "Usuario {UserId} alcanzó el límite diario de {Limit} mensajes de Sensi IA.",
@@ -53,8 +63,15 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         }
 
         // 2. Validar techo mensual estricto (EX-001)
+        var spend = await _store.GetAsync(GetMonthlySpendKey(), cancellationToken);
+        if (spend is null)
+        {
+            _logger.LogWarning("No fue posible leer el gasto mensual de Sensi IA. Operando en modo fail-closed (EX-001).");
+            return false;
+        }
+
+        var currentSpend = (decimal)spend.Value;
         var totalCap = (decimal)_settings.TotalBudgetCapUsd;
-        var currentSpend = await GetMonthlySpendAsync(cancellationToken);
         if (currentSpend + estimatedCostUsd > totalCap)
         {
             _logger.LogWarning(
@@ -81,14 +98,14 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
 
     public async Task<bool> IsReasoningBudgetAvailableAsync(CancellationToken cancellationToken = default)
     {
-        if (!_cacheService.IsAvailable)
+        if (!_store.IsAvailable)
         {
             return false;
         }
 
-        var reasoningKey = GetMonthlyReasoningSpendKey();
-        var currentReasoningSpend = await _cacheService.GetAsync<double?>(reasoningKey, cancellationToken) ?? 0.0;
-        return (decimal)currentReasoningSpend < (decimal)_settings.ReasoningBudgetCapUsd;
+        var reasoningSpend = await _store.GetAsync(GetMonthlyReasoningSpendKey(), cancellationToken);
+        return reasoningSpend.HasValue
+            && (decimal)reasoningSpend.Value < (decimal)_settings.ReasoningBudgetCapUsd;
     }
 
     public async Task RecordSpendAsync(
@@ -97,81 +114,70 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         AiRoutingTier routingTier = AiRoutingTier.Fast,
         CancellationToken cancellationToken = default)
     {
-        if (!_cacheService.IsAvailable)
+        if (!_store.IsAvailable)
         {
-            _logger.LogWarning("Redis no está disponible al registrar gasto de {Cost:F6} USD para usuario {UserId}.", actualCostUsd, userId);
+            _logger.LogWarning("El almacén de contadores no está disponible al registrar gasto de {Cost:F6} USD.", actualCostUsd);
             return;
         }
 
-        var spendKey = GetMonthlySpendKey();
-        var dailyKey = GetDailyCountKey(userId);
-
-        // Incremento atómico en Redis (INCRBYFLOAT)
-        var newTotal = await _cacheService.IncrementByFloatAsync(
-            spendKey,
+        // Incremento atómico del gasto mensual total
+        var newTotal = await _store.IncrementAsync(
+            GetMonthlySpendKey(),
             (double)actualCostUsd,
-            TimeSpan.FromDays(45),
+            MonthlyCounterTtl,
             cancellationToken);
 
-        // Sub-techo del nivel reasoning (sensus:sensi:spend:reasoning:yyyyMM)
+        // Sub-techo del nivel reasoning
         if (routingTier == AiRoutingTier.Reasoning)
         {
-            var reasoningKey = GetMonthlyReasoningSpendKey();
-            await _cacheService.IncrementByFloatAsync(
-                reasoningKey,
+            await _store.IncrementAsync(
+                GetMonthlyReasoningSpendKey(),
                 (double)actualCostUsd,
-                TimeSpan.FromDays(45),
+                MonthlyCounterTtl,
                 cancellationToken);
         }
 
-        // Contador diario de mensajes por usuario (INCR)
-        var newDaily = await _cacheService.IncrementAsync(
-            dailyKey,
-            1,
-            TimeSpan.FromDays(2),
+        // Contador diario de mensajes por usuario
+        var newDaily = await _store.IncrementAsync(
+            GetDailyCountKey(userId),
+            1d,
+            DailyCounterTtl,
             cancellationToken);
+
+        if (newTotal is null || newDaily is null)
+        {
+            _logger.LogWarning("No se pudo registrar por completo el gasto de Sensi IA ({Cost:F6} USD, {Tier}).", actualCostUsd, routingTier);
+            return;
+        }
 
         _logger.LogInformation(
             "Gasto registrado Sensi IA: +{Cost:F6} USD ({Tier}). Acumulado mes: {TotalSpend:F4} USD. Mensajes hoy usuario {UserId}: {DailyCount}",
             actualCostUsd,
             routingTier,
-            newTotal ?? 0.0,
+            newTotal.Value,
             userId,
-            newDaily ?? 0);
+            (long)newDaily.Value);
     }
 
     public async Task<int> GetTodayMessageCountAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        if (!_cacheService.IsAvailable)
+        if (!_store.IsAvailable)
         {
             return 0;
         }
 
-        var key = GetDailyCountKey(userId);
-        var cached = await _cacheService.GetAsync<long?>(key, cancellationToken);
-        return cached.HasValue ? (int)cached.Value : 0;
-    }
-
-    private async Task<decimal> GetMonthlySpendAsync(CancellationToken cancellationToken)
-    {
-        if (!_cacheService.IsAvailable)
-        {
-            return 0m;
-        }
-
-        var key = GetMonthlySpendKey();
-        var cached = await _cacheService.GetAsync<double?>(key, cancellationToken);
-        return cached.HasValue ? (decimal)cached.Value : 0m;
+        var count = await _store.GetAsync(GetDailyCountKey(userId), cancellationToken);
+        return count.HasValue ? (int)count.Value : 0;
     }
 
     private static string GetMonthlySpendKey() =>
-        $"sensus:sensi:spend:{DateTime.UtcNow:yyyyMM}";
+        $"spend:{DateTime.UtcNow:yyyyMM}";
 
     private static string GetMonthlyReasoningSpendKey() =>
-        $"sensus:sensi:spend:reasoning:{DateTime.UtcNow:yyyyMM}";
+        $"spend:reasoning:{DateTime.UtcNow:yyyyMM}";
 
     private static string GetDailyCountKey(Guid userId) =>
-        $"sensus:sensi:user:{userId}:daily:{DateTime.UtcNow:yyyyMMdd}";
+        $"daily:{userId}:{DateTime.UtcNow:yyyyMMdd}";
 }

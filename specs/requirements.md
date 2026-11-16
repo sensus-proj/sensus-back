@@ -420,5 +420,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Pendiente |
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
+| `FR-049-01` | 049 | FR | Definir `IBudgetCounterStore` con incremento atómico numérico, lectura de contador y estado de disponibilidad | Must | Implementado |
+| `FR-049-02` | 049 | FR | Implementar `DynamoDbBudgetCounterStore` con `UpdateItem ... ADD` atómico, lectura consistente y expiración por atributo TTL | Must | Implementado |
+| `FR-049-03` | 049 | FR | `AiBudgetGuard` usa `IBudgetCounterStore` y opera *fail-closed* si el almacén no está disponible, falla o expira | Must | Implementado |
+| `FR-049-04` | 049 | FR | Definir la tabla en CDK: clave `pk`, `PAY_PER_REQUEST`, TTL en `expiresAt`, sin PITR, etiquetas `project`/`environment`/`owner` | Must | Implementado |
+| `FR-049-05` | 049 | FR | Conceder a la Lambda solo `dynamodb:GetItem` y `dynamodb:UpdateItem` sobre esa tabla y publicar `AiBudgetStore__TableName` | Must | Implementado |
+| `FR-049-06` | 049 | FR | Resolver nombre de tabla y *endpoint* opcional desde configuración, sin secretos ni valores fijos en código | Must | Implementado |
+| `FR-049-07` | 049 | FR | Tratar contadores con `expiresAt` vencido como 0 aunque DynamoDB no los haya purgado todavía | Should | Implementado |
+| `NFR-049-01` | 049 | NFR | Costo mensual | 0.00 USD; dentro del Free Tier permanente de DynamoDB | Pendiente |
+| `NFR-049-02` | 049 | NFR | Seguridad de fallo | 100 % de errores del almacén producen degradación determinista | Implementado |
+| `NFR-049-03` | 049 | NFR | Privacidad en logs | Sin claves, identificadores ni valores en logs del almacén | Implementado |
+| `NFR-049-04` | 049 | NFR | Latencia | p95 < 100 ms por operación de contador desde Lambda | Pendiente |
 
-Total: **416 requisitos** en 48 specs.
+Total: **427 requisitos** en 49 specs.

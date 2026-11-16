@@ -1,3 +1,5 @@
+using Amazon;
+using Amazon.DynamoDBv2;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -86,6 +88,34 @@ public static class DependencyInjection
         services.AddSingleton<IHardRuleLeakDetector, HardRuleLeakDetector>();
         services.AddSingleton<IPiiRedactor, PatternPiiAndSecretRedactor>();
         services.AddSingleton<IAiModelRouter, DeterministicModelRouter>();
+        // Contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB (Spec 049, ADR 0013)
+        services.Configure<AiBudgetStoreSettings>(
+            configuration.GetSection(AiBudgetStoreSettings.SectionName));
+        services.AddSingleton<IAmazonDynamoDB>(sp =>
+        {
+            var storeSettings = sp.GetRequiredService<IOptions<AiBudgetStoreSettings>>().Value;
+            var timeout = TimeSpan.FromSeconds(storeSettings.TimeoutSeconds > 0 ? storeSettings.TimeoutSeconds : 3);
+            var clientConfig = new AmazonDynamoDBConfig
+            {
+                Timeout = timeout,
+                MaxErrorRetry = 1
+            };
+
+            if (!string.IsNullOrWhiteSpace(storeSettings.ServiceUrl))
+            {
+                clientConfig.ServiceURL = storeSettings.ServiceUrl;
+            }
+            else
+            {
+                var region = System.Environment.GetEnvironmentVariable("AWS_REGION")
+                    ?? System.Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION")
+                    ?? "us-east-2";
+                clientConfig.RegionEndpoint = RegionEndpoint.GetBySystemName(region);
+            }
+
+            return new AmazonDynamoDBClient(clientConfig);
+        });
+        services.AddSingleton<IBudgetCounterStore, DynamoDbBudgetCounterStore>();
         services.AddSingleton<IAiBudgetGuard, AiBudgetGuard>();
         services.AddHttpClient<IAiChatGateway, OpenAiChatGateway>((sp, client) =>
         {

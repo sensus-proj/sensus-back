@@ -32,6 +32,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IAiChatGateway FakeAiChatGateway { get; } = Substitute.For<IAiChatGateway>();
     public ITextModerationService TextModerationService { get; } = Substitute.For<ITextModerationService>();
     public ICacheService CacheService { get; } = Substitute.For<ICacheService>();
+    public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -106,6 +107,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             CacheService.GetAsync<double?>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((double?)0.0);
             services.RemoveAll<ICacheService>();
             services.AddSingleton(CacheService);
+
+            // Contadores de presupuesto de Sensi IA (Spec 049): disponibles y sin consumo previo
+            BudgetCounterStore.IsAvailable.Returns(true);
+            BudgetCounterStore.GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((double?)0d);
+            BudgetCounterStore.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)1d);
+            services.RemoveAll<IBudgetCounterStore>();
+            services.AddSingleton(BudgetCounterStore);
         });
     }
 }

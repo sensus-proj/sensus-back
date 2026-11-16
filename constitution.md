@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **2.1.0** |
+| Versión | **2.2.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-15 (v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
+| Última enmienda | 2026-11-15 (v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -343,7 +343,8 @@ son requisitos funcionales del producto.
 | Cómputo | AWS Lambda | — | Ejecución serverless |
 | API | AWS API Gateway | — | Exposición RESTful |
 | Multimedia y CDN | Cloudinary | — | Almacenamiento, transformación y distribución de contenido multimedia |
-| Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048) |
+| Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048). Opcional: la API MUST operar con Redis desactivado |
+| Contadores de presupuesto y cuota | Amazon DynamoDB (`PAY_PER_REQUEST`, TTL nativo) | — | Contadores atómicos de gasto mensual y mensajes diarios de Sensi IA (EX-001), con *fail-closed* ante indisponibilidad. Sin VPC. Dentro del nivel gratuito permanente (Spec 049 y ADR 0013) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
 | Moderación de contenido publicado | OpenAI `gpt-4o-mini` en modo visión con la política de Sensus | — | Moderación multimodal de ofertas, publicaciones y comentarios (Spec 017); detecta armas, drogas y simbología de odio que `omni-moderation-latest` dejaba pasar |
 | Moderación de texto del asistente | OpenAI `omni-moderation-latest` | — | Filtro gratuito de entrada y salida de Sensi IA (Spec 046) |
@@ -605,6 +606,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 1.4.0 | 2026-11-13 | Habilitación del asistente generativo Sensi: cuarta excepción de proveedor externo y alta en el stack autorizado (§2.1, §2.2); moderación de entrada y salida generativa, prohibición de acceso del proveedor a datos, credenciales y herramientas, y cálculo de importes en el backend (§2.2, §2.4); alcance funcional ampliado (§2.5); excepción a P-VI registrada en el Apéndice E. Deriva de ADR 0011 y Spec 046. |
 | 2.0.0 | 2026-11-15 | **MAJOR** (redefine la prohibición de herramientas de §2.2 de la v1.4.0). Evolución agéntica en 7 capas de Sensi IA: habilitación de MCP *in-process* y *Function Calling* exclusivamente de solo lectura bajo validación de permisos JWT en el servidor (§2.1, §2.2, §2.4); separación entre logs técnicos sanitizados en CloudWatch y trazabilidad redactada de PII en MongoDB con TTL/purga (P-IV); *Prompt Caching*, *Model Router* con afinidad de sesión, *guardrails* duales y puerta bloqueante CI/CD de *Evals* (§2.5). Deriva de ADR 0012 y Specs 046 y 047. |
 | 2.1.0 | 2026-11-15 | **MINOR**. Moderación de contenido publicado con `gpt-4o-mini` en modo visión y política de Sensus (armas, drogas, simbología de odio), porque `omni-moderation-latest` dejaba pasar imágenes con armas; `omni-moderation-latest` queda para el texto de Sensi IA (§2.1, §2.4). Nueva excepción `EX-002` por el costo de la moderación (Apéndice E). Deriva de la decisión D28 y de las Specs 017 y 046. |
+| 2.2.0 | 2026-11-15 | **MINOR**. Alta de Amazon DynamoDB en el stack autorizado (§2.1) exclusivamente para los contadores atómicos de presupuesto y cuota diaria de Sensi IA (EX-001), con TTL nativo, modo `PAY_PER_REQUEST`, sin VPC y dentro del nivel gratuito permanente; Redis pasa a ser opcional y de solo caché de lecturas. Motivo: con Redis desactivado en el despliegue, `AiBudgetGuard` fallaba en modo cerrado y toda respuesta de Sensi salía degradada. Alternativas descartadas: ElastiCache (exige VPC y NAT Gateway, ≈ 40 USD/mes) y Redis de un proveedor externo (multi-nube, §2.2). Spec 049 y ADR 0013. |
 
 ---
 
@@ -700,4 +702,4 @@ Excepciones registradas: [Apéndice E]
 
 ---
 
-**Versión 2.1.0 — Ratificada el 2026-10-28, enmendada el 2026-11-15.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 2.2.0 — Ratificada el 2026-10-28, enmendada el 2026-11-15.** Toda modificación requiere el procedimiento de §4.3.

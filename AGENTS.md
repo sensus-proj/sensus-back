@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.1.0** |
+| Documento normativo | `constitution.md` **v2.2.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
@@ -38,7 +38,7 @@ pago, bases de datos relacionales y cualquier nube distinta de AWS.
 | `specs/NNN-slug/tasks.md` | Tareas atómicas trazables | Para ejecutar el trabajo |
 | `specs/NNN-slug/checklist.md` | Definition of Ready/Done y evidencia | Al abrir y cerrar cada tarea |
 | `specs/requirements.md` | Registro consolidado de requisitos | Para localizar un `FR`/`NFR` |
-| `specs/README.md` | Índice de las specs (47 activas y 1 en backlog) | Para ubicar una capacidad |
+| `specs/README.md` | Índice de las specs (48 activas y 1 en backlog) | Para ubicar una capacidad |
 | `docs/adr/` | Decisiones de arquitectura | Antes de proponer un cambio estructural |
 | `memory.md` | Estado vivo del proyecto y próximos pasos | Al inicio y al cierre de cada sesión |
 | `AGENTS.md` | Reglas operativas (este archivo) | En cada sesión de trabajo |
@@ -179,7 +179,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).
 - Logs operativos (CloudWatch) sin PII, sin tokens, sin contenido moderado y sin prompts o respuestas
   en claro del asistente. Incluye siempre `correlation-id`. La auditoría redactada del asistente IA en
-  MongoDB cumple TTL y purga ante eliminación de cuenta (`constitution.md` v2.1.0).
+  MongoDB cumple TTL y purga ante eliminación de cuenta (`constitution.md` v2.2.0).
 - **Moderación obligatoria antes de publicar o guardar en Cloudinary**, con imagen **y** texto en la misma
   solicitud.
 - **Fail-closed**: si la moderación falla o expira, el contenido va a cuarentena. Nunca se publica.
@@ -222,7 +222,7 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 
 - Cobertura mínima: **80 %** de líneas en Domain y Application; 60 % recomendado en el resto.
 - Las pruebas son deterministas y no dependen de servicios externos reales. Las *Evals con modelo* de
-  Sensi IA no son pruebas: corren en un job aparte antes de cada release (`constitution.md` v2.1.0).
+  Sensi IA no son pruebas: corren en un job aparte antes de cada release (`constitution.md` v2.2.0).
 - El test de arquitectura debe pasar siempre.
 - **Prohibido** bajar umbrales, marcar pruebas como omitidas o fusionar con CI en rojo.
 
@@ -305,4 +305,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.1.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v2.2.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**

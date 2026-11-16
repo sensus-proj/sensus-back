@@ -11,14 +11,14 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-15 |
+| **Última actualización** | 2026-11-16 |
 | **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas para **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas, tareas `T046-01` a `T046-22` cerradas y parciales según alcance), resolución integral de los 14 ítems de revisión de código y prerrequisitos de infraestructura y datos (Items 0 a 8) |
 | **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Spec 046 y prerrequisitos) |
 | **Agente** | Antigravity |
-| **Constitución vigente** | v2.1.0 (2026-11-15) |
-| **AGENTS.md vigente** | v2.1.0 |
+| **Constitución vigente** | v2.2.0 (2026-11-15) |
+| **AGENTS.md vigente** | v2.2.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests) |
-| **Última tarea completada** | Resolución integral de los 14 ítems de revisión de código de Sensi IA (Spec 046) e infraestructura: 1) `SensiSettings` en Application sin números mágicos inyectado con `IOptions`; 2) `ScreenContext` acotado a `KnownScreenContexts` con FluentValidation anti-inyección; 3) Purga en cascada de `ai_conversations`, `ai_messages` y `ai_trace_logs` al eliminar cuenta (`FR-046-15`); 4) Control de presupuesto atómico con Redis `INCRBYFLOAT`/`INCR`, fail-closed ante caída de Redis y sub-techo de 3.00 USD reasoning (`EX-001`); 5) Umbrales de moderación de texto en configuración; 6) Base de conocimiento sin fallback silencioso como `EmbeddedResource`; 7) `AiConversation.Create` rechaza `Invitado`; 8) `RecommendedPackage` rechaza ofertas duplicadas; 9) Entrega de `citedOffers` y `recommendedPackage` al cliente en `AiTurnResponseDto`; 10) `get_my_account` sin PII de nombre completo; 11) `T046-15` marcado como Parcial; 12) Cifras INEGI de tesina corregidas; 13) Degradación determinista tras bucle agéntico agotado; 14) Re-lanzamiento de `OperationCanceledException`. Trazabilidad SDD actualizada en specs/046, 013, 014, 017 y requirements.md. Verificado: 747 pruebas en verde (549 unitarias, 191 integración, 4 arquitectura, 3 E2E), 0 advertencias con `-warnaserror` y `dotnet format` limpio. Sin commits |
+| **Última tarea completada** | Spec 049 (contadores de presupuesto y cuota de Sensi IA en DynamoDB): causa raíz de que Sensi respondiera siempre degradado en producción (`Redis__Enabled=false` y `AiBudgetGuard` *fail-closed* sin Redis). Enmienda MINOR v2.2.0, ADR 0013, `IBudgetCounterStore` + `DynamoDbBudgetCounterStore`, refactor de `AiBudgetGuard`, tabla DynamoDB con TTL e IAM mínimo en CDK. 864 pruebas en verde, `-warnaserror` y `dotnet format` limpios, `cdk synth` verificado. **Pendiente:** `cdk diff`, `cdk deploy` con autorización explícita, verificar que Sensi llegue a OpenAI y DynamoDB Local con Testcontainers (T049-09). Antes: Resolución integral de los 14 ítems de revisión de código de Sensi IA (Spec 046) e infraestructura: 1) `SensiSettings` en Application sin números mágicos inyectado con `IOptions`; 2) `ScreenContext` acotado a `KnownScreenContexts` con FluentValidation anti-inyección; 3) Purga en cascada de `ai_conversations`, `ai_messages` y `ai_trace_logs` al eliminar cuenta (`FR-046-15`); 4) Control de presupuesto atómico con Redis `INCRBYFLOAT`/`INCR`, fail-closed ante caída de Redis y sub-techo de 3.00 USD reasoning (`EX-001`); 5) Umbrales de moderación de texto en configuración; 6) Base de conocimiento sin fallback silencioso como `EmbeddedResource`; 7) `AiConversation.Create` rechaza `Invitado`; 8) `RecommendedPackage` rechaza ofertas duplicadas; 9) Entrega de `citedOffers` y `recommendedPackage` al cliente en `AiTurnResponseDto`; 10) `get_my_account` sin PII de nombre completo; 11) `T046-15` marcado como Parcial; 12) Cifras INEGI de tesina corregidas; 13) Degradación determinista tras bucle agéntico agotado; 14) Re-lanzamiento de `OperationCanceledException`. Trazabilidad SDD actualizada en specs/046, 013, 014, 017 y requirements.md. Verificado: 747 pruebas en verde (549 unitarias, 191 integración, 4 arquitectura, 3 E2E), 0 advertencias con `-warnaserror` y `dotnet format` limpio. Sin commits |
 | **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). «No subas cambios de nada» confirmado |
 
 ---
@@ -27,7 +27,7 @@
 
 | Principio | Estado en el repositorio | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | Implementado | 48 specs en `specs/README.md` (47 activas, 1 en backlog) con `spec/plan/tasks/checklist` y `specs/requirements.md`; los 29 endpoints del catálogo están cubiertos |
+| I. Especificación y trazabilidad | Implementado | 49 specs en `specs/README.md` (48 activas, 1 en backlog) con `spec/plan/tasks/checklist` y `specs/requirements.md`; los 29 endpoints del catálogo están cubiertos |
 | II. Clean Architecture | Parcial | Capas existen; falta verificar dependencias con NetArchTest de forma continua |
 | III. CQRS y contratos | Parcial | Hay comandos/handlers y DTOs; faltan OpenAPI unificado y ProblemDetails uniforme (specs 009, 011) |
 | IV. Seguridad y privacidad | Parcial, con brechas | Secreto JWT versionado, CORS abierto, `RequireHttpsMetadata=false`, sin logout (specs 004, 012) |
