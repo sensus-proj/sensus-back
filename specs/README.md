@@ -53,6 +53,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 046 | [Asistente agéntico Sensi IA (7 capas)](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Parcial | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |
 | 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Parcial | 009, 010, 011, 012, 013 |
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
+| 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Parcial | 045, 046, 048 |
 
 ## Estados
 
@@ -70,4 +71,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **48 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 5, Ola 6: 7, Ola 7: 3, Backlog: 1.
+Total: **49 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 5, Ola 6: 7, Ola 7: 4, Backlog: 1.

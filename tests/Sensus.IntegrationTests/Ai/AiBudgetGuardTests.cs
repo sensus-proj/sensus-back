@@ -13,7 +13,7 @@ namespace Sensus.IntegrationTests.Ai;
 
 public sealed class AiBudgetGuardTests
 {
-    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IBudgetCounterStore _store = Substitute.For<IBudgetCounterStore>();
     private readonly OpenAiSettings _openAiSettings;
 
     public AiBudgetGuardTests()
@@ -33,133 +33,211 @@ public sealed class AiBudgetGuardTests
     private AiBudgetGuard CreateSut()
     {
         return new AiBudgetGuard(
-            _cacheService,
+            _store,
             Options.Create(_openAiSettings),
             NullLogger<AiBudgetGuard>.Instance);
     }
 
-    [Fact]
-    public async Task CanExecuteTurnAsync_WhenRedisUnavailable_FailsClosed()
+    private void SetupCounters(double? daily, double? monthly)
     {
-        // Arrange: Redis está caído o deshabilitado
-        _cacheService.IsAvailable.Returns(false);
+        _store.IsAvailable.Returns(true);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("daily:")), Arg.Any<CancellationToken>()).Returns(daily);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("spend:") && !k.StartsWith("spend:reasoning:")), Arg.Any<CancellationToken>())
+            .Returns(monthly);
+    }
+
+    [Fact]
+    public async Task CanExecuteTurnAsync_WhenStoreUnavailable_FailsClosed()
+    {
+        _store.IsAvailable.Returns(false);
         var sut = CreateSut();
 
-        // Act
         var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.002m);
 
-        // Assert: Comportamiento fail-closed para proteger el presupuesto EX-001
         canExecute.Should().BeFalse();
     }
 
     [Fact]
-    public async Task IsReasoningBudgetAvailableAsync_WhenRedisUnavailable_ReturnsFalse()
+    public async Task CanExecuteTurnAsync_WhenDailyReadFails_FailsClosed()
     {
-        // Arrange
-        _cacheService.IsAvailable.Returns(false);
+        SetupCounters(daily: null, monthly: 0d);
         var sut = CreateSut();
 
-        // Act
-        var available = await sut.IsReasoningBudgetAvailableAsync();
+        var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.002m);
 
-        // Assert
-        available.Should().BeFalse();
+        canExecute.Should().BeFalse();
     }
 
     [Fact]
-    public async Task IsReasoningBudgetAvailableAsync_WhenSpendBelowCap_ReturnsTrue()
+    public async Task CanExecuteTurnAsync_WhenMonthlyReadFails_FailsClosed()
     {
-        // Arrange
-        _cacheService.IsAvailable.Returns(true);
-        _cacheService.GetAsync<double?>(Arg.Is<string>(k => k.Contains("reasoning")), Arg.Any<CancellationToken>())
-            .Returns(2.40); // 2.40 < 3.00 USD
+        SetupCounters(daily: 1d, monthly: null);
         var sut = CreateSut();
 
-        // Act
-        var available = await sut.IsReasoningBudgetAvailableAsync();
+        var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.002m);
 
-        // Assert
-        available.Should().BeTrue();
+        canExecute.Should().BeFalse();
     }
 
     [Fact]
-    public async Task IsReasoningBudgetAvailableAsync_WhenSpendReachesCap_ReturnsFalse()
+    public async Task CanExecuteTurnAsync_WhenUnderBudgetAndQuota_ReturnsTrue()
     {
-        // Arrange
-        _cacheService.IsAvailable.Returns(true);
-        _cacheService.GetAsync<double?>(Arg.Is<string>(k => k.Contains("reasoning")), Arg.Any<CancellationToken>())
-            .Returns(3.00); // 3.00 >= 3.00 USD
+        SetupCounters(daily: 3d, monthly: 0.25);
         var sut = CreateSut();
 
-        // Act
-        var available = await sut.IsReasoningBudgetAvailableAsync();
+        var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.001m);
 
-        // Assert
-        available.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task RecordSpendAsync_WhenReasoningTier_IncrementsBothTotalAndReasoningKeys()
-    {
-        // Arrange
-        _cacheService.IsAvailable.Returns(true);
-        var sut = CreateSut();
-        var userId = Guid.NewGuid();
-
-        // Act
-        await sut.RecordSpendAsync(userId, 0.016m, AiRoutingTier.Reasoning);
-
-        // Assert
-        await _cacheService.Received(1).IncrementByFloatAsync(
-            Arg.Is<string>(k => k.Contains("spend:") && !k.Contains("reasoning")),
-            Arg.Is<double>(v => Math.Abs(v - 0.016) < 0.0001),
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<CancellationToken>());
-
-        await _cacheService.Received(1).IncrementByFloatAsync(
-            Arg.Is<string>(k => k.Contains("spend:reasoning:")),
-            Arg.Is<double>(v => Math.Abs(v - 0.016) < 0.0001),
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<CancellationToken>());
-
-        await _cacheService.Received(1).IncrementAsync(
-            Arg.Is<string>(k => k.Contains(userId.ToString())),
-            1,
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<CancellationToken>());
+        canExecute.Should().BeTrue();
     }
 
     [Fact]
     public async Task CanExecuteTurnAsync_WhenTotalBudgetExceeded_ReturnsFalse()
     {
-        // Arrange
-        _cacheService.IsAvailable.Returns(true);
-        _cacheService.GetAsync<long?>(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((long?)5); // 5 mensajes hoy (< 20)
-        _cacheService.GetAsync<double?>(Arg.Is<string>(k => !k.Contains("reasoning")), Arg.Any<CancellationToken>())
-            .Returns(4.999); // 4.999 + 0.002 = 5.001 > 5.00 USD
+        SetupCounters(daily: 5d, monthly: 4.999); // 4.999 + 0.002 = 5.001 > 5.00 USD
         var sut = CreateSut();
 
-        // Act
         var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.002m);
 
-        // Assert
         canExecute.Should().BeFalse();
     }
 
     [Fact]
     public async Task CanExecuteTurnAsync_WhenDailyLimitReached_ReturnsFalse()
     {
-        // Arrange
-        _cacheService.IsAvailable.Returns(true);
-        _cacheService.GetAsync<long?>(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((long?)20); // 20 mensajes hoy
+        SetupCounters(daily: 20d, monthly: 0d);
         var sut = CreateSut();
 
-        // Act
         var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.001m);
 
-        // Assert
         canExecute.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CanExecuteTurnAsync_WhenAlertThresholdReached_StillAllowsTurn()
+    {
+        SetupCounters(daily: 1d, monthly: 4.10); // >= 80 % de 5.00 y por debajo del techo
+        var sut = CreateSut();
+
+        var canExecute = await sut.CanExecuteTurnAsync(Guid.NewGuid(), 0.001m);
+
+        canExecute.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsReasoningBudgetAvailableAsync_WhenStoreUnavailable_ReturnsFalse()
+    {
+        _store.IsAvailable.Returns(false);
+        var sut = CreateSut();
+
+        (await sut.IsReasoningBudgetAvailableAsync()).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task IsReasoningBudgetAvailableAsync_WhenReadFails_ReturnsFalse()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("spend:reasoning:")), Arg.Any<CancellationToken>()).Returns((double?)null);
+        var sut = CreateSut();
+
+        (await sut.IsReasoningBudgetAvailableAsync()).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task IsReasoningBudgetAvailableAsync_WhenSpendBelowCap_ReturnsTrue()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("spend:reasoning:")), Arg.Any<CancellationToken>()).Returns(2.40);
+        var sut = CreateSut();
+
+        (await sut.IsReasoningBudgetAvailableAsync()).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsReasoningBudgetAvailableAsync_WhenSpendReachesCap_ReturnsFalse()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("spend:reasoning:")), Arg.Any<CancellationToken>()).Returns(3.00);
+        var sut = CreateSut();
+
+        (await sut.IsReasoningBudgetAvailableAsync()).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecordSpendAsync_WhenReasoningTier_IncrementsTotalReasoningAndDailyKeys()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(1d);
+        var sut = CreateSut();
+        var userId = Guid.NewGuid();
+
+        await sut.RecordSpendAsync(userId, 0.016m, AiRoutingTier.Reasoning);
+
+        await _store.Received(1).IncrementAsync(
+            Arg.Is<string>(k => k.StartsWith("spend:") && !k.StartsWith("spend:reasoning:")),
+            Arg.Is<double>(v => Math.Abs(v - 0.016) < 0.0001),
+            TimeSpan.FromDays(45),
+            Arg.Any<CancellationToken>());
+        await _store.Received(1).IncrementAsync(
+            Arg.Is<string>(k => k.StartsWith("spend:reasoning:")),
+            Arg.Is<double>(v => Math.Abs(v - 0.016) < 0.0001),
+            TimeSpan.FromDays(45),
+            Arg.Any<CancellationToken>());
+        await _store.Received(1).IncrementAsync(
+            Arg.Is<string>(k => k.StartsWith("daily:" + userId)),
+            1d,
+            TimeSpan.FromDays(2),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordSpendAsync_WhenFastTier_DoesNotTouchReasoningKey()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(1d);
+        var sut = CreateSut();
+
+        await sut.RecordSpendAsync(Guid.NewGuid(), 0.001m, AiRoutingTier.Fast);
+
+        await _store.DidNotReceive().IncrementAsync(
+            Arg.Is<string>(k => k.StartsWith("spend:reasoning:")),
+            Arg.Any<double>(),
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordSpendAsync_WhenStoreUnavailable_DoesNotThrowNorIncrement()
+    {
+        _store.IsAvailable.Returns(false);
+        var sut = CreateSut();
+
+        var act = () => sut.RecordSpendAsync(Guid.NewGuid(), 0.001m);
+
+        await act.Should().NotThrowAsync();
+        await _store.DidNotReceiveWithAnyArgs().IncrementAsync(default!, default, default, default);
+    }
+
+    [Fact]
+    public async Task RecordSpendAsync_WhenIncrementFails_DoesNotThrow()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)null);
+        var sut = CreateSut();
+
+        var act = () => sut.RecordSpendAsync(Guid.NewGuid(), 0.001m);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task GetTodayMessageCountAsync_ReturnsStoredCount_AndZeroWhenUnavailable()
+    {
+        _store.IsAvailable.Returns(true);
+        _store.GetAsync(Arg.Is<string>(k => k.StartsWith("daily:")), Arg.Any<CancellationToken>()).Returns(7d);
+        var sut = CreateSut();
+        (await sut.GetTodayMessageCountAsync(Guid.NewGuid())).Should().Be(7);
+
+        _store.IsAvailable.Returns(false);
+        (await sut.GetTodayMessageCountAsync(Guid.NewGuid())).Should().Be(0);
     }
 }
