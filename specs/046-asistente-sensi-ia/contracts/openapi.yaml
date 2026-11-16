@@ -387,6 +387,33 @@ components:
           type: number
           format: double
           nullable: true
+        description:
+          type: string
+          nullable: true
+        discountPercentage:
+          type: integer
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        endsAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        merchantAddress:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
 
     AiUsageSummaryDto:
       type: object

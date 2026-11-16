@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Sensus.Application.Ai.Commands.SendMessage;
+using Sensus.Application.Ai.DTOs;
 using Sensus.Application.Ai.Services;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Settings;
@@ -50,6 +51,7 @@ public sealed class SendAiMessageCommandHandlerTests
     private readonly IKnowledgeBaseProvider _knowledge = Substitute.For<IKnowledgeBaseProvider>();
     private readonly IAiChatGateway _gateway = Substitute.For<IAiChatGateway>();
     private readonly IDeterministicAiFallbackService _fallback = Substitute.For<IDeterministicAiFallbackService>();
+    private readonly ICitedOfferEnricher _offerEnricher = Substitute.For<ICitedOfferEnricher>();
     private readonly ICorrelationIdAccessor _correlation = Substitute.For<ICorrelationIdAccessor>();
     private readonly SensiSettings _settings = new() { MaxInputChars = 100, MaxAgenticRounds = 2 };
 
@@ -85,6 +87,14 @@ public sealed class SendAiMessageCommandHandlerTests
             .Returns(new BuiltPromptPayload([], "static", "dynamic", [], "prompt", 1500));
         _fallback.BuildFallbackAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<decimal?>(), Arg.Any<CancellationToken>())
             .Returns(new FallbackAiTurnResult("Respuesta básica de Sensi.", null, [], "fallback"));
+        _offerEnricher.EnrichAsync(
+                Arg.Any<IReadOnlyList<CitedOfferDto>>(),
+                Arg.Any<string>(),
+                Arg.Any<IReadOnlySet<string>>(),
+                Arg.Any<double?>(),
+                Arg.Any<double?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(ci.ArgAt<IReadOnlyList<CitedOfferDto>>(0)));
     }
 
     private SendAiMessageCommandHandler CreateHandler() => new(
@@ -106,6 +116,7 @@ public sealed class SendAiMessageCommandHandlerTests
         _knowledge,
         _gateway,
         _fallback,
+        _offerEnricher,
         _correlation,
         Options.Create(_settings),
         NullLogger<SendAiMessageCommandHandler>.Instance);
@@ -117,6 +128,34 @@ public sealed class SendAiMessageCommandHandlerTests
 
     private AiConversation ExistingConversation(Guid? owner = null) =>
         AiConversation.Create(owner ?? _user.Id, RoleType.Consumidor, "gpt-4o-mini", AiRoutingTier.Fast, "1.0.0", null, DateTime.UtcNow).Value;
+
+    [Fact]
+    public async Task Handle_ShouldReturnEnrichedOfferCards_ForOffersMentionedInReply()
+    {
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(ToolCall(SensiToolNames.SearchOffers), Reply("Encontré el Teclado Gaming a $150."));
+        _toolExecutor.ExecuteAsync(Arg.Any<McpToolCall>(), Arg.Any<Guid>(), Arg.Any<IReadOnlySet<AiScope>>(), Arg.Any<CancellationToken>())
+            .Returns(new McpToolExecutionResult("call-1", SensiToolNames.SearchOffers, SearchOffersJson, true));
+        var card = new CitedOfferDto("o1", "Teclado Gaming", "m1", "Tienda 3B", 150m, 200m, 1, true, 0.4,
+            Description: "Teclado con RGB", DiscountPercentage: 25, ImageUrl: "https://img/x.jpg",
+            Category: "Tecnologia", EndsAtUtc: new DateTime(2026, 11, 30, 0, 0, 0, DateTimeKind.Utc),
+            MerchantAddress: "Calle 1", Latitude: 19.4, Longitude: -99.1);
+        _offerEnricher.EnrichAsync(
+                Arg.Any<IReadOnlyList<CitedOfferDto>>(),
+                "Encontré el Teclado Gaming a $150.",
+                Arg.Any<IReadOnlySet<string>>(),
+                19.43,
+                -99.13,
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<CitedOfferDto>>([card]));
+
+        var result = await CreateHandler().Handle(
+            new SendAiMessageCommand(null, "Que ofertas hay", Latitude: 19.43, Longitude: -99.13),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.OffersCited.Should().ContainSingle().Which.Should().Be(card);
+    }
 
     [Fact]
     public async Task Handle_ShouldReturnUnauthorized_WhenUserIdIsMissing()

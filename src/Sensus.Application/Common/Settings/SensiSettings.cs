@@ -39,6 +39,9 @@ public sealed class SensiSettings
     [Range(1, 20)]
     public int MaxTurnsHistory { get; set; } = 6;
 
+    [Range(1, 10)]
+    public int MaxCitedOfferCards { get; set; } = 5;
+
     [Range(1, 200)]
     public int DailyMessageLimitPerUser { get; set; } = 20;
 
