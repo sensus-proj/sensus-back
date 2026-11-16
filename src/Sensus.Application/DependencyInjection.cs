@@ -25,6 +25,7 @@ public static class DependencyInjection
         // Sensi IA (Spec 046)
         services.AddSingleton<Sensus.Application.Ai.Services.ITwoBlockPromptBuilder, Sensus.Application.Ai.Services.TwoBlockPromptBuilder>();
         services.AddScoped<Sensus.Application.Common.Interfaces.IDeterministicAiFallbackService, Sensus.Application.Ai.Services.DeterministicAiFallbackService>();
+        services.AddScoped<Sensus.Application.Common.Interfaces.ICitedOfferEnricher, Sensus.Application.Ai.Services.CitedOfferEnricher>();
 
         return services;
     }

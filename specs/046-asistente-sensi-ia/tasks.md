@@ -35,6 +35,7 @@
 | `T046-20` | Escribir pruebas unitarias de dominio, *Prompt Builder*, *Model Router* *sticky*, cálculo de presupuesto, anti-inyección, redacción PII y *Hard Rules* (`≥ 80 %` cobertura) | Tests | `FR-046-04`, `FR-046-07`, `FR-046-09`, `FR-046-10`, `FR-046-11`, `FR-046-12` | `T046-08`, `T046-14` | Completada |
 | `T046-21` | Escribir pruebas de integración (Testcontainers MongoDB + HTTP mocks de OpenAI para fallo/timeout/malformado/moderación, CRUD + `DELETE` cascada, autorización `Invitado`/roles, ausencia de PII en logs) | Tests | `FR-046-01`, `FR-046-02`, `FR-046-08`, `FR-046-14`, `FR-046-15`, `FR-046-16` | `T046-18` | Parcial |
 | `T046-22` | Validar `dotnet test`, cobertura ≥ 80 %, pruebas de arquitectura, ejecución de *Evals* y conformidad OpenAPI | Tests / Docs | `FR-046-17`, `NFR-046-01`, `NFR-046-08` | `T046-19`, `T046-20`, `T046-21` | Completada |
+| `T046-23` | Completar ofertas citadas con datos del repositorio (`CitedOfferEnricher`, `MaxCitedOfferCards`, `CitedOfferDto` ampliado) y cubrirlo con pruebas | Application | `FR-046-18` | T046-06 | Completada |
 
 ---
 

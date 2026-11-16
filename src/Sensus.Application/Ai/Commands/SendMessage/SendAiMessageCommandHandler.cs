@@ -41,6 +41,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
     private readonly IKnowledgeBaseProvider _knowledgeBaseProvider;
     private readonly IAiChatGateway _chatGateway;
     private readonly IDeterministicAiFallbackService _fallbackService;
+    private readonly ICitedOfferEnricher _offerEnricher;
     private readonly ICorrelationIdAccessor _correlationIdAccessor;
     private readonly SensiSettings _sensiSettings;
     private readonly ILogger<SendAiMessageCommandHandler> _logger;
@@ -64,6 +65,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         IKnowledgeBaseProvider knowledgeBaseProvider,
         IAiChatGateway chatGateway,
         IDeterministicAiFallbackService fallbackService,
+        ICitedOfferEnricher offerEnricher,
         ICorrelationIdAccessor correlationIdAccessor,
         IOptions<SensiSettings> sensiOptions,
         ILogger<SendAiMessageCommandHandler> logger)
@@ -86,6 +88,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         _knowledgeBaseProvider = knowledgeBaseProvider;
         _chatGateway = chatGateway;
         _fallbackService = fallbackService;
+        _offerEnricher = offerEnricher;
         _correlationIdAccessor = correlationIdAccessor;
         _sensiSettings = sensiOptions.Value;
         _logger = logger;
@@ -485,12 +488,23 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             completionTokensTotal,
             cacheHitAny);
 
+        // FR-046-18: tarjetas con datos completos solo de las ofertas que la respuesta menciona
+        var packageOfferIds = recommendedPackageDto?.Items.Select(i => i.OfferId).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var offerCards = await _offerEnricher.EnrichAsync(
+            citedOffersList,
+            sanitizedReply,
+            packageOfferIds,
+            request.Latitude,
+            request.Longitude,
+            cancellationToken);
+
         return Result.Success(new AiTurnResponseDto(
             conversation.Id.ToString(),
             assistantMessage.Id.ToString(),
             sanitizedReply,
             recommendedPackageDto,
-            citedOffersList.Count > 0 ? citedOffersList : null,
+            offerCards.Count > 0 ? offerCards : null,
             toolsInvoked,
             false,
             null,

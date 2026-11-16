@@ -374,6 +374,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-046-15` | 046 | FR | Persistir auditoría redactada de PII/secretos en MongoDB (`ai_trace_logs`) con TTL (30 días por defecto) y purga en `DELETE` y eliminación de cuenta | Must | Implementado |
 | `FR-046-16` | 046 | FR | Resolver API key desde Secrets Manager o SSM, enviar `store: false` y operar sobre TLS ≥ 1.2 | Must | Parcial |
 | `FR-046-17` | 046 | FR | Versionar manifiesto y suite de Evals de Sensi IA para la puerta bloqueante CI/CD (Spec 047) | Must | Parcial |
+| `FR-046-18` | 046 | FR | Entregar en `offersCited` las ofertas que la respuesta menciona por título (máximo `OpenAiSettings con datos completos leídos del repositorio, sin repetir las del paquete recomendado | Must | Implementado |
 | `NFR-046-01` | 046 | NFR | Latencia de turno agéntico | p95 < 8 s; límite interno ≤ 25 s (< 29 s Lambda/API GW) | Parcial |
 | `NFR-046-02` | 046 | NFR | Costo mensual OpenAI Chat API (EX-001) | ≤ 5.00 USD/mes con alarma al 80 % (4.00 USD) y degradación al 100 % | Implementado |
 | `NFR-046-03` | 046 | NFR | Aprovechamiento de Prompt Caching | Bloque estático ≥ 1,024 tokens; ≥ 70 % de tokens cacheados en turno ≥ 2 | Parcial |
@@ -432,4 +433,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-049-03` | 049 | NFR | Privacidad en logs | Sin claves, identificadores ni valores en logs del almacén | Implementado |
 | `NFR-049-04` | 049 | NFR | Latencia | p95 < 100 ms por operación de contador desde Lambda | Pendiente |
 
-Total: **427 requisitos** en 49 specs.
+Total: **428 requisitos** en 49 specs.

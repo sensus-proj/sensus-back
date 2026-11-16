@@ -67,7 +67,15 @@ public sealed record CitedOfferDto(
     decimal RegularPriceMxn,
     int AvailableStock,
     bool IsOpenNow,
-    double? DistanceKm = null);
+    double? DistanceKm = null,
+    string? Description = null,
+    int? DiscountPercentage = null,
+    string? ImageUrl = null,
+    string? Category = null,
+    DateTime? EndsAtUtc = null,
+    string? MerchantAddress = null,
+    double? Latitude = null,
+    double? Longitude = null);
 
 public sealed record AiUsageSummaryDto(
     int PromptTokens,

@@ -138,3 +138,18 @@ public interface IDeterministicAiFallbackService
         decimal? budgetMxn,
         CancellationToken cancellationToken = default);
 }
+
+public interface ICitedOfferEnricher
+{
+    /// <summary>
+    /// Devuelve, con datos completos del repositorio, las ofertas citadas que la respuesta menciona por título
+    /// (hasta <c>MaxCitedOfferCards</c>), excluyendo las que ya viajan en el paquete recomendado.
+    /// </summary>
+    Task<IReadOnlyList<Sensus.Application.Ai.DTOs.CitedOfferDto>> EnrichAsync(
+        IReadOnlyList<Sensus.Application.Ai.DTOs.CitedOfferDto> citedOffers,
+        string reply,
+        IReadOnlySet<string> excludedOfferIds,
+        double? latitude,
+        double? longitude,
+        CancellationToken cancellationToken = default);
+}
