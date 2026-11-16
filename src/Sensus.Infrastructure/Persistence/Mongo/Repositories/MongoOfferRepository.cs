@@ -396,4 +396,82 @@ public sealed class MongoOfferRepository : IOfferRepository
 
     private static int GetInt32(BsonDocument document, string field) =>
         document.TryGetValue(field, out BsonValue value) && value.IsNumeric ? value.ToInt32() : 0;
+
+    public async Task<IReadOnlyList<Offer>> SearchAsync(
+        string? query,
+        MerchantCategory? category,
+        decimal? maxBudgetMxn,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var filterBuilder = Builders<OfferDocument>.Filter;
+        var filters = new List<FilterDefinition<OfferDocument>>
+        {
+            filterBuilder.Eq(o => o.Status, OfferStatus.Published.ToString()),
+            filterBuilder.Gt(o => o.EndsAt, now),
+            filterBuilder.Gt(o => o.Stock, 0)
+        };
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var escaped = Regex.Escape(query.Trim());
+            var regex = new BsonRegularExpression(escaped, "i");
+            filters.Add(filterBuilder.Or(
+                filterBuilder.Regex(o => o.Title, regex),
+                filterBuilder.Regex(o => o.Description, regex)));
+        }
+
+        if (category.HasValue)
+        {
+            filters.Add(filterBuilder.Eq(o => o.Category, category.Value.ToString()));
+        }
+
+        if (maxBudgetMxn.HasValue && maxBudgetMxn.Value > 0)
+        {
+            filters.Add(filterBuilder.Lte(o => o.DiscountedPrice, maxBudgetMxn.Value));
+        }
+
+        var combinedFilter = filterBuilder.And(filters);
+        var sort = Builders<OfferDocument>.Sort.Descending(o => o.CreatedAtUtc);
+        var safeLimit = Math.Clamp(limit, 1, 50);
+
+        var documents = await _context.Offers
+            .Find(combinedFilter)
+            .Sort(sort)
+            .Limit(safeLimit)
+            .ToListAsync(cancellationToken);
+
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task<(IReadOnlyList<Offer> Items, int TotalCount)> GetByMerchantIdPagedAsync(
+        Guid merchantId,
+        OfferStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var filterBuilder = Builders<OfferDocument>.Filter;
+        var filter = filterBuilder.Eq(o => o.MerchantId, merchantId);
+        if (status.HasValue)
+        {
+            filter = filterBuilder.And(filter, filterBuilder.Eq(o => o.Status, status.Value.ToString()));
+        }
+
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+
+        var totalCount = (int)await _context.Offers.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        var sort = Builders<OfferDocument>.Sort.Descending(o => o.CreatedAtUtc);
+
+        var documents = await _context.Offers
+            .Find(filter)
+            .Sort(sort)
+            .Skip((safePage - 1) * safePageSize)
+            .Limit(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        return (documents.Select(d => d.ToDomain()).ToList(), totalCount);
+    }
 }

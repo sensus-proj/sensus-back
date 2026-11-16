@@ -24,4 +24,13 @@
     <InternalsVisibleTo Include="Sensus.IntegrationTests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Knowledge\sensi-app-guide.v1.0.0.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="Knowledge\sensi-app-guide.v1.0.0.md">
+      <LogicalName>sensi-app-guide.v1.0.0.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

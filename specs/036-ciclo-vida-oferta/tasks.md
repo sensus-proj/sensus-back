@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
 
 ## Tareas
@@ -13,16 +13,16 @@
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
 | T036-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-036-01` | — | Pendiente |
-| T036-02 | Implementar: Máquina de estados de Offer y transiciones válidas | Domain | `FR-036-01` | T036-01 | Pendiente |
-| T036-03 | Implementar: ChangeOfferStatusCommand y validador | Application | `FR-036-01` | T036-02 | Pendiente |
-| T036-04 | Implementar: Actualización atómica y registro de auditoría | Infrastructure | `FR-036-01` | T036-03 | Pendiente |
-| T036-05 | Implementar: Endpoint PUT /api/v1/offers/{id}/status | Api | `FR-036-01` | T036-04 | Pendiente |
-| T036-06 | Implementar la máquina de estados | Domain | `FR-036-01` | T036-05 | Pendiente |
-| T036-07 | Validar apartados activos antes de archivar | Application | `FR-036-04` | T036-06 | Pendiente |
+| T036-02 | Implementar: Máquina de estados de Offer y transiciones válidas | Domain | `FR-036-01` | T036-01 | Completada |
+| T036-03 | Implementar: ChangeOfferStatusCommand y validador | Application | `FR-036-01` | T036-02 | Completada |
+| T036-04 | Implementar: Actualización atómica y registro de auditoría | Infrastructure | `FR-036-01` | T036-03 | Parcial |
+| T036-05 | Implementar: Endpoint PUT /api/v1/offers/{id}/status | Api | `FR-036-01` | T036-04 | Completada |
+| T036-06 | Implementar la máquina de estados | Domain | `FR-036-01` | T036-05 | Completada |
+| T036-07 | Validar apartados activos antes de archivar | Application | `FR-036-04` | T036-06 | Completada |
 | T036-08 | Persistir el historial de estados | Infrastructure | `FR-036-06` | T036-07 | Pendiente |
 | T036-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-036-01` | T036-08 | Pendiente |
-| T036-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-036-01` | T036-09 | Pendiente |
-| T036-11 | Registrar evidencias del Constitution Check | Docs | `FR-036-01` | T036-10 | Pendiente |
+| T036-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-036-01` | T036-09 | Completada |
+| T036-11 | Registrar evidencias del Constitution Check | Docs | `FR-036-01` | T036-10 | Completada |
 
 ## Notas de ejecución
 

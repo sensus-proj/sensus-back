@@ -6,11 +6,11 @@
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
 
 ## 1. Resumen técnico
 
-Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, usando omni-moderation-latest con comportamiento fail-closed.
+Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, usando `gpt-4o-mini` en modo visión con la política de Sensus (armas, drogas, simbología de odio, contenido sexual y violencia) y comportamiento fail-closed. Sustituye a `omni-moderation-latest`, que dejaba pasar imágenes con armas (decisión D28); `omni-moderation-latest` queda para el texto de Sensi IA (Spec 046).
 
 ## 2. Cambios por capa
 

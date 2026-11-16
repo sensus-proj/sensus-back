@@ -68,6 +68,11 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 })
         };
 
+        var correlationId = httpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+            ?? httpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+            ?? Guid.NewGuid().ToString("D");
+        problemDetails.Extensions["correlationId"] = correlationId;
+
         httpContext.Response.StatusCode = statusCode;
 
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);

@@ -189,4 +189,66 @@ public sealed class RedisCacheService : ICacheService
             return false;
         }
     }
+
+    public bool IsAvailable => _settings.Enabled && _connection is not null && _connection.IsConnected;
+
+    public async Task<double?> IncrementByFloatAsync(string key, double value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        var db = GetDatabase();
+        if (db is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var result = await db.StringIncrementAsync(key, value);
+            if (expiration.HasValue)
+            {
+                await db.KeyExpireAsync(key, expiration.Value);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error al ejecutar INCRBYFLOAT para la clave '{Key}' en Redis.", key);
+            return null;
+        }
+    }
+
+    public async Task<long?> IncrementAsync(string key, long value = 1, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        var db = GetDatabase();
+        if (db is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var result = await db.StringIncrementAsync(key, value);
+            if (expiration.HasValue)
+            {
+                await db.KeyExpireAsync(key, expiration.Value);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error al ejecutar INCR para la clave '{Key}' en Redis.", key);
+            return null;
+        }
+    }
 }

@@ -155,4 +155,30 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
 
         return expired;
     }
+
+    public async Task<IReadOnlyList<OfferClaim>> GetByUserIdAsync(
+        Guid userId,
+        OfferClaimStatus? status = null,
+        int limit = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        var filter = filterBuilder.Eq(c => c.UserId, userId);
+
+        if (status.HasValue)
+        {
+            filter = filterBuilder.And(filter, filterBuilder.Eq(c => c.Status, status.Value.ToString()));
+        }
+
+        var sort = Builders<OfferClaimDocument>.Sort.Descending(c => c.CreatedAtUtc);
+        var safeLimit = Math.Clamp(limit, 1, 50);
+
+        var documents = await _context.OfferClaims
+            .Find(filter)
+            .Sort(sort)
+            .Limit(safeLimit)
+            .ToListAsync(cancellationToken);
+
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
 }

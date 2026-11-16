@@ -37,4 +37,21 @@ public interface ICacheService
     /// Determina si una clave existe en el caché.
     /// </summary>
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Indica si el servicio de caché distribuido está habilitado y conectado.
+    /// </summary>
+    bool IsAvailable { get; }
+
+    /// <summary>
+    /// Incrementa atómicamente un valor de punto flotante en caché (ej. INCRBYFLOAT).
+    /// Devuelve el nuevo valor o null si el servicio no está disponible.
+    /// </summary>
+    Task<double?> IncrementByFloatAsync(string key, double value, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Incrementa atómicamente un contador entero en caché (ej. INCRBY).
+    /// Devuelve el nuevo valor o null si el servicio no está disponible.
+    /// </summary>
+    Task<long?> IncrementAsync(string key, long value = 1, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
 }

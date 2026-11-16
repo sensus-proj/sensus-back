@@ -9,21 +9,21 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 022 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
 
 ---
 
 ## 1. Contexto y problema
 
-Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, usando omni-moderation-latest con comportamiento fail-closed.
+Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, usando `gpt-4o-mini` en modo visión con la política de Sensus (armas, drogas, simbología de odio, contenido sexual y violencia) y comportamiento fail-closed. Sustituye a `omni-moderation-latest`, que dejaba pasar imágenes con armas (decisión D28); `omni-moderation-latest` queda para el texto de Sensi IA (Spec 046).
 
 ## 2. Alcance
 
 **Incluye**
 
 - Envío conjunto de imagen y texto
-- Interpretación de flagged, categories y category_scores
+- Interpretación de `decision`, `flagged_categories` y `category_scores`
 - Fail-closed ante error o timeout
 - Registro de la decisión
 - Aplicación a ofertas del catálogo y a contenido social
@@ -46,8 +46,8 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 | ID | Requisito | Prioridad |
 |---|---|---|
 | FR-017-01 | Enviar imagen y texto en la misma solicitud de moderación | Must |
-| FR-017-02 | Consumir omni-moderation-latest con tiempo de espera acotado | Must |
-| FR-017-03 | Interpretar flagged, categories y category_scores de las seis subcategorías | Must |
+| FR-017-02 | Consumir `gpt-4o-mini` en modo visión (`detail: low`) con la política de Sensus y tiempo de espera acotado; el modelo se fija en `OpenAiSettings:Model`, con costo bajo la excepción `EX-002` | Must |
+| FR-017-03 | Interpretar `decision`, `flagged_categories` y `category_scores` del JSON estructurado (armas, odio, drogas, violencia, contenido sexual e ilícitos) y tratar como fallo toda respuesta malformada | Must |
 | FR-017-04 | No publicar si el proveedor falla, expira o responde de forma inválida | Must |
 | FR-017-05 | Registrar veredicto, categorías, puntajes y acción adoptada | Must |
 | FR-017-06 | Moderar toda imagen de oferta antes de exponerla públicamente | Must |

@@ -4,13 +4,13 @@
 |---|---|
 | ID | 047 |
 | Slug | `ci-cd-pipeline` |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Ola | 7 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 010, 011, 012, 013 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.1.0 |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
 
 ---
 
@@ -33,6 +33,7 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 - `check-specs.mjs` para trazabilidad SDD (bloqueante)
 - `cdk synth` y `cdk diff` para IaC (si existe `infra/`)
 - Configuración de secretos únicamente en GitHub Secrets (`SNYK_TOKEN`, `SONAR_TOKEN`, `SONAR_ORGANIZATION`)
+- Puerta bloqueante de *Evals* automatizados de Sensi IA (Spec 046: precisión, seguridad/inyecciones, *Hard Rules* y tono) activada por cambios en *system prompt*, herramientas MCP o documento Markdown RAG (`FR-047-13`..`FR-047-15`)
 
 **No incluye**
 
@@ -63,6 +64,9 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 | FR-047-10 | Ejecuta `check-specs.mjs specs` para validar 4 artefactos por spec | Must |
 | FR-047-11 | Ejecuta `cdk synth` y `cdk diff` en PR cuando exista `infra/` | Should |
 | FR-047-12 | Los secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) solo como GitHub Secrets, nunca en YAML | Must |
+| FR-047-13 | Ejecuta las *Evals* de Sensi IA (Spec 046) en dos niveles: (a) *Evals* deterministas sin red (fuga de *Hard Rules*, redacción PII, aritmética de presupuesto, filtro de inyección y estructura del payload) dentro de `dotnet test`, bloqueantes en cada PR; (b) *Evals* con modelo (precisión contra el Markdown, uso de herramientas, tono y resistencia a *Prompt Injection*/*Jailbreak*) en un job `ai-evals` manual o programado, fuera del gate por PR (`constitution.md` v2.0.0) | Must |
+| FR-047-14 | Bloquea la fusión si falla cualquier *Evals* determinista, y bloquea el despliegue a producción si la última ejecución de `ai-evals` sobre la versión a liberar no existe o incumple los umbrales de `NFR-047-06` | Must |
+| FR-047-15 | Publica el reporte sanitizado de métricas de *Evals* (tasas por categoría y versión evaluada, sin PII ni secretos en logs ni en YAML del workflow) como artefacto del pipeline; cualquier clave opcional de juez/proveedor para CI reside exclusivamente en GitHub Secrets | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -73,6 +77,7 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 | NFR-047-03 | Vulnerabilidades críticas/altas en dependencias | 0 |
 | NFR-047-04 | Secretos en código o YAML del workflow | 0 |
 | NFR-047-05 | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) |
+| NFR-047-06 | Umbrales de *Evals* de Sensi IA | Deterministas = 100 % (gate por PR). Con modelo, previo a release: precisión ≥ 90 %, tono/identidad ≥ 95 %, resistencia a inyección ≥ 95 % y 0 revelaciones de proveedor o secretos |
 
 ## 6. Criterios de aceptación
 
@@ -114,7 +119,17 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 ### CA-047-08: Secretos fuera del código
 - **Dado**: el workflow YAML
 - **Cuando**: se revisan los valores de autenticación
-- **Entonces**: `SNYK_TOKEN` y `SONAR_TOKEN` se leen solo de `${{ secrets.* }}`, nunca hardcodeados
+- **Entonces**: `SNYK_TOKEN` y `SONAR_TOKEN` (y cualquier secreto opcional para *Evals* en CI) se leen solo de `${{ secrets.* }}`, nunca hardcodeados
+
+### CA-047-09: Bloqueo por regresión de *Evals* en Sensi IA
+- **Dado**: un PR que modifica el *system prompt*, las definiciones de herramientas MCP o el documento Markdown de conocimiento de Sensi IA (Spec 046)
+- **Cuando**: corren las *Evals* deterministas en `dotnet test` y, antes del release, el job `ai-evals`
+- **Entonces**: si falla una *Evals* determinista, el PR no puede fusionarse; si `ai-evals` reporta precisión `< 90 %`, tono/identidad `< 95 %`, resistencia a inyección `< 95 %` o alguna revelación de proveedor o secreto, el despliegue a producción queda bloqueado
+
+### CA-047-10: Trazabilidad sanitizada del reporte de *Evals*
+- **Dado**: una ejecución del job `ai-evals` en el pipeline CI/CD
+- **Cuando**: finaliza la evaluación y se publica el artefacto de métricas
+- **Entonces**: el reporte incluye tasas por categoría, versión del documento evaluado y número de casos aprobados/fallidos, con `0` PII y `0` secretos en logs y artefactos
 
 ---
 

@@ -18,3 +18,7 @@ infra/publish/
 **/secrets.json
 .env
 .env.*
+
+# Temporary bundles and worktrees
+*.bundle
+_wt*/
