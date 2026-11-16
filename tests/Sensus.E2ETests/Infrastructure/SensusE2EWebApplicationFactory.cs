@@ -19,6 +19,9 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public FakeDateTimeProvider FakeClock { get; } = new();
     public FakeGeocodingService FakeGeocoding { get; } = new();
     public FakeEmailSender FakeEmailSender { get; } = new();
+    public InMemoryAiConversationRepository AiConversationRepository { get; } = new();
+    public InMemoryAiMessageRepository AiMessageRepository { get; } = new();
+    public InMemoryAiTraceLogRepository AiTraceLogRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -51,6 +54,16 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(FakeEmailSender);
+
+            // Sensi IA (Spec 046) - Repositorios en memoria para pruebas E2E
+            services.RemoveAll<IAiConversationRepository>();
+            services.AddSingleton<IAiConversationRepository>(AiConversationRepository);
+
+            services.RemoveAll<IAiMessageRepository>();
+            services.AddSingleton<IAiMessageRepository>(AiMessageRepository);
+
+            services.RemoveAll<IAiTraceLogRepository>();
+            services.AddSingleton<IAiTraceLogRepository>(AiTraceLogRepository);
         });
     }
 }

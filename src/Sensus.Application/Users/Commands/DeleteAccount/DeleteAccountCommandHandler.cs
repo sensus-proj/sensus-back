@@ -19,6 +19,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IOfferRepository _offerRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ICacheService? _cacheService;
+    private readonly IAiConversationRepository? _conversationRepository;
+    private readonly IAiMessageRepository? _messageRepository;
+    private readonly IAiTraceLogRepository? _traceLogRepository;
 
     public DeleteAccountCommandHandler(
         IUserRepository userRepository,
@@ -29,7 +32,10 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         IProfileImageStorage imageStorage,
         IOfferRepository offerRepository,
         IDateTimeProvider dateTimeProvider,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IAiConversationRepository? conversationRepository = null,
+        IAiMessageRepository? messageRepository = null,
+        IAiTraceLogRepository? traceLogRepository = null)
     {
         _userRepository = userRepository;
         _comercioRepository = comercioRepository;
@@ -40,6 +46,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
         _cacheService = cacheService;
+        _conversationRepository = conversationRepository;
+        _messageRepository = messageRepository;
+        _traceLogRepository = traceLogRepository;
     }
 
     public async Task<Result> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
@@ -72,9 +81,26 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         // FR-030-06: las ofertas se archivan antes de borrar el comercio para que dejen de ser visibles
         await ArchiveMerchantOffersAsync(userId, cancellationToken);
 
-        // Cascada de purga completa: comercio, tokens de recuperación y usuario
+        // Cascada de purga completa: comercio, tokens de recuperación, datos de Sensi IA y usuario
         await _comercioRepository.DeleteByUsuarioIdAsync(userId, cancellationToken);
         await _tokenRepository.InvalidateExistingTokensForUserAsync(userId, cancellationToken);
+
+        // FR-046-15: Purga en cascada de conversaciones, mensajes y trazas de auditoría de Sensi IA
+        if (_conversationRepository is not null)
+        {
+            await _conversationRepository.PurgeAllByUserIdAsync(userId, cancellationToken);
+        }
+
+        if (_messageRepository is not null)
+        {
+            await _messageRepository.PurgeAllByUserIdAsync(userId, cancellationToken);
+        }
+
+        if (_traceLogRepository is not null)
+        {
+            await _traceLogRepository.PurgeAllByUserIdAsync(userId, cancellationToken);
+        }
+
         await _userRepository.DeleteAsync(userId, cancellationToken);
 
         return Result.Success();

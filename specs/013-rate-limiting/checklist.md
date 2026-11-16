@@ -14,19 +14,19 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] El 429 incluye Retry-After
-- [ ] Los umbrales están en configuración
+- [x] El 429 incluye Retry-After
+- [x] Los umbrales están en configuración
 - [x] El login tiene límite más estricto
 
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
+- [x] Pruebas unitarias y de integración añadidas y en verde
+- [x] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
 - [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Logs con correlation-id y sin PII
+- [x] Revisión de seguridad: sin secretos, autorización verificada
 - [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
@@ -34,8 +34,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — BRECHA: umbrales fijados en código en `SecurityExtensions.cs` (AGENTS.md §12)
-- [ ] **V. Verificación automatizada** — BRECHA: sin pruebas de 429
+- [x] **IV. Seguridad y privacidad** — PASS
+- [x] **V. Verificación automatizada** — PASS
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
 
@@ -55,3 +55,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | Límites por IP con políticas `auth-strict`, `recover`, `read-heavy` y `sensitive-write`. Faltan límite por usuario, cabecera Retry-After y umbrales en configuración. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-15 | Antigravity | PASS | Umbrales externalizados a `RateLimitingSettings` en `appsettings.json`, límites por usuario autenticado y por IP, cabecera `Retry-After` con respuesta ProblemDetails (429) y pruebas de integración en `RateLimitingTests.cs`. |

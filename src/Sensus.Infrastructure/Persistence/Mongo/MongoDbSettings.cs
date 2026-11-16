@@ -15,4 +15,7 @@ public sealed class MongoDbSettings
     public string MediaAssetsCollectionName { get; set; } = "media_assets";
     public string DevicesCollectionName { get; set; } = "devices";
     public string NotificationSettingsCollectionName { get; set; } = "notification_settings";
+    public string AiConversationsCollectionName { get; set; } = "ai_conversations";
+    public string AiMessagesCollectionName { get; set; } = "ai_messages";
+    public string AiTraceLogsCollectionName { get; set; } = "ai_trace_logs";
 }

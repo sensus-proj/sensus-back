@@ -213,4 +213,42 @@ public class DeleteAccountEndpointTests : IClassFixture<CustomWebApplicationFact
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    // Regresión FR-046-15: al eliminar la cuenta se deben purgar todas las conversaciones, mensajes y trazas de Sensi IA
+    [Fact]
+    public async Task DeleteAccount_ShouldPurgeAllAiData_WhenAccountIsDeleted()
+    {
+        // Arrange
+        var passwordHasher = _factory.Services.GetRequiredService<IPasswordHasher>();
+        var rawPassword = $"Sensus-{Guid.NewGuid():N}-Aa1#";
+
+        var user = User.Create(
+            "User with Sensi Data",
+            $"user.{Guid.NewGuid():N}@sensus.com",
+            passwordHasher.HashPassword(rawPassword),
+            true,
+            DateTime.UtcNow).Value;
+
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+
+        _factory.AiConversationRepository.ClearReceivedCalls();
+        _factory.AiMessageRepository.ClearReceivedCalls();
+        _factory.AiTraceLogRepository.ClearReceivedCalls();
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/users/account")
+        {
+            Content = JsonContent.Create(new DeleteAccountCommand(rawPassword))
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateTokenForUser(user));
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.AiConversationRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _factory.AiMessageRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _factory.AiTraceLogRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+    }
 }

@@ -75,4 +75,25 @@ public interface IOfferRepository
         double latitude,
         double longitude,
         CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// Búsqueda de ofertas activas con stock y vigencia, filtrando opcionalmente por texto (título/descripción),
+    /// categoría y presupuesto máximo (spec 041, FR-046-06).
+    /// </summary>
+    Task<IReadOnlyList<Offer>> SearchAsync(
+        string? query,
+        MerchantCategory? category,
+        decimal? maxBudgetMxn,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Obtiene ofertas paginadas de un comercio con filtro opcional por estado (spec 037, FR-046-08).
+    /// </summary>
+    Task<(IReadOnlyList<Offer> Items, int TotalCount)> GetByMerchantIdPagedAsync(
+        Guid merchantId,
+        OfferStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

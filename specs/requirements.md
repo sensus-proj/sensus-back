@@ -87,14 +87,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-012-04` | 012 | FR | Habilitar HSTS en producción | Should | Implementado |
 | `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Pendiente |
 | `FR-013-01` | 013 | FR | Limitar peticiones por IP | Must | Implementado |
-| `FR-013-02` | 013 | FR | Limitar peticiones por usuario autenticado | Must | Pendiente |
-| `FR-013-03` | 013 | FR | Responder 429 con Retry-After | Must | Pendiente |
-| `FR-013-04` | 013 | FR | Configurar umbrales por entorno sin recompilar | Must | Pendiente |
+| `FR-013-02` | 013 | FR | Limitar peticiones por usuario autenticado | Must | Implementado |
+| `FR-013-03` | 013 | FR | Responder 429 con Retry-After | Must | Implementado |
+| `FR-013-04` | 013 | FR | Configurar umbrales por entorno sin recompilar | Must | Implementado |
 | `FR-013-05` | 013 | FR | Aplicar límites más estrictos en autenticación | Should | Implementado |
 | `NFR-013-01` | 013 | NFR | Sobrecarga del limitador | < 10 ms por petición | Pendiente |
 | `NFR-013-02` | 013 | NFR | Disponibilidad ante picos | Sin degradar a 5xx | Pendiente |
 | `FR-014-01` | 014 | FR | Emitir logs en JSON estructurado | Must | Pendiente |
-| `FR-014-02` | 014 | FR | Aceptar o generar correlation-id por petición | Must | Pendiente |
+| `FR-014-02` | 014 | FR | Aceptar o generar correlation-id por petición | Must | Implementado |
 | `FR-014-03` | 014 | FR | Excluir PII, tokens y contenido moderado | Must | Pendiente |
 | `FR-014-04` | 014 | FR | Registrar método, ruta, estado y duración | Should | Pendiente |
 | `NFR-014-01` | 014 | NFR | Campos obligatorios | timestamp, level, correlationId, message | Pendiente |
@@ -109,8 +109,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-016-03` | 016 | FR | No exponer cadenas de conexión ni versiones | Must | Implementado |
 | `NFR-016-01` | 016 | NFR | Latencia de readiness | < 500 ms | Pendiente |
 | `FR-017-01` | 017 | FR | Enviar imagen y texto en la misma solicitud de moderación | Must | Implementado |
-| `FR-017-02` | 017 | FR | Consumir omni-moderation-latest con tiempo de espera acotado | Must | Implementado |
-| `FR-017-03` | 017 | FR | Interpretar flagged, categories y category_scores de las seis subcategorías | Must | Implementado |
+| `FR-017-02` | 017 | FR | Consumir `gpt-4o-mini` en modo visión con la política de Sensus y tiempo de espera acotado (costo en EX-002) | Must | Implementado |
+| `FR-017-03` | 017 | FR | Interpretar `decision`, `flagged_categories` y `category_scores` del JSON y tratar como fallo la respuesta malformada | Must | Implementado |
 | `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
@@ -357,30 +357,31 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |
 | `NFR-045-04` | 045 | NFR | Privilegios IAM | Mínimo privilegio estricto | Implementado |
 | `NFR-045-05` | 045 | NFR | Compatibilidad con pruebas existentes | 100 % pruebas en verde | Implementado |
-| `FR-046-01` | 046 | FR | Crear una conversación o devolver la activa de la persona autenticada | Must | Pendiente |
-| `FR-046-02` | 046 | FR | Rechazar con 401 sin JWT válido y con 403 las sesiones invitadas | Must | Pendiente |
-| `FR-046-03` | 046 | FR | Moderar el mensaje de la persona antes de enviarlo al proveedor generativo, fail-closed | Must | Pendiente |
-| `FR-046-04` | 046 | FR | Recuperar las ofertas candidatas de forma determinista, sin intervención del proveedor generativo | Must | Pendiente |
-| `FR-046-05` | 046 | FR | Interpretar el presupuesto del mensaje y rechazar montos no positivos o no interpretables | Must | Pendiente |
-| `FR-046-06` | 046 | FR | Calcular el paquete y recalcular su total en el backend sin exceder el presupuesto | Must | Pendiente |
-| `FR-046-07` | 046 | FR | Descartar toda oferta cuyo identificador no pertenezca al conjunto de candidatos | Must | Pendiente |
-| `FR-046-08` | 046 | FR | Moderar el texto generado antes de devolverlo, fail-closed | Must | Pendiente |
-| `FR-046-09` | 046 | FR | Excluir ofertas vencidas, pausadas, sin existencias o de comercios inactivos | Must | Pendiente |
-| `FR-046-10` | 046 | FR | Persistir los mensajes de la conversación y devolverlos paginados | Must | Pendiente |
-| `FR-046-11` | 046 | FR | Limitar tokens por solicitud y mensajes por persona y día, con valores configurables | Must | Pendiente |
-| `FR-046-12` | 046 | FR | Resolver la clave del proveedor generativo desde AWS Secrets Manager | Must | Pendiente |
-| `FR-046-13` | 046 | FR | No registrar en logs el contenido del mensaje, el texto generado ni PII | Must | Pendiente |
-| `FR-046-14` | 046 | FR | Degradar a paquete determinista con redacción fija ante fallo, cuota agotada o timeout | Must | Pendiente |
-| `FR-046-15` | 046 | FR | Purgar las conversaciones y sus mensajes al eliminar la cuenta | Must | Pendiente |
-| `FR-046-16` | 046 | FR | Desactivar el entrenamiento del proveedor sobre los datos enviados | Must | Pendiente |
-| `FR-046-17` | 046 | FR | Reutilizar la respuesta en caché ante solicitudes equivalentes dentro del TTL configurado | Should | Pendiente |
-| `NFR-046-01` | 046 | NFR | Latencia de respuesta del asistente | p95 < 8 s; espera máxima 30 s | Pendiente |
-| `NFR-046-02` | 046 | NFR | Costo mensual del proveedor generativo | Techo 1.00 USD con alarma al 80 % | Pendiente |
-| `NFR-046-03` | 046 | NFR | Exactitud del paquete | 100 % con suma ≤ presupuesto | Pendiente |
-| `NFR-046-04` | 046 | NFR | Ofertas inexistentes en la respuesta | 0 | Pendiente |
-| `NFR-046-05` | 046 | NFR | Respuestas entregadas sin moderar | 0 | Pendiente |
-| `NFR-046-06` | 046 | NFR | Disponibilidad ante caída del proveedor generativo | 100 % con degradación determinista | Pendiente |
-| `NFR-046-07` | 046 | NFR | PII o contenido de prompts en logs | 0 | Pendiente |
+| `FR-046-01` | 046 | FR | Exponer CRUD conversacional (`POST`/`GET` paginado/`DELETE` en cascada de mensajes y trazas) | Must | Implementado |
+| `FR-046-02` | 046 | FR | Exigir JWT Bearer (401 sin token/revocado, 403 Invitado) y validar scopes por RoleType en backend y MCP | Must | Implementado |
+| `FR-046-03` | 046 | FR | Configurar identidad oficial Sensus (negocio local, QR, sin envíos/pagos), tono empático y orientación comercial en system prompt | Must | Implementado |
+| `FR-046-04` | 046 | FR | Cumplir Hard Rules: cero revelación de modelo base/OpenAI/GPT/arquitectura/secretos y rechazo seguro ante contenido inseguro | Must | Implementado |
+| `FR-046-05` | 046 | FR | Inyectar Markdown versionado (`semver` + SHA-256) dentro de `<contexto>` como única fuente de verdad de la app | Must | Implementado |
+| `FR-046-06` | 046 | FR | Implementar adaptador MCP in-process y Function Calling con 5 herramientas read-only (`search_offers`, `get_offer_detail`, `get_my_account`, `get_my_claims`, `get_my_merchant_offers`) acotado a ≤ 3 rondas y ≤ 25 s | Must | Implementado |
+| `FR-046-07` | 046 | FR | Validar presupuesto (> 0), excluir ofertas vencidas/pausadas/sin stock, descartar IDs inexistentes y recalcular totales en backend | Must | Implementado |
+| `FR-046-08` | 046 | FR | Moderar todo prompt entrante con OpenAI Moderation API (`omni-moderation-latest`, fail-closed) antes del LLM principal | Must | Implementado |
+| `FR-046-09` | 046 | FR | Detectar y bloquear Prompt Injection/Jailbreak en entrada y sanear textos de catálogo contra inyección indirecta | Must | Implementado |
+| `FR-046-10` | 046 | FR | Moderar salida (fail-closed), verificar fuga de Hard Rules y redactar PII y credenciales automáticamente | Must | Implementado |
+| `FR-046-11` | 046 | FR | Estructurar carga en dos bloques estrictos para Prompt Caching (Estático ≥ 1,024 tokens + Dinámico) | Must | Implementado |
+| `FR-046-12` | 046 | FR | Implementar Model Router previo de 2 niveles con afinidad sticky por conversación para preservar Prompt Caching | Must | Implementado |
+| `FR-046-13` | 046 | FR | Limitar tokens/mensajes/techo mensual EX-001 (5.00 USD/mes), usar caché FAQ opcional y degradar de forma determinista | Must | Implementado |
+| `FR-046-14` | 046 | FR | Emitir logs sanitizados en CloudWatch (correlation-id, versión Markdown, hashes, latencias, tokens cacheados, tools; sin PII ni prompts) | Must | Parcial |
+| `FR-046-15` | 046 | FR | Persistir auditoría redactada de PII/secretos en MongoDB (`ai_trace_logs`) con TTL (30 días por defecto) y purga en `DELETE` y eliminación de cuenta | Must | Implementado |
+| `FR-046-16` | 046 | FR | Resolver API key desde Secrets Manager o SSM, enviar `store: false` y operar sobre TLS ≥ 1.2 | Must | Parcial |
+| `FR-046-17` | 046 | FR | Versionar manifiesto y suite de Evals de Sensi IA para la puerta bloqueante CI/CD (Spec 047) | Must | Parcial |
+| `NFR-046-01` | 046 | NFR | Latencia de turno agéntico | p95 < 8 s; límite interno ≤ 25 s (< 29 s Lambda/API GW) | Parcial |
+| `NFR-046-02` | 046 | NFR | Costo mensual OpenAI Chat API (EX-001) | ≤ 5.00 USD/mes con alarma al 80 % (4.00 USD) y degradación al 100 % | Implementado |
+| `NFR-046-03` | 046 | NFR | Aprovechamiento de Prompt Caching | Bloque estático ≥ 1,024 tokens; ≥ 70 % de tokens cacheados en turno ≥ 2 | Parcial |
+| `NFR-046-04` | 046 | NFR | Exactitud de paquetes y vigencia | 100 % SUM ≤ presupuesto; 0 ofertas inexistentes, vencidas o sin stock | Implementado |
+| `NFR-046-05` | 046 | NFR | Eficacia de guardrails | 0 respuestas sin moderación/fallback; ≥ 95 % bloqueo de inyecciones; 0 fugas de Hard Rules | Parcial |
+| `NFR-046-06` | 046 | NFR | Privacidad en CloudWatch y salidas | 0 PII/credenciales en CloudWatch ni sin redactar en respuestas o trazas | Implementado |
+| `NFR-046-07` | 046 | NFR | Disponibilidad ante fallo/cuota de chat | 100 % respuesta determinista tras moderación entrada válida | Implementado |
+| `NFR-046-08` | 046 | NFR | Umbrales de Evals | Deterministas 100 % (gate por PR); con modelo previo a release: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Parcial |
 | `FR-047-01` | 047 | FR | El pipeline compila la solución con `-warnaserror` (0 warnings, 0 errores) | Must | Implementado |
 | `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Implementado |
 | `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Implementado |
@@ -393,11 +394,15 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-10` | 047 | FR | Ejecuta `check-specs.mjs specs` para validar 4 artefactos por spec | Must | Implementado |
 | `FR-047-11` | 047 | FR | Ejecuta `cdk synth` y `cdk diff` en PR cuando exista `infra/` | Should | Implementado |
 | `FR-047-12` | 047 | FR | Los secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) solo como GitHub Secrets, nunca en YAML | Must | Implementado |
+| `FR-047-13` | 047 | FR | Ejecutar Evals de Sensi IA en dos niveles: deterministas en `dotnet test` por PR y con modelo en job `ai-evals` manual o programado | Must | Pendiente |
+| `FR-047-14` | 047 | FR | Bloquear la fusión si falla una Evals determinista y el despliegue a producción sin `ai-evals` en verde | Must | Pendiente |
+| `FR-047-15` | 047 | FR | Publicar reporte sanitizado de métricas de Evals sin PII ni secretos en logs ni YAML (credenciales CI opcionales solo en GitHub Secrets) | Must | Pendiente |
 | `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Pendiente |
 | `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Implementado |
 | `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Implementado |
 | `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Implementado |
 | `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Pendiente |
+| `NFR-047-06` | 047 | NFR | Umbrales de Evals de Sensi IA | Deterministas 100 %; con modelo: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Pendiente |
 | `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
 | `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
 | `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Pendiente |
@@ -416,4 +421,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
 
-Total: **411 requisitos** en 48 specs.
+Total: **416 requisitos** en 48 specs.

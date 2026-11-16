@@ -36,7 +36,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
 - [ ] **III. CQRS y contratos** — BRECHA: existe el endpoint público `POST /api/v1/media/moderate`, contrario a FR-017-07
-- [ ] **IV. Seguridad y privacidad** — BRECHA: ante fallo o timeout se rechaza en lugar de enviar a cuarentena; la oferta acepta `ImageUrl` sin verificar que proviene de un MediaAsset aprobado
+- [ ] **IV. Seguridad y privacidad** — BRECHA: la oferta acepta `ImageUrl` sin verificar que proviene de un MediaAsset aprobado (corregido envío a cuarentena ante fallo, timeout o falta de clave)
 - [x] **V. Verificación automatizada** — PASS
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
@@ -57,3 +57,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `OpenAiImageModerationService` con omni-moderation y modo visión, timeout configurable y fail-closed. La moderación ocurre en la carga (`UploadMediaCommandHandler`). Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-15 | Equipo Sensus | Spec v1.2.0 | FR-017-02 y FR-017-03 alineados al modelo real (`gpt-4o-mini` en visión con política de Sensus, decisión D28); costo registrado en `EX-002` (`constitution.md` v2.1.0). Corregido el *fail-open* sin clave de `OpenAiImageModerationService.cs`: sin clave, errores y timeouts envían a cuarentena (fail-closed, `constitution.md` §2.4) con pruebas de regresión verificadas. |

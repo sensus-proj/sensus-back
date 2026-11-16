@@ -17,8 +17,8 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 010 | [Paginación estándar](010-paginacion-estandar/spec.md) | Plataforma | Nuevo | 0 | Parcial | 009 |
 | 011 | [Contrato OpenAPI](011-contrato-openapi/spec.md) | Plataforma | Nuevo | 0 | Parcial | 009, 010 |
 | 012 | [CORS y HTTPS por entorno](012-cors-y-https/spec.md) | Seguridad | Nuevo | 6 | Parcial | Ninguna |
-| 013 | [Control de tasa de peticiones](013-rate-limiting/spec.md) | Seguridad | Nuevo | 6 | Parcial | 012 |
-| 014 | [Logs estructurados y correlación](014-logs-estructurados-correlacion/spec.md) | Observabilidad | Nuevo | 6 | Pendiente | 009 |
+| 013 | [Control de tasa de peticiones](013-rate-limiting/spec.md) | Seguridad | Nuevo | 6 | Implementado | 012 |
+| 014 | [Logs estructurados y correlación](014-logs-estructurados-correlacion/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 009 |
 | 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
 | 016 | [Health checks](016-health-checks/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
 | 017 | [Moderación multimodal de contenido](017-moderacion-multimodal/spec.md) | Moderación | Nuevo | 4 | Parcial | 009, 022 |
@@ -50,8 +50,8 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 041 |
 | 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Implementado | 027, 003 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
-| 046 | [Asistente conversacional Sensi](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Pendiente | 002, 007, 013, 017, 018, 030, 041 |
-| 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 010, 011, 012, 013 |
+| 046 | [Asistente agéntico Sensi IA (7 capas)](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Parcial | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |
+| 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Parcial | 009, 010, 011, 012, 013 |
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
 
 ## Estados

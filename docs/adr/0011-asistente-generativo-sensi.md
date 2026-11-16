@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Aceptada |
-| Fecha | 2026-11-13 |
+| Estado | Sustituida por [ADR 0012](0012-sensi-ia-agentico-mcp-router-evals.md) |
+| Fecha | 2026-11-13 (sustituida el 2026-11-15) |
 | Principios afectados | II, IV, VI, VII |
 | Specs relacionados | 046, 007, 013, 017, 018, 030, 041 |
 | Fuente | Tesina Sensus §1 y §2.3 · Formato de Aceptación · hoja *Sensi IA* del catálogo de componentes móvil (Pantalla `P-25`, Componente `C-39`) |

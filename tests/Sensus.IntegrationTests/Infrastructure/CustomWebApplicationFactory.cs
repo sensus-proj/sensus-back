@@ -26,6 +26,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public FakeEmailSender FakeEmailSender { get; } = new();
     public IMediaAssetRepository MediaAssetRepository { get; } = Substitute.For<IMediaAssetRepository>();
     public RecordingMetricsPublisher Metrics { get; } = new();
+    public IAiConversationRepository AiConversationRepository { get; } = Substitute.For<IAiConversationRepository>();
+    public IAiMessageRepository AiMessageRepository { get; } = Substitute.For<IAiMessageRepository>();
+    public IAiTraceLogRepository AiTraceLogRepository { get; } = Substitute.For<IAiTraceLogRepository>();
+    public IAiChatGateway FakeAiChatGateway { get; } = Substitute.For<IAiChatGateway>();
+    public ITextModerationService TextModerationService { get; } = Substitute.For<ITextModerationService>();
+    public ICacheService CacheService { get; } = Substitute.For<ICacheService>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -76,6 +82,30 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(FakeEmailSender);
+
+            // Sensi IA (Spec 046)
+            services.RemoveAll<IAiConversationRepository>();
+            services.AddSingleton(AiConversationRepository);
+
+            services.RemoveAll<IAiMessageRepository>();
+            services.AddSingleton(AiMessageRepository);
+
+            services.RemoveAll<IAiTraceLogRepository>();
+            services.AddSingleton(AiTraceLogRepository);
+
+            services.RemoveAll<IAiChatGateway>();
+            services.AddSingleton(FakeAiChatGateway);
+
+            TextModerationService.ModerateTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new TextModerationResult(true, Decision: "Approved"));
+            services.RemoveAll<ITextModerationService>();
+            services.AddSingleton(TextModerationService);
+
+            CacheService.IsAvailable.Returns(true);
+            CacheService.GetAsync<long?>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((long?)0);
+            CacheService.GetAsync<double?>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((double?)0.0);
+            services.RemoveAll<ICacheService>();
+            services.AddSingleton(CacheService);
         });
     }
 }

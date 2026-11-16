@@ -41,7 +41,7 @@ public sealed class OpenAiImageModerationServiceTests
     }
 
     [Fact]
-    public async Task ModerateImageBytesAsync_WhenNoApiKeyConfigured_ReturnsApprovedBypass()
+    public async Task ModerateImageBytesAsync_WhenNoApiKeyConfigured_ReturnsQuarantine_FailClosed()
     {
         // Arrange
         var prevEnv = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -56,9 +56,9 @@ public sealed class OpenAiImageModerationServiceTests
             var result = await service.ModerateImageBytesAsync([1, 2, 3]);
 
             // Assert
-            result.IsApproved.Should().BeTrue();
-            result.Decision.Should().Be("Approved");
-            result.Message.Should().Contain("Moderación omitida");
+            result.IsApproved.Should().BeFalse();
+            result.Decision.Should().Be("Quarantine");
+            result.Message.Should().Be(OpenAiImageModerationService.QuarantineMessage);
         }
         finally
         {
@@ -297,7 +297,7 @@ public sealed class OpenAiImageModerationServiceTests
     }
 
     [Fact]
-    public async Task ModerateImageBytesAsync_WhenResultsArrayIsEmpty_ReturnsApproved()
+    public async Task ModerateImageBytesAsync_WhenResultsArrayIsEmpty_ReturnsQuarantine_FailClosed()
     {
         // Arrange
         var jsonResponse = JsonSerializer.Serialize(new
@@ -320,11 +320,13 @@ public sealed class OpenAiImageModerationServiceTests
         var result = await service.ModerateImageBytesAsync([1, 2, 3]);
 
         // Assert
-        result.IsApproved.Should().BeTrue();
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+        result.Message.Should().Be(OpenAiImageModerationService.QuarantineMessage);
     }
 
     [Fact]
-    public async Task ModerateImageBytesAsync_WhenHttpReturns500_ReturnsRejected()
+    public async Task ModerateImageBytesAsync_WhenHttpReturns500_ReturnsQuarantine_FailClosed()
     {
         // Arrange
         var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -341,8 +343,26 @@ public sealed class OpenAiImageModerationServiceTests
 
         // Assert
         result.IsApproved.Should().BeFalse();
-        result.Decision.Should().Be("Rejected");
-        result.Message.Should().Be(OpenAiImageModerationService.PolicyViolationMessage);
+        result.Decision.Should().Be("Quarantine");
+        result.Message.Should().Be(OpenAiImageModerationService.QuarantineMessage);
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenTimeoutOccurs_ReturnsQuarantine_FailClosed()
+    {
+        // Arrange
+        var handler = new DelegatingMockHandler(_ => throw new OperationCanceledException());
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key" });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        // Act
+        var result = await service.ModerateImageBytesAsync([1, 2, 3]);
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+        result.Message.Should().Be(OpenAiImageModerationService.QuarantineMessage);
     }
 
     [Fact]

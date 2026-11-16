@@ -47,6 +47,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
 
 // Configuración de Autenticación con JWT Bearer y validación de SecurityStamp
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -128,7 +129,7 @@ builder.Services.AddAuthentication(options =>
 
 // Políticas de Autorización y Rate Limiting
 builder.Services.AddAppAuthorizationPolicies();
-builder.Services.AddSecurityRateLimiting();
+builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
@@ -199,6 +200,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Pipeline HTTP
+app.UseMiddleware<Sensus.Api.Middlewares.CorrelationIdMiddleware>();
 // FR-015-01: las métricas envuelven todo el pipeline para medir la latencia completa y el estado final.
 app.UseMiddleware<Sensus.Api.Middlewares.RequestMetricsMiddleware>();
 app.UseExceptionHandler();
@@ -248,6 +250,7 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapAiEndpoints();
 
 await app.RunAsync();
 

@@ -85,6 +85,18 @@ public sealed class MongoDbContext
         _database?.GetCollection<NotificationSettingsDocument>(_settings.NotificationSettingsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<AiConversationDocument> AiConversations =>
+        _database?.GetCollection<AiConversationDocument>(_settings.AiConversationsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<AiMessageDocument> AiMessages =>
+        _database?.GetCollection<AiMessageDocument>(_settings.AiMessagesCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<AiTraceLogDocument> AiTraceLogs =>
+        _database?.GetCollection<AiTraceLogDocument>(_settings.AiTraceLogsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
     /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
@@ -186,6 +198,12 @@ public sealed class MongoDbContext
             // Índice geoespacial 2dsphere para búsqueda de ofertas cercanas
             var offerGeoKeys = Builders<OfferDocument>.IndexKeys.Geo2DSphere(o => o.Ubicacion);
             offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(offerGeoKeys));
+
+            // Índice de texto en (Title, Description) para búsqueda inteligente (spec 041, FR-046-06)
+            var textIndexKeys = Builders<OfferDocument>.IndexKeys
+                .Text(o => o.Title)
+                .Text(o => o.Description);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(textIndexKeys));
         }
         catch (Exception ex)
         {
@@ -195,6 +213,12 @@ public sealed class MongoDbContext
         try
         {
             var claimsCollection = _database.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName);
+
+            // Índice compuesto (UserId, CreatedAtUtc) para historial de apartados por usuario (spec 033, FR-046-07)
+            var userClaimsKeys = Builders<OfferClaimDocument>.IndexKeys
+                .Ascending(c => c.UserId)
+                .Descending(c => c.CreatedAtUtc);
+            claimsCollection.Indexes.CreateOne(new CreateIndexModel<OfferClaimDocument>(userClaimsKeys));
 
             // Un solo apartado activo por usuario y oferta (FR-033-03).
             var activeClaimKeys = Builders<OfferClaimDocument>.IndexKeys
@@ -292,6 +316,41 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: Los índices de preferencias de notificación ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Índices para conversaciones de Sensi IA (FR-046-01)
+            var conversationOwnerKeys = Builders<AiConversationDocument>.IndexKeys
+                .Ascending(c => c.OwnerUserId)
+                .Ascending(c => c.Status);
+            AiConversations.Indexes.CreateOne(new CreateIndexModel<AiConversationDocument>(conversationOwnerKeys));
+
+            // Índices para mensajes de Sensi IA
+            var messageConvKeys = Builders<AiMessageDocument>.IndexKeys
+                .Ascending(m => m.ConversationId)
+                .Ascending(m => m.CreatedAtUtc);
+            AiMessages.Indexes.CreateOne(new CreateIndexModel<AiMessageDocument>(messageConvKeys));
+
+            var messageOwnerKeys = Builders<AiMessageDocument>.IndexKeys.Ascending(m => m.OwnerUserId);
+            AiMessages.Indexes.CreateOne(new CreateIndexModel<AiMessageDocument>(messageOwnerKeys));
+
+            // Índices para trazas de auditoría de Sensi IA con TTL (FR-046-15)
+            var traceTtlKeys = Builders<AiTraceLogDocument>.IndexKeys.Ascending(t => t.ExpiresAtUtc);
+            var traceTtlOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.Zero };
+            AiTraceLogs.Indexes.CreateOne(new CreateIndexModel<AiTraceLogDocument>(traceTtlKeys, traceTtlOptions));
+
+            var traceConvKeys = Builders<AiTraceLogDocument>.IndexKeys
+                .Ascending(t => t.ConversationId)
+                .Ascending(t => t.CreatedAtUtc);
+            AiTraceLogs.Indexes.CreateOne(new CreateIndexModel<AiTraceLogDocument>(traceConvKeys));
+
+            var traceOwnerKeys = Builders<AiTraceLogDocument>.IndexKeys.Ascending(t => t.OwnerUserId);
+            AiTraceLogs.Indexes.CreateOne(new CreateIndexModel<AiTraceLogDocument>(traceOwnerKeys));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de Sensi IA ya existen o el clúster aún no está disponible.");
         }
     }
 }

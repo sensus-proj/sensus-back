@@ -175,4 +175,51 @@ public class InMemoryOfferRepository : IOfferRepository
 
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<Offer>> SearchAsync(
+        string? query,
+        MerchantCategory? category,
+        decimal? maxBudgetMxn,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var queryClean = query?.Trim();
+
+        var matches = _offers.Values
+            .Where(o => o.Status == OfferStatus.Published && o.EndsAt > now && o.Stock > 0)
+            .Where(o => string.IsNullOrWhiteSpace(queryClean)
+                || o.Title.Contains(queryClean, StringComparison.OrdinalIgnoreCase)
+                || o.Description.Contains(queryClean, StringComparison.OrdinalIgnoreCase))
+            .Where(o => !category.HasValue || string.Equals(o.Category, category.Value.ToString(), StringComparison.OrdinalIgnoreCase))
+            .Where(o => !maxBudgetMxn.HasValue || maxBudgetMxn.Value <= 0 || o.DiscountedPrice <= maxBudgetMxn.Value)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Take(Math.Clamp(limit, 1, 50))
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<Offer>>(matches);
+    }
+
+    public Task<(IReadOnlyList<Offer> Items, int TotalCount)> GetByMerchantIdPagedAsync(
+        Guid merchantId,
+        OfferStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = _offers.Values.Where(o => o.MerchantId == merchantId);
+        if (status.HasValue)
+        {
+            query = query.Where(o => o.Status == status.Value);
+        }
+
+        var list = query.OrderByDescending(o => o.CreatedAtUtc).ToList();
+        var total = list.Count;
+        var paged = list.Skip((safePage - 1) * safePageSize).Take(safePageSize).ToList();
+
+        return Task.FromResult<(IReadOnlyList<Offer> Items, int TotalCount)>((paged, total));
+    }
 }

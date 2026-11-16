@@ -2,8 +2,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
+using Sensus.Infrastructure.Ai.Budget;
+using Sensus.Infrastructure.Ai.Gateways;
+using Sensus.Infrastructure.Ai.Guardrails;
+using Sensus.Infrastructure.Ai.Mcp;
+using Sensus.Infrastructure.Ai.Routing;
 using Sensus.Infrastructure.Authentication;
 using Sensus.Infrastructure.Cache;
 using Sensus.Infrastructure.Migration;
@@ -58,10 +64,41 @@ public static class DependencyInjection
             configuration.GetSection(CloudinarySettings.SectionName));
         services.AddSingleton<IProfileImageStorage, CloudinaryImageStorage>();
 
-        // Moderación inteligente de imágenes con OpenAI Omni-Moderation
+        // Moderación inteligente de imágenes y texto con OpenAI
         services.Configure<OpenAiSettings>(
             configuration.GetSection(OpenAiSettings.SectionName));
+        services.AddSingleton<IValidateOptions<SensiSettings>, SensiSettingsValidator>();
+        services.AddOptions<SensiSettings>()
+            .Bind(configuration.GetSection(SensiSettings.SectionName))
+            .ValidateOnStart();
+
         services.AddHttpClient<IImageModerationService, OpenAiImageModerationService>();
+        services.AddHttpClient<ITextModerationService, OpenAiTextModerationService>();
+
+        // Base de conocimiento estática RAG para Sensi IA (Spec 046)
+        services.AddSingleton<IKnowledgeBaseProvider, Knowledge.KnowledgeBaseProvider>();
+
+        // Sensi IA (Spec 046) - Componentes de Capa 1 a 7
+        services.AddSingleton<IScopeAuthorizationMapper, JwtScopeAuthorizationMapper>();
+        services.AddSingleton<IMcpToolRegistry, McpToolRegistry>();
+        services.AddScoped<IMcpToolExecutor, InProcessMcpToolExecutor>();
+        services.AddSingleton<IPromptInjectionDetector, RegexAndStructuralInjectionDetector>();
+        services.AddSingleton<IHardRuleLeakDetector, HardRuleLeakDetector>();
+        services.AddSingleton<IPiiRedactor, PatternPiiAndSecretRedactor>();
+        services.AddSingleton<IAiModelRouter, DeterministicModelRouter>();
+        services.AddSingleton<IAiBudgetGuard, AiBudgetGuard>();
+        services.AddHttpClient<IAiChatGateway, OpenAiChatGateway>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<IOptions<OpenAiSettings>>().Value;
+            var baseUrl = !string.IsNullOrWhiteSpace(opts.BaseUrl) ? opts.BaseUrl.TrimEnd('/') + "/" : "https://api.openai.com/v1/";
+            client.BaseAddress = new Uri(baseUrl);
+            var timeout = opts.Sensi.TimeoutSeconds > 0 ? opts.Sensi.TimeoutSeconds : 25;
+            client.Timeout = TimeSpan.FromSeconds(timeout);
+        });
+
+        services.AddScoped<IAiConversationRepository, MongoAiConversationRepository>();
+        services.AddScoped<IAiMessageRepository, MongoAiMessageRepository>();
+        services.AddScoped<IAiTraceLogRepository, MongoAiTraceLogRepository>();
 
         // Caché distribuido con Redis (Spec 048)
         services.Configure<RedisSettings>(

@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **1.4.0** |
+| Versión | **2.1.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-13 (habilitación del asistente generativo Sensi como cuarta excepción de proveedor externo; §2.1, §2.2, §2.4 y §2.5) |
+| Última enmienda | 2026-11-15 (v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -171,8 +171,12 @@ y el sistema MUST fallar cerrado ante cualquier duda.
   configurables por entorno.
 - Los secretos MUST residir en AWS Secrets Manager o SSM Parameter Store. MUST NOT existir secretos en el
   repositorio, en el código, en imágenes, en artefactos de build ni en logs.
-- Los logs MUST NOT contener datos personales, tokens, credenciales ni contenido moderado. MUST incluir
-  un identificador de correlación por petición.
+- Los logs operativos (CloudWatch) MUST NOT contener datos personales (PII), tokens, credenciales,
+  contenido moderado ni prompts o respuestas en claro del asistente; MUST registrar únicamente metadatos
+  técnicos sanitizados (p. ej., *hashes* SHA-256, versiones, latencias, conteo de tokens cacheados e
+  identificadores de herramienta) y un identificador de correlación por petición. La trazabilidad de
+  auditoría del asistente IA (prompts y respuestas con redacción automática de PII y credenciales)
+  MUST persistirse exclusivamente en MongoDB con TTL configurable y purga ante eliminación de cuenta.
 - La autorización MUST verificarse en el servidor en cada operación. El cliente MUST NOT ser fuente de
   verdad de permisos ni de identidad.
 - La moderación de contenido MUST ejecutarse **antes** de publicar o persistir el contenido en Cloudinary.
@@ -222,6 +226,12 @@ ejecutadas de forma continua en el pipeline.
 - Cada corrección de defecto MUST acompañar una prueba de regresión que falle antes del arreglo.
 - Las pruebas MUST ser deterministas, aisladas y ejecutables en cualquier entorno sin dependencias
   manuales.
+- Excepción acotada para el asistente generativo (Spec 046): las *Evals con modelo*, que invocan al
+  proveedor generativo real, MUST NOT formar parte de la suite de pruebas ni del gate de fusión por PR.
+  Se ejecutan en un job separado, manual o programado, que MUST aprobarse antes de cada release a
+  producción (Spec 047). Las *Evals deterministas* (sin red: fuga de *Hard Rules*, redacción de PII,
+  aritmética de presupuesto, filtro de inyección y estructura del payload) son pruebas y MUST bloquear
+  la fusión.
 - El pipeline MUST bloquear la fusión si cualquier verificación falla. MUST NOT existir fusión con
   verificaciones en rojo.
 - El pipeline MUST ejecutar, como mínimo: compilación, pruebas unitarias, pruebas de integración,
@@ -335,8 +345,9 @@ son requisitos funcionales del producto.
 | Multimedia y CDN | Cloudinary | — | Almacenamiento, transformación y distribución de contenido multimedia |
 | Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
-| Moderación | OpenAI `omni-moderation-latest` | — | Moderación multimodal |
-| Asistente generativo | OpenAI, modelo de chat fijado por configuración | — | Redacción conversacional del asistente y selección dentro de candidatos recuperados (Spec 046) |
+| Moderación de contenido publicado | OpenAI `gpt-4o-mini` en modo visión con la política de Sensus | — | Moderación multimodal de ofertas, publicaciones y comentarios (Spec 017); detecta armas, drogas y simbología de odio que `omni-moderation-latest` dejaba pasar |
+| Moderación de texto del asistente | OpenAI `omni-moderation-latest` | — | Filtro gratuito de entrada y salida de Sensi IA (Spec 046) |
+| Asistente generativo | OpenAI Chat API (par de modelos fijados por configuración vía *Model Router*, *Prompt Caching* y API de Moderación) + adaptador MCP *in-process* / *Function Calling* en `Sensus.Infrastructure` | — | Asistente agéntico Sensi IA en 7 capas: identidad oficial, RAG Markdown estático, herramientas *read-only* de mínimo privilegio, autorización heredada, *guardrails* duales, afinidad de sesión y *Evals* (Spec 046, Spec 047 y ADR 0012) |
 | Notificaciones push | Abstracción `IPushDispatcher` | — | Despacho de notificaciones; adaptador FCM o SNS seleccionado por configuración |
 | IaC | AWS CDK (C#) | — | Aprovisionamiento de recursos |
 | Pruebas | xUnit, FluentAssertions, Testcontainers, NetArchTest | — | Unitarias, integración, arquitectura |
@@ -354,7 +365,11 @@ de cumplimiento.
   justificarse en una enmienda.
 - Interfaces de usuario: aplicación móvil, página web o *landing*. El backend MUST limitarse a la API.
 - Visión artificial local o modelos propios de moderación.
-- Acceso del proveedor generativo a la base de datos, a credenciales o a herramientas de ejecución.
+- Acceso directo del proveedor generativo a la base de datos, a credenciales, a la red o a
+  herramientas arbitrarias de ejecución o escritura. El modelo únicamente podrá invocar, mediante
+  *Function Calling* nativo o protocolo MCP *in-process* dentro de la misma Lambda, herramientas de
+  solo lectura explícitamente declaradas, ejecutadas íntegramente por el backend y validadas contra
+  los permisos (`JWT`/scopes) de la persona autenticada (ADR 0012).
 - Pasarelas de pago no contempladas en la especificación base.
 - Servicios de AWS fuera del nivel gratuito.
 - Recursos aprovisionados manualmente en consola.
@@ -379,22 +394,28 @@ omita el veredicto.
 | Aspecto | Requisito |
 |---|---|
 | Entrada | Imagen (Base64 o URL) **y** texto asociado (título o comentario) en la misma solicitud |
-| Salida esperada | `flagged`, `categories` (booleanos) y `category_scores` (0.0–1.0) |
-| Bloques evaluados | Contenido sexual (erotismo, desnudez), violencia (gráfica, general), autolesiones (suicidio, intención, instrucciones) |
+| Salida esperada | `decision`, `flagged_categories` y `category_scores` (0.0–1.0) en JSON estructurado y validado por el backend; con `omni-moderation-latest`, `flagged`, `categories` y `category_scores` |
+| Bloques evaluados | Contenido sexual (erotismo, desnudez), violencia (gráfica, general), autolesiones (suicidio, intención, instrucciones) y, por política comercial de Sensus, armas de fuego o blancas, drogas y simbología de odio |
 | Banda baja | Publicación automática |
 | Banda intermedia | Revisión manual |
 | Banda alta | Rechazo automático y baneo del usuario |
 | Umbrales | Externalizados en configuración, por entorno, registrados con cada decisión |
 | Fallo del proveedor | Cuarentena del contenido; nunca publicación |
 
-La moderación aplica además al asistente conversacional, aunque su contenido no se publique: el
-mensaje de la persona MUST moderarse antes de enviarse al proveedor generativo y el texto generado
-MUST moderarse antes de devolverse. Ante error, timeout, cuota agotada o respuesta inválida de
-cualquiera de los dos proveedores, MUST NOT entregarse texto generado.
+La moderación aplica además al asistente conversacional agéntico, aunque su contenido no se
+publique: todo mensaje de la persona MUST atravesar la etapa de *guardrails* de entrada (API de
+moderación y detección de *prompt injection*/*jailbreak*) antes de invocar al modelo principal, y
+toda salida generada MUST moderarse y someterse a redacción automática de PII o credenciales antes de
+entregarse o persistirse. Ante error, timeout, cuota agotada o respuesta inválida del proveedor de
+moderación o del modelo generativo, MUST NOT entregarse texto generado por IA (degradación
+determinista controlada cuando aplique tras moderación de entrada exitosa, conforme a la Spec 046).
 
-El proveedor generativo MUST recibir únicamente el mensaje y un conjunto cerrado de candidatos
-recuperado de forma determinista. Toda referencia fuera de ese conjunto MUST descartarse. Los importes
-y totales MUST calcularse en el backend y MUST NOT tomarse de la respuesta del proveedor.
+Cuando el asistente utilice *Function Calling* o MCP *in-process*, el proveedor generativo MUST
+recibir únicamente declaraciones explícitas de herramientas de solo lectura, contexto estático de
+conocimiento en Markdown, metadatos mínimos de sesión sin secretos y el historial acotado. Toda
+consulta real a datos, validación de autorización por permisos de la sesión, verificación de
+vigencia/existencias y cálculo de importes o totales MUST ejecutarse en el backend y MUST NOT
+confiarse a los parámetros o montos sugeridos por el modelo.
 
 ### 2.5 Alcance funcional del backend
 
@@ -404,8 +425,11 @@ y totales MUST calcularse en el backend y MUST NOT tomarse de la respuesta del p
 - Inventario de ofertas por comerciante con ciclo de vida explícito.
 - Feed social geolocalizado con publicaciones, comentarios, reacciones y reportes.
 - Búsqueda, recomendaciones y alternativas calculadas dentro del backend.
-- Asistente conversacional de paquetes por presupuesto, con recuperación determinista y redacción
-  generativa acotada.
+- Asistente conversacional agéntico (Sensi IA) con capa de conocimiento en Markdown, herramientas de
+  solo lectura vía MCP *in-process* / *Function Calling*, autorización heredada de sesión, *Prompt
+  Caching*, enrutamiento de modelos con afinidad de sesión, *guardrails* de entrada/salida,
+  trazabilidad auditada, *Evals* deterministas bloqueantes en CI-CD y *Evals* con modelo previas a cada
+  release (Specs 046 y 047).
 - Gestión de contenido de usuario con moderación previa.
 - Almacenamiento, transformación y entrega de multimedia mediante Cloudinary.
 - Notificaciones push a dispositivos registrados.
@@ -579,6 +603,8 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 1.2.0 | 2026-10-29 | Rutas públicas `/api/v1` con recursos en inglés (§3.5); abstracción de despacho push con adaptadores FCM o SNS (§2.1); excepciones acotadas a proveedores externos (§2.2); alcance funcional alineado al catálogo de 29 endpoints (§2.5). |
 | 1.3.0 | 2026-11-08 | Adopción oficial de Cloudinary para almacenamiento, transformación y CDN multimedia (§2.1, §2.2, P-VI), sustituyendo Amazon S3 y CloudFront. |
 | 1.4.0 | 2026-11-13 | Habilitación del asistente generativo Sensi: cuarta excepción de proveedor externo y alta en el stack autorizado (§2.1, §2.2); moderación de entrada y salida generativa, prohibición de acceso del proveedor a datos, credenciales y herramientas, y cálculo de importes en el backend (§2.2, §2.4); alcance funcional ampliado (§2.5); excepción a P-VI registrada en el Apéndice E. Deriva de ADR 0011 y Spec 046. |
+| 2.0.0 | 2026-11-15 | **MAJOR** (redefine la prohibición de herramientas de §2.2 de la v1.4.0). Evolución agéntica en 7 capas de Sensi IA: habilitación de MCP *in-process* y *Function Calling* exclusivamente de solo lectura bajo validación de permisos JWT en el servidor (§2.1, §2.2, §2.4); separación entre logs técnicos sanitizados en CloudWatch y trazabilidad redactada de PII en MongoDB con TTL/purga (P-IV); *Prompt Caching*, *Model Router* con afinidad de sesión, *guardrails* duales y puerta bloqueante CI/CD de *Evals* (§2.5). Deriva de ADR 0012 y Specs 046 y 047. |
+| 2.1.0 | 2026-11-15 | **MINOR**. Moderación de contenido publicado con `gpt-4o-mini` en modo visión y política de Sensus (armas, drogas, simbología de odio), porque `omni-moderation-latest` dejaba pasar imágenes con armas; `omni-moderation-latest` queda para el texto de Sensi IA (§2.1, §2.4). Nueva excepción `EX-002` por el costo de la moderación (Apéndice E). Deriva de la decisión D28 y de las Specs 017 y 046. |
 
 ---
 
@@ -621,7 +647,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | Rate limiting | P-IV |
 | Compresión y serialización eficiente | P-VII |
 | CI/CD con pruebas unitarias, integración y seguridad | P-V, §3.1 |
-| Moderación `omni-moderation-latest` | P-IV, §2.4 |
+| Moderación `gpt-4o-mini` (contenido publicado) y `omni-moderation-latest` (texto de Sensi IA) | P-IV, §2.4 |
 | Imagen y texto en la misma solicitud | §2.4 |
 | `flagged`, `categories`, `category_scores`, seis subcategorías | §2.4 |
 | Bandas de decisión: publicar, revisar, rechazar y banear | §2.4 |
@@ -669,8 +695,9 @@ Excepciones registradas: [Apéndice E]
 
 | ID | Principio | Alcance | Justificación | Responsable | Expira | Estado |
 |---|---|---|---|---|---|---|
-| EX-001 | VI | Costo variable del proveedor generativo del asistente conversacional (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual, límite de tokens por solicitud, límite de mensajes por persona y día, caché y alarma de facturación (`NFR-046-02`) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
+| EX-001 | VI | Costo variable del proveedor generativo de Sensi IA (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual (`5.00 USD/mes`, elevado desde `1.00 USD/mes` el 2026-11-15 por decisión del responsable del proyecto), *Prompt Caching* estático en dos bloques, *Model Router* con afinidad *sticky*, límite de tokens y mensajes diarios por persona, caché distribuida, puerta CI/CD de *Evals* y degradación determinista controlada (`NFR-046-02` y ADR 0012) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
+| EX-002 | VI | Costo variable de la moderación de contenido publicado con `gpt-4o-mini` (Spec 017) | `omni-moderation-latest` es gratuito pero dejaba pasar imágenes con armas y drogas, incompatibles con el giro de Sensus. Costo estimado ≈ 0.00013 USD por imagen (`detail: low`); techo de `1.00 USD/mes` (≈ 7,500 imágenes) con alarma al `80 %`. Al agotarse, el contenido va a cuarentena (fail-closed), nunca se publica sin veredicto. Se recomienda un proyecto y una clave de OpenAI independientes de Sensi IA para que el gasto de uno no bloquee al otro | Por asignar | Al cierre de la Spec 017 o al agotarse el techo de gasto mensual | Vigente |
 
 ---
 
-**Versión 1.4.0 — Ratificada el 2026-10-28, enmendada el 2026-11-13.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 2.1.0 — Ratificada el 2026-10-28, enmendada el 2026-11-15.** Toda modificación requiere el procedimiento de §4.3.

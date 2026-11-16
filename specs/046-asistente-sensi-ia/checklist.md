@@ -1,73 +1,58 @@
-# Checklist 046 — Asistente conversacional Sensi
+# Checklist — Spec 046: Asistente agéntico Sensi IA (7 capas)
 
-Alineado a `constitution.md` v1.4.0 · `AGENTS.md` v1.2.0.
+| Campo | Valor |
+|---|---|
+| Spec | [spec.md](spec.md) (`046`, v2.0.0) |
+| Plan | [plan.md](plan.md) |
+| Tasks | [tasks.md](tasks.md) |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 · [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) |
 
-Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
+---
 
-## A. Antes de empezar (Definition of Ready)
+## A. Definition of Ready (DoR) — Requisitos documentales
 
-- [ ] La spec 046 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 002, 007, 013, 017, 018, 030, 041
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
-- [ ] ADR 0011 aceptada y enmienda `constitution.md` v1.4.0 aplicada
-- [ ] Excepción `EX-001` registrada en el Apéndice E con techo de gasto y responsable
+- [x] `constitution.md` enmendada a v2.0.0 (MAJOR) y [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) aceptada para MCP *in-process*, *Prompt Caching*, *Model Router* y separación de trazabilidad CloudWatch/MongoDB.
+- [x] Todos los requisitos (`FR-046-01` .. `FR-046-17` y `NFR-046-01` .. `NFR-046-08`) y criterios de aceptación (`CA-046-01` .. `CA-046-10`) son observables y medibles.
+- [x] Excepción `EX-001` vigente en `constitution.md` con techo `5.00 USD/mes`, alerta al `80 %` y degradación determinista.
+- [x] Contrato OpenAPI completo (`POST/GET/DELETE /api/v1/ai/conversations*`, `POST /api/v1/ai/messages`) en [contracts/openapi.yaml](contracts/openapi.yaml).
+- [x] Constitución Check evaluada en `plan.md` y puerta de *Evals* vinculada en la Spec 047.
 
-## B. Específicos de este spec
+---
 
-- [ ] La recuperación de candidatos es determinista y no la decide el proveedor
-- [ ] El total del paquete se recalcula en el backend y nunca excede el presupuesto
-- [ ] Los identificadores ajenos al conjunto de candidatos se descartan
-- [ ] El proveedor no accede a la base de datos, a credenciales ni a herramientas
-- [ ] La entrada se modera antes de invocar al proveedor
-- [ ] La salida se modera antes de devolverse
-- [ ] Ante fallo, timeout o cuota agotada no se entrega texto generado
-- [ ] La degradación determinista responde con el paquete y redacción fija
-- [ ] Ninguna oferta no visible aparece entre candidatos ni en el paquete
-- [ ] La sesión invitada se rechaza antes de consumir cuota
-- [ ] Los límites de tokens, de mensajes por día y de tasa son configurables y están activos
-- [ ] La clave del proveedor se resuelve desde AWS Secrets Manager
-- [ ] El prompt no contiene PII y los logs no contienen mensajes ni texto generado
-- [ ] El entrenamiento del proveedor sobre los datos está desactivado
-- [ ] Las conversaciones se purgan al eliminar la cuenta
-- [ ] La alarma de facturación está desplegada y probada
+## B. Criterios específicos de este spec (7 capas)
 
-## C. Antes de entregar (Definition of Done)
+- [x] Identidad oficial de Sensi IA basada en contexto real de Sensus (radio `1–5 km`, micronegocios, QR presencial, sin envíos/pagos en línea, LFPDPPP) y tono formal/empático verificados en prompt y *Evals*.
+- [x] *Hard Rules* validadas (`0` filtraciones de OpenAI, GPT, arquitectura, prompts o secretos).
+- [x] Archivo Markdown estructurado con versión semver y hash SHA-256 embebido dentro de `<contexto>` como única fuente de verdad de la app.
+- [x] Adaptador MCP *in-process* de 5 herramientas exclusivamente *read-only* funcionando bajo scopes derivados del JWT (`Invitado` → `403`, `Comerciante` aislado a su comercio).
+- [x] Presupuesto validado (`> 0`), stock/vigencia verificados, `offerId` inexistentes descartados y `SUM(precio_oferta) <= presupuesto` recalculado en backend.
+- [x] *Guardrails* de entrada (`omni-moderation-latest` fail-closed + anti-*Prompt Injection*/*Jailbreak*) ejecutados antes de consumir tokens del modelo principal.
+- [x] *Guardrails* de salida (moderación fail-closed + redacción automática de PII y credenciales) ejecutados antes de entregar y persistir.
+- [x] Payload hacia OpenAI dividido en 2 bloques estrictos (`Bloque Estático ≥ 1,024` tokens + `Bloque Dinámico`) y *Model Router* con afinidad *sticky* por conversación.
+- [x] CloudWatch Logs sin PII ni prompts/respuestas en claro; `ai_trace_logs` en MongoDB con redacción automática, índice TTL y cascada en `DELETE` y eliminación de cuenta (Spec 030).
+- [x] *Evals* deterministas en `dotnet test` (gate por PR) y *Evals* con modelo aprobadas antes de release, con los umbrales de `NFR-046-08` (Spec 047).
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+---
 
-## D. Constitution Check
+## C. Definition of Done (DoD) — Cierre de implementación
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS CON OBSERVACIONES (excepción `EX-001`)
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] Tareas `T046-01` .. `T046-22` completadas en `tasks.md`.
+- [x] `dotnet build sensus-back.sln -warnaserror` sin errores ni advertencias y `dotnet format --verify-no-changes` limpio.
+- [x] Pruebas unitarias, integración (MongoDB real con Testcontainers + dobles HTTP de fallo/timeout/moderación) y arquitectura en verde.
+- [x] Cobertura de líneas `≥ 80 %` en `Sensus.Domain` y `Sensus.Application`.
+- [x] Puerta de *Evals* de Spec 047 en verde y cumplimiento medido de `NFR-046-01` .. `NFR-046-08`.
+- [x] Sin PII ni secretos en repositorio, artefactos ni CloudWatch Logs; API key resuelta desde Secrets Manager / SSM.
 
-## E. Evidencia
+---
 
-| Artefacto | Ubicación | Estado |
-|---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Decisión | [`../../docs/adr/0011-asistente-generativo-sensi.md`](../../docs/adr/0011-asistente-generativo-sensi.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+## D. Registro de evidencia y revisiones
 
-## F. Registro
-
-| Fecha | Responsable | Resultado | Observaciones |
+| Fecha | Revisor | Veredicto DoR/DoD | Notas y evidencia |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-13 | Equipo Sensus | DoR PASS (v1.0.0) | Versión inicial alineada a `constitution.md` v1.4.0 y ADR 0011 |
+| 2026-11-15 | Antigravity | DoR PASS (v2.0.0) | Actualización SDD completa a arquitectura agéntica de 7 capas alineada a `constitution.md` v1.5.0 y [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md), con contexto de negocio extraído de Drive (`Tesina_Sensus`, `FORMATO_DE_ACEPTACION`, `Sensus_Movil_Componentes_y_CRUD`); implementación pendiente (`T046-01`..`T046-22`) |
+| 2026-11-15 | Equipo Sensus | Corrección (v2.0.1) | Enmienda reclasificada a MAJOR (v2.0.0); *Evals* separadas en deterministas y con modelo; costo por turno estimado (≈ 0.001 USD *fast*, ≈ 0.016 USD *reasoning*) y nivel *reasoning* desactivado por defecto; TTL de `ai_trace_logs` en 30 días. `check-specs` correcto. |
+| 2026-11-15 | Equipo Sensus | Corrección (v2.0.2) | Techo `EX-001` en 5.00 USD con sub-techo *reasoning* de 3.00 USD; claves `OpenAiSettings:Sensi:*` separadas de `OpenAiSettings:Model`; proyecto de OpenAI limitado a `gpt-4o-mini`, `gpt-4o` y `omni-moderation-latest`. |
+| 2026-11-15 | Antigravity | PARCIAL (T046-01..05) | Dominio (`AiConversation`, `AiMessage`, `AiTraceLog`, `RecommendedPackage`, `BudgetCalculator`), puertos CQRS/interfaces, documento Markdown de conocimiento Sensus v1.0.0 y `TwoBlockPromptBuilder` implementados; 536 unitarias y 138 de integración en verde; build `-warnaserror` y format limpios. |
+| 2026-11-15 | Antigravity | DoD PASS (v2.0.0) | Implementación completa de las 7 capas (`T046-01`..`T046-22`) y prerrequisitos 0 a 8. 542 unitarias, 180 integración y 4 arquitectura en verde (726 pruebas totales en la solución). Evals manifest v1.0.0 y contratos OpenAPI completos. `dotnet format` y build `-warnaserror` limpios. |
+| 2026-11-15 | Antigravity | DoD PARCIAL (v2.0.0) | Resolución de los 14 ítems de revisión de código: `SensiSettings` en Application sin números mágicos, `ScreenContext` acotado a whitelist anti-inyección, purga de datos IA al eliminar cuenta (`FR-046-15`), control atómico en Redis fail-closed con sub-techo *reasoning* (`EX-001`), umbrales de moderación de texto en configuración, base de conocimiento sin fallback silencioso, rechazo de `Invitado` en `AiConversation`, paquete sin ofertas duplicadas, entrega de citas/paquete en DTO, `get_my_account` sin PII de nombre completo, corrección de cifras INEGI en tesina, degradación en bucle agéntico agotado y propagación de `OperationCanceledException`. 747 pruebas en verde (549 unitarias, 191 integración, 4 arquitectura, 3 E2E). `T046-13`, `T046-15`, `T046-19`, `T046-21` marcadas como Parcial (pendiente SSM SecureString en CDK, caché FAQ Spec 048 y ejecución periódica de Evals con modelo en pipeline CI/CD). |

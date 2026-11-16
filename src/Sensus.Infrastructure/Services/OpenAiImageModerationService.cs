@@ -48,8 +48,8 @@ public sealed class OpenAiImageModerationService : IImageModerationService
         if (string.IsNullOrWhiteSpace(resolvedApiKey))
         {
             _logger.LogWarning(
-                "[MODO DESARROLLO / OPENAI MODERATION] Clave de API no configurada. Configure la variable de entorno 'OPENAI_API_KEY' (o 'OpenAiSettings__ApiKey' / 'OpenAiSettings:ApiKey' en appsettings.json) para moderación con OpenAI.");
-            return new ImageModerationResult(true, "Moderación omitida en desarrollo local por falta de ApiKey.", null, "Approved");
+                "Clave de API de OpenAI no configurada. Contenido enviado a cuarentena por principio fail-closed (§2.4 constitución).");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         try
@@ -75,13 +75,13 @@ public sealed class OpenAiImageModerationService : IImageModerationService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogError("Timeout al conectar con el servicio de OpenAI Moderation.");
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError("Timeout al conectar con el servicio de OpenAI Moderation. Contenido enviado a cuarentena por principio fail-closed (§2.4 constitución).");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Excepción no controlada durante la moderación de imagen con OpenAI.");
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError(ex, "Excepción no controlada durante la moderación con OpenAI. Contenido enviado a cuarentena por principio fail-closed (§2.4 constitución).");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
     }
 
@@ -174,23 +174,23 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cts.Token);
-            _logger.LogError("Error al invocar OpenAI Chat Completions (HTTP {StatusCode}): {ErrorBody}", response.StatusCode, errorBody);
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError("Error al invocar OpenAI Chat Completions (HTTP {StatusCode}): {ErrorBody}. Contenido enviado a cuarentena.", response.StatusCode, errorBody);
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         var chatResponse = await response.Content.ReadFromJsonAsync<OpenAiChatCompletionResponse>(cancellationToken: cts.Token);
         var content = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content;
         if (string.IsNullOrWhiteSpace(content))
         {
-            _logger.LogError("Respuesta vacía de OpenAI Chat Completions para visión.");
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError("Respuesta vacía de OpenAI Chat Completions para visión. Contenido enviado a cuarentena.");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         var parsed = JsonSerializer.Deserialize<ChatVisionModerationResult>(content, JsonOptions);
         if (parsed == null)
         {
-            _logger.LogError("No se pudo deserializar el JSON de moderación de visión de OpenAI.");
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError("No se pudo deserializar el JSON de moderación de visión de OpenAI. Contenido enviado a cuarentena.");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         var decision = parsed.Decision?.Trim().ToLowerInvariant() switch
@@ -267,8 +267,8 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cts.Token);
-            _logger.LogError("Error al invocar OpenAI Moderations (HTTP {StatusCode}): {ErrorBody}", response.StatusCode, errorBody);
-            return new ImageModerationResult(false, PolicyViolationMessage, null, "Rejected");
+            _logger.LogError("Error al invocar OpenAI Moderations (HTTP {StatusCode}): {ErrorBody}. Contenido enviado a cuarentena.", response.StatusCode, errorBody);
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         var responseJson = await response.Content.ReadFromJsonAsync<OpenAiModerationResponse>(cancellationToken: cts.Token);
@@ -276,8 +276,8 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
 
         if (firstResult is null)
         {
-            _logger.LogWarning("OpenAI Moderations no devolvió resultados en el arreglo.");
-            return new ImageModerationResult(true, "Sin resultados para evaluar.", null, "Approved");
+            _logger.LogWarning("OpenAI Moderations no devolvió resultados en el arreglo. Contenido enviado a cuarentena.");
+            return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
         var categoryScores = firstResult.CategoryScores ?? new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);

@@ -5,8 +5,8 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Completada |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado | Parcial (`T047-01`..`T047-13` completadas; `T047-14`..`T047-16` pendientes para gate *Evals* IA) |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
 
 ## Tareas
 
@@ -25,6 +25,9 @@
 | T047-11 | Ejecutar localmente: `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, `check-specs.mjs specs` | Verificación | `FR-047-01`, `FR-047-09`, `FR-047-10` | T047-01 | Completada |
 | T047-12 | Actualizar `specs/README.md` y `specs/requirements.md` con spec 047 | Docs | `FR-047-01` | T047-11 | Completada |
 | T047-13 | Registrar evidencias del Constitution Check | Docs | `FR-047-01` | T047-12 | Completada |
+| T047-14 | Definir runner de *Evals* automatizados de Sensi IA (precisión Markdown, herramientas MCP, tono, inyecciones, redacción PII y *Hard Rules*) y script de evaluación de umbrales (`NFR-047-06`) | Tests / CI | `FR-047-13`, `FR-047-14`, `NFR-047-06` | T047-13 | Pendiente |
+| T047-15 | Agregar job `ai-evals` (`workflow_dispatch` y `schedule`) que ejecuta las *Evals* con modelo y publica reporte sanitizado sin PII ni secretos; las *Evals* deterministas corren en `dotnet test` | CI | `FR-047-13`, `FR-047-15`, `NFR-047-05` | T047-14 | Pendiente |
+| T047-16 | Validar que una *Evals* determinista fallida bloquea el merge y que `deploy-serverless.yml` no despliega sin una ejecución de `ai-evals` en verde | CI / Docs | `FR-047-14`, `NFR-047-05`, `NFR-047-06` | T047-15 | Pendiente |
 
 ## Notas de ejecución
 
