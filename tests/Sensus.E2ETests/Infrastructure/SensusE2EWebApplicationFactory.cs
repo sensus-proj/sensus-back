@@ -23,6 +23,7 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryAiMessageRepository AiMessageRepository { get; } = new();
     public InMemoryAiTraceLogRepository AiTraceLogRepository { get; } = new();
     public InMemoryFriendRequestRepository FriendRequestRepository { get; } = new();
+    public InMemorySharedOfferRepository SharedOfferRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -68,6 +69,9 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IFriendRequestRepository>();
             services.AddSingleton<IFriendRequestRepository>(FriendRequestRepository);
+
+            services.RemoveAll<ISharedOfferRepository>();
+            services.AddSingleton<ISharedOfferRepository>(SharedOfferRepository);
         });
     }
 }

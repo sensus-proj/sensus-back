@@ -23,21 +23,23 @@ La aplicación móvil (`FT-25-amigos-qr`) necesita conectar usuarios reales medi
 **Incluye**
 
 - Generación determinística del código de invitación por usuario (`FriendInviteCodeGenerator`, formato `SNS-XXXXXX` derivado de SHA-256 sobre el correo normalizado).
-- Entidad de dominio `FriendRequest` con estados `Pending`, `Accepted` y `Rejected`.
-- Repositorio `IFriendRequestRepository` y su implementación en MongoDB Atlas (`friend_requests` en `MongoDbContext`), más consulta `GetByInviteCodeAsync` en `IUserRepository`.
-- Consultas y comandos MediatR: `GetFriendsOverviewQuery`, `SendFriendRequestCommand`, `AcceptFriendRequestCommand`, `RejectFriendRequestCommand` y `RemoveFriendCommand`.
-- Endpoints REST protegidos con `RegisteredUserPolicy` bajo `/api/v1/friends`:
+- Entidades de dominio `FriendRequest` (estados `Pending`, `Accepted`, `Rejected`) y `SharedOffer` (ofertas individuales compartidas entre amigos conectados).
+- Repositorios `IFriendRequestRepository` (`friend_requests`) e `ISharedOfferRepository` (`shared_offers`) en `MongoDbContext`, más consulta `GetByInviteCodeAsync` en `IUserRepository` y enriquecimiento con `FotoPerfilUrl`.
+- Consultas y comandos MediatR: `GetFriendsOverviewQuery`, `SendFriendRequestCommand`, `AcceptFriendRequestCommand`, `RejectFriendRequestCommand`, `RemoveFriendCommand`, `GetFriendSharedOffersQuery` y `ShareOfferWithFriendsCommand` (máximo 10 destinatarios por envío).
+- Endpoints REST protegidos con `RegisteredUserPolicy`:
   - `GET /api/v1/friends`
   - `POST /api/v1/friends/requests`
   - `POST /api/v1/friends/requests/{requestId:guid}/accept`
   - `POST /api/v1/friends/requests/{requestId:guid}/reject`
   - `DELETE /api/v1/friends/{friendUserId:guid}`
+  - `GET /api/v1/friends/{friendUserId:guid}/shared-offers`
+  - `POST /api/v1/offers/{offerId:guid}/share`
 - Despacho de notificación push vía `IPushDispatcher` hacia los dispositivos activos del destinatario/remitente.
 
 **No incluye**
 
 - Búsqueda pública global por nombre o teléfono.
-- Envío directo de ofertas entre amigos (`POST /api/v1/offers/{id}/share`), diferido para iteración posterior.
+- Mensajería de texto libre entre usuarios (solo compartición de ofertas vigentes).
 
 ## 3. Actores
 
@@ -55,6 +57,7 @@ La aplicación móvil (`FT-25-amigos-qr`) necesita conectar usuarios reales medi
 | FR-050-04 | Notificar a los dispositivos activos del destinatario mediante `IDeviceRepository` e `IPushDispatcher` al crearse la solicitud pendiente y al ser aceptada | Must |
 | FR-050-05 | Permitir únicamente al destinatario aceptar con `POST /api/v1/friends/requests/{requestId}/accept` (`403` a terceros) y permitir a los participantes cancelar/rechazar con `POST /api/v1/friends/requests/{requestId}/reject` | Must |
 | FR-050-06 | Permitir eliminar un vínculo de amistad existente mediante `DELETE /api/v1/friends/{friendUserId}` | Should |
+| FR-050-07 | Enriquecer `FriendsOverviewDto` y solicitudes con la URL de foto de perfil (`FotoPerfilUrl`), permitir compartir ofertas vigentes entre 1 y 10 amigos conectados mediante `POST /api/v1/offers/{offerId}/share` y consultar el hilo de ofertas compartidas con `GET /api/v1/friends/{friendUserId}/shared-offers` | Must |
 
 ## 5. Requisitos no funcionales
 

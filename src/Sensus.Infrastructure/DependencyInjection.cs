@@ -173,6 +173,7 @@ public static class DependencyInjection
         // Registro de dispositivos para push (Spec 027)
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
+        services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
         services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
 
         // Preferencias de notificación (Spec 044)

@@ -10,17 +10,17 @@
 
 ## 1. Resumen técnico
 
-Se implementa el agregado `FriendRequest` y el generador `FriendInviteCodeGenerator` en `Sensus.Domain`, los casos de uso CQRS en `Sensus.Application.Friends`, la persistencia en MongoDB (`friend_requests`) en `Sensus.Infrastructure` y los endpoints REST bajo `/api/v1/friends` en `Sensus.Api`, junto con dobles en `Sensus.TestKit` para pruebas E2E.
+Se implementan los agregados `FriendRequest` y `SharedOffer` más `FriendInviteCodeGenerator` en `Sensus.Domain`, los casos de uso CQRS en `Sensus.Application.Friends`, la persistencia en MongoDB (`friend_requests`, `shared_offers`) en `Sensus.Infrastructure` y los endpoints REST bajo `/api/v1/friends` y `/api/v1/offers/{offerId:guid}/share` en `Sensus.Api`, junto con dobles en `Sensus.TestKit` para pruebas E2E.
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Domain | `FriendRequest`, `FriendRequestStatus`, `FriendInviteCodeGenerator`, `IFriendRequestRepository`, `IUserRepository.GetByInviteCodeAsync` |
-| Application | `GetFriendsOverviewQuery`, `SendFriendRequestCommand`, `AcceptFriendRequestCommand`, `RejectFriendRequestCommand`, `RemoveFriendCommand`, `FriendDtos`, `FriendRequestMappingExtensions` |
-| Infrastructure | `FriendRequestDocument`, `MongoFriendRequestRepository`, índices de `FriendRequests` en `MongoDbContext`, `FriendRequestsCollectionName` en `MongoDbSettings`, `MongoUserRepository.GetByInviteCodeAsync` |
+| Domain | `FriendRequest`, `FriendRequestStatus`, `SharedOffer`, `FriendInviteCodeGenerator`, `IFriendRequestRepository`, `ISharedOfferRepository`, `IUserRepository.GetByInviteCodeAsync` |
+| Application | `GetFriendsOverviewQuery`, `SendFriendRequestCommand`, `AcceptFriendRequestCommand`, `RejectFriendRequestCommand`, `RemoveFriendCommand`, `ShareOfferWithFriendsCommand`, `GetFriendSharedOffersQuery`, `FriendDtos`, `FriendRequestMappingExtensions` |
+| Infrastructure | `FriendRequestDocument`, `SharedOfferDocument`, `MongoFriendRequestRepository`, `MongoSharedOfferRepository`, índices en `MongoDbContext`, `MongoDbSettings`, `MongoUserRepository.GetByInviteCodeAsync` |
 | Api | `FriendEndpoints.cs` mapeado en `Program.cs` |
-| Tests | `FriendHandlersTests`, `InMemoryFriendRequestRepository`, actualización de `InMemoryUserRepository` y `SensusE2EWebApplicationFactory` |
+| Tests | `FriendHandlersTests`, `InMemoryFriendRequestRepository`, `InMemorySharedOfferRepository`, actualización de `InMemoryUserRepository` y `SensusE2EWebApplicationFactory` |
 
 ## 3. Modelo de datos e índices
 
