@@ -97,6 +97,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<AiTraceLogDocument>(_settings.AiTraceLogsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<FriendRequestDocument> FriendRequests =>
+        _database?.GetCollection<FriendRequestDocument>(_settings.FriendRequestsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
     /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
@@ -348,9 +352,26 @@ public sealed class MongoDbContext
             var traceOwnerKeys = Builders<AiTraceLogDocument>.IndexKeys.Ascending(t => t.OwnerUserId);
             AiTraceLogs.Indexes.CreateOne(new CreateIndexModel<AiTraceLogDocument>(traceOwnerKeys));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug(ex, "Nota: Los índices de Sensi IA ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var friendUsersKeys = Builders<FriendRequestDocument>.IndexKeys
+                .Ascending(f => f.SenderUserId)
+                .Ascending(f => f.TargetUserId);
+            FriendRequests.Indexes.CreateOne(new CreateIndexModel<FriendRequestDocument>(friendUsersKeys));
+
+            var friendTargetKeys = Builders<FriendRequestDocument>.IndexKeys
+                .Ascending(f => f.TargetUserId)
+                .Ascending(f => f.Status);
+            FriendRequests.Indexes.CreateOne(new CreateIndexModel<FriendRequestDocument>(friendTargetKeys));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de amigos ya existen o el clúster aún no está disponible.");
         }
     }
 }

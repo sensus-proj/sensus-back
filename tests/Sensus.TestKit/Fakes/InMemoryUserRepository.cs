@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
 
@@ -17,6 +18,18 @@ public class InMemoryUserRepository : IUserRepository
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var user = _users.Values.FirstOrDefault(u => string.Equals(u.Correo, email, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(user);
+    }
+
+    public Task<User?> GetByInviteCodeAsync(string inviteCode, CancellationToken cancellationToken = default)
+    {
+        var normalizedCode = inviteCode.Trim().ToUpperInvariant();
+        var user = _users.Values.FirstOrDefault(u =>
+            u.Estatus &&
+            string.Equals(
+                FriendInviteCodeGenerator.Generate(u.Correo, u.NombreCompleto),
+                normalizedCode,
+                StringComparison.OrdinalIgnoreCase));
         return Task.FromResult(user);
     }
 

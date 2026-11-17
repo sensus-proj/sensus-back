@@ -432,5 +432,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-049-02` | 049 | NFR | Seguridad de fallo | 100 % de errores del almacén producen degradación determinista | Implementado |
 | `NFR-049-03` | 049 | NFR | Privacidad en logs | Sin claves, identificadores ni valores en logs del almacén | Implementado |
 | `NFR-049-04` | 049 | NFR | Latencia | p95 < 100 ms por operación de contador desde Lambda | Pendiente |
+| `FR-050-01` | 050 | FR | Generar código `SNS-XXXXXX` y exponer vista general en `GET /api/v1/friends` | Must | Implementado |
+| `FR-050-02` | 050 | FR | Registrar solicitud pendiente vía `POST /api/v1/friends/requests` por código | Must | Implementado |
+| `FR-050-03` | 050 | FR | Bloquear auto-invitaciones y manejar duplicados/mutuas de forma idempotente | Must | Implementado |
+| `FR-050-04` | 050 | FR | Notificar dispositivos activos del destinatario vía `IPushDispatcher` | Must | Implementado |
+| `FR-050-05` | 050 | FR | Aceptar (solo destinatario) o rechazar solicitudes mediante `/accept` y `/reject` | Must | Implementado |
+| `FR-050-06` | 050 | FR | Eliminar vínculo de amistad vía `DELETE /api/v1/friends/{friendUserId}` | Should | Implementado |
+| `NFR-050-01` | 050 | NFR | Seguridad | 100 % de endpoints protegidos con `RegisteredUserPolicy` | Implementado |
+| `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
+| `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
 
-Total: **428 requisitos** en 49 specs.
+Total: **437 requisitos** en 50 specs.
