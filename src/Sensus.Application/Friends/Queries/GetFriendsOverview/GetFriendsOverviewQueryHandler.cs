@@ -3,6 +3,7 @@ using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Friends.Common;
 using Sensus.Application.Friends.DTOs;
 using Sensus.Domain.Common;
+using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
@@ -41,16 +42,16 @@ public sealed class GetFriendsOverviewQueryHandler : IRequestHandler<GetFriendsO
                 Error.NotFound("User.NotFound", "Usuario no encontrado."));
         }
 
-        var myInviteCode = FriendInviteCodeGenerator.Generate(user.Correo, user.NombreCompleto);
-        var records = await _friendRequestRepository.GetForUserAsync(userId, cancellationToken);
+        string myInviteCode = FriendInviteCodeGenerator.Generate(user.Correo, user.NombreCompleto);
+        IReadOnlyList<FriendRequest> records = await _friendRequestRepository.GetForUserAsync(userId, cancellationToken);
 
-        var friends = records
+        List<FriendItemDto> friends = records
             .Where(r => r.Status == FriendRequestStatus.Accepted)
             .OrderByDescending(r => r.RespondedAtUtc ?? r.CreatedAtUtc)
             .Select(r => r.ToFriendDtoFor(userId))
             .ToList();
 
-        var pendingReceived = records
+        List<PendingFriendRequestDto> pendingReceived = records
             .Where(r => r.Status == FriendRequestStatus.Pending && r.TargetUserId == userId)
             .OrderByDescending(r => r.CreatedAtUtc)
             .Select(r => new PendingFriendRequestDto(
@@ -61,7 +62,7 @@ public sealed class GetFriendsOverviewQueryHandler : IRequestHandler<GetFriendsO
                 r.CreatedAtUtc))
             .ToList();
 
-        var pendingSent = records
+        List<SentFriendRequestDto> pendingSent = records
             .Where(r => r.Status == FriendRequestStatus.Pending && r.SenderUserId == userId)
             .OrderByDescending(r => r.CreatedAtUtc)
             .Select(r => r.ToSentDto())

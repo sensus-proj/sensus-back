@@ -23,8 +23,8 @@ public class InMemoryUserRepository : IUserRepository
 
     public Task<User?> GetByInviteCodeAsync(string inviteCode, CancellationToken cancellationToken = default)
     {
-        var normalizedCode = inviteCode.Trim().ToUpperInvariant();
-        var user = _users.Values.FirstOrDefault(u =>
+        string normalizedCode = inviteCode.Trim().ToUpperInvariant();
+        User? user = _users.Values.FirstOrDefault(u =>
             u.Estatus &&
             string.Equals(
                 FriendInviteCodeGenerator.Generate(u.Correo, u.NombreCompleto),

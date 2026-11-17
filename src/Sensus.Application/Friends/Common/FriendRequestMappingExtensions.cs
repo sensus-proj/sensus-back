@@ -20,7 +20,7 @@ internal static class FriendRequestMappingExtensions
 
     public static FriendItemDto ToFriendDtoFor(this FriendRequest request, Guid viewerUserId)
     {
-        var isSender = request.SenderUserId == viewerUserId;
+        bool isSender = request.SenderUserId == viewerUserId;
         return new FriendItemDto(
             UserId: isSender ? request.TargetUserId : request.SenderUserId,
             InviteCode: isSender ? request.TargetInviteCode : request.SenderInviteCode,

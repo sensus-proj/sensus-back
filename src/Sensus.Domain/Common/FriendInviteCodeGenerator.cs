@@ -10,7 +10,7 @@ public static class FriendInviteCodeGenerator
 {
     public static string Generate(string? email, string? displayName = null)
     {
-        var seed = !string.IsNullOrWhiteSpace(email)
+        string? seed = !string.IsNullOrWhiteSpace(email)
             ? email.Trim().ToLowerInvariant()
             : (!string.IsNullOrWhiteSpace(displayName) ? displayName.Trim().ToLowerInvariant() : null);
 
@@ -19,7 +19,7 @@ public static class FriendInviteCodeGenerator
             return "SNS-VECINO";
         }
 
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
         return $"SNS-{Convert.ToHexString(hash.AsSpan(0, 3))}";
     }
 }

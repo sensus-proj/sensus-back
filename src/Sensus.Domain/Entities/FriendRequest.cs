@@ -76,9 +76,9 @@ public sealed class FriendRequest : BaseEntity, IAggregateRoot
                 Error.Validation("Friend.InvalidCode", "El código de invitación es obligatorio."));
         }
 
-        var cleanSenderName = string.IsNullOrWhiteSpace(senderName) ? senderInviteCode.Trim() : senderName.Trim();
-        var cleanTargetName = string.IsNullOrWhiteSpace(targetName) ? targetInviteCode.Trim() : targetName.Trim();
-        var cleanVia = string.IsNullOrWhiteSpace(addedVia) ? "QR" : addedVia.Trim();
+        string cleanSenderName = string.IsNullOrWhiteSpace(senderName) ? senderInviteCode.Trim() : senderName.Trim();
+        string cleanTargetName = string.IsNullOrWhiteSpace(targetName) ? targetInviteCode.Trim() : targetName.Trim();
+        string cleanVia = string.IsNullOrWhiteSpace(addedVia) ? "QR" : addedVia.Trim();
 
         return Result.Success(new FriendRequest(
             Guid.NewGuid(),

@@ -45,21 +45,21 @@ public sealed class SendFriendRequestCommandHandler
                 Error.Unauthorized("Friends.Unauthorized", "Debes iniciar sesión para enviar solicitudes."));
         }
 
-        var normalizedCode = request.InviteCode?.Trim().ToUpperInvariant() ?? string.Empty;
+        string normalizedCode = request.InviteCode?.Trim().ToUpperInvariant() ?? string.Empty;
         if (normalizedCode.Length < 6)
         {
             return Result.Failure<SendFriendRequestResponseDto>(
                 Error.Validation("Friends.InvalidCode", "Ingresa un código de invitación válido."));
         }
 
-        var sender = await _userRepository.GetByIdAsync(senderId, cancellationToken);
+        User? sender = await _userRepository.GetByIdAsync(senderId, cancellationToken);
         if (sender is null)
         {
             return Result.Failure<SendFriendRequestResponseDto>(
                 Error.NotFound("User.NotFound", "Usuario no encontrado."));
         }
 
-        var target = await _userRepository.GetByInviteCodeAsync(normalizedCode, cancellationToken);
+        User? target = await _userRepository.GetByInviteCodeAsync(normalizedCode, cancellationToken);
         if (target is null || !target.Estatus)
         {
             return Result.Failure<SendFriendRequestResponseDto>(
@@ -72,7 +72,7 @@ public sealed class SendFriendRequestCommandHandler
                 Error.Validation("Friends.SelfInvite", "No puedes enviarte una solicitud a ti mismo."));
         }
 
-        var existing = await _friendRequestRepository.GetBetweenUsersAsync(sender.Id, target.Id, cancellationToken);
+        FriendRequest? existing = await _friendRequestRepository.GetBetweenUsersAsync(sender.Id, target.Id, cancellationToken);
         if (existing is not null)
         {
             if (existing.Status == FriendRequestStatus.Accepted)
@@ -91,7 +91,7 @@ public sealed class SendFriendRequestCommandHandler
             await _friendRequestRepository.DeleteAsync(existing.Id, cancellationToken);
         }
 
-        var senderCode = FriendInviteCodeGenerator.Generate(sender.Correo, sender.NombreCompleto);
+        string senderCode = FriendInviteCodeGenerator.Generate(sender.Correo, sender.NombreCompleto);
         var createResult = FriendRequest.Create(
             sender.Id,
             sender.NombreCompleto,

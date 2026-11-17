@@ -40,14 +40,14 @@ public sealed class MongoUserRepository : IUserRepository
 
     public async Task<User?> GetByInviteCodeAsync(string inviteCode, CancellationToken cancellationToken = default)
     {
-        var normalizedCode = inviteCode.Trim().ToUpperInvariant();
-        var activeFilter = Builders<UserDocument>.Filter.Eq(u => u.Estatus, true);
-        using var cursor = await _context.Users.Find(activeFilter).ToCursorAsync(cancellationToken);
+        string normalizedCode = inviteCode.Trim().ToUpperInvariant();
+        FilterDefinition<UserDocument> activeFilter = Builders<UserDocument>.Filter.Eq(u => u.Estatus, true);
+        using IAsyncCursor<UserDocument> cursor = await _context.Users.Find(activeFilter).ToCursorAsync(cancellationToken);
         while (await cursor.MoveNextAsync(cancellationToken))
         {
-            foreach (var doc in cursor.Current)
+            foreach (UserDocument doc in cursor.Current)
             {
-                var candidate = FriendInviteCodeGenerator.Generate(doc.Correo, doc.NombreCompleto);
+                string candidate = FriendInviteCodeGenerator.Generate(doc.Correo, doc.NombreCompleto);
                 if (string.Equals(candidate, normalizedCode, StringComparison.OrdinalIgnoreCase))
                 {
                     return doc.ToDomain();
