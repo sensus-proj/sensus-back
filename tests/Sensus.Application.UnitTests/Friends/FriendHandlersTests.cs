@@ -56,8 +56,10 @@ public sealed class FriendHandlersTests
         FriendRequest.Create(senderId, "A", "", targetId, "B", "SNS-2", "QR", FixedNow).IsFailure.Should().BeTrue();
 
         FriendRequest created = FriendRequest.Create(senderId, " ", "sns-111111", targetId, " ", "sns-222222", " ", FixedNow).Value;
-        created.SenderName.Should().Be("SNS-111111");
-        created.TargetName.Should().Be("SNS-222222");
+        created.SenderName.Should().Be("sns-111111");
+        created.TargetName.Should().Be("sns-222222");
+        created.SenderInviteCode.Should().Be("SNS-111111");
+        created.TargetInviteCode.Should().Be("SNS-222222");
         created.AddedVia.Should().Be("QR");
 
         FriendRequest rehydrated = FriendRequest.Rehydrate(
