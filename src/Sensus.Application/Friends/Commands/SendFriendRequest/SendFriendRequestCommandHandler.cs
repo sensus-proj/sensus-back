@@ -79,7 +79,7 @@ public sealed class SendFriendRequestCommandHandler
             {
                 return Result.Success(new SendFriendRequestResponseDto(
                     Outcome: "AlreadyConnected",
-                    Friend: existing.ToFriendDtoFor(sender.Id),
+                    Friend: existing.ToFriendDtoFor(sender.Id, target.FotoPerfilUrl),
                     PendingRequest: null));
             }
 
@@ -127,7 +127,7 @@ public sealed class SendFriendRequestCommandHandler
         return Result.Success(new SendFriendRequestResponseDto(
             Outcome: "Sent",
             Friend: null,
-            PendingRequest: friendRequest.ToSentDto()));
+            PendingRequest: friendRequest.ToSentDto(target.FotoPerfilUrl)));
     }
 
     private async Task<Result<SendFriendRequestResponseDto>> HandleExistingPendingAsync(
@@ -141,7 +141,7 @@ public sealed class SendFriendRequestCommandHandler
             return Result.Success(new SendFriendRequestResponseDto(
                 Outcome: "AlreadyPending",
                 Friend: null,
-                PendingRequest: existing.ToSentDto()));
+                PendingRequest: existing.ToSentDto(target.FotoPerfilUrl)));
         }
 
         existing.Accept(_dateTimeProvider.UtcNow);
@@ -162,7 +162,7 @@ public sealed class SendFriendRequestCommandHandler
 
         return Result.Success(new SendFriendRequestResponseDto(
             Outcome: "AcceptedMutual",
-            Friend: existing.ToFriendDtoFor(sender.Id),
+            Friend: existing.ToFriendDtoFor(sender.Id, target.FotoPerfilUrl),
             PendingRequest: null));
     }
 }

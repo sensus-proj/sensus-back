@@ -101,6 +101,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<FriendRequestDocument>(_settings.FriendRequestsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<SharedOfferDocument> SharedOffers =>
+        _database?.GetCollection<SharedOfferDocument>(_settings.SharedOffersCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
     /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
@@ -368,6 +372,12 @@ public sealed class MongoDbContext
                 .Ascending(f => f.TargetUserId)
                 .Ascending(f => f.Status);
             FriendRequests.Indexes.CreateOne(new CreateIndexModel<FriendRequestDocument>(friendTargetKeys));
+
+            var sharedOffersKeys = Builders<SharedOfferDocument>.IndexKeys
+                .Ascending(s => s.SenderUserId)
+                .Ascending(s => s.RecipientUserId)
+                .Ascending(s => s.SharedAtUtc);
+            SharedOffers.Indexes.CreateOne(new CreateIndexModel<SharedOfferDocument>(sharedOffersKeys));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
