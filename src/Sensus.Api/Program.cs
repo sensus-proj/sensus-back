@@ -251,6 +251,7 @@ app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
 app.MapAiEndpoints();
+app.MapFriendEndpoints();
 
 await app.RunAsync();
 
