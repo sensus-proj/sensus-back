@@ -243,4 +243,74 @@ public class UpdateMerchantProfileCommandHandlerTests
         await cacheService.Received(1).RemoveAsync($"sensus:merchants:{existingComercio.Id}", Arg.Any<CancellationToken>());
         await cacheService.Received(1).RemoveByPrefixAsync("sensus:offers:nearby:", Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_ShouldUpdateFotoFachadaUrl_WhenProvided()
+    {
+        Guid userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        Comercio existingComercio = Comercio.Create(userId, "Tienda", "Calle Hidalgo 10", "42800", 20.0, -99.3).Value;
+        _comercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(existingComercio);
+
+        UpdateMerchantProfileCommand command = new(
+            "Tienda",
+            "Calle Hidalgo 10",
+            "42800",
+            null,
+            null,
+            20.0,
+            -99.3,
+            "https://cdn.sensus.com/new-facade.jpg");
+
+        Result<ComercioDto> result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/new-facade.jpg");
+        existingComercio.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/new-facade.jpg");
+    }
+
+    [Fact]
+    public async Task Handle_ShouldDeactivateAndReactivateComercio_WhenActivoProvided()
+    {
+        Guid userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        Comercio existingComercio = Comercio.Create(userId, "Tienda", "Calle Hidalgo 10", "42800", 20.0, -99.3).Value;
+        _comercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(existingComercio);
+
+        UpdateMerchantProfileCommand deactivateCommand = new(
+            "Tienda",
+            "Calle Hidalgo 10",
+            "42800",
+            null,
+            null,
+            20.0,
+            -99.3,
+            null,
+            false);
+
+        Result<ComercioDto> closedResult = await _handler.Handle(deactivateCommand, CancellationToken.None);
+
+        closedResult.IsSuccess.Should().BeTrue();
+        closedResult.Value.Activo.Should().BeFalse();
+        existingComercio.Activo.Should().BeFalse();
+
+        UpdateMerchantProfileCommand activateCommand = new(
+            "Tienda",
+            "Calle Hidalgo 10",
+            "42800",
+            null,
+            null,
+            20.0,
+            -99.3,
+            null,
+            true);
+
+        Result<ComercioDto> openResult = await _handler.Handle(activateCommand, CancellationToken.None);
+
+        openResult.IsSuccess.Should().BeTrue();
+        openResult.Value.Activo.Should().BeTrue();
+        existingComercio.Activo.Should().BeTrue();
+    }
 }

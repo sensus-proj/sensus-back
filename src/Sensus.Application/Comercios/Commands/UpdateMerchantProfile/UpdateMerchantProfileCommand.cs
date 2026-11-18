@@ -15,4 +15,6 @@ public sealed record UpdateMerchantProfileCommand(
     List<HorarioDiaDto>? Horarios,
     string? Categoria = null,
     double? Latitud = null,
-    double? Longitud = null) : IRequest<Result<ComercioDto>>;
+    double? Longitud = null,
+    string? FotoFachadaUrl = null,
+    bool? Activo = null) : IRequest<Result<ComercioDto>>;

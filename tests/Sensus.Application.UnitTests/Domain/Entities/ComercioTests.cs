@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Xunit;
 
@@ -90,5 +91,39 @@ public class ComercioTests
 
         updateResult.IsFailure.Should().BeTrue();
         updateResult.Error.Code.Should().Be(expectedErrorCode);
+    }
+
+    [Fact]
+    public void CreateAndUpdateDetails_ShouldPersistAndPreserveFotoFachadaUrl()
+    {
+        Comercio comercio = Comercio.Create(
+            Guid.NewGuid(),
+            "Panadería Centro",
+            "Av. Reforma 123",
+            "06600",
+            19.4326,
+            -99.1332,
+            fotoFachadaUrl: " https://cdn.sensus.com/fachada-1.jpg ").Value;
+
+        comercio.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/fachada-1.jpg");
+
+        Result preserveResult = comercio.UpdateDetails(
+            "Panadería Centro",
+            "Av. Reforma 123",
+            "06600",
+            19.4326,
+            -99.1332);
+        preserveResult.IsSuccess.Should().BeTrue();
+        comercio.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/fachada-1.jpg");
+
+        Result updatePhotoResult = comercio.UpdateDetails(
+            "Panadería Centro",
+            "Av. Reforma 123",
+            "06600",
+            19.4326,
+            -99.1332,
+            fotoFachadaUrl: "https://cdn.sensus.com/fachada-2.jpg");
+        updatePhotoResult.IsSuccess.Should().BeTrue();
+        comercio.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/fachada-2.jpg");
     }
 }
