@@ -52,6 +52,16 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verificar puerta bloqueante de Evals Sensi IA (FR-047-14)
+        run: node .github/scripts/run-ai-evals.mjs --mode all
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
       - name: Publicar Sensus.Api como binario bootstrap para Amazon Linux 2023 ARM64
         run: |
           dotnet publish src/Sensus.Api/Sensus.Api.csproj \

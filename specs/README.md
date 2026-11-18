@@ -51,7 +51,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Implementado | 027, 003 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
 | 046 | [Asistente agéntico Sensi IA (7 capas)](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Parcial | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |
-| 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Parcial | 009, 010, 011, 012, 013 |
+| 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 010, 011, 012, 013 |
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
 | 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Parcial | 045, 046, 048 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |

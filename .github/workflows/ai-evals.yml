@@ -1,0 +1,81 @@
+name: AI Evals (Sensi IA Quality Gate)
+
+on:
+  workflow_dispatch:
+    inputs:
+      eval_mode:
+        description: "Modo de evaluación de Sensi IA"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - deterministic
+          - model
+  schedule:
+    # Ejecución programada previa a ciclos semanales de release (lunes a las 05:00 UTC)
+    - cron: "0 5 * * 1"
+  workflow_call:
+    inputs:
+      eval_mode:
+        type: string
+        default: "all"
+
+concurrency:
+  group: ai-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai-evals:
+    name: Evaluación de Evals Sensi IA (Spec 046 / 047)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+      CI: "true"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restaurar dependencias .NET
+        run: dotnet restore sensus-back.sln
+
+      - name: Compilar solución
+        run: dotnet build sensus-back.sln --configuration Release --no-restore -warnaserror
+
+      - name: Ejecutar pruebas deterministas de IA (dotnet test)
+        run: >
+          dotnet test sensus-back.sln
+          --configuration Release
+          --no-build
+          --filter "FullyQualifiedName~Ai|FullyQualifiedName~Guardrails"
+          --logger "trx;LogFileName=ai-evals.trx"
+
+      - name: Ejecutar runner y análisis de umbrales de Evals
+        run: node .github/scripts/run-ai-evals.mjs --mode ${{ inputs.eval_mode || 'all' }} --output-dir artifacts/ai-evals
+
+      - name: Publicar reporte sanitizado de Evals (sin PII ni secretos)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-evals-report
+          path: artifacts/ai-evals
+          retention-days: 30
