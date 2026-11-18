@@ -64,6 +64,9 @@ public sealed class ComercioDocument
     [BsonRepresentation(BsonType.String)]
     public MerchantCategory Categoria { get; set; } = MerchantCategoryCatalog.Default;
 
+    [BsonElement("fotoFachadaUrl")]
+    public string? FotoFachadaUrl { get; set; }
+
     [BsonElement("horarios")]
     public List<HorarioDiaDocument> Horarios { get; set; } = [];
 
@@ -82,6 +85,7 @@ public sealed class ComercioDocument
             Activo = comercio.Activo,
             FechaRegistro = comercio.FechaRegistro,
             Categoria = comercio.Categoria,
+            FotoFachadaUrl = comercio.FotoFachadaUrl,
             Horarios = comercio.Horarios.Select(h => new HorarioDiaDocument
             {
                 Dia = h.Dia,
@@ -123,6 +127,7 @@ public sealed class ComercioDocument
             Activo,
             FechaRegistro,
             Categoria,
-            domainHorarios);
+            domainHorarios,
+            FotoFachadaUrl);
     }
 }

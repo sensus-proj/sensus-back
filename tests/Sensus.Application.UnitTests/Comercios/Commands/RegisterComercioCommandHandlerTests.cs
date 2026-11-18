@@ -218,4 +218,28 @@ public class RegisterComercioCommandHandlerTests
         result.Error.Code.Should().Be(expectedErrorCode);
         await _comercioRepository.DidNotReceive().AddAsync(Arg.Any<Comercio>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_Should_PersistFotoFachadaUrl_WhenProvided()
+    {
+        User user = User.Create("Beto", "beto-foto@sensus.com", "hashed_pw", true, DateTime.UtcNow).Value;
+        _userRepository.GetByIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(user);
+        _comercioRepository.ExistsByUsuarioIdAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(false);
+        _jwtTokenGenerator.GenerateToken(Arg.Any<User>()).Returns(("token_ok", DateTime.UtcNow.AddHours(24)));
+
+        RegisterComercioCommand command = new(
+            "Tienda Sol",
+            "Av. Hidalgo 15",
+            "42800",
+            "Supermercados",
+            20.0536,
+            -99.3436,
+            "https://cdn.sensus.com/store-facade.jpg");
+
+        Sensus.Domain.Common.Result<Sensus.Application.Comercios.DTOs.RegisterComercioResponseDto> result =
+            await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Comercio.FotoFachadaUrl.Should().Be("https://cdn.sensus.com/store-facade.jpg");
+    }
 }

@@ -13,4 +13,5 @@ public sealed record RegisterComercioCommand(
     string CodigoPostal,
     string? Categoria = null,
     double? Latitud = null,
-    double? Longitud = null) : IRequest<Result<RegisterComercioResponseDto>>;
+    double? Longitud = null,
+    string? FotoFachadaUrl = null) : IRequest<Result<RegisterComercioResponseDto>>;
