@@ -61,6 +61,9 @@ jobs:
       - name: Umbral de cobertura (Domain y Application ≥ 80 %)
         run: node .github/scripts/check-coverage.mjs artifacts/coverage 80 Sensus.Domain Sensus.Application
 
+      - name: Puerta bloqueante de Evals deterministas de Sensi IA (FR-047-13, NFR-047-06)
+        run: node .github/scripts/run-ai-evals.mjs --mode deterministic
+
       - name: Publicar resultados de pruebas
         if: always()
         uses: actions/upload-artifact@v4

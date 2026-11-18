@@ -395,15 +395,15 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-10` | 047 | FR | Ejecuta `check-specs.mjs specs` para validar 4 artefactos por spec | Must | Implementado |
 | `FR-047-11` | 047 | FR | Ejecuta `cdk synth` y `cdk diff` en PR cuando exista `infra/` | Should | Implementado |
 | `FR-047-12` | 047 | FR | Los secretos (`SNYK_TOKEN`, `SONAR_TOKEN`) solo como GitHub Secrets, nunca en YAML | Must | Implementado |
-| `FR-047-13` | 047 | FR | Ejecutar Evals de Sensi IA en dos niveles: deterministas en `dotnet test` por PR y con modelo en job `ai-evals` manual o programado | Must | Pendiente |
-| `FR-047-14` | 047 | FR | Bloquear la fusión si falla una Evals determinista y el despliegue a producción sin `ai-evals` en verde | Must | Pendiente |
-| `FR-047-15` | 047 | FR | Publicar reporte sanitizado de métricas de Evals sin PII ni secretos en logs ni YAML (credenciales CI opcionales solo en GitHub Secrets) | Must | Pendiente |
-| `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Pendiente |
+| `FR-047-13` | 047 | FR | Ejecutar Evals de Sensi IA en dos niveles: deterministas en `dotnet test` por PR y con modelo en job `ai-evals` manual o programado | Must | Implementado |
+| `FR-047-14` | 047 | FR | Bloquear la fusión si falla una Evals determinista y el despliegue a producción sin `ai-evals` en verde | Must | Implementado |
+| `FR-047-15` | 047 | FR | Publicar reporte sanitizado de métricas de Evals sin PII ni secretos en logs ni YAML (credenciales CI opcionales solo en GitHub Secrets) | Must | Implementado |
+| `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Implementado |
 | `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Implementado |
 | `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Implementado |
 | `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Implementado |
-| `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Pendiente |
-| `NFR-047-06` | 047 | NFR | Umbrales de Evals de Sensi IA | Deterministas 100 %; con modelo: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Pendiente |
+| `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Implementado |
+| `NFR-047-06` | 047 | NFR | Umbrales de Evals de Sensi IA | Deterministas 100 %; con modelo: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Implementado |
 | `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
 | `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
 | `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Pendiente |

@@ -4,13 +4,13 @@
 |---|---|
 | ID | 047 |
 | Slug | `ci-cd-pipeline` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 7 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 010, 011, 012, 013 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
 

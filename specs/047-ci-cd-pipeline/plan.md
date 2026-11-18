@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Parcial (ampliado para gate CI de *Evals* IA) |
-| Versión | 1.1.0 |
+| Estado del plan | Implementado |
+| Versión | 1.2.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
 
