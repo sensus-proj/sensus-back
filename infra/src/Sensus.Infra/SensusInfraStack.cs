@@ -3,6 +3,7 @@ using Amazon.CDK.AWS.Apigatewayv2;
 using Amazon.CDK.AWS.Budgets;
 using Amazon.CDK.AWS.CloudWatch;
 using Amazon.CDK.AWS.CloudWatch.Actions;
+using Amazon.CDK.AWS.DynamoDB;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
@@ -55,6 +56,26 @@ public sealed class SensusInfraStack : Stack
             Resources = [apiLogGroup.LogGroupArn, $"{apiLogGroup.LogGroupArn}:*"]
         }));
 
+        // Contadores atómicos de presupuesto y cuota de Sensi IA (Spec 049, ADR 0013).
+        // PAY_PER_REQUEST + TTL nativo: dentro del Free Tier permanente de DynamoDB (0 USD) y sin VPC.
+        var budgetTable = new Table(this, "SensiBudgetTable", new TableProps
+        {
+            TableName = $"sensus-sensi-budget-{envName}",
+            PartitionKey = new Amazon.CDK.AWS.DynamoDB.Attribute { Name = "pk", Type = AttributeType.STRING },
+            BillingMode = BillingMode.PAY_PER_REQUEST,
+            TimeToLiveAttribute = "expiresAt",
+            PointInTimeRecoverySpecification = new PointInTimeRecoverySpecification { PointInTimeRecoveryEnabled = false },
+            RemovalPolicy = RemovalPolicy.DESTROY
+        });
+
+        lambdaRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "AllowSensiBudgetCounters",
+            Effect = Effect.ALLOW,
+            Actions = ["dynamodb:GetItem", "dynamodb:UpdateItem"],
+            Resources = [budgetTable.TableArn]
+        }));
+
         // Lectura de parámetros y secretos desde AWS Systems Manager (SSM) Parameter Store (100 % gratuito, 0 USD)
         lambdaRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
@@ -68,6 +89,40 @@ public sealed class SensusInfraStack : Stack
         // Sin VPC ni NAT Gateway para garantizar costo 0.00 USD y salida directa a MongoDB Atlas, Cloudinary y OpenAI.
         var assetPath = ResolveLambdaAssetPath();
 
+        var lambdaEnv = new Dictionary<string, string>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Production",
+            ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
+            ["Redis__Enabled"] = "false",
+            ["AiBudgetStore__TableName"] = budgetTable.TableName,
+            ["Observability__Metrics__Enabled"] = "true",
+            ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
+            ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
+        };
+
+        string[] passthroughKeys =
+        [
+            "MongoDbSettings__ConnectionString",
+            "MONGODB_CONNECTION_STRING",
+            "MONGO_URI",
+            "JwtSettings__Secret",
+            "ClaimCodeSettings__Secret",
+            "Cloudinary__CloudName",
+            "Cloudinary__ApiKey",
+            "Cloudinary__ApiSecret",
+            "OpenAiSettings__ApiKey",
+            "MailerSettings__ApiKey"
+        ];
+
+        foreach (var key in passthroughKeys)
+        {
+            var val = System.Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrWhiteSpace(val))
+            {
+                lambdaEnv[key] = val;
+            }
+        }
+
         var apiFunction = new Function(this, "SensusApiFunction", new FunctionProps
         {
             FunctionName = $"sensus-api-{envName}",
@@ -80,15 +135,7 @@ public sealed class SensusInfraStack : Stack
             MemorySize = 512,
             Timeout = Duration.Seconds(29),
             LogGroup = apiLogGroup,
-            Environment = new Dictionary<string, string>
-            {
-                ["ASPNETCORE_ENVIRONMENT"] = "Production",
-                ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
-                ["Redis__Enabled"] = "false",
-                ["Observability__Metrics__Enabled"] = "true",
-                ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
-                ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
-            }
+            Environment = lambdaEnv
         });
 
         // 4. AWS API Gateway v2 — HTTP API con integración proxy hacia la Lambda y CORS (FR-045-04)

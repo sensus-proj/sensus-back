@@ -121,7 +121,9 @@ public sealed class GetNearbyOffersQueryHandler
             hit.Offer.Id,
             hit.Offer.MerchantId,
             hit.MerchantName,
-            hit.MerchantCategory.ToString(),
+            string.IsNullOrWhiteSpace(hit.Offer.Category)
+                ? hit.MerchantCategory.ToString()
+                : hit.Offer.Category,
             hit.Offer.Title,
             hit.Offer.Description,
             hit.Offer.OriginalPrice,
@@ -131,5 +133,7 @@ public sealed class GetNearbyOffersQueryHandler
             hit.Offer.ImageUrl,
             hit.Offer.StartsAt,
             hit.Offer.EndsAt,
-            Math.Round(hit.DistanceMeters, 2));
+            Math.Round(hit.DistanceMeters, 2),
+            hit.Offer.Latitude,
+            hit.Offer.Longitude);
 }

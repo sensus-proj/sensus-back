@@ -1,0 +1,459 @@
+openapi: 3.1.0
+info:
+  title: Sensus API — Sensi IA (Spec 046)
+  version: 2.0.0
+  description: |
+    Contrato RESTful del asistente agéntico Sensi IA en 7 capas:
+    identidad oficial Sensus, RAG estático en Markdown, herramientas MCP in-process de solo lectura,
+    autorización heredada del JWT de sesión, guardrails de entrada/salida con redacción de PII,
+    Prompt Caching + Model Router con afinidad sticky, trazabilidad auditable y eliminación en cascada.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+
+paths:
+  /ai/conversations:
+    post:
+      operationId: createOrResumeAiConversation
+      summary: Crear una nueva conversación o recuperar la conversación activa de la persona autenticada
+      tags: [Sensi IA]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '200':
+          description: Conversación activa existente reutilizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSummaryResponse'
+        '201':
+          description: Nueva conversación creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /ai/conversations/{conversationId}:
+    parameters:
+      - $ref: '#/components/parameters/ConversationId'
+    get:
+      operationId: getAiConversation
+      summary: Consultar una conversación propia con sus mensajes paginados
+      tags: [Sensi IA]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Conversación y página de mensajes solicitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteAiConversation
+      summary: Eliminar una conversación propia y purgar en cascada sus mensajes y trazas redactadas
+      tags: [Sensi IA]
+      responses:
+        '204':
+          description: Conversación, mensajes y trazas redactadas purgados exitosamente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ai/messages:
+    post:
+      operationId: sendAiMessage
+      summary: Enviar un mensaje del usuario a Sensi IA a través de la arquitectura de 7 capas
+      tags: [Sensi IA]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendAiMessageRequest'
+      responses:
+        '200':
+          description: Respuesta redactada de Sensi IA (normal o degradada deterministamente ante falla de chat)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiTurnResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Mensaje bloqueado por guardrail de moderación, prompt injection o presupuesto inválido
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: Servicio de moderación previa indisponible (fail-closed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+
+  responses:
+    BadRequest:
+      description: Solicitud inválida
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorized:
+      description: Token JWT ausente, expirado o revocado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Forbidden:
+      description: Rol no autorizado (p. ej. Invitado) o recurso de otro usuario
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Conversación no encontrada
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    TooManyRequests:
+      description: Límite de tasa o cuota diaria por persona superado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    CreateConversationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        forceNew:
+          type: boolean
+          default: false
+          description: Cuando es true fuerza la creación de un hilo nuevo en lugar de reanudar el activo
+        screenContext:
+          type: string
+          maxLength: 64
+          nullable: true
+          description: Pantalla móvil origen (ej. home_map, offer_detail, my_claims)
+
+    ConversationSummaryResponse:
+      type: object
+      required: [conversationId, status, routingTier, markdownVersion, createdAtUtc, updatedAtUtc]
+      properties:
+        conversationId:
+          type: string
+        status:
+          type: string
+          enum: [Active, Archived]
+        routingTier:
+          type: string
+          enum: [Fast, Reasoning]
+          description: Nivel de modelo asignado por afinidad sticky de sesión (no expone identificador interno del proveedor)
+        markdownVersion:
+          type: string
+          example: 1.0.0
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    ConversationDetailResponse:
+      type: object
+      required: [conversation, messages, pagination]
+      properties:
+        conversation:
+          $ref: '#/components/schemas/ConversationSummaryResponse'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessageItem'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+
+    ConversationMessageItem:
+      type: object
+      required: [messageId, role, content, degraded, createdAtUtc]
+      properties:
+        messageId:
+          type: string
+        role:
+          type: string
+          enum: [User, Assistant, SystemNotice]
+        content:
+          type: string
+          description: Contenido con PII y credenciales redactadas
+        recommendedPackage:
+          $ref: '#/components/schemas/RecommendedPackageDto'
+        offersCited:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitedOfferDto'
+        toolsInvoked:
+          type: array
+          items:
+            type: string
+          description: Nombres lógicos de herramientas MCP ejecutadas (sin secretos)
+        degraded:
+          type: boolean
+        createdAtUtc:
+          type: string
+          format: date-time
+
+    SendAiMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        conversationId:
+          type: string
+          nullable: true
+          maxLength: 64
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1500
+        screenContext:
+          type: string
+          nullable: true
+          maxLength: 64
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          nullable: true
+        radiusKm:
+          type: number
+          format: double
+          minimum: 1
+          maximum: 5
+          nullable: true
+
+    AiTurnResponse:
+      type: object
+      required:
+        - conversationId
+        - messageId
+        - reply
+        - degraded
+        - routingTier
+        - markdownVersion
+        - correlationId
+        - usage
+      properties:
+        conversationId:
+          type: string
+        messageId:
+          type: string
+        reply:
+          type: string
+          description: Respuesta redactada de PII/credenciales y moderada fail-closed
+        recommendedPackage:
+          $ref: '#/components/schemas/RecommendedPackageDto'
+        offersCited:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitedOfferDto'
+        toolsInvoked:
+          type: array
+          items:
+            type: string
+        degraded:
+          type: boolean
+        degradationReason:
+          type: string
+          nullable: true
+          enum: [BudgetCapReached, ProviderTimeout, ProviderUnavailable, GuardrailFallback, null]
+        routingTier:
+          type: string
+          enum: [Fast, Reasoning]
+        markdownVersion:
+          type: string
+        correlationId:
+          type: string
+        usage:
+          $ref: '#/components/schemas/AiUsageSummaryDto'
+
+    RecommendedPackageDto:
+      type: object
+      nullable: true
+      required: [budgetMxn, totalPriceMxn, items]
+      properties:
+        budgetMxn:
+          type: number
+          format: double
+        totalPriceMxn:
+          type: number
+          format: double
+          description: Suma recalculada por el backend, siempre menor o igual a budgetMxn
+        savingsMxn:
+          type: number
+          format: double
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitedOfferDto'
+
+    CitedOfferDto:
+      type: object
+      required: [offerId, title, merchantId, merchantName, offerPriceMxn, regularPriceMxn, availableStock, isOpenNow]
+      properties:
+        offerId:
+          type: string
+        title:
+          type: string
+        merchantId:
+          type: string
+        merchantName:
+          type: string
+        offerPriceMxn:
+          type: number
+          format: double
+        regularPriceMxn:
+          type: number
+          format: double
+        availableStock:
+          type: integer
+        isOpenNow:
+          type: boolean
+        distanceKm:
+          type: number
+          format: double
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        discountPercentage:
+          type: integer
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        endsAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        merchantAddress:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+
+    AiUsageSummaryDto:
+      type: object
+      required: [promptTokens, cachedTokens, completionTokens, cacheHit]
+      properties:
+        promptTokens:
+          type: integer
+        cachedTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        cacheHit:
+          type: boolean
+
+    PaginationMetadata:
+      type: object
+      required: [page, pageSize, totalCount, totalPages]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ProblemDetails:
+      type: object
+      required: [title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        correlationId:
+          type: string

@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers;
 using Sensus.Domain.Common;
 using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
@@ -14,17 +15,20 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
     private readonly ICurrentUserService _currentUserService;
     private readonly IGeocodingService _geocodingService;
     private readonly ICacheService? _cacheService;
+    private readonly IOfferRepository? _offerRepository;
 
     public UpdateMerchantProfileCommandHandler(
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IGeocodingService geocodingService,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOfferRepository? offerRepository = null)
     {
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _geocodingService = geocodingService;
         _cacheService = cacheService;
+        _offerRepository = offerRepository;
     }
 
     public async Task<Result<ComercioDto>> Handle(UpdateMerchantProfileCommand request, CancellationToken cancellationToken)
@@ -50,24 +54,21 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
         var direccionCambio = !string.Equals(comercio.Direccion, request.Direccion, StringComparison.OrdinalIgnoreCase) ||
                               !string.Equals(comercio.CodigoPostal, request.CodigoPostal, StringComparison.OrdinalIgnoreCase);
 
-        var latitud = comercio.Latitud;
-        var longitud = comercio.Longitud;
+        var coordsResult = await ComercioCoordinateHelper.ResolveAsync(
+            request.Latitud,
+            request.Longitud,
+            shouldGeocodeIfMissing: direccionCambio,
+            request.Direccion,
+            request.CodigoPostal,
+            _geocodingService,
+            cancellationToken);
 
-        if (direccionCambio)
+        if (coordsResult.IsFailure)
         {
-            var geocodeResult = await _geocodingService.GeocodeAddressAsync(
-                request.Direccion,
-                request.CodigoPostal,
-                cancellationToken);
-
-            if (geocodeResult.IsFailure)
-            {
-                return Result.Failure<ComercioDto>(geocodeResult.Error);
-            }
-
-            latitud = geocodeResult.Value.Latitude;
-            longitud = geocodeResult.Value.Longitude;
+            return Result.Failure<ComercioDto>(coordsResult.Error);
         }
+
+        var (latitud, longitud) = coordsResult.Value ?? (comercio.Latitud, comercio.Longitud);
 
         var updateResult = comercio.UpdateDetails(
             nombreComercial,
@@ -119,11 +120,17 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
 
         await _comercioRepository.UpdateAsync(comercio, cancellationToken);
 
-        // Invalidar caché del comercio (Spec 048)
+        if (_offerRepository is not null)
+        {
+            await _offerRepository.UpdateMerchantLocationAsync(comercio.Id, latitud, longitud, cancellationToken);
+        }
+
+        // Invalidar caché del comercio y ofertas cercanas (Spec 048)
         if (_cacheService is not null)
         {
             await _cacheService.RemoveAsync($"sensus:merchants:user:{usuarioId}", cancellationToken);
             await _cacheService.RemoveAsync($"sensus:merchants:{comercio.Id}", cancellationToken);
+            await _cacheService.InvalidateAsync(null, cancellationToken);
         }
 
         return Result.Success(comercio.ToDto());

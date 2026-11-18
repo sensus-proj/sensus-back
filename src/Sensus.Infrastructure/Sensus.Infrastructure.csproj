@@ -6,6 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.1.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.13" />
@@ -19,5 +20,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sensus.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Knowledge\sensi-app-guide.v1.0.0.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="Knowledge\sensi-app-guide.v1.0.0.md">
+      <LogicalName>sensi-app-guide.v1.0.0.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 
 </Project>

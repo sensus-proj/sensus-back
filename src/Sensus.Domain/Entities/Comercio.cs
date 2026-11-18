@@ -136,6 +136,13 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
                 Error.Validation("Comercio.CategoriaInvalida", "La categoría del comercio no pertenece al catálogo."));
         }
 
+        var coordsResult = ValidateAndNormalizeCoordinates(latitud, longitud);
+        if (coordsResult.IsFailure)
+        {
+            return Result.Failure<Comercio>(coordsResult.Error);
+        }
+
+        var (normalizedLat, normalizedLng) = coordsResult.Value;
         var registrationDate = fechaRegistro ?? DateTime.UtcNow;
 
         var comercio = new Comercio(
@@ -144,8 +151,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
             nombreComercial.Trim(),
             direccion.Trim(),
             codigoPostal.Trim(),
-            latitud,
-            longitud,
+            normalizedLat,
+            normalizedLng,
             registrationDate,
             categoria);
 
@@ -204,11 +211,19 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
                 Error.Validation("Comercio.CategoriaInvalida", "La categoría del comercio no pertenece al catálogo."));
         }
 
+        var coordsResult = ValidateAndNormalizeCoordinates(latitud, longitud);
+        if (coordsResult.IsFailure)
+        {
+            return Result.Failure(coordsResult.Error);
+        }
+
+        var (normalizedLat, normalizedLng) = coordsResult.Value;
+
         NombreComercial = nombreComercial.Trim();
         Direccion = direccion.Trim();
         CodigoPostal = codigoPostal.Trim();
-        Latitud = latitud;
-        Longitud = longitud;
+        Latitud = normalizedLat;
+        Longitud = normalizedLng;
 
         if (categoria.HasValue)
         {
@@ -216,6 +231,25 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         }
 
         return Result.Success();
+    }
+
+    private static Result<(double Latitud, double Longitud)> ValidateAndNormalizeCoordinates(double latitud, double longitud)
+    {
+        if (double.IsNaN(latitud) || double.IsInfinity(latitud) || latitud < -90.0 || latitud > 90.0)
+        {
+            return Result.Failure<(double, double)>(
+                Error.Validation("Comercio.LatitudInvalida", "La latitud debe encontrarse entre -90 y 90 grados."));
+        }
+
+        if (double.IsNaN(longitud) || double.IsInfinity(longitud) || longitud < -180.0 || longitud > 180.0)
+        {
+            return Result.Failure<(double, double)>(
+                Error.Validation("Comercio.LongitudInvalida", "La longitud debe encontrarse entre -180 y 180 grados."));
+        }
+
+        return Result.Success((
+            Math.Round(latitud, 6, MidpointRounding.AwayFromZero),
+            Math.Round(longitud, 6, MidpointRounding.AwayFromZero)));
     }
 
     /// <summary>

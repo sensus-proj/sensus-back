@@ -1,4 +1,5 @@
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Domain.Repositories;
 
@@ -45,5 +46,15 @@ public interface IOfferClaimRepository
     /// </summary>
     Task<IReadOnlyList<OfferClaim>> ExpireClaimsAsync(
         DateTime nowUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Obtiene el historial de apartados de un usuario ordenados por fecha de creación descendente,
+    /// filtrando opcionalmente por estado (spec 033, FR-046-07).
+    /// </summary>
+    Task<IReadOnlyList<OfferClaim>> GetByUserIdAsync(
+        Guid userId,
+        OfferClaimStatus? status = null,
+        int limit = 10,
         CancellationToken cancellationToken = default);
 }

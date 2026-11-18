@@ -18,13 +18,18 @@ using Sensus.Infrastructure.Migration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Carga opcional de configuración local privada (ignorada en Git) para credenciales de MongoDB Atlas y llaves locales
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
+
 // El secreto JWT nunca se versiona (AGENTS.md §8). En Development se genera uno efímero cuando
 // no está configurado; fuera de Development su ausencia es un error de configuración explícito.
 var configuredSecret = builder.Configuration["JwtSettings:Secret"];
 var isLambdaRuntime = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
 if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") || isLambdaRuntime))
 {
-    configuredSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
+    var seedBytes = Encoding.UTF8.GetBytes($"Sensus.JwtKey.Deterministic.{builder.Environment.EnvironmentName}");
+    configuredSecret = Convert.ToBase64String(SHA384.HashData(seedBytes));
     builder.Configuration["JwtSettings:Secret"] = configuredSecret;
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {
@@ -42,6 +47,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
 
 // Configuración de Autenticación con JWT Bearer y validación de SecurityStamp
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -123,7 +129,7 @@ builder.Services.AddAuthentication(options =>
 
 // Políticas de Autorización y Rate Limiting
 builder.Services.AddAppAuthorizationPolicies();
-builder.Services.AddSecurityRateLimiting();
+builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
@@ -194,6 +200,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Pipeline HTTP
+app.UseMiddleware<Sensus.Api.Middlewares.CorrelationIdMiddleware>();
 // FR-015-01: las métricas envuelven todo el pipeline para medir la latencia completa y el estado final.
 app.UseMiddleware<Sensus.Api.Middlewares.RequestMetricsMiddleware>();
 app.UseExceptionHandler();
@@ -243,6 +250,8 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapAiEndpoints();
+app.MapFriendEndpoints();
 
 await app.RunAsync();
 

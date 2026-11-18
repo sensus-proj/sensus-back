@@ -4,7 +4,7 @@
 |---|---|
 | ID | 014 |
 | Slug | `logs-estructurados-correlacion` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

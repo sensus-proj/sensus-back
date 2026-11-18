@@ -21,6 +21,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     public string? ImageUrl { get; private set; }
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
+    public string? Category { get; private set; }
 
     /// <summary>Contador acumulado de vistas deduplicadas por usuario y día (FR-032-03).</summary>
     public int ViewCount { get; private set; }
@@ -48,7 +49,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         string? imageUrl,
         double? latitude,
         double? longitude,
-        DateTime createdAtUtc) : base(id)
+        DateTime createdAtUtc,
+        string? category = null) : base(id)
     {
         MerchantId = merchantId;
         Title = title;
@@ -64,6 +66,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         Latitude = latitude;
         Longitude = longitude;
         CreatedAtUtc = createdAtUtc;
+        Category = category;
     }
 
     /// <summary>
@@ -81,7 +84,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         string? imageUrl = null,
         double? latitude = null,
         double? longitude = null,
-        DateTime? nowUtc = null)
+        DateTime? nowUtc = null,
+        string? category = null)
     {
         DateTime now = nowUtc ?? DateTime.UtcNow;
 
@@ -142,7 +146,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             imageUrl?.Trim(),
             latitude,
             longitude,
-            now);
+            now,
+            string.IsNullOrWhiteSpace(category) ? null : category.Trim());
 
         return Result.Success(offer);
     }
@@ -168,7 +173,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         DateTime createdAtUtc,
         DateTime? lastModifiedAtUtc = null,
         int viewCount = 0,
-        int version = 1)
+        int version = 1,
+        string? category = null)
     {
         Offer offer = new(
             id,
@@ -185,7 +191,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             imageUrl,
             latitude,
             longitude,
-            createdAtUtc)
+            createdAtUtc,
+            category)
         {
             LastModifiedAtUtc = lastModifiedAtUtc,
             ViewCount = viewCount,
@@ -210,7 +217,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         string? imageUrl,
         int activeClaimCount,
         int expectedVersion,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        string? category = null)
     {
         if (expectedVersion != Version)
         {
@@ -274,6 +282,10 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         StartsAt = startsAt.ToUniversalTime();
         EndsAt = endsAt.ToUniversalTime();
         ImageUrl = trimmedImageUrl;
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            Category = category.Trim();
+        }
         Version++;
         LastModifiedAtUtc = nowUtc;
 

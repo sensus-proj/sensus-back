@@ -48,6 +48,12 @@ public sealed class RedisCacheServiceTests
 
         var actRemovePrefix = () => sut.RemoveByPrefixAsync("test:");
         await actRemovePrefix.Should().NotThrowAsync();
+
+        sut.IsAvailable.Should().BeFalse();
+        var incrFloat = await sut.IncrementByFloatAsync("test:key", 1.5);
+        incrFloat.Should().BeNull();
+        var incrInt = await sut.IncrementAsync("test:key", 1);
+        incrInt.Should().BeNull();
     }
 
     [Fact]

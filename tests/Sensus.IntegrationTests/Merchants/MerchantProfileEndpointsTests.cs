@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Sensus.Application.Comercios.Commands.RegisterComercio;
 using Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
@@ -275,5 +276,123 @@ public class MerchantProfileEndpointsTests : IClassFixture<CustomWebApplicationF
         var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ActivateMerchant_ShouldReturnCreated_WithClientCoordinates()
+    {
+        var user = User.Create(
+            "Usuario Nuevo",
+            "activar@sensus.com",
+            "pw",
+            true,
+            DateTime.UtcNow).Value;
+
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(user);
+        _factory.ComercioRepository.ExistsByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        var token = CreateTokenForUser(user);
+        var command = new RegisterComercioCommand(
+            "Panadería La Esperanza",
+            "Av. Hidalgo 45, Centro",
+            "42800",
+            null,
+            20.056789,
+            -99.341234);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/merchants/activate")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<RegisterComercioResponseDto>();
+        body.Should().NotBeNull();
+        body!.EsComerciante.Should().BeTrue();
+        body.Comercio.Latitud.Should().Be(20.056789);
+        body.Comercio.Longitud.Should().Be(-99.341234);
+    }
+
+    [Fact]
+    public async Task ActivateMerchant_ShouldReturnBadRequest_WhenCoordinatesOutOfRange()
+    {
+        var user = User.Create("Usuario Bad Coords", "badcoords@sensus.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        var token = CreateTokenForUser(user);
+
+        var command = new RegisterComercioCommand("Panadería", "Av. Hidalgo 45", "42800", null, 120.0, -99.3);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/merchants/activate")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetMyMerchant_ShouldReturnOk_WhenUserIsMerchant()
+    {
+        var merchantUser = User.Create("Comerciante", "me@comercio.com", "pw", true, DateTime.UtcNow).Value;
+        merchantUser.AddRole(RoleType.Comerciante);
+
+        var comercio = Comercio.Create(
+            merchantUser.Id,
+            "Mi Tienda Oficial",
+            "Av. Reforma 100",
+            "06600",
+            19.4326,
+            -99.1332).Value;
+
+        _factory.UserRepository.GetByIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns(merchantUser);
+        _factory.ComercioRepository.GetByUsuarioIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns(comercio);
+
+        var token = CreateTokenForUser(merchantUser);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/me");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<ComercioDto>();
+        dto.Should().NotBeNull();
+        dto!.NombreComercial.Should().Be("Mi Tienda Oficial");
+    }
+
+    [Fact]
+    public async Task GetNearbyMerchants_ShouldReturnOk_WithNearbyComercios()
+    {
+        var user = User.Create("Vecino", "vecino.nearby@sensus.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        var token = CreateTokenForUser(user);
+
+        var comercio = Comercio.Create(
+            Guid.NewGuid(),
+            "Tienda Vecina",
+            "Av. Hidalgo 10",
+            "42800",
+            20.0536,
+            -99.3436).Value;
+
+        _factory.ComercioRepository
+            .GetNearbyAsync(20.0536, -99.3436, 2000, Arg.Any<CancellationToken>())
+            .Returns([comercio]);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/nearby?lat=20.0536&lng=-99.3436&radiusMeters=2000");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = await response.Content.ReadFromJsonAsync<List<ComercioDto>>();
+        items.Should().NotBeNull();
+        items!.Should().ContainSingle(c => c.NombreComercial == "Tienda Vecina");
     }
 }

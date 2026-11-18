@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.GeoJsonObjectModel;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
 using Sensus.Domain.Models;
@@ -134,7 +136,13 @@ public sealed class MongoOfferRepository : IOfferRepository
 
         if (category.HasValue)
         {
-            pipeline.Add(new BsonDocument("$match", new BsonDocument("merchant.categoria", category.Value.ToString())));
+            string categoryText = category.Value.ToString();
+            var regex = new BsonRegularExpression($"^{Regex.Escape(categoryText)}$", "i");
+            pipeline.Add(new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+            {
+                new BsonDocument("category", regex),
+                new BsonDocument("merchant.categoria", categoryText)
+            })));
         }
 
         pipeline.Add(new BsonDocument("$sort", new BsonDocument
@@ -257,6 +265,25 @@ public sealed class MongoOfferRepository : IOfferRepository
         return result.ModifiedCount == 1;
     }
 
+    /// <summary>
+    /// Sincroniza las coordenadas de todas las ofertas del comercio cuando este cambia de ubicación.
+    /// </summary>
+    public async Task UpdateMerchantLocationAsync(
+        Guid merchantId,
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<OfferDocument>.Filter.Eq(o => o.MerchantId, merchantId);
+        var geoPoint = GeoJson.Point(GeoJson.Geographic(longitude, latitude));
+        var update = Builders<OfferDocument>.Update
+            .Set(o => o.Latitude, latitude)
+            .Set(o => o.Longitude, longitude)
+            .Set(o => o.Ubicacion, geoPoint);
+
+        await _context.Offers.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
     private static BsonDocument BuildVisibilityFilter(DateTime nowUtc) =>
         new()
         {
@@ -273,40 +300,89 @@ public sealed class MongoOfferRepository : IOfferRepository
             ? parsedStatus
             : OfferStatus.Published;
 
-        string categoryValue = GetString(document, "merchantCategory") ?? MerchantCategory.Otros.ToString();
+        BsonDocument? merchantDoc = document.TryGetValue("merchant", out BsonValue merchantValue) &&
+                                    merchantValue.IsBsonDocument
+            ? merchantValue.AsBsonDocument
+            : null;
+
+        string merchantName = (merchantDoc is not null ? GetString(merchantDoc, "nombreComercial") : null)
+            ?? GetString(document, "merchantName")
+            ?? string.Empty;
+
+        string categoryValue = (merchantDoc is not null ? GetString(merchantDoc, "categoria") : null)
+            ?? GetString(document, "merchantCategory")
+            ?? MerchantCategory.Otros.ToString();
         MerchantCategory category = MerchantCategoryCatalog.TryParse(categoryValue, out MerchantCategory parsedCategory)
             ? parsedCategory
             : MerchantCategory.Otros;
 
+        double? latitude = (merchantDoc is not null ? GetNullableDouble(merchantDoc, "latitud") : null)
+            ?? GetNullableDouble(document, "latitude");
+        double? longitude = (merchantDoc is not null ? GetNullableDouble(merchantDoc, "longitud") : null)
+            ?? GetNullableDouble(document, "longitude");
+
         Offer offer = Offer.Reconstitute(
-            document["_id"].AsGuid,
-            document["merchantId"].AsGuid,
-            document["title"].AsString,
-            document["description"].AsString,
-            document["originalPrice"].ToDecimal(),
-            document["discountPercentage"].ToInt32(),
-            document["discountedPrice"].ToDecimal(),
-            document["stock"].ToInt32(),
-            document["startsAt"].ToUniversalTime(),
-            document["endsAt"].ToUniversalTime(),
+            ParseGuid(document, "_id"),
+            ParseGuid(document, "merchantId"),
+            GetString(document, "title") ?? string.Empty,
+            GetString(document, "description") ?? string.Empty,
+            GetDecimal(document, "originalPrice"),
+            GetInt32(document, "discountPercentage"),
+            GetDecimal(document, "discountedPrice"),
+            GetInt32(document, "stock"),
+            GetRequiredDateUtc(document, "startsAt"),
+            GetRequiredDateUtc(document, "endsAt"),
             status,
             GetString(document, "imageUrl"),
-            GetNullableDouble(document, "latitude"),
-            GetNullableDouble(document, "longitude"),
-            document["createdAtUtc"].ToUniversalTime(),
+            latitude,
+            longitude,
+            GetRequiredDateUtc(document, "createdAtUtc"),
             GetNullableDate(document, "lastModifiedAtUtc"),
             GetInt32(document, "viewCount"),
-            GetInt32(document, "version") == 0 ? 1 : GetInt32(document, "version"));
+            GetInt32(document, "version") == 0 ? 1 : GetInt32(document, "version"),
+            GetString(document, "category"));
 
         return new NearbyOfferHit(
             offer,
-            document["distanceMeters"].ToDouble(),
-            GetString(document, "merchantName") ?? string.Empty,
+            GetNullableDouble(document, "distanceMeters") ?? 0d,
+            merchantName,
             category);
     }
 
-    private static string? GetString(BsonDocument document, string field) =>
-        document.TryGetValue(field, out BsonValue value) && !value.IsBsonNull ? value.AsString : null;
+    private static Guid ParseGuid(BsonDocument document, string field)
+    {
+        if (!document.TryGetValue(field, out BsonValue value) || value.IsBsonNull)
+        {
+            return Guid.Empty;
+        }
+
+        if (value.IsString && Guid.TryParse(value.AsString, out Guid parsed))
+        {
+            return parsed;
+        }
+
+        return value.IsBsonBinaryData ? value.AsGuid : Guid.Empty;
+    }
+
+    private static string? GetString(BsonDocument document, string field)
+    {
+        if (!document.TryGetValue(field, out BsonValue value) || value.IsBsonNull)
+        {
+            return null;
+        }
+
+        return value.IsString ? value.AsString : value.ToString();
+    }
+
+    private static decimal GetDecimal(BsonDocument document, string field) =>
+        document.TryGetValue(field, out BsonValue value) && !value.IsBsonNull && value.IsNumeric
+            ? value.ToDecimal()
+            : 0m;
+
+    private static DateTime GetRequiredDateUtc(BsonDocument document, string field) =>
+        document.TryGetValue(field, out BsonValue value) && value.IsValidDateTime
+            ? value.ToUniversalTime()
+            : DateTime.UtcNow;
 
     private static double? GetNullableDouble(BsonDocument document, string field) =>
         document.TryGetValue(field, out BsonValue value) && !value.IsBsonNull && value.IsNumeric
@@ -320,4 +396,82 @@ public sealed class MongoOfferRepository : IOfferRepository
 
     private static int GetInt32(BsonDocument document, string field) =>
         document.TryGetValue(field, out BsonValue value) && value.IsNumeric ? value.ToInt32() : 0;
+
+    public async Task<IReadOnlyList<Offer>> SearchAsync(
+        string? query,
+        MerchantCategory? category,
+        decimal? maxBudgetMxn,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var filterBuilder = Builders<OfferDocument>.Filter;
+        var filters = new List<FilterDefinition<OfferDocument>>
+        {
+            filterBuilder.Eq(o => o.Status, OfferStatus.Published.ToString()),
+            filterBuilder.Gt(o => o.EndsAt, now),
+            filterBuilder.Gt(o => o.Stock, 0)
+        };
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var escaped = Regex.Escape(query.Trim());
+            var regex = new BsonRegularExpression(escaped, "i");
+            filters.Add(filterBuilder.Or(
+                filterBuilder.Regex(o => o.Title, regex),
+                filterBuilder.Regex(o => o.Description, regex)));
+        }
+
+        if (category.HasValue)
+        {
+            filters.Add(filterBuilder.Eq(o => o.Category, category.Value.ToString()));
+        }
+
+        if (maxBudgetMxn.HasValue && maxBudgetMxn.Value > 0)
+        {
+            filters.Add(filterBuilder.Lte(o => o.DiscountedPrice, maxBudgetMxn.Value));
+        }
+
+        var combinedFilter = filterBuilder.And(filters);
+        var sort = Builders<OfferDocument>.Sort.Descending(o => o.CreatedAtUtc);
+        var safeLimit = Math.Clamp(limit, 1, 50);
+
+        var documents = await _context.Offers
+            .Find(combinedFilter)
+            .Sort(sort)
+            .Limit(safeLimit)
+            .ToListAsync(cancellationToken);
+
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task<(IReadOnlyList<Offer> Items, int TotalCount)> GetByMerchantIdPagedAsync(
+        Guid merchantId,
+        OfferStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var filterBuilder = Builders<OfferDocument>.Filter;
+        var filter = filterBuilder.Eq(o => o.MerchantId, merchantId);
+        if (status.HasValue)
+        {
+            filter = filterBuilder.And(filter, filterBuilder.Eq(o => o.Status, status.Value.ToString()));
+        }
+
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+
+        var totalCount = (int)await _context.Offers.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        var sort = Builders<OfferDocument>.Sort.Descending(o => o.CreatedAtUtc);
+
+        var documents = await _context.Offers
+            .Find(filter)
+            .Sort(sort)
+            .Skip((safePage - 1) * safePageSize)
+            .Limit(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        return (documents.Select(d => d.ToDomain()).ToList(), totalCount);
+    }
 }

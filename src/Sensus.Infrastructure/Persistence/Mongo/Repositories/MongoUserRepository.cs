@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
@@ -35,6 +36,26 @@ public sealed class MongoUserRepository : IUserRepository
         var filter = Builders<UserDocument>.Filter.Eq(u => u.Correo, normalizedEmail);
         var document = await _context.Users.Find(filter).FirstOrDefaultAsync(cancellationToken);
         return document?.ToDomain();
+    }
+
+    public async Task<User?> GetByInviteCodeAsync(string inviteCode, CancellationToken cancellationToken = default)
+    {
+        string normalizedCode = inviteCode.Trim().ToUpperInvariant();
+        FilterDefinition<UserDocument> activeFilter = Builders<UserDocument>.Filter.Eq(u => u.Estatus, true);
+        using IAsyncCursor<UserDocument> cursor = await _context.Users.Find(activeFilter).ToCursorAsync(cancellationToken);
+        while (await cursor.MoveNextAsync(cancellationToken))
+        {
+            foreach (UserDocument doc in cursor.Current)
+            {
+                string candidate = FriendInviteCodeGenerator.Generate(doc.Correo, doc.NombreCompleto);
+                if (string.Equals(candidate, normalizedCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    return doc.ToDomain();
+                }
+            }
+        }
+
+        return null;
     }
 
     public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default)

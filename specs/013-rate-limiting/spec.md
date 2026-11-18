@@ -4,7 +4,7 @@
 |---|---|
 | ID | 013 |
 | Slug | `rate-limiting` |
-| Estado | Pendiente |
+| Estado | Implementado |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

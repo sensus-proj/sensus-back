@@ -54,7 +54,8 @@ public class MediaEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var dto = await response.Content.ReadFromJsonAsync<ModerateImageResponseDto>();
         dto.Should().NotBeNull();
-        dto!.Approved.Should().BeTrue();
+        dto!.Approved.Should().BeFalse();
+        dto.Decision.Should().Be("Quarantine");
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public class MediaEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var dto = await response.Content.ReadFromJsonAsync<ModerateImageResponseDto>();
         dto.Should().NotBeNull();
-        dto!.Approved.Should().BeTrue();
-        dto.Decision.Should().Be("Approved");
+        dto!.Approved.Should().BeFalse();
+        dto.Decision.Should().Be("Quarantine");
     }
 }

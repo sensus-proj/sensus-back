@@ -7,37 +7,37 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## A. Antes de empezar (Definition of Ready)
 
 - [ ] La spec 012 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
+- [x] Los requisitos tienen identificador y criterio medible
 - [ ] Las dependencias están resueltas: Ninguna
-- [ ] El alcance y las exclusiones están declarados
+- [x] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
-- [ ] Producción no usa AllowAnyOrigin
-- [ ] HTTPS es obligatorio fuera de desarrollo
-- [ ] Los orígenes están en configuración, no en código
+- [x] Producción no usa AllowAnyOrigin
+- [x] HTTPS es obligatorio fuera de desarrollo
+- [x] Los orígenes están en configuración, no en código
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
+- [x] Código en la capa correcta y test de arquitectura en verde
 - [ ] Pruebas unitarias y de integración añadidas y en verde
 - [ ] Cobertura ≥ 80 % en Domain y Application
 - [ ] Contrato OpenAPI actualizado
 - [ ] IaC actualizada y `cdk diff` revisado si aplica
 - [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — FAIL
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS
+- [ ] **V. Verificación automatizada** — BRECHA: sin pruebas de integración de CORS, HTTPS ni HSTS
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS
 
 ## E. Evidencia
 
@@ -54,4 +54,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-15 | Equipo Sensus | PARCIAL | CORS por `Cors:AllowedOrigins`, sin AllowAnyOrigin; HSTS y redirección HTTPS fuera de Development (`Program.cs`). Falta T012-05. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |

@@ -1,0 +1,28 @@
+# Tareas 049 — Contadores de presupuesto y cuota de Sensi IA en Amazon DynamoDB
+
+| Campo | Valor |
+|---|---|
+| Spec | [`spec.md`](spec.md) |
+| Plan | [`plan.md`](plan.md) |
+| Checklist | [`checklist.md`](checklist.md) |
+| Estado | Parcial |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
+
+## Tareas
+
+| ID | Tarea | Capa | Requisito | Depende | Estado |
+|---|---|---|---|---|---|
+| T049-01 | Enmienda v2.2.0, ADR 0013 y alineación de `AGENTS.md` | Docs | FR-049-04 | — | Hecha |
+| T049-02 | Crear `IBudgetCounterStore` | Application | FR-049-01 | T049-01 | Hecha |
+| T049-03 | Implementar `DynamoDbBudgetCounterStore` y `AiBudgetStoreSettings` | Infrastructure | FR-049-02, FR-049-06, FR-049-07 | T049-02 | Hecha |
+| T049-04 | Refactorizar `AiBudgetGuard` a `IBudgetCounterStore` | Infrastructure | FR-049-03 | T049-02 | Hecha |
+| T049-05 | Registrar DI y sección `AiBudgetStore` en `appsettings.json` | Api / Infrastructure | FR-049-06 | T049-03 | Hecha |
+| T049-06 | Tabla DynamoDB, IAM mínimo y variable de entorno en CDK | infra | FR-049-04, FR-049-05 | T049-01 | Hecha |
+| T049-07 | Pruebas unitarias de `AiBudgetGuard` | Tests | FR-049-03 | T049-04 | Hecha |
+| T049-08 | Pruebas de `DynamoDbBudgetCounterStore` con doble del SDK | Tests | FR-049-02, FR-049-07 | T049-03 | Hecha |
+| T049-09 | Pruebas con DynamoDB Local (Testcontainers) | Tests | FR-049-02 | T049-08 | Bloqueada (sin Docker) |
+| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (`synth` OK; `diff` y despliegue pendientes) |
+
+## Notas de ejecución
+
+`cdk deploy` no se ejecuta sin autorización explícita del responsable. `cdk synth` se verificó con la salida en un directorio temporal (tabla con TTL, etiquetas, variable `AiBudgetStore__TableName` y política mínima). `cdk diff` requiere credenciales de AWS y queda pendiente.

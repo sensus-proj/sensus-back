@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Borrador |
-| Versión | 1.0.0 |
+| Estado del plan | Parcial (ampliado para gate CI de *Evals* IA) |
+| Versión | 1.1.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
 
 ---
 
@@ -23,6 +23,7 @@ Implementar y corregir el pipeline CI-CD de GitHub Actions para cumplir con los 
 | `.opencode/skills/quality-gates-sensus/SKILL.md` | Documentar gates locales y CI |
 | `.opencode/agents/security-reviewer.md` | Agregar checklist de Snyk/SonarCloud |
 | `.opencode/agents/test-qa.md` | Agregar comandos de gates CI |
+| `.github/workflows/ci.yml` + suite de *Evals* IA | *Evals* deterministas dentro de `dotnet test` (bloquean el PR) y job `ai-evals` con `workflow_dispatch` y `schedule` que llama al proveedor real; `deploy-serverless.yml` exige su última ejecución en verde. Umbrales `NFR-047-06`, sin PII ni secretos en logs |
 
 ## 3. Modelo de datos e índices
 
@@ -60,7 +61,7 @@ Evaluación previa a la implementación.
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | PASS | Requisitos `FR-047-01` a `FR-047-12` con criterios de aceptación medibles |
+| I | PASS | Requisitos `FR-047-01` a `FR-047-15` y `NFR-047-01` a `NFR-047-06` con criterios de aceptación medibles |
 | II | PASS | Cambios acotados a `.github/`, `.opencode/` y `stryker-config.json` |
 | III | PASS | No se exponen entidades de dominio; pipeline es infraestructura de desarrollo |
 | IV | PASS | Snyk, gitleaks, SonarCloud, secretos en GitHub Secrets |

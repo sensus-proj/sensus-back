@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using Sensus.Application.Common.Settings;
+
 namespace Sensus.Infrastructure.Services;
 
 public sealed class CategoryThreshold
@@ -19,4 +22,6 @@ public sealed class OpenAiSettings
     public double DefaultHighThreshold { get; set; } = 0.75;
 
     public Dictionary<string, CategoryThreshold> CategoryThresholds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public SensiSettings Sensi { get; set; } = new();
 }

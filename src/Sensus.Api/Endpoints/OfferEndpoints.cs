@@ -65,7 +65,8 @@ public static class OfferEndpoints
                 body.StartsAt,
                 body.EndsAt,
                 body.ImageUrl,
-                body.ExpectedVersion);
+                body.ExpectedVersion,
+                body.Category);
 
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
@@ -297,6 +298,7 @@ public sealed record UpdateOfferBody(
     DateTime StartsAt,
     DateTime EndsAt,
     string? ImageUrl,
-    int ExpectedVersion);
+    int ExpectedVersion,
+    string? Category = null);
 
 public sealed record ChangeOfferStatusBody(string NewStatus);
