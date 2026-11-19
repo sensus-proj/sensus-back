@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 007, 032, 037 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -55,6 +55,7 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 | FR-033-08 | Impedir que un comerciante canjee códigos de otro comercio | Must |
 | FR-033-09 | Tras confirmar el apartado, avisar al comprador y a la cuenta propietaria del comercio en sus dispositivos activos, respetando `pushEnabled` | Must |
 | FR-033-10 | Entregar al comprador `claimId`, `offerId` y `expiresAtUtc` en el push para mostrar el límite de recogida | Must |
+| FR-033-12 | Restringir `POST /offers/claims/expire-check` a `Administrador`, con límite de tasa `sensitive-write` (era público hasta el 2026-11-19, OWASP API5) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -101,6 +102,12 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 - Un cambio de estado o apartado rechazado genera cero avisos de apartado. Un apartado confirmado genera un aviso por dispositivo activo de cada destinatario con push habilitado. Un reintento del despacho sobre el mismo apartado no solicita nuevamente los envíos ya reservados.
 - La confirmación, el código QR y `expiresAtUtc` conservan su contrato HTTP si el envío falla. El aviso del comprador incluye el vencimiento absoluto y permite que el cliente calcule la cuenta regresiva. El push no incluye QR, código de canje ni datos personales.
 
+### CA-033-12
+
+- **Dado** una solicitud sin token, de invitado, de consumidor o de comerciante
+- **Cuando** llama a `POST /api/v1/offers/claims/expire-check`
+- **Entonces** recibe `401` o `403` y no se ejecuta la expiración; con token de `Administrador` recibe `200`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -125,7 +132,7 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`, `FR-033-09`, `FR-033-10`
+- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`, `FR-033-09`, `FR-033-10`, `FR-033-12`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

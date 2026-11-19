@@ -263,6 +263,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Implementado |
 | `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Implementado |
 | `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Implementado |
+| `FR-033-12` | 033 | FR | Restringir `claims/expire-check` a administrador, con límite de tasa | Must | Implementado |
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
@@ -291,7 +292,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-036-02` | 036 | NFR | Auditoría | 100 % de transiciones registradas | Pendiente |
 | `FR-036-07` | 036 | FR | Republicar oferta expirada o archivada con nuevas fechas y stock | Must | Implementado |
 | `FR-036-08` | 036 | FR | Ejecutar la expiración de ofertas vencidas y devolver el conteo | Must | Implementado |
-| `FR-036-09` | 036 | FR | Restringir `expire-check` a administrador o invocación interna, con límite de tasa | Must | Pendiente |
+| `FR-036-09` | 036 | FR | Restringir `expire-check` a administrador, con límite de tasa | Must | Implementado |
 | `FR-036-10` | 036 | FR | Límite de tasa en `republish` | Should | Pendiente |
 | `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Implementado |
 | `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Implementado |
@@ -499,4 +500,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
 
-Total: **494 requisitos** en 53 specs.
+Total: **495 requisitos** en 53 specs.

@@ -50,7 +50,7 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 | FR-036-06 | Registrar estado anterior, nuevo estado, actor y fecha | Must |
 | FR-036-07 | Republicar una oferta `Expired` o `Archived` (`POST /offers/{id}/republish`) con nuevas fechas y stock; solo el comercio dueño con comercio activo; invalida la caché | Must |
 | FR-036-08 | Ejecutar la expiración de ofertas vencidas (`POST /offers/expire-check`) y devolver el número de ofertas expiradas | Must |
-| FR-036-09 | Restringir `expire-check` a `Administrador` o a una invocación interna, con límite de tasa; hoy es público y responde `200` sin token | Must |
+| FR-036-09 | Restringir `expire-check` a `Administrador`, con límite de tasa `sensitive-write` (era público hasta el 2026-11-19) | Must |
 | FR-036-10 | Aplicar el límite de tasa `sensitive-write` a `republish` | Should |
 
 ## 5. Requisitos no funcionales
@@ -98,7 +98,7 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 - **Cuando** se intenta republicar
 - **Entonces** recibe `409` `Offer.CannotRepublishActive`; con fechas inválidas o stock < 1 recibe `400`; si es de otro comercio, `403`; si no existe, `404`
 
-### CA-036-07 (pendiente, FR-036-09)
+### CA-036-07
 
 - **Dado** una solicitud sin token o con token que no es de administrador
 - **Cuando** llama a `POST /api/v1/offers/expire-check`
@@ -110,7 +110,7 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 |---|---|---|
 | PUT | `/api/v1/offers/{id}/status` | JWT |
 | POST | `/api/v1/offers/{id}/republish` | JWT de comerciante (`MerchantOnly`) |
-| POST | `/api/v1/offers/expire-check` | **Hoy pública (defecto, FR-036-09)**; objetivo: `AdminOnly` |
+| POST | `/api/v1/offers/expire-check` | JWT de `Administrador` (`AdminOnly`), límite `sensitive-write` |
 
 ## 8. Dependencias y supuestos
 

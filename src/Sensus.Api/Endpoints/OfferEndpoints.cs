@@ -133,9 +133,16 @@ public static class OfferEndpoints
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
+        // FR-036-09: operación administrativa; antes era pública (OWASP API5). Los procesos programados
+        // ejecutan el comando directamente, sin pasar por HTTP.
+        .RequireAuthorization(SecurityExtensions.AdminOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("TriggerOfferExpiration")
-        .WithSummary("SE-022 a SE-025: Ejecuta la transición atómica en MongoDB de ofertas cuya vigencia expiró")
-        .Produces<ExpireOffersResultDto>(StatusCodes.Status200OK);
+        .WithSummary("SE-022 a SE-025: Ejecuta la transición atómica en MongoDB de ofertas cuya vigencia expiró (solo Administrador)")
+        .Produces<ExpireOffersResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 007: Ofertas publicadas dentro de un radio, ordenadas por distancia
         offersGroup.MapGet("/nearby", async (
@@ -236,9 +243,15 @@ public static class OfferEndpoints
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
+        // FR-033-12: operación administrativa; antes era pública (OWASP API5).
+        .RequireAuthorization(SecurityExtensions.AdminOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("TriggerClaimExpiration")
-        .WithSummary("Spec 033: Expira los apartados vencidos y devuelve el stock reservado")
-        .Produces<ExpireClaimsResultDto>(StatusCodes.Status200OK);
+        .WithSummary("Spec 033: Expira los apartados vencidos y devuelve el stock reservado (solo Administrador)")
+        .Produces<ExpireClaimsResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 032: Detalle completo de la oferta con datos públicos del comercio
         offersGroup.MapGet("/{id:guid}", async (

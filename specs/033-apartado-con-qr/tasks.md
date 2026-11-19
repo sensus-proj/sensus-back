@@ -29,6 +29,7 @@
 |---|---|---|---|---|
 | T033-13 | Enviar avisos tras persistir el apartado y reservar cada envío de forma atómica | Application / Infrastructure | `FR-033-09` | Implementado en local. Entrega FCM y latencia real pendientes |
 | T033-14 | Incluir el vencimiento UTC en el aviso del comprador y probar el contrato push | Application / Pruebas | `FR-033-10` | Implementado en backend. Presentación y entrega física pendientes |
+| T033-15 | Proteger `claims/expire-check` con `AdminOnly` y límite de tasa; regresión en `ExpireCheckAuthorizationTests` | Api | `FR-033-12` | — | Hecho |
 
 ## Notas de ejecución
 

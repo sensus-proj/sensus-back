@@ -43,7 +43,7 @@ paths:
   /api/v1/offers/expire-check:
     post:
       summary: Expira las ofertas cuya vigencia terminó
-      description: Hoy es público (defecto FR-036-09). Objetivo, solo AdminOnly o invocación interna.
+      description: Solo Administrador (FR-036-09). Era público hasta el 2026-11-19.
       operationId: triggerOfferExpiration
       security: [{ bearerAuth: [] }]
       responses:
@@ -56,6 +56,9 @@ paths:
                 properties:
                   expiredCount: { type: integer }
                   executedAtUtc: { type: string, format: date-time }
+        '401': { description: Sin token }
+        '403': { description: El usuario no es Administrador }
+        '429': { description: Límite de tasa sensitive-write superado }
 components:
   securitySchemes:
     bearerAuth:
