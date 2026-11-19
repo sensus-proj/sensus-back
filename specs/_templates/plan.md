@@ -26,6 +26,12 @@
 
 {{SECURITY}}
 
+### Modelo de amenazas (STRIDE, Principio VIII)
+
+| Amenaza | Categoría | Mitigación | Riesgo residual |
+|---|---|---|---|
+| — | — | — | — |
+
 ## 5. Observabilidad y rendimiento
 
 {{OBS}}

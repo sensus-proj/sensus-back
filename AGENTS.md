@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.2.0** |
+| Documento normativo | `constitution.md` **v2.3.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
-| Última actualización | 2026-11-15 |
+| Última actualización | 2026-11-19 |
 
 > Este archivo es **operativo**. En caso de conflicto con `constitution.md`, prevalece la constitución y
 > este archivo MUST corregirse en el mismo cambio.
@@ -186,6 +186,28 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Umbrales de moderación en configuración; nunca en código. Toda decisión se registra con veredicto,
   categorías, puntajes, umbral aplicado y acción.
 
+### 8.1 Nivel fintech (Principio VIII, `constitution.md` v2.3.0)
+
+Todo lo nuevo o modificado, en backend y móvil, cumple desde el primer commit:
+
+- **Estándares:** OWASP ASVS 5.0 nivel 2 (nivel 3 en autenticación, sesiones, autorización, sanciones,
+  canje y eliminación de cuenta), OWASP API Top 10, MASVS L2 + resiliencia, NIST 800-63B, SSDF y SLSA 2.
+- **Modelo de amenazas (STRIDE)** en `plan.md` de toda spec que toque identidad, datos, códigos
+  canjeables o acciones administrativas.
+- **Mínimo privilegio** en IAM y roles; acciones privilegiadas autorizadas en el servidor y registradas.
+- **Validación con lista de permitidos**, límites de tamaño y errores uniformes sin enumeración.
+- **Auditoría de solo adición** de eventos de seguridad, con actor, objetivo, resultado y
+  `correlation-id`, sin PII ni secretos.
+- **Secretos** en SSM *SecureString* o Secrets Manager, rotados cada 90 días como máximo; nunca como
+  variable de entorno en claro.
+- **Pipeline bloqueante** (severidad alta o crítica): SAST, SCA, secretos, escaneo de IaC, DAST y SBOM.
+- **Vulnerabilidades:** crítica ≤ 7 días, alta ≤ 30, media ≤ 90.
+- **Móvil:** *pinning* con pin de respaldo, Play Integrity, Keystore, `FLAG_SECURE`, biometría en
+  acciones sensibles y *release* sin logs ni depuración.
+- Si un control supera el nivel gratuito, se documenta un control compensatorio o se pide aprobación;
+  nunca se omite.
+- Las brechas conocidas viven en el Apéndice F de la constitución; una brecha vencida es bloqueante.
+
 ---
 
 ## 9. Datos y rendimiento
@@ -264,7 +286,8 @@ Antes de dar una tarea por terminada:
 - [ ] Logs estructurados, con `correlation-id` y sin PII.
 - [ ] `checklist.md` de la spec actualizado, sin casillas pendientes y con evidencia registrada.
 - [ ] `tasks.md` refleja el estado real de cada tarea.
-- [ ] Constitution Check del `plan.md` en PASS o brecha registrada.
+- [ ] Constitution Check del `plan.md` en PASS o brecha registrada (ocho principios, incluido el VIII).
+- [ ] Modelo de amenazas, escaneos bloqueantes (SAST, SCA, secretos, IaC, DAST, SBOM) y controles fintech verificados.
 - [ ] `memory.md` actualizado al cerrar la sesión.
 
 Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo omitas.
@@ -305,4 +328,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.2.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v2.3.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
