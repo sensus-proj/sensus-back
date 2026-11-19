@@ -38,60 +38,57 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
                 Error.Unauthorized("Device.Unauthenticated", "Usuario no autenticado."));
         }
 
+        string token = request.Token.Trim();
+        string deviceId = request.DeviceId.Trim();
+
         // Validar el token con el proveedor antes de registrar (FR-027-03, FR-027-05)
-        bool tokenValid = await _pushDispatcher.ValidateTokenAsync(request.Token, cancellationToken);
-        if (!tokenValid)
+        PushResult validation = await _pushDispatcher.ValidateTokenAsync(token, cancellationToken);
+        if (validation == PushResult.Unavailable)
+        {
+            return Result.Failure<DeviceTokenResponseDto>(new Error(
+                "Device.ProviderUnavailable", "No se pudo validar el dispositivo en este momento.", ErrorType.Unavailable));
+        }
+
+        if (validation == PushResult.InvalidToken)
         {
             // El token es inválido, se elimina si existía (FR-027-05)
-            Device? existingByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
-            if (existingByToken is not null)
+            Device? existingByToken = await _deviceRepository.GetByTokenAsync(token, cancellationToken);
+            if (existingByToken?.UserId == parsedUserId)
             {
-                existingByToken.Deactivate();
-                await _deviceRepository.UpdateAsync(existingByToken, cancellationToken);
+                await _deviceRepository.DeactivateByTokenAsync(existingByToken.Id, token, cancellationToken);
             }
 
             return Result.Failure<DeviceTokenResponseDto>(
                 Error.Validation("Device.InvalidToken", "El token de dispositivo no es válido."));
         }
 
-        // Buscar si ya existe un dispositivo con este deviceId para este usuario (FR-027-02)
-        Device? existing = await _deviceRepository.GetByUserAndDeviceIdAsync(parsedUserId, request.DeviceId, cancellationToken);
+        Device? existing = await _deviceRepository.GetByUserAndDeviceIdAsync(parsedUserId, deviceId, cancellationToken);
+        Device? binding = await _deviceRepository.GetByTokenAsync(token, cancellationToken);
 
-        if (existing is not null)
+        if (binding is not null && binding.Id != existing?.Id &&
+            !await _deviceRepository.TryRemoveTokenBindingAsync(binding.Id, binding.UserId, token, cancellationToken))
         {
-            // Actualizar token existente sin duplicar (FR-027-02)
-            existing.UpdateToken(request.Token);
-            existing.MarkUsed();
-            existing.Activate();
-            await _deviceRepository.UpdateAsync(existing, cancellationToken);
-
-            return Result.Success(new DeviceTokenResponseDto(
-                DeviceId: existing.DeviceId,
-                Platform: existing.Platform,
-                Token: existing.Token,
-                IsActive: existing.IsActive,
-                RegisteredAtUtc: existing.RegisteredAtUtc,
-                Message: "Token de dispositivo actualizado correctamente."));
+            return RegistrationConflict();
         }
 
-        // Verificar si el token ya pertenece a otro usuario y reasignar (FR-027-06)
-        Device? deviceByToken = await _deviceRepository.GetByTokenAsync(request.Token, cancellationToken);
-        if (deviceByToken is not null && deviceByToken.UserId != parsedUserId)
+        Device device = existing ?? Device.Create(parsedUserId, deviceId, request.Platform, token, _dateTimeProvider.UtcNow);
+        try
         {
-            // Reasignar: desactivar para el usuario anterior
-            deviceByToken.Deactivate();
-            await _deviceRepository.UpdateAsync(deviceByToken, cancellationToken);
+            if (existing is null)
+            {
+                await _deviceRepository.AddAsync(device, cancellationToken);
+            }
+            else
+            {
+                device.UpdateToken(token);
+                device.Activate();
+                await _deviceRepository.UpdateAsync(device, cancellationToken);
+            }
         }
-
-        // Crear nuevo dispositivo (FR-027-01)
-        Device device = Device.Create(
-            parsedUserId,
-            request.DeviceId,
-            request.Platform,
-            request.Token,
-            _dateTimeProvider.UtcNow);
-
-        await _deviceRepository.AddAsync(device, cancellationToken);
+        catch (DeviceTokenConflictException)
+        {
+            return RegistrationConflict();
+        }
 
         return Result.Success(new DeviceTokenResponseDto(
             DeviceId: device.DeviceId,
@@ -99,6 +96,12 @@ public sealed class RegisterDeviceCommandHandler : IRequestHandler<RegisterDevic
             Token: device.Token,
             IsActive: device.IsActive,
             RegisteredAtUtc: device.RegisteredAtUtc,
-            Message: "Token de dispositivo registrado correctamente."));
+            Message: existing is null
+                ? "Token de dispositivo registrado correctamente."
+                : "Token de dispositivo actualizado correctamente."));
     }
+
+    private static Result<DeviceTokenResponseDto> RegistrationConflict() =>
+        Result.Failure<DeviceTokenResponseDto>(
+            Error.Conflict("Device.RegistrationConflict", "El registro cambió durante la operación. Vuelva a intentarlo."));
 }

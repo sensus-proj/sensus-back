@@ -10,6 +10,7 @@ namespace Sensus.Infrastructure.Persistence.Mongo;
 /// </summary>
 public sealed class MongoDbContext
 {
+    private const string ClaimPushReceiptsCollection = "claim_push_receipts";
     private readonly IMongoDatabase? _database;
     private readonly ILogger<MongoDbContext> _logger;
     private readonly MongoDbSettings _settings;
@@ -68,6 +69,14 @@ public sealed class MongoDbContext
     public IMongoCollection<OfferClaimDocument> OfferClaims =>
         _database?.GetCollection<OfferClaimDocument>(_settings.OfferClaimsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<ClaimPushReceiptDocument> ClaimPushReceipts =>
+        _database?.GetCollection<ClaimPushReceiptDocument>(ClaimPushReceiptsCollection)
+        ?? throw new InvalidOperationException("MongoDB ConnectionString is not configured.");
+
+    public IMongoCollection<NotificationLocationDocument> NotificationLocations =>
+        _database?.GetCollection<NotificationLocationDocument>("notification_locations")
+        ?? throw new InvalidOperationException("MongoDB ConnectionString is not configured.");
 
     public IMongoCollection<OfferViewDocument> OfferViews =>
         _database?.GetCollection<OfferViewDocument>(_settings.OfferViewsCollectionName)
@@ -285,6 +294,10 @@ public sealed class MongoDbContext
             var expiresOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) };
             claimsCollection.Indexes.CreateOne(
                 new CreateIndexModel<OfferClaimDocument>(expiresKeys, expiresOptions));
+
+            var receiptKeys = Builders<ClaimPushReceiptDocument>.IndexKeys.Ascending(r => r.ExpiresAtUtc);
+            ClaimPushReceipts.Indexes.CreateOne(new CreateIndexModel<ClaimPushReceiptDocument>(
+                receiptKeys, new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }));
         }
         catch (Exception ex)
         {
@@ -352,6 +365,12 @@ public sealed class MongoDbContext
             var settingsUserKeys = Builders<NotificationSettingsDocument>.IndexKeys.Ascending(d => d.UserId);
             var settingsUserOptions = new CreateIndexOptions<NotificationSettingsDocument> { Unique = true };
             NotificationSettings.Indexes.CreateOne(new CreateIndexModel<NotificationSettingsDocument>(settingsUserKeys, settingsUserOptions));
+
+            var locationKeys = Builders<NotificationLocationDocument>.IndexKeys.Geo2DSphere(d => d.Coordinates);
+            NotificationLocations.Indexes.CreateOne(new CreateIndexModel<NotificationLocationDocument>(locationKeys));
+            var locationExpiry = Builders<NotificationLocationDocument>.IndexKeys.Ascending(d => d.ExpiresAtUtc);
+            NotificationLocations.Indexes.CreateOne(new CreateIndexModel<NotificationLocationDocument>(
+                locationExpiry, new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }));
         }
         catch (Exception ex)
         {

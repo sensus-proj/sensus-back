@@ -6,7 +6,7 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Completada |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ## Tareas
 
@@ -25,8 +25,15 @@
 | T033-11 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-033-01` | T033-10 | Completada |
 | T033-12 | Registrar evidencias del Constitution Check | Docs | `FR-033-01` | T033-11 | Completada |
 
+| ID | Tarea | Capa | Requisito | Estado |
+|---|---|---|---|---|
+| T033-13 | Enviar avisos tras persistir el apartado y reservar cada envío de forma atómica | Application / Infrastructure | `FR-033-09` | Implementado en local. Entrega FCM y latencia real pendientes |
+| T033-14 | Incluir el vencimiento UTC en el aviso del comprador y probar el contrato push | Application / Pruebas | `FR-033-10` | Implementado en backend. Presentación y entrega física pendientes |
+
 ## Notas de ejecución
 
 - Cada tarea se cierra actualizando `checklist.md` y `plan.md` si cambia el diseño.
 - Ninguna tarea se considera terminada sin pruebas verdes y cobertura dentro del umbral (P-V).
 - Los identificadores de requisito remiten a `spec.md` §4 y §5.
+
+- [x] T033-14 — Implementar y verificar lectura autorizada desde el aviso (FR-033-11).

@@ -14,6 +14,7 @@ using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
 using Sensus.Application.Offers.Queries.GetNearbyOffers;
+using Sensus.Application.Offers.Queries.GetOfferClaim;
 using Sensus.Application.Offers.Queries.GetOfferDetail;
 
 namespace Sensus.Api.Endpoints;
@@ -188,6 +189,23 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 033: Canje del código por el comerciante propietario
+        offersGroup.MapGet("/claims/{claimId:guid}", async (
+            Guid claimId,
+            HttpContext context,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            var result = await sender.Send(new GetOfferClaimQuery(claimId), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .WithName("GetOfferClaim")
+        .Produces<OfferClaimDetailDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
         offersGroup.MapPost("/claims/{code}/redeem", async (
             string code,
             ISender sender,

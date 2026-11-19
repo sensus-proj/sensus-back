@@ -102,6 +102,49 @@ paths:
           description: Usuario invitado no permitido
         '404':
           description: Preferencias no encontradas
+  /api/v1/users/notification-location:
+    put:
+      summary: Comparte la última ubicación para alertas de ofertas cercanas
+      operationId: shareNotificationLocation
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+      responses:
+        '204':
+          description: Ubicación guardada
+        '400':
+          description: Coordenadas inválidas
+        '401':
+          description: No autenticado
+        '403':
+          description: Usuario invitado no permitido
+        '429':
+          description: Límite de actualización de ubicación excedido
+    delete:
+      summary: Retira el consentimiento y elimina la ubicación de alertas
+      operationId: deleteNotificationLocation
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204':
+          description: Ubicación eliminada o ya ausente
+        '401':
+          description: No autenticado
+        '403':
+          description: Usuario invitado no permitido
 components:
   securitySchemes:
     bearerAuth:

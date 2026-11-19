@@ -31,7 +31,7 @@ paths:
                   description: Plataforma del dispositivo
                 token:
                   type: string
-                  description: Token de push (FCM o SNS)
+                  description: Token de registro de Firebase Cloud Messaging
       responses:
         '200':
           description: Token registrado o actualizado correctamente
@@ -60,6 +60,22 @@ paths:
           description: No autenticado
         '403':
           description: Usuario invitado no permitido
+        '409':
+          description: El registro cambió durante la reasignación del token. La operación puede reintentarse.
+        '503':
+          description: El proveedor de push no pudo validar el registro en este momento
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  status:
+                    type: integer
+                    enum: [503]
 components:
   securitySchemes:
     bearerAuth:

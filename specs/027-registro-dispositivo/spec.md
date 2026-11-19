@@ -4,13 +4,13 @@
 |---|---|
 | ID | 027 |
 | Slug | `registro-dispositivo` |
-| Estado | Implementado |
+| Estado | Parcial |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 003, 013 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
 
@@ -26,11 +26,12 @@ Registrar y actualizar el token de dispositivo del usuario para habilitar notifi
 - Reasignación segura entre usuarios
 - Despacho mediante IPushDispatcher
 - Limpieza de tokens rechazados
+- Entrega real mediante FCM a la app Android de Sensus, desarrollada en Kotlin
 
 **No incluye**
 
 - Campañas masivas
-- Programación de envíos
+- Programación de envíos, iOS y adaptador SNS
 - Preferencias por tipo (spec 044)
 
 ## 3. Actores
@@ -45,8 +46,8 @@ Registrar y actualizar el token de dispositivo del usuario para habilitar notifi
 | FR-027-01 | Registrar token de dispositivo con plataforma y deviceId | Must |
 | FR-027-02 | Actualizar el token existente sin duplicar el dispositivo | Must |
 | FR-027-03 | Despachar notificaciones mediante IPushDispatcher | Must |
-| FR-027-04 | Seleccionar el adaptador FCM o SNS por configuración | Must |
-| FR-027-05 | Eliminar tokens rechazados por el proveedor | Must |
+| FR-027-04 | Configurar FCM HTTP v1 como proveedor de producción para Android | Must |
+| FR-027-05 | Desactivar tokens rechazados definitivamente por el proveedor | Must |
 | FR-027-06 | Reasignar un token que cambia de usuario sin dejar acceso residual | Must |
 | FR-027-07 | No fallar si el usuario no tiene dispositivos activos | Should |
 
@@ -76,7 +77,7 @@ Registrar y actualizar el token de dispositivo del usuario para habilitar notifi
 
 - **Dado** token inválido en el envío
 - **Cuando** se despacha
-- **Entonces** el token se elimina y se registra
+- **Entonces** el dispositivo se desactiva y el fallo se registra sin incluir el token
 
 ### CA-027-04
 
@@ -89,6 +90,24 @@ Registrar y actualizar el token de dispositivo del usuario para habilitar notifi
 - **Dado** token de otro usuario
 - **Cuando** se registra
 - **Entonces** se reasigna y el anterior deja de recibir
+
+### CA-027-06
+
+- **Dado** un teléfono Android con permiso de notificaciones y token registrado en Sensus
+- **Cuando** el backend de pruebas despacha un aviso al dispositivo
+- **Entonces** FCM acepta el mensaje y el teléfono muestra una notificación que abre la pantalla del evento al tocarla
+
+### CA-027-07
+
+- **Dado** un envío rechazado por timeout, error de autenticación del proveedor o respuesta malformada
+- **Cuando** se procesa la respuesta de FCM
+- **Entonces** se registra un fallo sin tokens ni contenido personal y el dispositivo conserva su estado; solo un rechazo definitivo del token da lugar a su desactivación
+
+### CA-027-08
+
+- **Dado** un usuario autenticado y una indisponibilidad de FCM durante la validación del token
+- **Cuando** el usuario envía `PUT /api/v1/users/device-token`
+- **Entonces** recibe 503 con ProblemDetails y el registro persistido queda sin cambios
 
 ## 7. Contratos expuestos
 
@@ -109,7 +128,7 @@ Registrar y actualizar el token de dispositivo del usuario para habilitar notifi
 
 ## 10. Preguntas abiertas
 
-- ¿Qué adaptador será el predeterminado en producción: FCM o SNS?
+- Proveedor acordado: FCM HTTP v1 para Android.
 
 ## 11. Trazabilidad
 

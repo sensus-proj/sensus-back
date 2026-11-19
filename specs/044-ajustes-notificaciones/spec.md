@@ -4,13 +4,13 @@
 |---|---|
 | ID | 044 |
 | Slug | `ajustes-notificaciones` |
-| Estado | Implementado |
+| Estado | Parcial |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 027, 003 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
 
@@ -48,6 +48,8 @@ Permitir que el usuario configure qué notificaciones recibe, con lectura y actu
 | FR-044-04 | Respetar pushEnabled y las categorías al despachar | Must |
 | FR-044-05 | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must |
 | FR-044-06 | Devolver 200 con el estado resultante tras la actualización | Must |
+| FR-044-07 | Guardar la última ubicación compartida con consentimiento para alertas y permitir que el usuario la retire | Must |
+| FR-044-08 | Al crear una oferta disponible, avisar "Nuevo {título} cerca de ti" únicamente a usuarios con ubicación vigente dentro de su radio y alertas activadas, después de aprobar por moderación su título y descripción | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -82,12 +84,27 @@ Permitir que el usuario configure qué notificaciones recibe, con lectura y actu
 - **Cuando** se despacha un aviso de oferta
 - **Entonces** no se envía
 
+### CA-044-05
+
+- Solo la cuenta autenticada puede guardar o retirar su ubicación de alertas. Se guarda únicamente la última ubicación y su hora de recepción en UTC. La vigencia predeterminada es de 24 horas y puede reducirse con la configuración `NotificationLocation:LifetimeHours`. La ubicación retirada, vencida o eliminada con la cuenta queda excluida del despacho.
+
+### CA-044-06
+
+- Al crear una oferta con `POST /api/v1/offers` que queda disponible en ese momento (publicada, vigente y con stock), el backend modera juntos su título y descripción. Solo el veredicto `Approved` produce avisos. `Rejected`, `Quarantine`, error o tiempo agotado producen cero avisos (*fail-closed*). La oferta se crea igual: el aviso nunca bloquea ni revierte la creación.
+- Un destinatario con `pushEnabled` y `offerAlerts` activos, dentro de su `radiusKm` (límite inclusivo) y con ubicación vigente, recibe un aviso por dispositivo activo. Sin preferencias guardadas se usan los valores por defecto. El titular del comercio no recibe aviso de su propia oferta.
+- El aviso contiene solo el título `Nuevo {título de la oferta} cerca de ti`, sin cuerpo, y los datos `type=nearby_offer` y `offerId`. Al tocarlo, la app abre `GET /api/v1/offers/{offerId}`.
+- Sin difusión retroactiva ni avisos por ofertas programadas a futuro, republicadas o editadas. El máximo de destinatarios por oferta, el radio máximo de búsqueda y el tiempo total del envío se fijan en la configuración `NearbyOfferAlerts`.
+
+> **Decisión del responsable del proyecto (2026-11-19).** El aviso se habilita moderando el texto que muestra la notificación (título y descripción). La moderación de la imagen de la oferta sigue pendiente en la spec 034, donde la brecha IV queda registrada. Esta decisión sustituye, solo para el aviso, la condición previa de aprobación conjunta con la imagen.
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
 | GET | `/api/v1/users/settings` | JWT |
 | PUT | `/api/v1/users/settings` | JWT |
+
+La ubicación de alertas se gestionará mediante `PUT` y `DELETE /api/v1/users/notification-location`. Ambas operaciones requieren JWT de usuario registrado. `PUT` recibe `latitude` y `longitude`; implica la acción de compartir ubicación para alertas desde la app. Ambas devuelven 204. `DELETE` es idempotente. Las coordenadas fuera de rango se rechazan con 400.
 
 ## 8. Dependencias y supuestos
 
@@ -105,7 +122,7 @@ Permitir que el usuario configure qué notificaciones recibe, con lectura y actu
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-044-01`, `FR-044-02`, `FR-044-03`, `FR-044-04`, `FR-044-05`, `FR-044-06`
+- Requisitos de este spec: `FR-044-01`, `FR-044-02`, `FR-044-03`, `FR-044-04`, `FR-044-05`, `FR-044-06`, `FR-044-07`, `FR-044-08`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

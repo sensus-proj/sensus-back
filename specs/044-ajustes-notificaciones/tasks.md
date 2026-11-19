@@ -5,8 +5,8 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Implementado |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado | Parcial |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ## Tareas
 
@@ -22,6 +22,12 @@
 | T044-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-044-01` | T044-07 | Implementado |
 | T044-09 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-044-01` | T044-08 | Implementado |
 | T044-10 | Registrar evidencias del Constitution Check | Docs | `FR-044-01` | T044-09 | Implementado |
+
+| ID | Tarea | Capa | Requisito | Estado |
+|---|---|---|---|---|
+| T044-11 | Cerrar contrato de ubicación consentida, vigencia y purga | Api / Docs | `FR-044-07` | Implementado |
+| T044-12 | Implementar persistencia geográfica indexada y retiro de ubicación | Infrastructure | `FR-044-07` | Implementado en local. Integración móvil pendiente |
+| T044-13 | Despachar alertas al crear ofertas con texto aprobado y cubrir radio, preferencias y fallos | Application / Infrastructure / Pruebas | `FR-044-08` | Implementado. Entrega FCM física pendiente de la credencial en SSM |
 
 ## Notas de ejecución
 
