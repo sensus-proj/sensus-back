@@ -6,7 +6,7 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Parcial |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Alineado a | `constitution.md` v2.3.0 · `AGENTS.md` v2.3.0 |
 
 ## Tareas
 
@@ -26,13 +26,17 @@
 | T048-12 | Implementar invalidación de caché al crear/actualizar/eliminar publicación | Infrastructure | `FR-048-08` | T048-03 | Pendiente (Ola 3) |
 | T048-13 | Implementar invalidación de caché al actualizar perfil de comerciante y usuario | Infrastructure | `FR-048-09` | T048-03 | Completada |
 | T048-14 | Implementar fallback graceful a MongoDB si Redis no está disponible | Infrastructure | `FR-048-11` | T048-03 | Completada |
-| T048-15 | Integrar health check del caché en `/health` | Api | `FR-048-12` | T048-04 | Pendiente |
+| T048-15 | Integrar health check del caché en `/health/ready` (`CacheHealthCheck`: `Degraded`, nunca `Unhealthy`) | Api | `FR-048-12` | T048-04 | Completada |
 | T048-16 | Pruebas unitarias de `RedisCacheService` y Handlers con caché | Pruebas | `FR-048-01` | T048-03 | Completada |
 | T048-17 | Pruebas de integración con Redis real | Pruebas | `FR-048-02` | T048-03 | Pendiente |
 | T048-18 | Prueba de fallo graceful (Redis caído → MongoDB sin error 5xx) | Pruebas | `FR-048-11` | T048-14 | Completada |
 | T048-19 | Prueba de invalidación de caché al modificar oferta | Pruebas | `FR-048-07` | T048-11 | Completada |
 | T048-20 | Actualizar `specs/README.md`, `requirements.md` y checklist del spec | Docs | `FR-048-01` | T048-20 | Completada |
 | T048-21 | Registrar evidencias del Constitution Check | Docs | `FR-048-01` | T048-20 | Completada |
+
+| T048-22 | Implementar `MemoryCacheService` (TTL acotado, tope de entradas, JSON inmutable) y seleccionar proveedor por configuración | Infrastructure | `FR-048-13` | T048-03 | Completada |
+| T048-23 | Pruebas de `MemoryCacheService`, selección de proveedor y `CacheHealthCheck` | Pruebas | `FR-048-13` | T048-22 | Completada |
+| T048-24 | Aprovisionar VPC, Valkey Serverless y Lambda en VPC con CDK (`SensusInfraStack.CacheAndSchedule.cs`); `Redis__Enabled=true` | IaC | `FR-048-14` | T048-22 | Hecho (pendiente de despliegue por CI) |
 
 ## Notas de ejecución
 

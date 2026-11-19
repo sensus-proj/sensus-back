@@ -148,7 +148,18 @@ public static class DependencyInjection
                 return ConnectionMultiplexer.Connect(options);
             });
         }
-        services.AddSingleton<ICacheService, RedisCacheService>();
+
+        // Spec 048: con Redis habilitado y configurado se usa Redis; si no (despliegue en Lambda sin ElastiCache,
+        // por costo) se usa la caché en memoria de proceso, con TTL acotado, para que las lecturas sigan cacheadas.
+        services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionName));
+        if (redisEnabled && !string.IsNullOrWhiteSpace(redisConn))
+        {
+            services.AddSingleton<ICacheService, RedisCacheService>();
+        }
+        else
+        {
+            services.AddSingleton<ICacheService, MemoryCacheService>();
+        }
 
         // Configuración de MongoDB Atlas
         services.Configure<MongoDbSettings>(
@@ -175,6 +186,18 @@ public static class DependencyInjection
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
         services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
+
+        // Sanciones y baneo (Spec 020): configuración, persistencia y métricas
+        services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(
+            configuration.GetSection(Sensus.Application.Common.Settings.SanctionSettings.SectionName));
+        services.AddScoped<Sensus.Domain.Repositories.ISanctionRepository, MongoSanctionRepository>();
+        services.AddSingleton<ISanctionMetrics>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedSanctionMetrics(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
+                : new NullSanctionMetrics();
+        });
 
         // Preferencias de notificación (Spec 044)
         services.AddScoped<INotificationSettingsRepository, MongoNotificationSettingsRepository>();

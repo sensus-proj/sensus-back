@@ -135,4 +135,64 @@ public class LoginCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Auth.UserDeactivated");
     }
+
+    [Fact]
+    public async Task Handle_Should_ReturnSanctionedForbidden_WithEndDate_WhenCredentialsAreValidButUserIsSuspended()
+    {
+        // Arrange (Spec 020, CA-020-03)
+        var now = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        var user = User.Create("Carlos Diaz", "carlos@sensus.com", "hash", true, now).Value;
+        user.Suspend(Guid.NewGuid(), now.AddHours(24), now);
+        var command = new LoginCommand("carlos@sensus.com", "CorrectPassword123!");
+        _userRepository.GetByEmailAsync(command.Correo, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword(command.Password, user.PasswordHash).Returns(true);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Auth.UserSanctioned");
+        result.Error.Type.Should().Be(Sensus.Domain.Common.ErrorType.Forbidden);
+        result.Error.Extensions!["sanctionEndsAtUtc"].Should().Be(now.AddHours(24));
+        _jwtTokenGenerator.DidNotReceive().GenerateToken(Arg.Any<User>());
+        await _userRepository.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_Should_NotRevealSanction_WhenPasswordIsWrong()
+    {
+        // Arrange (ASVS V2: sin enumeración; la sanción solo se revela con credenciales válidas)
+        var now = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        var user = User.Create("Carlos Diaz", "carlos@sensus.com", "hash", true, now).Value;
+        user.Suspend(Guid.NewGuid(), null, now);
+        var command = new LoginCommand("carlos@sensus.com", "WrongPassword!");
+        _userRepository.GetByEmailAsync(command.Correo, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword(command.Password, user.PasswordHash).Returns(false);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Error.Code.Should().Be("Auth.InvalidCredentials");
+    }
+
+    [Fact]
+    public async Task Handle_Should_AllowLogin_WhenSuspensionAlreadyExpired()
+    {
+        // Arrange (CA-020-06: la sanción temporal vence sin intervención)
+        var now = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        var user = User.Create("Carlos Diaz", "carlos@sensus.com", "hash", true, now.AddDays(-5)).Value;
+        user.Suspend(Guid.NewGuid(), now.AddMinutes(-1), now.AddDays(-1));
+        var command = new LoginCommand("carlos@sensus.com", "CorrectPassword123!");
+        _userRepository.GetByEmailAsync(command.Correo, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword(command.Password, user.PasswordHash).Returns(true);
+        _jwtTokenGenerator.GenerateToken(user).Returns(("jwt", now.AddHours(1)));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+    }
 }

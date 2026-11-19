@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
+using Sensus.Application.Sanctions.Commands.ApplySanction;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -16,19 +18,25 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
     private readonly IMediaAssetRepository _mediaAssetRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ISender _sender;
+    private readonly ILogger<UploadMediaCommandHandler> _logger;
 
     public UploadMediaCommandHandler(
         IMediaStorage mediaStorage,
         IImageModerationService moderationService,
         IMediaAssetRepository mediaAssetRepository,
         ICurrentUserService currentUser,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ISender sender,
+        ILogger<UploadMediaCommandHandler> logger)
     {
         _mediaStorage = mediaStorage;
         _moderationService = moderationService;
         _mediaAssetRepository = mediaAssetRepository;
         _currentUser = currentUser;
         _dateTimeProvider = dateTimeProvider;
+        _sender = sender;
+        _logger = logger;
     }
 
     public async Task<Result<UploadMediaResponseDto>> Handle(
@@ -93,6 +101,8 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
 
         await _mediaAssetRepository.AddAsync(mediaAsset, cancellationToken);
 
+        await TrySanctionAsync(parsedUserId, mediaAsset.Id, moderationResult, cancellationToken);
+
         UploadMediaResponseDto dto = new UploadMediaResponseDto(
             MediaId: mediaAsset.Id,
             PublicId: mediaAsset.PublicId,
@@ -105,5 +115,38 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             CreatedAtUtc: mediaAsset.CreatedAtUtc);
 
         return Result.Success(dto);
+    }
+
+    /// <summary>
+    /// Spec 020 (FR-020-01): una decisión de banda alta dispara la sanción. Un fallo al sancionar nunca debe
+    /// alterar el veredicto de moderación ya aplicado ni publicar el contenido (fail-closed).
+    /// </summary>
+    private async Task TrySanctionAsync(
+        Guid userId,
+        Guid mediaId,
+        ImageModerationResult moderation,
+        CancellationToken cancellationToken)
+    {
+        if (moderation.IsApproved)
+        {
+            return;
+        }
+
+        try
+        {
+            await _sender.Send(
+                new ApplySanctionCommand(
+                    userId,
+                    mediaId,
+                    moderation.Decision,
+                    moderation.FlaggedCategories,
+                    moderation.CategoryScores,
+                    moderation.AppliedThresholdSummary),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "No se pudo aplicar la sanción para el activo {MediaId}; el contenido sigue sin publicarse.", mediaId);
+        }
     }
 }

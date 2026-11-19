@@ -20,4 +20,5 @@ public sealed class MongoDbSettings
     public string AiTraceLogsCollectionName { get; set; } = "ai_trace_logs";
     public string FriendRequestsCollectionName { get; set; } = "friend_requests";
     public string SharedOffersCollectionName { get; set; } = "shared_offers";
+    public string SanctionsCollectionName { get; set; } = "sanctions";
 }
