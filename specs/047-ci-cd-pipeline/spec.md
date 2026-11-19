@@ -56,7 +56,7 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 | FR-047-02 | Ejecuta pruebas unitarias sin integración en job aislado | Must |
 | FR-047-03 | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must |
 | FR-047-04 | Ejecuta Snyk `test` con severidad ≥ high como paso bloqueante | Must |
-| FR-047-05 | Ejecuta SonarCloud análisis con calidad gate bloqueante | Must |
+| FR-047-05 | Ejecuta SonarCloud análisis con calidad gate bloqueante en todos los PR (hacia `develop` y `main`) y en `push` a `main` (el plan gratuito de SonarQube Cloud restringe el análisis directo de ramas no principales fuera de PR) | Must |
 | FR-047-06 | Ejecuta Stryker.NET pruebas de mutación como paso advisory | Should |
 | FR-047-07 | Ejecuta gitleaks escaneo de secretos como paso bloqueante | Must |
 | FR-047-08 | Verifica cobertura ≥ 80 % en `Sensus.Domain` y `Sensus.Application` como paso bloqueante | Must |
@@ -102,9 +102,9 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 - **Entonces**: el job falla y bloquea el merge
 
 ### CA-047-05: SonarCloud calidad gate
-- **Dado**: código con code smells o bugs
+- **Dado**: un PR hacia `develop` o `main`, o un `push` a `main` (en `push` directo a `develop` el job se omite porque el plan gratuito de SonarQube Cloud rechaza ramas no principales con HTTP 403, conservando costo 0 USD de P-VI sin relajar el gate de PR)
 - **Cuando**: se ejecuta el análisis de SonarCloud
-- **Entonces**: la calidad gate debe pasar antes de permitir el merge
+- **Entonces**: la calidad gate debe pasar antes de permitir el merge y el resumen de `sonar_end.log` se publica incluso ante fallo sin usar `continue-on-error`
 
 ### CA-047-06: Cobertura bloqueante
 - **Dado**: cobertura medida por Coverlet
