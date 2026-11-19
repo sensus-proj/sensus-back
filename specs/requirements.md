@@ -128,12 +128,19 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Implementado |
 | `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Implementado |
 | `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
-| `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Pendiente |
-| `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Pendiente |
-| `FR-020-03` | 020 | FR | Registrar motivo, evidencia y responsable | Must | Pendiente |
-| `FR-020-04` | 020 | FR | Bloquear el acceso del usuario sancionado | Must | Pendiente |
-| `NFR-020-01` | 020 | NFR | Efectividad del bloqueo | < 1 s | Pendiente |
-| `NFR-020-02` | 020 | NFR | Reversibilidad | Sin pérdida de datos del usuario | Pendiente |
+| `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Implementado |
+| `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Implementado |
+| `FR-020-03` | 020 | FR | Registrar motivo, evidencia y responsable | Must | Implementado |
+| `FR-020-04` | 020 | FR | Bloquear el acceso del usuario sancionado | Must | Implementado |
+| `NFR-020-01` | 020 | NFR | Efectividad del bloqueo | < 1 s | Implementado |
+| `NFR-020-02` | 020 | NFR | Reversibilidad | Sin pérdida de datos del usuario | Implementado |
+| `FR-020-05` | 020 | FR | Consultar sanciones con filtros y paginación (administrador) | Must | Implementado |
+| `FR-020-06` | 020 | FR | Escalar la duración de la sanción por reincidencia hasta el baneo permanente | Should | Implementado |
+| `FR-020-07` | 020 | FR | Aplicar una sanción manual temporal o permanente (administrador) | Should | Implementado |
+| `NFR-020-03` | 020 | NFR | Privacidad y observabilidad | 0 PII en logs; métricas de sanciones aplicadas y revertidas | Implementado |
+| `NFR-020-04` | 020 | NFR | Rendimiento de consulta | Paginación 20/100 sobre índices declarados | Implementado |
+| `FR-020-08` | 020 | FR | Notificar por push al usuario al aplicar y al revertir una sanción | Must | Implementado |
+| `NFR-020-05` | 020 | NFR | Seguridad de nivel fintech (Principio VIII) | Sin enumeración de cuentas; autorización en borde y caso de uso | Implementado |
 | `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Pendiente |
 | `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Pendiente |
 | `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Pendiente |
@@ -442,4 +449,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
 | `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
 
-Total: **437 requisitos** en 50 specs.
+Total: **444 requisitos** en 50 specs.

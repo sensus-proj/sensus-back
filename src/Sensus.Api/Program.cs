@@ -115,6 +115,14 @@ builder.Services.AddAuthentication(options =>
                 return;
             }
 
+            // Spec 020 (FR-020-04, NFR-020-01): una sanción vigente invalida de inmediato los tokens ya emitidos.
+            var clock = context.HttpContext.RequestServices.GetRequiredService<IDateTimeProvider>();
+            if (user.IsSuspended(clock.UtcNow))
+            {
+                context.Fail("La cuenta se encuentra suspendida por una sanción.");
+                return;
+            }
+
             var tokenSecurityStamp = userPrincipal.FindFirstValue(JwtTokenGenerator.SecurityStampClaimType);
             var path = context.HttpContext.Request.Path.Value ?? string.Empty;
             var isLogoutPath = path.EndsWith("/auth/logout", StringComparison.OrdinalIgnoreCase);
@@ -250,6 +258,7 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();
 

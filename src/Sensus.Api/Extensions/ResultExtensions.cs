@@ -55,6 +55,14 @@ public static class ResultExtensions
             Detail = error.Message
         };
 
+        if (error.Extensions is not null)
+        {
+            foreach (var (key, value) in error.Extensions)
+            {
+                problemDetails.Extensions[key] = value;
+            }
+        }
+
         return Results.Problem(problemDetails);
     }
 }

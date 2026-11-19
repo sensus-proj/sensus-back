@@ -33,6 +33,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public ITextModerationService TextModerationService { get; } = Substitute.For<ITextModerationService>();
     public ICacheService CacheService { get; } = Substitute.For<ICacheService>();
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
+    public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
+    public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -83,6 +85,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(FakeEmailSender);
+
+            // Sanciones (Spec 020): sin MongoDB real en los tests de endpoints; sin dispositivos que notificar
+            services.RemoveAll<ISanctionRepository>();
+            services.AddSingleton(SanctionRepository);
+
+            DeviceRepository.GetActiveByUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
+            services.RemoveAll<IDeviceRepository>();
+            services.AddSingleton(DeviceRepository);
 
             // Sensi IA (Spec 046)
             services.RemoveAll<IAiConversationRepository>();

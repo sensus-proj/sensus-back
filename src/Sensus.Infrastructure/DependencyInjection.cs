@@ -176,6 +176,18 @@ public static class DependencyInjection
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
         services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
 
+        // Sanciones y baneo (Spec 020): configuración, persistencia y métricas
+        services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(
+            configuration.GetSection(Sensus.Application.Common.Settings.SanctionSettings.SectionName));
+        services.AddScoped<Sensus.Domain.Repositories.ISanctionRepository, MongoSanctionRepository>();
+        services.AddSingleton<ISanctionMetrics>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedSanctionMetrics(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
+                : new NullSanctionMetrics();
+        });
+
         // Preferencias de notificación (Spec 044)
         services.AddScoped<INotificationSettingsRepository, MongoNotificationSettingsRepository>();
 

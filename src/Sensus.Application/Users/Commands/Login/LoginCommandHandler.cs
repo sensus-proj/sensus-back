@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Sanctions.Common;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Repositories;
@@ -52,8 +53,16 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<A
             return Result.Failure<AuthResponseDto>(invalidCredentialsError);
         }
 
-        // Registrar último acceso
         var now = _dateTimeProvider.UtcNow;
+
+        // Spec 020 (FR-020-04, CA-020-03): se verifica DESPUÉS de la contraseña para no revelar a un atacante
+        // que la cuenta existe ni que está sancionada (ASVS V2, no enumeración de usuarios).
+        if (user.IsSuspended(now))
+        {
+            return Result.Failure<AuthResponseDto>(user.ToLoginError());
+        }
+
+        // Registrar último acceso
         user.RecordAccess(now);
         await _userRepository.UpdateAsync(user, cancellationToken);
 

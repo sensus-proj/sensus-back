@@ -1,8 +1,11 @@
 using FluentAssertions;
+using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
+using Sensus.Application.Sanctions.Commands.ApplySanction;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -17,6 +20,7 @@ public sealed class UploadMediaCommandHandlerTests
     private readonly IMediaAssetRepository _mediaAssetRepository = Substitute.For<IMediaAssetRepository>();
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly ISender _sender = Substitute.For<ISender>();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly UploadMediaCommandHandler _handler;
@@ -28,7 +32,9 @@ public sealed class UploadMediaCommandHandlerTests
             _moderationService,
             _mediaAssetRepository,
             _currentUser,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _sender,
+            NullLogger<UploadMediaCommandHandler>.Instance);
     }
 
     [Fact]
@@ -165,5 +171,70 @@ public sealed class UploadMediaCommandHandlerTests
         await _mediaAssetRepository.Received(1).AddAsync(
             Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Rejected && a.SecureUrl == null),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenModerationRejected_ShouldSendApplySanctionCommandWithEvidence()
+    {
+        // Arrange
+        ArrangeUploadReady("Rejected", isApproved: false, categories: ["weapons"]);
+        var command = new UploadMediaCommand(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        await _sender.Received(1).Send(
+            Arg.Is<ApplySanctionCommand>(c =>
+                c.UserId == _userId &&
+                c.Decision == "Rejected" &&
+                c.MediaId == result.Value.MediaId &&
+                c.Categories!.Contains("weapons")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenModerationApproved_ShouldNotSendApplySanctionCommand()
+    {
+        // Arrange
+        ArrangeUploadReady("Approved", isApproved: true, categories: []);
+        var command = new UploadMediaCommand(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg");
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _sender.DidNotReceive().Send(Arg.Any<ApplySanctionCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenSanctionFails_ShouldStillReturnRejectedVerdictAndNeverPublish()
+    {
+        // Arrange (regresión fail-closed: un fallo al sancionar no altera el veredicto de moderación)
+        ArrangeUploadReady("Rejected", isApproved: false, categories: ["weapons"]);
+        _sender.Send(Arg.Any<ApplySanctionCommand>(), Arg.Any<CancellationToken>())
+            .Returns<Task<Result>>(_ => throw new InvalidOperationException("Mongo caído"));
+        var command = new UploadMediaCommand(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be("Rejected");
+        result.Value.SecureUrl.Should().BeNull();
+    }
+
+    private void ArrangeUploadReady(string decision, bool isApproved, string[] categories)
+    {
+        _currentUser.UserId.Returns(_userId.ToString());
+        _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 11, 13, 10, 0, 0, DateTimeKind.Utc));
+        _mediaAssetRepository.CountByUserAndDateAsync(_userId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+        _mediaStorage.UploadImageAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new MediaUploadResult("public-id-123", "https://cloudinary.com/img.jpg")));
+        _moderationService.ModerateImageBytesAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(isApproved, "Resultado.", categories, decision));
     }
 }

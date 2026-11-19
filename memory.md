@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 3.3.0 · **Actualizado:** 2026-11-17 · **Alineado a:** `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0
+**Version:** 3.4.0 · **Actualizado:** 2026-11-19 · **Alineado a:** `constitution.md` v2.3.0 · `AGENTS.md` v2.3.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,14 +11,14 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-17 |
+| **Última actualización** | 2026-11-19 |
 | **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas para **Spec 047 v1.2.0** (CI-CD y DevSecOps al 100 %, cerradas `T047-14` a `T047-16`), **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas, tareas `T046-01` a `T046-22` cerradas y parciales según alcance), resolución integral de los 14 ítems de revisión de código y prerrequisitos de infraestructura y datos (Items 0 a 8) |
 | **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Spec 046, Spec 047 y prerrequisitos) |
 | **Agente** | Antigravity |
-| **Constitución vigente** | v2.2.0 (2026-11-15) |
-| **AGENTS.md vigente** | v2.2.0 |
+| **Constitución vigente** | v2.3.0 (2026-11-19) |
+| **AGENTS.md vigente** | v2.3.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests) |
-| **Última tarea completada** | Spec 047 (CI-CD y calidad DevSecOps completada al 100 %, elevando del 71 % al 100 %): 1) Runner de Evals sanitizado `.github/scripts/run-ai-evals.mjs` (FR-047-13, FR-047-15, NFR-047-06) con validación determinista al 100 %, rúbricas de modelo y 0 PII/secretos; 2) Workflow `.github/workflows/ai-evals.yml` (FR-047-13, FR-047-15) ejecutable vía `workflow_dispatch` y `schedule` con publicación de reporte; 3) Puerta bloqueante en `ci.yml` para PRs (T047-16, FR-047-14); 4) Candado en `deploy-serverless.yml` previo a `cdk deploy` exigiendo Evals en verde (T047-16, FR-047-14); 5) Trazabilidad SDD actualizada en specs/047, requirements.md y specs/README.md. Antes: FR-046-18 (offersCited enriquecidas) y Spec 049 (presupuesto DynamoDB) |
+| **Última tarea completada** | **Spec 020 (sanciones y baneo) implementada** y **constitución v2.3.0** (Principio VIII, DevSecOps de nivel fintech en backend y móvil, con Apéndice F de brechas G-01 a G-13). Spec 020: entidad `Sanction` de solo adición, suspensión denormalizada en `User`, escalamiento 24 h, 7 d, 30 d, permanente en `Moderation:Sanctions`, endpoints `/api/v1/moderation/sanctions` solo para `Administrador`, bloqueo en login (403 `Auth.UserSanctioned`, tras validar la contraseña) y en cada token, alerta push al aplicar y revertir, métricas EMF; 711 pruebas unitarias, 283 de integración y 12 contra MongoDB real. Antes: Spec 047 (CI-CD y calidad DevSecOps completada al 100 %, elevando del 71 % al 100 %): 1) Runner de Evals sanitizado `.github/scripts/run-ai-evals.mjs` (FR-047-13, FR-047-15, NFR-047-06) con validación determinista al 100 %, rúbricas de modelo y 0 PII/secretos; 2) Workflow `.github/workflows/ai-evals.yml` (FR-047-13, FR-047-15) ejecutable vía `workflow_dispatch` y `schedule` con publicación de reporte; 3) Puerta bloqueante en `ci.yml` para PRs (T047-16, FR-047-14); 4) Candado en `deploy-serverless.yml` previo a `cdk deploy` exigiendo Evals en verde (T047-16, FR-047-14); 5) Trazabilidad SDD actualizada en specs/047, requirements.md y specs/README.md. Antes: FR-046-18 (offersCited enriquecidas) y Spec 049 (presupuesto DynamoDB) |
 | **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). «No subas cambios de nada» confirmado |
 
 ---
