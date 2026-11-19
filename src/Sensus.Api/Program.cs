@@ -27,11 +27,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 builder.Configuration.AddEnvironmentVariables();
 
-// El secreto JWT nunca se versiona (AGENTS.md §8). En Development se genera uno efímero cuando
-// no está configurado; fuera de Development su ausencia es un error de configuración explícito.
+// Secretos de producción desde SSM Parameter Store (Principio VIII, regla 5). Va al final: tiene la mayor prioridad.
+builder.Configuration.AddSensusSecretStore(Environment.GetEnvironmentVariable(SecretsConfigurationExtensions.PrefixVariable));
+
+// El secreto JWT nunca se versiona (AGENTS.md §8). Solo en Development y Testing se genera uno local cuando
+// no está configurado. En Lambda su ausencia detiene el arranque (fail-closed): un secreto derivable del código
+// permitiría a cualquiera fabricar tokens válidos.
 var configuredSecret = builder.Configuration["JwtSettings:Secret"];
 var isLambdaRuntime = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
-if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") || isLambdaRuntime))
+if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
 {
     var seedBytes = Encoding.UTF8.GetBytes($"Sensus.JwtKey.Deterministic.{builder.Environment.EnvironmentName}");
     configuredSecret = Convert.ToBase64String(SHA384.HashData(seedBytes));

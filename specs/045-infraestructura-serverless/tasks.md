@@ -22,6 +22,8 @@
 | T045-08 | Aplicar etiquetas obligatorias (`project`, `environment`, `owner`) en `Program.cs` de `Sensus.Infra` | IaC | `FR-045-09` | T045-05 | Completada |
 | T045-09 | Verificar compilación de `Sensus.Infra`, regresión de las 201 pruebas de `sensus-back.sln` y validación de `.github/workflows/ci.yml` | Pruebas | `NFR-045-05` | T045-02, T045-08 | Completada |
 | T045-10 | Actualizar `specs/README.md`, `specs/requirements.md` y `memory.md` | Docs | `FR-045-02` | T045-09 | Completada |
+| T045-11 | Cargar secretos desde SSM (`SecretsConfigurationExtensions`), quitar la inyección por variables de entorno en CDK y en el workflow, permiso `GetParametersByPath` sobre la ruta, y fail-closed del secreto JWT en Lambda | Api e IaC | `FR-045-11` | T045-10 | Hecho (pendiente de cargar parámetros) |
+| T045-12 | Pasar `ALERTS_EMAIL` como contexto `budgetEmail` en `deploy-serverless.yml` | IaC | `FR-045-12` | T045-10 | Hecho |
 
 ## Notas de ejecución
 
