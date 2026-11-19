@@ -22,6 +22,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IAiConversationRepository? _conversationRepository;
     private readonly IAiMessageRepository? _messageRepository;
     private readonly IAiTraceLogRepository? _traceLogRepository;
+    private readonly INotificationLocationRepository? _notificationLocations;
 
     public DeleteAccountCommandHandler(
         IUserRepository userRepository,
@@ -35,7 +36,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         ICacheService? cacheService = null,
         IAiConversationRepository? conversationRepository = null,
         IAiMessageRepository? messageRepository = null,
-        IAiTraceLogRepository? traceLogRepository = null)
+        IAiTraceLogRepository? traceLogRepository = null,
+        INotificationLocationRepository? notificationLocations = null)
     {
         _userRepository = userRepository;
         _comercioRepository = comercioRepository;
@@ -49,6 +51,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _traceLogRepository = traceLogRepository;
+        _notificationLocations = notificationLocations;
     }
 
     public async Task<Result> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
@@ -102,6 +105,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         }
 
         await _userRepository.DeleteAsync(userId, cancellationToken);
+
+        if (_notificationLocations is not null)
+        {
+            await _notificationLocations.DeleteAsync(userId, cancellationToken);
+        }
 
         return Result.Success();
     }

@@ -53,6 +53,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## F. Registro
 
+- [ ] Para habilitar las alertas de `FR-044-08`, persistir evidencia de moderación conjunta vinculada a la versión y contenido de la oferta. La ruta de creación actual puede guardar `Published` sin esa evidencia; ningún aviso debe usar el estado como sustituto del veredicto (`FR-034-03`, `NFR-034-02`).
+
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `POST /api/v1/offers` con invariantes en `Offer.Create`. Faltan Draft, límite de 20 activas y respuesta 202. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |

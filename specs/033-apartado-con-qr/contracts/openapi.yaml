@@ -29,6 +29,38 @@ paths:
         '403': { description: La sesión de invitado no puede apartar }
         '409': { description: Oferta no disponible, sin stock o ya existe un apartado activo }
         '429': { description: Límite de peticiones excedido }
+  /api/v1/offers/claims/{claimId}:
+    get:
+      summary: Recupera un apartado desde un aviso push
+      operationId: getOfferClaim
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Apartado del comprador o del comercio titular
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [claimId, offerId, status, expiresAtUtc]
+                properties:
+                  claimId: { type: string, format: uuid }
+                  offerId: { type: string, format: uuid }
+                  status: { type: string, enum: [Active, Redeemed, Expired] }
+                  expiresAtUtc: { type: string, format: date-time }
+                  qrPayload:
+                    type: [string, 'null']
+                    description: Disponible únicamente para el comprador con un apartado vigente y firma verificable.
+        '401': { description: No autenticado }
+        '403': { description: Sesión de invitado }
+        '404': { description: Apartado inexistente o ajeno }
   /api/v1/offers/claims/{code}/redeem:
     post:
       summary: Canjea un código de apartado

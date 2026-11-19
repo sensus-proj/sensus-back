@@ -35,6 +35,8 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IUserRepository>();
             services.AddSingleton<IUserRepository>(UserRepository);
+            services.RemoveAll<INotificationLocationRepository>();
+            services.AddSingleton<INotificationLocationRepository, InMemoryNotificationLocationRepository>();
 
             services.RemoveAll<IComercioRepository>();
             services.AddSingleton<IComercioRepository>(ComercioRepository);

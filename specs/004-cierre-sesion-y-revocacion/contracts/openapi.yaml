@@ -10,8 +10,15 @@ paths:
     post:
       summary: "Cierra la sesión activa revocando el token JWT actual de forma verificable e idempotente"
       security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: deviceId
+          required: false
+          description: Identificador de la instalación que se desvincula de las notificaciones push.
+          schema: { type: string, minLength: 1, maxLength: 100 }
       responses:
         '204': { description: Sin contenido }
+        '400': { description: Identificador inválido }
         '401': { description: No autenticado }
 components:
   securitySchemes:

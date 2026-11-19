@@ -3,6 +3,7 @@ using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.ClaimOffer;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -20,6 +21,7 @@ public class ClaimOfferCommandHandlerTests
     private readonly IClaimCodeService _claimCodeService = Substitute.For<IClaimCodeService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IClaimPushNotifier _claimPushNotifier = Substitute.For<IClaimPushNotifier>();
     private readonly ClaimOfferCommandHandler _handler;
 
     public ClaimOfferCommandHandlerTests()
@@ -35,7 +37,8 @@ public class ClaimOfferCommandHandlerTests
             _currentUserService,
             _claimCodeService,
             _dateTimeProvider,
-            _cacheService);
+            _cacheService,
+            _claimPushNotifier);
     }
 
     [Fact]
@@ -65,6 +68,9 @@ public class ClaimOfferCommandHandlerTests
 
         await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offer.Id), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+        await _claimPushNotifier.Received(1).NotifyAsync(
+            Arg.Is<OfferClaim>(claim => claim.Id == result.Value.ClaimId && claim.ExpiresAtUtc == result.Value.ExpiresAtUtc),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -137,6 +143,7 @@ public class ClaimOfferCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("OfferClaim.AlreadyActive");
         await _offerRepository.Received(1).ReturnStockAsync(offer.Id, 1, Arg.Any<CancellationToken>());
+        await _claimPushNotifier.DidNotReceive().NotifyAsync(Arg.Any<OfferClaim>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

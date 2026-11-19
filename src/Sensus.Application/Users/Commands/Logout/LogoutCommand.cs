@@ -6,4 +6,4 @@ namespace Sensus.Application.Users.Commands.Logout;
 /// <summary>
 /// Comando CQRS para cerrar la sesión del usuario autenticado (FR-004-01).
 /// </summary>
-public sealed record LogoutCommand : IRequest<Result>;
+public sealed record LogoutCommand(string? DeviceId = null) : IRequest<Result>;

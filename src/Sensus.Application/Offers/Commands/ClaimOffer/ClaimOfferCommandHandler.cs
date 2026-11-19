@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -15,6 +16,7 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
     private readonly IClaimCodeService _claimCodeService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ICacheService? _cacheService;
+    private readonly IClaimPushNotifier? _claimPushNotifier;
 
     public ClaimOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -22,7 +24,8 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         ICurrentUserService currentUserService,
         IClaimCodeService claimCodeService,
         IDateTimeProvider dateTimeProvider,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IClaimPushNotifier? claimPushNotifier = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -30,6 +33,7 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         _claimCodeService = claimCodeService;
         _dateTimeProvider = dateTimeProvider;
         _cacheService = cacheService;
+        _claimPushNotifier = claimPushNotifier;
     }
 
     public async Task<Result<ClaimOfferResultDto>> Handle(
@@ -96,6 +100,11 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         }
 
         await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
+
+        if (_claimPushNotifier is not null)
+        {
+            await _claimPushNotifier.NotifyAsync(claim, cancellationToken);
+        }
 
         return Result.Success(new ClaimOfferResultDto(
             claim.Id,

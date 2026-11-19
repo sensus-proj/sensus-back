@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -16,6 +17,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -23,7 +25,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        INearbyOfferNotifier? nearbyOfferNotifier = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -31,6 +34,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _nearbyOfferNotifier = nearbyOfferNotifier;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -72,6 +76,12 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
 
         _logger.LogInformation("Oferta {OfferId} creada exitosamente para el comercio {ComercioId}. Vigencia hasta {EndsAtUtc}",
             offer.Id, comercio.Id, offer.EndsAt);
+
+        // FR-044-08: el aviso se intenta después de persistir y nunca revierte la creación.
+        if (_nearbyOfferNotifier is not null)
+        {
+            await _nearbyOfferNotifier.NotifyAsync(offer, userId, cancellationToken);
+        }
 
         return Result.Success(offer.ToDto());
     }

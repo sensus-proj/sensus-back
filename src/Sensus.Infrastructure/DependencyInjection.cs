@@ -185,7 +185,6 @@ public static class DependencyInjection
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
-        services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
 
         // Sanciones y baneo (Spec 020): configuración, persistencia y métricas
         services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(
