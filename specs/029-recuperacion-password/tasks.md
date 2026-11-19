@@ -24,6 +24,8 @@
 | T029-10 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-029-01` | T029-09 | Hecho |
 | T029-11 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-029-01` | T029-10 | Hecho |
 | T029-12 | Registrar evidencias del Constitution Check | Docs | `FR-029-01` | T029-11 | Hecho |
+| T029-13 | Documentar el alias `POST /auth/reset-password` y su contrato | Docs | `FR-029-08` | — | Hecho |
+| T029-14 | Retirar el alias cuando la app móvil use `/auth/recover/confirm` | Api | `FR-029-09` | T029-13 | Pendiente |
 
 ## Notas de ejecución
 

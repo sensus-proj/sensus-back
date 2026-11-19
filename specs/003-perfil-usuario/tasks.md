@@ -19,6 +19,10 @@
 | T003-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-003-01` | T003-04 | Pendiente |
 | T003-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-003-01` | T003-05 | Pendiente |
 | T003-07 | Registrar evidencias del Constitution Check | Docs | `FR-003-01` | T003-06 | Pendiente |
+| T003-08 | Documentar `POST /users/photo-signature` (retro-spec) y su contrato | Docs | `FR-003-07` | — | Hecho |
+| T003-09 | Validar `fotoPerfilUrl` contra el host exacto `res.cloudinary.com`, la cuenta propia y la carpeta `sensus/profiles/{userId}`; hoy basta con que el host termine en `cloudinary.com` | Application | `FR-003-06` | T003-08 | Pendiente |
+| T003-10 | Moderar la foto de perfil antes de aceptarla: subir por `/media/upload` (moderado) o validar el veredicto antes de guardar la URL | Application | `FR-003-08` | T003-08 | Pendiente |
+| T003-11 | Límite de tasa `sensitive-write` en `photo-signature` | Api | `FR-003-09` | T003-08 | Pendiente |
 
 ## Notas de ejecución
 

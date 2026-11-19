@@ -20,6 +20,29 @@ paths:
       responses:
         '204': { description: Sin contenido }
         '400': { description: Solicitud inválida }
+  /api/v1/auth/reset-password:
+    post:
+      summary: Alias obsoleto de /api/v1/auth/recover/confirm
+      operationId: resetPassword
+      deprecated: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, nuevaPassword]
+              properties:
+                token: { type: string }
+                nuevaPassword: { type: string, format: password }
+      responses:
+        '204':
+          description: Contraseña restablecida
+        '400':
+          description: Token inválido o vencido, o contraseña que no cumple la política
+        '429':
+          description: Límite de tasa recover superado
 components:
   securitySchemes:
     bearerAuth:
