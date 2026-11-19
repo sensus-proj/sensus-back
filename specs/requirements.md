@@ -411,23 +411,25 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Implementado |
 | `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Implementado |
 | `NFR-047-06` | 047 | NFR | Umbrales de Evals de Sensi IA | Deterministas 100 %; con modelo: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Implementado |
-| `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
-| `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
-| `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Pendiente |
+| `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Implementado |
+| `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Implementado |
+| `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Implementado |
 | `FR-048-04` | 048 | FR | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must | Implementado |
 | `FR-048-05` | 048 | FR | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must | Implementado |
 | `FR-048-06` | 048 | FR | Cachear respuestas de `GET /feed/nearby` con TTL configurable | Must | Pendiente |
 | `FR-048-07` | 048 | FR | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must | Implementado |
 | `FR-048-08` | 048 | FR | Invalidar caché de feed al crear, actualizar o eliminar una publicación | Must | Pendiente |
-| `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Pendiente |
+| `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Implementado |
 | `FR-048-10` | 048 | FR | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must | Implementado |
-| `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Pendiente |
-| `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Pendiente |
+| `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Implementado |
+| `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Implementado |
 | `NFR-048-01` | 048 | NFR | Latencia de lectura con caché | p95 < 300 ms | Pendiente |
 | `NFR-048-02` | 048 | NFR | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms | Pendiente |
-| `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Pendiente |
-| `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
-| `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
+| `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Implementado |
+| `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Implementado |
+| `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Implementado |
+| `FR-048-13` | 048 | FR | Usar caché en memoria de proceso cuando Redis está apagado | Should | Implementado |
+| `NFR-048-06` | 048 | NFR | Desactualización entre instancias con caché en memoria | ≤ 60 s (`Cache:Memory:MaxTtlSeconds`) | Implementado |
 | `FR-049-01` | 049 | FR | Definir `IBudgetCounterStore` con incremento atómico numérico, lectura de contador y estado de disponibilidad | Must | Implementado |
 | `FR-049-02` | 049 | FR | Implementar `DynamoDbBudgetCounterStore` con `UpdateItem ... ADD` atómico, lectura consistente y expiración por atributo TTL | Must | Implementado |
 | `FR-049-03` | 049 | FR | `AiBudgetGuard` usa `IBudgetCounterStore` y opera *fail-closed* si el almacén no está disponible, falla o expira | Must | Implementado |
@@ -449,4 +451,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
 | `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
 
-Total: **444 requisitos** en 50 specs.
+Total: **446 requisitos** en 50 specs.

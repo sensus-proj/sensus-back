@@ -148,7 +148,18 @@ public static class DependencyInjection
                 return ConnectionMultiplexer.Connect(options);
             });
         }
-        services.AddSingleton<ICacheService, RedisCacheService>();
+
+        // Spec 048: con Redis habilitado y configurado se usa Redis; si no (despliegue en Lambda sin ElastiCache,
+        // por costo) se usa la caché en memoria de proceso, con TTL acotado, para que las lecturas sigan cacheadas.
+        services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionName));
+        if (redisEnabled && !string.IsNullOrWhiteSpace(redisConn))
+        {
+            services.AddSingleton<ICacheService, RedisCacheService>();
+        }
+        else
+        {
+            services.AddSingleton<ICacheService, MemoryCacheService>();
+        }
 
         // Configuración de MongoDB Atlas
         services.Configure<MongoDbSettings>(

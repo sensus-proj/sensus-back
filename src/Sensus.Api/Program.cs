@@ -181,7 +181,8 @@ builder.Services.AddOpenApi();
 
 // Health Checks
 builder.Services.AddHealthChecks()
-    .AddCheck<Sensus.Api.Health.MongoReadinessHealthCheck>("mongodb", tags: ["ready"]);
+    .AddCheck<Sensus.Api.Health.MongoReadinessHealthCheck>("mongodb", tags: ["ready"])
+    .AddCheck<Sensus.Api.Health.CacheHealthCheck>("cache", tags: ["ready"]);
 
 // Configuración de CORS segura con allowlist explícita (nunca AllowAnyOrigin)
 const string SensusCorsPolicy = "SensusCorsPolicy";

@@ -41,7 +41,7 @@ public sealed class MongoSanctionRepositoryTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        if (_connectionString is not null)
+        if (!string.IsNullOrWhiteSpace(_connectionString))
         {
             await new MongoClient(_connectionString).DropDatabaseAsync(_databaseName);
         }

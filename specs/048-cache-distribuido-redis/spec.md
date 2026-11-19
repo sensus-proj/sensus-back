@@ -9,8 +9,8 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 010, 024, 026, 032 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Versión | 1.1.0 |
+| Alineado a | `constitution.md` v2.3.0 · `AGENTS.md` v2.3.0 |
 
 ---
 
@@ -60,6 +60,7 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 | FR-048-10 | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must |
 | FR-048-11 | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must |
 | FR-048-12 | Health check del caché integrado con `/health/ready` | Should |
+| FR-048-13 | Usar una caché en memoria de proceso, sin costo, cuando Redis está apagado o sin cadena de conexión (despliegue en Lambda sin ElastiCache) | Should |
 
 ## 5. Requisitos no funcionales
 
@@ -70,6 +71,7 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 | NFR-048-03 | TTL mínimo | Configurable, por entidad |
 | NFR-048-04 | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) |
 | NFR-048-05 | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) |
+| NFR-048-06 | Desactualización entre instancias con la caché en memoria | ≤ `Cache:Memory:MaxTtlSeconds` (60 s por defecto), porque cada Lambda tiene su caché y la invalidación es local |
 
 ## 6. Criterios de aceptación
 
@@ -97,6 +99,11 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 - **Dado**: `appsettings.json`
 - **Cuando**: se inspecciona la configuración de caché
 - **Entonces**: los TTL están definidos en configuración, no hardcodeados en código
+
+### CA-048-07: Caché en memoria cuando Redis está apagado
+- **Dado**: `Redis:Enabled=false` o sin cadena de conexión (como en el despliegue en Lambda)
+- **Cuando**: se repite una lectura cacheable dentro del TTL
+- **Entonces**: la segunda lectura sale de la caché en memoria sin consultar MongoDB, y tras `MaxTtlSeconds` se vuelve a consultar
 
 ### CA-048-06: Health check
 - **Dado**: el endpoint `/health/ready`

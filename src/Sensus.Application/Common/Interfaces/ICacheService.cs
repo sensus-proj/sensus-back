@@ -44,6 +44,11 @@ public interface ICacheService
     bool IsAvailable { get; }
 
     /// <summary>
+    /// Proveedor activo: <c>redis</c>, <c>memory</c> o <c>none</c> (Spec 048, FR-048-12).
+    /// </summary>
+    string Provider { get; }
+
+    /// <summary>
     /// Incrementa atómicamente un valor de punto flotante en caché (ej. INCRBYFLOAT).
     /// Devuelve el nuevo valor o null si el servicio no está disponible.
     /// </summary>
