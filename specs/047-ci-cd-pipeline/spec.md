@@ -82,7 +82,7 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 ## 6. Criterios de aceptación
 
 ### CA-047-01: Pipeline compila limpio
-- **Dado**: un push o PR a `main` o `Sprint1`
+- **Dado**: un push o PR a `main` o `develop` (rama de integración desde el 2026-11-19; antes `Sprint1`)
 - **Cuando**: se ejecuta el job `build-and-test`
 - **Entonces**: `dotnet build -warnaserror` finaliza con 0 errores y 0 warnings
 

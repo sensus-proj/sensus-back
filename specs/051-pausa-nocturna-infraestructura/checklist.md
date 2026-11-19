@@ -54,3 +54,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-19 | Rodrigo Sánchez (con asistente) | Implementado, pendiente de despliegue | Se despliega por CI al llegar a `main` |
+| 2026-11-19 | Rodrigo Sánchez (con asistente) | Defecto en producción | El arranque de las 07:00 falló con `UnauthorizedOperation` en `CreateNatGateway` sobre la IP elástica: la condición `aws:RequestTag` no aplica a recursos existentes. Cada reintento dejó una IP suelta (3). Corregido en T051-09 y verificado con `iam simulate-custom-policy` |
