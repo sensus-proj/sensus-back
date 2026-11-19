@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 001 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -48,6 +48,8 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 | FR-002-03 | Responder 401 con mensaje genérico ante credenciales inválidas | Must |
 | FR-002-04 | Actualizar la fecha de último acceso | Should |
 | FR-002-05 | Rechazar cuentas suspendidas o eliminadas | Must |
+| FR-002-06 | Consultar la identidad de la sesión actual (`GET /auth/me`): id, nombre, correo y roles leídos de los claims del JWT ya validado, sin consultar la base | Must |
+| FR-002-07 | Responder `/auth/me` con un DTO explícito (`CurrentUserDto`) con prueba de mapeo; hoy devuelve un objeto anónimo | Should |
 
 ## 5. Requisitos no funcionales
 
@@ -82,11 +84,24 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 - **Cuando** se intenta login
 - **Entonces** 403 sin revelar el estado detallado
 
+### CA-002-05
+
+- **Dado** un token válido de usuario registrado o invitado
+- **Cuando** llama a `GET /api/v1/auth/me`
+- **Entonces** recibe `200` con `userId`, `nombreCompleto`, `correo` y `roles`
+
+### CA-002-06
+
+- **Dado** una solicitud sin token, con token revocado o de un usuario sancionado
+- **Cuando** llama a `GET /api/v1/auth/me`
+- **Entonces** recibe `401`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
 | POST | `/api/v1/auth/login` | Pública |
+| GET | `/api/v1/auth/me` | JWT (registrado o invitado) |
 
 ## 8. Dependencias y supuestos
 
@@ -104,7 +119,7 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-002-01`, `FR-002-02`, `FR-002-03`, `FR-002-04`, `FR-002-05`
+- Requisitos de este spec: `FR-002-01`, `FR-002-02`, `FR-002-03`, `FR-002-04`, `FR-002-05`, `FR-002-06`, `FR-002-07`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

@@ -20,14 +20,19 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-002-05` | 002 | FR | Rechazar cuentas suspendidas o eliminadas | Must | Implementado |
 | `NFR-002-01` | 002 | NFR | Latencia de login | p95 < 600 ms | Implementado |
 | `NFR-002-02` | 002 | NFR | Vigencia del token | 60 minutos, configurable por entorno | Implementado |
+| `FR-002-06` | 002 | FR | Consultar la identidad de la sesión actual (`GET /auth/me`) desde los claims del JWT | Must | Implementado |
+| `FR-002-07` | 002 | FR | Responder `/auth/me` con un DTO explícito y prueba de mapeo | Should | Pendiente |
 | `FR-003-01` | 003 | FR | Devolver el perfil del usuario autenticado | Must | Implementado |
 | `FR-003-02` | 003 | FR | Excluir passwordHash y datos sensibles de la respuesta | Must | Implementado |
 | `FR-003-03` | 003 | FR | Responder 401 sin token o con token inválido | Must | Implementado |
 | `FR-003-04` | 003 | FR | Actualizar nombre completo y avatar del propio usuario | Must | Implementado |
 | `FR-003-05` | 003 | FR | Rechazar cambios de correo o roles desde este endpoint | Must | Implementado |
-| `FR-003-06` | 003 | FR | Aceptar solo avatares subidos por el propio usuario y aprobados | Must | Implementado |
+| `FR-003-06` | 003 | FR | Aceptar solo avatares subidos por el propio usuario y aprobados | Must | Parcial (sin moderación ni validación estricta de la URL; T003-09 y T003-10) |
 | `NFR-003-01` | 003 | NFR | Latencia de consulta | p95 < 300 ms | Implementado |
 | `NFR-003-02` | 003 | NFR | Latencia de actualización | p95 < 500 ms | Implementado |
+| `FR-003-07` | 003 | FR | Emitir firma de subida a Cloudinary limitada a `sensus/profiles/{userId}` | Must | Implementado |
+| `FR-003-08` | 003 | FR | Moderar la foto de perfil antes de publicarla o guardarla | Must | Pendiente |
+| `FR-003-09` | 003 | FR | Límite de tasa en la emisión de firmas | Should | Pendiente |
 | `FR-004-01` | 004 | FR | Exponer POST /api/v1/auth/logout autenticado | Must | Implementado |
 | `FR-004-02` | 004 | FR | Registrar el jti revocado con TTL igual a la expiración del token | Must | Parcial |
 | `FR-004-03` | 004 | FR | Rechazar cualquier petición con token revocado | Must | Implementado |
@@ -216,6 +221,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-029-01` | 029 | NFR | Latencia de solicitud | p95 < 700 ms | Pendiente |
 | `NFR-029-02` | 029 | NFR | Enumeración de cuentas | Cero diferencia de respuesta entre correo existente e inexistente | Pendiente |
 | `NFR-029-03` | 029 | NFR | Límite de solicitudes | 3 por correo y hora | Pendiente |
+| `FR-029-08` | 029 | FR | Alias `POST /auth/reset-password` de `/auth/recover/confirm` | Must | Implementado |
+| `FR-029-09` | 029 | FR | Retirar el alias cuando el móvil use la ruta canónica | Should | Pendiente |
 | `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado |
 | `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Parcial |
 | `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado |
@@ -256,6 +263,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Implementado |
 | `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Implementado |
 | `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Implementado |
+| `FR-033-12` | 033 | FR | Restringir `claims/expire-check` a administrador, con límite de tasa | Must | Implementado |
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
@@ -282,6 +290,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-036-06` | 036 | FR | Registrar estado anterior, nuevo estado, actor y fecha | Must | Parcial |
 | `NFR-036-01` | 036 | NFR | Efectividad del cambio | < 2 s en la consulta de cercanía | Pendiente |
 | `NFR-036-02` | 036 | NFR | Auditoría | 100 % de transiciones registradas | Pendiente |
+| `FR-036-07` | 036 | FR | Republicar oferta expirada o archivada con nuevas fechas y stock | Must | Implementado |
+| `FR-036-08` | 036 | FR | Ejecutar la expiración de ofertas vencidas y devolver el conteo | Must | Implementado |
+| `FR-036-09` | 036 | FR | Restringir `expire-check` a administrador, con límite de tasa | Must | Implementado |
+| `FR-036-10` | 036 | FR | Límite de tasa en `republish` | Should | Pendiente |
 | `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Implementado |
 | `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Implementado |
 | `FR-037-03` | 037 | FR | Incluir apartados activos, canjes y vistas por oferta | Must | Pendiente |
@@ -402,7 +414,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Implementado |
 | `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Implementado |
 | `FR-047-04` | 047 | FR | Ejecuta Snyk `test` con severidad ≥ high como paso bloqueante | Must | Implementado |
-| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante | Must | Implementado |
+| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante en todos los PR (`develop` y `main`) y en `push` a `main` | Must | Implementado |
 | `FR-047-06` | 047 | FR | Ejecuta Stryker.NET pruebas de mutación como paso advisory | Should | Implementado |
 | `FR-047-07` | 047 | FR | Ejecuta gitleaks escaneo de secretos como paso bloqueante | Must | Implementado |
 | `FR-047-08` | 047 | FR | Verifica cobertura ≥ 80 % en `Sensus.Domain` y `Sensus.Application` como paso bloqueante | Must | Implementado |
@@ -470,5 +482,22 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-051-02` | 051 | NFR | Mínimo privilegio | Solo recursos etiquetados y ARN propios | Implementado |
 | `NFR-051-03` | 051 | NFR | Tiempo de reanudación | ≤ 5 min | Implementado |
 | `NFR-051-04` | 051 | NFR | Idempotencia | Repetir una acción no duplica ni falla | Implementado |
+| `FR-052-01` | 052 | FR | Emitir JWT de invitado sin credenciales (rol Invitado, sub aleatorio) | Must | Implementado |
+| `FR-052-02` | 052 | FR | Devolver token, tipo, expiración, radio máximo y rol | Must | Implementado |
+| `FR-052-03` | 052 | FR | Limitar el radio del invitado a 2 km en el servidor | Must | Implementado |
+| `FR-052-04` | 052 | FR | Negar al invitado las operaciones de usuario registrado | Must | Implementado |
+| `FR-052-05` | 052 | FR | Límite de tasa auth-strict en /auth/guest | Must | Implementado |
+| `FR-052-06` | 052 | FR | Vigencia del token de invitado en configuración y ≤ 15 min con renovación | Must | Pendiente |
+| `NFR-052-01` | 052 | NFR | Privacidad | Sin registros persistentes ni PII | Implementado |
+| `NFR-052-02` | 052 | NFR | Abuso | Más de 10 solicitudes por minuto reciben 429 | Implementado |
+| `FR-053-01` | 053 | FR | Comercios activos dentro del radio, ordenados por cercanía | Must | Implementado |
+| `FR-053-02` | 053 | FR | Radio por defecto 2000 m; tope 2 km invitados y 50 km registrados | Must | Implementado |
+| `FR-053-03` | 053 | FR | Acceso para registrados e invitados | Must | Implementado |
+| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Pendiente |
+| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Pendiente |
+| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Pendiente |
+| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
+| `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
+| `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
 
-Total: **464 requisitos** en 51 specs.
+Total: **495 requisitos** en 53 specs.

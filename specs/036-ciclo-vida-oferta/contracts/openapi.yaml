@@ -15,6 +15,50 @@ paths:
         '400': { description: Solicitud inválida }
         '401': { description: No autenticado }
         '404': { description: No encontrado }
+  /api/v1/offers/{id}/republish:
+    post:
+      summary: Republica una oferta expirada o archivada
+      operationId: republishOffer
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newStartsAt, newEndsAt, newStock]
+              properties:
+                newStartsAt: { type: string, format: date-time }
+                newEndsAt: { type: string, format: date-time }
+                newStock: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Oferta republicada en estado Published }
+        '400': { description: Fechas inválidas o stock menor a 1 }
+        '401': { description: Sin token }
+        '403': { description: Sin comercio activo o la oferta es de otro comercio }
+        '404': { description: La oferta no existe }
+        '409': { description: La oferta no está Expired ni Archived }
+  /api/v1/offers/expire-check:
+    post:
+      summary: Expira las ofertas cuya vigencia terminó
+      description: Solo Administrador (FR-036-09). Era público hasta el 2026-11-19.
+      operationId: triggerOfferExpiration
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expiredCount: { type: integer }
+                  executedAtUtc: { type: string, format: date-time }
+        '401': { description: Sin token }
+        '403': { description: El usuario no es Administrador }
+        '429': { description: Límite de tasa sensitive-write superado }
 components:
   securitySchemes:
     bearerAuth:

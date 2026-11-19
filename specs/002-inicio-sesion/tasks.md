@@ -19,6 +19,8 @@
 | T002-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-002-01` | T002-04 | Pendiente |
 | T002-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-002-01` | T002-05 | Pendiente |
 | T002-07 | Registrar evidencias del Constitution Check | Docs | `FR-002-01` | T002-06 | Pendiente |
+| T002-08 | Documentar `GET /auth/me` (retro-spec) y su contrato | Docs | `FR-002-06` | — | Hecho |
+| T002-09 | Sustituir el objeto anónimo de `/auth/me` por `CurrentUserDto` con prueba de mapeo | Api | `FR-002-07` | T002-08 | Pendiente |
 
 ## Notas de ejecución
 
