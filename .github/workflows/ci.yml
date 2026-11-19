@@ -19,8 +19,6 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
   CI: "true"
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
 jobs:
   build-and-test:
@@ -30,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -62,11 +60,13 @@ jobs:
         run: node .github/scripts/check-coverage.mjs artifacts/coverage 80 Sensus.Domain Sensus.Application
 
       - name: Puerta bloqueante de Evals deterministas de Sensi IA (FR-047-13, NFR-047-06)
-        run: node .github/scripts/run-ai-evals.mjs --mode deterministic
+        run: |
+          node --test .github/scripts/run-ai-evals.test.mjs
+          node .github/scripts/run-ai-evals.mjs --mode deterministic
 
       - name: Publicar resultados de pruebas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results
           path: ./artifacts/coverage
@@ -78,7 +78,7 @@ jobs:
     timeout-minutes: 30
     services:
       mongo:
-        image: mongo:7.0
+        image: mongo:7.0@sha256:884c055bff8b7144ca44830d01826facd3083b33c4dea44b94a1476c62de3c32
         ports:
           - 27017:27017
         options: >-
@@ -86,13 +86,17 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      dynamodb:
+        image: amazon/dynamodb-local:2.6.1@sha256:1856c05cc66a0e49dc1099e483ad2851477eeebe2135250ac11a1d1227db54b1
+        ports:
+          - 8000:8000
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -110,10 +114,11 @@ jobs:
           --logger "trx;LogFileName=integration.trx"
         env:
           MONGO_CONNECTION_STRING: mongodb://localhost:27017
+          DYNAMODB_LOCAL_ENDPOINT: http://localhost:8000
 
       - name: Publicar resultados de integración
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: integration-results
           path: ./artifacts/integration
@@ -123,13 +128,15 @@ jobs:
     name: Seguridad de dependencias y código (Snyk)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -161,10 +168,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -191,7 +198,7 @@ jobs:
     if: success() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     services:
       mongo:
-        image: mongo:7.0
+        image: mongo:7.0@sha256:884c055bff8b7144ca44830d01826facd3083b33c4dea44b94a1476c62de3c32
         ports:
           - 27017:27017
         options: >-
@@ -199,15 +206,19 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      dynamodb:
+        image: amazon/dynamodb-local:2.6.1@sha256:1856c05cc66a0e49dc1099e483ad2851477eeebe2135250ac11a1d1227db54b1
+        ports:
+          - 8000:8000
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -246,6 +257,7 @@ jobs:
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
         env:
           MONGO_CONNECTION_STRING: mongodb://localhost:27017
+          DYNAMODB_LOCAL_ENDPOINT: http://localhost:8000
 
       - name: Verificar reportes de cobertura generados
         run: |
@@ -280,12 +292,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -295,7 +307,7 @@ jobs:
           dotnet list sensus-back.sln package --vulnerable --include-transitive
 
       - name: Escaneo de secretos (bloqueante)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
@@ -310,7 +322,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Comprobar existencia de infraestructura
         id: check_infra
@@ -324,7 +336,7 @@ jobs:
 
       - name: Configurar .NET
         if: steps.check_infra.outputs.exists == 'true'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
@@ -353,7 +365,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Toda carpeta de spec MUST tener los cuatro artefactos (constitution.md §3.6).
       - name: Verificar artefactos por spec

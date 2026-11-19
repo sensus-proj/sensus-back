@@ -42,6 +42,13 @@ public static class DependencyInjection
                 ? new EmbeddedMetricsPublisher(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
                 : new NoOpRequestMetricsPublisher();
         });
+        services.AddSingleton<IAiMetricsPublisher>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedAiMetricsPublisher(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
+                : new NullAiMetricsPublisher();
+        });
 
         // Autenticación, BCrypt y JWT
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
