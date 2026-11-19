@@ -174,7 +174,6 @@ public static class DependencyInjection
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
-        services.AddSingleton<IPushDispatcher, FcmPushDispatcher>();
 
         // Preferencias de notificación (Spec 044)
         services.AddScoped<INotificationSettingsRepository, MongoNotificationSettingsRepository>();

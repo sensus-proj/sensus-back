@@ -22,6 +22,7 @@ public sealed class ShareOfferWithFriendsCommandHandler
     private readonly ISharedOfferRepository _sharedOfferRepository;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPushDispatcher _pushDispatcher;
+    private readonly INotificationSettingsRepository _notificationSettings;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public ShareOfferWithFriendsCommandHandler(
@@ -33,7 +34,8 @@ public sealed class ShareOfferWithFriendsCommandHandler
         ISharedOfferRepository sharedOfferRepository,
         IDeviceRepository deviceRepository,
         IPushDispatcher pushDispatcher,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        INotificationSettingsRepository notificationSettings)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
@@ -43,6 +45,7 @@ public sealed class ShareOfferWithFriendsCommandHandler
         _sharedOfferRepository = sharedOfferRepository;
         _deviceRepository = deviceRepository;
         _pushDispatcher = pushDispatcher;
+        _notificationSettings = notificationSettings;
         _dateTimeProvider = dateTimeProvider;
     }
 
@@ -141,6 +144,7 @@ public sealed class ShareOfferWithFriendsCommandHandler
             await FriendRequestMappingExtensions.NotifyUserDevicesAsync(
                 _deviceRepository,
                 _pushDispatcher,
+                _notificationSettings,
                 recipientId,
                 title: "Oferta compartida",
                 body: $"{sender.NombreCompleto} te compartió: {offer.Title}.",

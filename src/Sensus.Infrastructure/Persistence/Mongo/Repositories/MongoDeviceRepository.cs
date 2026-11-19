@@ -25,7 +25,14 @@ public sealed class MongoDeviceRepository : IDeviceRepository
     public async Task AddAsync(Device device, CancellationToken cancellationToken = default)
     {
         DeviceDocument document = DeviceDocument.FromDomain(device);
-        await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
+        try
+        {
+            await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new DeviceTokenConflictException(exception);
+        }
     }
 
     public async Task<Device?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
@@ -55,7 +62,30 @@ public sealed class MongoDeviceRepository : IDeviceRepository
     {
         DeviceDocument document = DeviceDocument.FromDomain(device);
         FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.Eq(d => d.Id, device.Id);
-        await _collection.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
+        try
+        {
+            await _collection.ReplaceOneAsync(filter, document, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new DeviceTokenConflictException(exception);
+        }
+    }
+
+    public async Task<bool> TryRemoveTokenBindingAsync(Guid id, Guid userId, string token, CancellationToken cancellationToken = default)
+    {
+        var removed = await _collection.DeleteOneAsync(
+            d => d.Id == id && d.UserId == userId && d.Token == token, cancellationToken);
+        return removed.DeletedCount == 1;
+    }
+
+    public Task DeactivateByTokenAsync(Guid id, string token, CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.And(
+            Builders<DeviceDocument>.Filter.Eq(d => d.Id, id),
+            Builders<DeviceDocument>.Filter.Eq(d => d.Token, token));
+        return _collection.UpdateOneAsync(filter, Builders<DeviceDocument>.Update.Set(d => d.IsActive, false),
+            cancellationToken: cancellationToken);
     }
 
     public async Task<bool> ExistsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -68,6 +98,22 @@ public sealed class MongoDeviceRepository : IDeviceRepository
     {
         FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.And(
             Builders<DeviceDocument>.Filter.Eq(d => d.UserId, userId),
+            Builders<DeviceDocument>.Filter.Eq(d => d.IsActive, true));
+        List<DeviceDocument> documents = await _collection.Find(filter).ToListAsync(cancellationToken);
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task<List<Device>> GetActiveByUsersAsync(IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Índice compuesto userId + deviceId (FR-027-06).
+        FilterDefinition<DeviceDocument> filter = Builders<DeviceDocument>.Filter.And(
+            Builders<DeviceDocument>.Filter.In(d => d.UserId, userIds),
             Builders<DeviceDocument>.Filter.Eq(d => d.IsActive, true));
         List<DeviceDocument> documents = await _collection.Find(filter).ToListAsync(cancellationToken);
         return documents.Select(d => d.ToDomain()).ToList();

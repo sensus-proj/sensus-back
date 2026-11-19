@@ -38,7 +38,7 @@ public sealed class FriendHandlersTests
             Arg.Any<string>(),
             Arg.Any<string>(),
             Arg.Any<IReadOnlyDictionary<string, string>?>(),
-            Arg.Any<CancellationToken>()).Returns(true);
+            Arg.Any<CancellationToken>()).Returns(PushResult.Accepted);
     }
 
     [Fact]
@@ -88,8 +88,14 @@ public sealed class FriendHandlersTests
         rehydratedShare.OfferTitle.Should().Be("Pan dulce");
     }
 
-    [Fact]
-    public async Task SendFriendRequest_CreatesPendingRequestAndNotifiesTargetDevices()
+    [Theory]
+    [InlineData(true, true, PushResult.Accepted)]
+    [InlineData(true, true, PushResult.Unavailable)]
+    [InlineData(true, true, PushResult.InvalidToken)]
+    [InlineData(true, false, PushResult.Accepted)]
+    [InlineData(false, true, PushResult.Accepted)]
+    public async Task SendFriendRequest_CreatesPendingRequestAndRespectsPushSettings(
+        bool pushEnabled, bool socialAlerts, PushResult pushResult)
     {
         User sender = User.Create("Alberto", "alberto@sensus.com", "hash", true, FixedNow).Value;
         User target = User.Create("Maria", "maria@sensus.com", "hash", true, FixedNow).Value;
@@ -104,9 +110,15 @@ public sealed class FriendHandlersTests
         _userRepository.GetByInviteCodeAsync(targetCode, Arg.Any<CancellationToken>()).Returns(target);
         _friendRequestRepository.GetBetweenUsersAsync(sender.Id, target.Id, Arg.Any<CancellationToken>()).Returns((FriendRequest?)null);
         _deviceRepository.GetActiveByUserAsync(target.Id, Arg.Any<CancellationToken>()).Returns([device]);
+        var notificationSettings = Substitute.For<INotificationSettingsRepository>();
+        NotificationSettings settings = NotificationSettings.CreateDefaults(target.Id);
+        settings.Update(pushEnabled, null, socialAlerts, null);
+        notificationSettings.GetByUserIdAsync(target.Id, Arg.Any<CancellationToken>()).Returns(settings);
+        _pushDispatcher.SendAsync(device.Token, Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>()).Returns(pushResult);
 
         SendFriendRequestCommandHandler handler = new(
-            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider);
+            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider, notificationSettings);
 
         Result<SendFriendRequestResponseDto> result = await handler.Handle(
             new SendFriendRequestCommand(inputDto.InviteCode, inputDto.AddedVia), CancellationToken.None);
@@ -118,12 +130,14 @@ public sealed class FriendHandlersTests
         result.Value.PendingRequest!.TargetInviteCode.Should().Be(targetCode);
         result.Value.PendingRequest.TargetPhotoUrl.Should().Be("https://cdn/maria.jpg");
         await _friendRequestRepository.Received(1).AddAsync(Arg.Any<FriendRequest>(), Arg.Any<CancellationToken>());
-        await _pushDispatcher.Received(1).SendAsync(
+        await _pushDispatcher.Received(pushEnabled && socialAlerts ? 1 : 0).SendAsync(
             device.Token,
             "Nueva solicitud de amistad",
             Arg.Is<string>(b => b.Contains("Alberto")),
             Arg.Any<IReadOnlyDictionary<string, string>?>(),
             Arg.Any<CancellationToken>());
+        await _deviceRepository.Received(pushResult == PushResult.InvalidToken ? 1 : 0)
+            .DeactivateByTokenAsync(device.Id, device.Token, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -135,7 +149,7 @@ public sealed class FriendHandlersTests
         string targetCode = FriendInviteCodeGenerator.Generate(target.Correo);
 
         SendFriendRequestCommandHandler handler = new(
-            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider);
+            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider, Substitute.For<INotificationSettingsRepository>());
 
         _currentUser.IsGuest.Returns(true);
         (await handler.Handle(new SendFriendRequestCommand(targetCode), CancellationToken.None)).Error.Type.Should().Be(ErrorType.Unauthorized);
@@ -195,7 +209,7 @@ public sealed class FriendHandlersTests
         _deviceRepository.GetActiveByUserAsync(target.Id, Arg.Any<CancellationToken>()).Returns([]);
 
         SendFriendRequestCommandHandler handler = new(
-            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider);
+            _currentUser, _userRepository, _friendRequestRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider, Substitute.For<INotificationSettingsRepository>());
 
         Result<SendFriendRequestResponseDto> result = await handler.Handle(new SendFriendRequestCommand(targetCode, "QR"), CancellationToken.None);
 
@@ -218,7 +232,7 @@ public sealed class FriendHandlersTests
         Device device = Device.Create(senderId, "dev-s", "Android", "token-12345678901234567890", FixedNow);
 
         AcceptFriendRequestCommandHandler acceptHandler = new(
-            _currentUser, _friendRequestRepository, _userRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider);
+            _currentUser, _friendRequestRepository, _userRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider, Substitute.For<INotificationSettingsRepository>());
         RejectFriendRequestCommandHandler rejectHandler = new(
             _currentUser, _friendRequestRepository, _dateTimeProvider);
 
@@ -323,7 +337,7 @@ public sealed class FriendHandlersTests
         rel2.Accept(FixedNow);
 
         ShareOfferWithFriendsCommandHandler shareHandler = new(
-            _currentUser, _userRepository, _offerRepository, _comercioRepository, _friendRequestRepository, _sharedOfferRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider);
+            _currentUser, _userRepository, _offerRepository, _comercioRepository, _friendRequestRepository, _sharedOfferRepository, _deviceRepository, _pushDispatcher, _dateTimeProvider, Substitute.For<INotificationSettingsRepository>());
         GetFriendSharedOffersQueryHandler threadHandler = new(
             _currentUser, _userRepository, _friendRequestRepository, _sharedOfferRepository);
 

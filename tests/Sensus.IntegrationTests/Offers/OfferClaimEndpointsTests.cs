@@ -26,14 +26,105 @@ public class OfferClaimEndpointsTests : IClassFixture<CustomWebApplicationFactor
         _factory.OfferClaimRepository.ClearReceivedCalls();
     }
 
-    private string CreateConsumerToken()
+    private string CreateConsumerToken() => CreateConsumerToken(out _);
+
+    private string CreateConsumerToken(out Guid userId)
     {
         User user = User.Create("Consumidor", $"consumidor.{Guid.NewGuid():N}@sensus.com", "hash", true, DateTime.UtcNow).Value;
+        userId = user.Id;
         _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
 
         var tokenGenerator = _factory.Services.GetRequiredService<IJwtTokenGenerator>();
         var (token, _) = tokenGenerator.GenerateToken(user);
         return token;
+    }
+
+    [Fact]
+    public async Task GetOfferClaim_ReturnsQrOnlyToBuyer()
+    {
+        string buyerToken = CreateConsumerToken(out Guid buyerId);
+        var (merchantToken, merchant) = CreateMerchantToken();
+        OfferClaim claim = OfferClaim.Create(buyerId, Guid.NewGuid(), merchant.Id, DateTime.UtcNow).Value;
+        ClaimCode code = _factory.Services.GetRequiredService<IClaimCodeService>()
+            .Generate(claim.Id, claim.OfferId, claim.ExpiresAtUtc);
+        claim.AssignCodeHash(code.Hash);
+        _factory.OfferClaimRepository.GetByIdAsync(claim.Id, Arg.Any<CancellationToken>()).Returns(claim);
+        _factory.ComercioRepository.GetByIdAsync(merchant.Id, Arg.Any<CancellationToken>()).Returns(merchant);
+        string url = $"/api/v1/offers/claims/{claim.Id}";
+
+        using HttpResponseMessage anonymous = await _client.GetAsync(url);
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var (guestToken, _) = _factory.Services.GetRequiredService<IJwtTokenGenerator>().GenerateGuestToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
+        using HttpResponseMessage guest = await _client.GetAsync(url);
+        guest.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateConsumerToken());
+        using HttpResponseMessage thirdParty = await _client.GetAsync(url);
+        thirdParty.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", merchantToken);
+        using HttpResponseMessage merchantResponse = await _client.GetAsync(url);
+        merchantResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await merchantResponse.Content.ReadFromJsonAsync<OfferClaimDetailDto>())!.QrPayload.Should().BeNull();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
+        using HttpResponseMessage buyerResponse = await _client.GetAsync(url);
+        buyerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        buyerResponse.Headers.CacheControl!.NoStore.Should().BeTrue();
+        (await buyerResponse.Content.ReadFromJsonAsync<OfferClaimDetailDto>())!.QrPayload.Should().Be(code.QrPayload);
+    }
+
+    [Fact]
+    public async Task GetOfferClaim_ReturnsExpiredWithoutQrWhenExpiryJobHasNotRun()
+    {
+        string buyerToken = CreateConsumerToken(out Guid buyerId);
+        OfferClaim claim = OfferClaim.Create(buyerId, Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddDays(-2)).Value;
+        _factory.OfferClaimRepository.GetByIdAsync(claim.Id, Arg.Any<CancellationToken>()).Returns(claim);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
+
+        using HttpResponseMessage response = await _client.GetAsync($"/api/v1/offers/claims/{claim.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detail = (await response.Content.ReadFromJsonAsync<OfferClaimDetailDto>())!;
+        detail.Status.Should().Be("Expired");
+        detail.QrPayload.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetOfferClaim_OmitsQrWhenPersistedSignatureWasReplaced()
+    {
+        string buyerToken = CreateConsumerToken(out Guid buyerId);
+        OfferClaim claim = OfferClaim.Create(buyerId, Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow).Value;
+        claim.AssignCodeHash("replaced-signature-hash");
+        _factory.OfferClaimRepository.GetByIdAsync(claim.Id, Arg.Any<CancellationToken>()).Returns(claim);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
+
+        using HttpResponseMessage response = await _client.GetAsync($"/api/v1/offers/claims/{claim.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.NoStore.Should().BeTrue();
+        var detail = (await response.Content.ReadFromJsonAsync<OfferClaimDetailDto>())!;
+        detail.Status.Should().Be("Active");
+        detail.QrPayload.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetOfferClaim_ReturnsNotFoundForMissingClaimOrInactiveMerchant()
+    {
+        var (merchantToken, merchant) = CreateMerchantToken();
+        merchant.Deactivate();
+        OfferClaim claim = OfferClaim.Create(Guid.NewGuid(), Guid.NewGuid(), merchant.Id, DateTime.UtcNow).Value;
+        _factory.OfferClaimRepository.GetByIdAsync(claim.Id, Arg.Any<CancellationToken>()).Returns(claim);
+        _factory.ComercioRepository.GetByIdAsync(merchant.Id, Arg.Any<CancellationToken>()).Returns(merchant);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", merchantToken);
+
+        using HttpResponseMessage inactiveMerchant = await _client.GetAsync($"/api/v1/offers/claims/{claim.Id}");
+        using HttpResponseMessage missing = await _client.GetAsync($"/api/v1/offers/claims/{Guid.NewGuid()}");
+
+        inactiveMerchant.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     private (string Token, Comercio Comercio) CreateMerchantToken()

@@ -98,3 +98,7 @@ Permitir cerrar sesión de forma efectiva, invalidando el token del usuario ante
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
+
+### FR-004-05 — Desvinculación push del dispositivo
+
+Logout admite el parámetro opcional de consulta deviceId (1 a 100 caracteres, sin aceptar solo espacios). Si se proporciona, desactiva el registro del dispositivo de la cuenta autenticada antes de revocar la sesión. Si el registro no existe, el logout continúa. Sin el parámetro se conserva el comportamiento existente. Un valor inválido devuelve 400 sin revocar la sesión.

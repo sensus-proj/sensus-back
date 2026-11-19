@@ -11,4 +11,4 @@ namespace Sensus.Application.Users.Commands.RegisterDevice;
 public sealed record RegisterDeviceCommand(
     string DeviceId,
     string Platform,
-    string Token) : IRequest<Result<DeviceTokenResponseDto>>;
+    string Token) : IRequest<Result<DeviceTokenResponseDto>>, ISensitiveRequest;

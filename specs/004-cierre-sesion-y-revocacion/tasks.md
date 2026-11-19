@@ -28,3 +28,5 @@
 - Cada tarea se cierra actualizando `checklist.md` y `plan.md`.
 - Verificado con 100 pruebas unitarias y 34 pruebas de integración en verde.
 - Los identificadores de requisito remiten a `spec.md` §4 y §5.
+
+- [ ] T004-11 — FR-004-05. Añadir parámetro opcional, desactivar el dispositivo propio y verificar el contrato y persistencia.

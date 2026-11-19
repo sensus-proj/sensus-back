@@ -45,6 +45,7 @@ public static class ResultExtensions
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Unprocessable => StatusCodes.Status422UnprocessableEntity,
+            ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status400BadRequest
         };
 

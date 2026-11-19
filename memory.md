@@ -11,7 +11,7 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-17 |
+| **Última actualización** | 2026-11-19 |
 | **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas para **Spec 047 v1.2.0** (CI-CD y DevSecOps al 100 %, cerradas `T047-14` a `T047-16`), **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas, tareas `T046-01` a `T046-22` cerradas y parciales según alcance), resolución integral de los 14 ítems de revisión de código y prerrequisitos de infraestructura y datos (Items 0 a 8) |
 | **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Spec 046, Spec 047 y prerrequisitos) |
 | **Agente** | Antigravity |
@@ -229,3 +229,61 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 - Toda decisión nueva se añade a §C con su ID y fecha; si afecta un principio, exige enmienda (§4.3 de la constitución).
 - Nunca escribir secretos, credenciales ni datos personales.
 - Subir la versión: PATCH por corrección, MINOR por sección nueva, MAJOR por cambio de estructura.
+
+## Auditoría técnica del 2026-11-18
+
+- Revisión de `main` en `c2e56e1`. GitHub Actions registró CI y CD exitosos. CI ejecutó 882 casos únicos sin fallos ni omisiones (631 unitarios, 244 de integración, 4 de arquitectura y 3 E2E). La URL de salud de API Gateway respondió HTTP 200 por HTTPS.
+- Inventario de 45 operaciones funcionales y 3 rutas de salud. Quedaron brechas de autorización en los dos disparadores de expiración y de trazabilidad y cobertura HTTP en varias rutas. El runner de Evals usa puntuación fija y no acredita evaluación con un modelo real.
+- Siguiente paso propuesto para una futura sesión: priorizar la autorización de los disparadores y la verificación real de Evals. No se modificó el código de aplicación ni se ejecutó un despliegue.
+
+## Sincronización del 2026-11-18
+
+- La rama local `main` ya coincidía con `origin/main` en `c2e56e1`. Se conservó la auditoría local previa. La sincronización quedó verificada y no requiere seguimiento.
+
+## Push de eventos y ofertas cercanas (2026-11-18)
+
+- Se revisaron las specs 027, 034 y 044 y el despacho social. El adaptador FCM simula entregas y el flujo social no aplica las preferencias. La spec 027 deja abierta la elección del proveedor de producción. Para especificar alertas de ofertas cercanas queda por definir el origen de la ubicación del destinatario. Siguiente paso: resolver el proveedor y la ubicación, y completar los criterios de aceptación antes de implementar.
+
+### Alcance confirmado y secuencia propuesta
+
+- El responsable indicó que Firebase aún no está configurado y que las alertas cercanas usarán la última ubicación compartida por la app. Solicitó también avisar al comercio al confirmar un apartado y mostrar al comprador el tiempo restante para recogerlo.
+- Orden propuesto: cerrar criterios SDD; configurar FCM y verificar un push social en un teléfono; añadir evento de apartado y cuenta regresiva usando ExpiresAtUtc; incorporar ubicación consentida y alertas al publicar ofertas; validar en dispositivos reales antes de liberar. Quedan por confirmar plataforma y tecnología móvil, vigencia de ubicación y si la cuenta regresiva también debe aparecer en la bandeja del sistema. No se modificaron specs ni código ni se configuró Firebase.
+
+- Confirmado: Android Kotlin, repositorio sensus-proj/sensus-app-mobile. En main (2c6e1c2), Gradle declara applicationId sensus.com y Firebase Messaging, y el manifiesto incluye POST_NOTIFICATIONS. Se eligió FCM HTTP v1, se actualizó la spec 027 y se registró el envío real como pendiente. Siguiente paso: confirmar acceso al proyecto Firebase de pruebas, registrar la app y completar la preparación SDD antes de implementar el adaptador.
+
+- Firebase: se creó Sensus Dev (sensus-dev-4f843, plan Spark) y se registró Android sensus.com como Sensus Android Dev. Siguiente paso: incorporar google-services.json a la app Android y verificar entrega en un teléfono; el adaptador del backend sigue pendiente.
+
+- Se localizó la copia Android en StudioProjects/sensus-app-mobile y se verificó que FT-21 ya tiene activación explícita, obtención de token y registro ante la API. No se encontró google-services.json después del intento de descarga desde el navegador integrado. ADB funciona y no detectó dispositivos. Siguiente paso: obtener el archivo oficial, activar su procesamiento en Gradle y comprobar el flujo en Android.
+
+- Se integró en Sensus Mobile el google-services.json oficial del proyecto sensus-dev-4f843, con Google Services en Gradle y el JSON fuera de Git. processDebugGoogleServices y compileDebugKotlin pasaron. Pendientes: verificar en Android físico el permiso, el registro del token y el push desde Firebase Console, y completar el adaptador FCM real del backend.
+
+- Prueba en Android físico: se detectó permiso de notificaciones denegado y app detenida. Tras habilitar el permiso y abrir Sensus, se envió Prueba Sensus desde Firebase Console y se verificó en Android. Entrega Firebase a Android confirmada. Siguiente paso: implementar y verificar el envío real desde el backend.
+
+- Se detalló el plan 027 para FCM HTTP v1 con credenciales por ambiente en SSM, resultado de despacho explícito, protección ante fallos y pruebas de contrato. Se registró la evidencia de la prueba Firebase Console a Android. El plan sigue pendiente de aprobación según la constitución §3.1; después corresponde implementar y probar el aviso social desde el backend, antes de apartados y ofertas cercanas.
+
+- Plan 027 aprobado e implementado en local: FCM HTTP v1, OAuth desde SSM, validación sin entrega, 503 ante indisponibilidad y filtro social. Pruebas: 636 unitarias, 258 integración, 4 arquitectura y 3 E2E en verde con SDK 11 contra net10.0; cobertura Domain 89.00 % y Application 96.83 %. Pendientes: credencial de pruebas en SSM, aviso real backend a Android, verificación en MongoDB de desactivación condicional y corrección de colisión de token al reasignar. No hubo despliegue. Después siguen los apartados y las ofertas por zona.
+
+- Backend de notificaciones: FR-033-09/10 integra avisos al comprador y comercio tras persistir el apartado, con vencimiento UTC y deduplicación MongoDB. FR-044-07 incorpora PUT/DELETE de ubicación consentida, vigencia predeterminada 24 h, índices 2dsphere/TTL y purga al eliminar la cuenta. FR-044-08 sigue sin disparador por falta de evidencia de moderación vinculada a la versión vigente de la oferta (FR-034-03). Pasaron 915 pruebas, incluidas tres de Testcontainers contra MongoDB real; cobertura Domain 89.00 % y Application 96.53 %. Pendientes: acceso al entorno AWS de pruebas, credencial FCM en SSM, prueba real desde el backend y latencia p95. Siguiente paso de ofertas: cerrar el vínculo de moderación y el evento de publicación segura. No se modificó Android ni se desplegó.
+
+- 2026-11-19 (Claude): FR-033-11 cerrado con pruebas de integración (firma reemplazada sin QR, apartado inexistente y comercio inactivo con 404) y prueba unitaria de fallos del adaptador en `ClaimPushNotifier`. FR-044-08 implementado con el alcance que decidió el responsable: al crear una oferta disponible, `NearbyOfferNotifier` modera el título y la descripción (*fail-closed*), busca ubicaciones vigentes con `$geoNear`, filtra preferencias, radio inclusivo y titular del comercio, y envía `Nuevo {título} cerca de ti` sin cuerpo, con `type=nearby_offer` y `offerId`. La configuración vive en `NearbyOfferAlerts`. Pruebas: 649 unitarias, 276 de integración (incluidas 2 nuevas de Testcontainers) y 4 de arquitectura en verde; build `-warnaserror` correcto. Todo se ejecutó con el SDK 11 desde fuera del repo porque el SDK 10.0.401 de `global.json` no está instalado. Pendientes: credencial FCM en SSM, `Push:Simulate=false`, que Android abra `GET /offers/{offerId}` al recibir `nearby_offer`, la moderación de la imagen de la oferta (brecha de la spec 034) y medir la latencia de `POST /offers`. Sin commits ni despliegue.
+
+## Inventario técnico y DevSecOps del 2026-11-18
+
+- Se contrastó main (c2e56e1), el árbol local y los workflows. Se identificaron 50 operaciones locales, incluidas dos rutas de ubicación aún locales, frente a 48 en el despliegue registrado. Quedaron documentadas las brechas de autorización de expiraciones, trazabilidad de rutas, DAST y cobertura HTTP. La consulta de salud desde esta sesión quedó sin resolver por DNS. No se modificó el código ni se desplegó.
+- Siguiente paso técnico identificado: cerrar la autorización de las tareas de expiración y cubrirla con pruebas HTTP.
+
+### 2026-11-19 — Revisión de integración Android de notificaciones
+
+Se revisaron los contratos, el código y la evidencia de las specs 027, 033, 034 y 044. Android puede integrar registro de dispositivo, preferencias, ubicación compartida y confirmación de apartado con QR desde la respuesta REST. Quedan abiertos la credencial FCM en SSM, la prueba de entrega y apertura desde el push real, la medición de latencia del apartado y el disparador de ofertas cercanas condicionado a moderación verificable. La API carece de lectura de apartado por ID para recuperar el contexto desde el push. No se modificó código ni se reejecutaron pruebas porque el SDK .NET solicitado no está instalado. Siguiente paso: verificar el registro y un apartado con dos cuentas y FCM real en desarrollo.
+
+### 2026-11-19 — Avance de cierre de notificaciones
+
+Se añadió la desvinculación push opcional por deviceId al logout (FR-004-05), dos pruebas unitarias y el contrato de navegación de los avisos de apartado con el detalle de oferta como destino disponible sin estado local. Quedaron pendientes la verificación del cambio con .NET 10.0.401 y MongoDB, la corrección y verificación de la reasignación de token de T027-08, y la implementación del disparador cercano después de cerrar FR-034-03. El SDK solicitado no está instalado y la comprobación de descarga falló por resolución DNS. La configuración FCM y las pruebas de entrega real se reservaron para el final por petición del responsable.
+
+### 2026-11-19 — Lectura de apartado y reasignación de token push
+
+Implementados, pendientes de verificar: GET de apartado autenticado con QR solo para el comprador vigente y no-store (FR-033-11), y liberación condicional de la asociación previa del token para evitar la colisión del índice único al cambiar de cuenta (FR-027-06). Añadidas pruebas de API y test de repositorio MongoDB. El filtro oficial de pruebas sigue bloqueado por el SDK .NET 10.0.401 faltante. Para las alertas de cercanía se documentó el diseño en 034 y 044. Sigue pendiente implementar evidencia conjunta, cuarentena previa a almacenamiento, selección y despacho. Firebase y la prueba Android permanecen para el final.
+
+### 2026-11-19 — Bloqueo normativo de moderación para alertas cercanas
+
+Se contrastó la cuarentena exigida por el Principio IV y la spec 019 con Cloudinary como almacenamiento multimedia exclusivo (Principio VI). La ruta actual retiene en Cloudinary y escribe antes del veredicto. Se dejó en el plan 034 una propuesta §4.3 para retención temporal privada en MongoDB con TTL antes de Cloudinary. Pendientes aprobación, implementación de moderación y alertas, y verificación del punto 3. La consulta de SDK sigue mostrando 9.0.317 y 11.0.100, sin SDK compatible con global.json. No se cambiaron endpoints ni se activó Firebase.

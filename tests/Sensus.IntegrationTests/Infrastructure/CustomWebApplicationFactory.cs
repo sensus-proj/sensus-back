@@ -51,6 +51,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IComercioRepository>();
             services.AddSingleton(ComercioRepository);
 
+            services.RemoveAll<IDeviceRepository>();
+            services.AddSingleton(Substitute.For<IDeviceRepository>());
+
+            services.RemoveAll<INotificationSettingsRepository>();
+            services.AddSingleton(Substitute.For<INotificationSettingsRepository>());
+
+            services.RemoveAll<INotificationLocationRepository>();
+            services.AddSingleton(Substitute.For<INotificationLocationRepository>());
+
             services.RemoveAll<IMediaAssetRepository>();
             services.AddSingleton(MediaAssetRepository);
 

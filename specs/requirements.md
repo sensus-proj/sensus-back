@@ -1,4 +1,4 @@
-﻿# Registro de requisitos
+# Registro de requisitos
 
 Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>` y `NFR-<spec>-<nn>`.
 
@@ -32,6 +32,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-004-02` | 004 | FR | Registrar el jti revocado con TTL igual a la expiración del token | Must | Parcial |
 | `FR-004-03` | 004 | FR | Rechazar cualquier petición con token revocado | Must | Implementado |
 | `FR-004-04` | 004 | FR | Responder 204 aunque el token ya estuviera revocado | Should | Implementado |
+| `FR-004-05` | 004 | FR | Desactivar el registro push del dispositivo que se identifica al cerrar sesión | Must | Pendiente de verificación |
 | `NFR-004-01` | 004 | NFR | Efectividad de la revocación | < 1 s desde el logout | Pendiente |
 | `NFR-004-02` | 004 | NFR | Sobrecarga por petición | < 50 ms | Pendiente |
 | `FR-005-01` | 005 | FR | Activar el rol comercial sobre la cuenta autenticada | Must | Implementado |
@@ -183,9 +184,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-026-02` | 026 | NFR | Índice | Compuesto por status + location + createdAt | Pendiente |
 | `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
 | `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
-| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Implementado |
-| `FR-027-04` | 027 | FR | Seleccionar el adaptador FCM o SNS por configuración | Must | Implementado |
-| `FR-027-05` | 027 | FR | Eliminar tokens rechazados por el proveedor | Must | Implementado |
+| `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Parcial |
+| `FR-027-04` | 027 | FR | Configurar FCM HTTP v1 como proveedor de producción para Android | Must | Pendiente |
+| `FR-027-05` | 027 | FR | Desactivar tokens rechazados definitivamente por el proveedor | Must | Pendiente |
 | `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Implementado |
 | `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Implementado |
 | `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Implementado |
@@ -242,6 +243,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-033-06` | 033 | FR | Exponer POST /api/v1/offers/claims/{code}/redeem para el comerciante propietario | Must | Implementado |
 | `FR-033-07` | 033 | FR | Marcar el canje como usado y rechazar un segundo canje del mismo código | Must | Implementado |
 | `FR-033-08` | 033 | FR | Impedir que un comerciante canjee códigos de otro comercio | Must | Implementado |
+| `FR-033-09` | 033 | FR | Avisar al comercio y comprador al confirmar un apartado | Must | Parcial |
+| `FR-033-10` | 033 | FR | Entregar vencimiento absoluto al comprador en el aviso de apartado | Must | Parcial |
+| `FR-033-11` | 033 | FR | Recuperar el apartado autenticado desde un aviso push | Must | Implementado |
 | `NFR-033-01` | 033 | NFR | Latencia del apartado | p95 < 700 ms | Implementado |
 | `NFR-033-02` | 033 | NFR | Consistencia de stock | Cero unidades negativas bajo concurrencia | Implementado |
 | `NFR-033-03` | 033 | NFR | Liberación de stock | ≤ 5 min tras la expiración | Implementado |
@@ -340,6 +344,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Implementado |
 | `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Implementado |
 | `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Implementado |
+| `FR-044-07` | 044 | FR | Guardar y retirar la última ubicación compartida para alertas | Must | Parcial |
+| `FR-044-08` | 044 | FR | Alertar sobre nuevas ofertas con texto aprobado dentro del radio del usuario | Must | Implementado |
 | `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Implementado |
 | `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Implementado |
 | `FR-045-01` | 045 | FR | Habilitar hospedaje dual en `Sensus.Api` con `AddAWSLambdaHosting(LambdaEventSource.HttpApi)` | Must | Implementado |
@@ -442,4 +448,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
 | `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
 
-Total: **437 requisitos** en 50 specs.
+Total: **441 requisitos** en 50 specs.
