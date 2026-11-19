@@ -5,8 +5,8 @@
 | Spec | [spec.md](spec.md) (`046`, v2.0.0) |
 | Estado del plan | Listo para implementación |
 | Versión | 2.0.0 |
-| Constitution Check | PASS CON OBSERVACIONES (`EX-001`) |
-| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 · [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) |
+| Constitution Check | PASS CON OBSERVACIONES (`EX-001`, Apéndice F) |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 · [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) · [ADR 0013](../../docs/adr/0013-contadores-presupuesto-dynamodb.md) |
 
 ---
 
@@ -157,18 +157,32 @@ HTTP Request (JWT Bearer)
 
 ---
 
+## 5.5 Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza STRIDE | Vector / Activo afectado | Mitigación en diseño e implementación | Evidencia |
+|---|---|---|---|
+| **Spoofing** | Suplantación de identidad de rol o sesión de invitado en `/api/v1/ai/*` y herramientas MCP; redirección maliciosa de `OPENAI_BASE_URL` en CI | JWT stateless validado en borde + verificación de usuario activo y rechazo explícito de `Invitado` (`403`); `IScopeAuthorizationMapper` deriva scopes desde roles en servidor; runner de Evals restringe `OPENAI_BASE_URL` mediante lista de permitidos (`https://api.openai.com` salvo loopback explícito en tests) rechazando userinfo/query/fragment | `SendAiMessageCommandHandler`, `ScopeAuthorizedMcpDispatcher`, `.github/scripts/run-ai-evals.mjs` |
+| **Tampering** | *Prompt injection* directo o indirecto vía descripciones de ofertas, manipulación de `ScreenContext` o envenenamiento de caché FAQ | Detector determinista anti-inyección y moderación `omni-moderation-latest` fail-closed ejecutados **antes** de consultar la caché FAQ; `KnownScreenContexts` con whitelist cerrada; sanitización de textos devueltos por tools MCP; partición de clave FAQ por `markdownVersion:role:screenContext` | `SendAiMessageCommandHandler`, `AiCacheKeys`, `RegexAndStructuralInjectionDetector` |
+| **Repudiation** | Disputas sobre consumo, bloqueos por moderación o acciones del asistente | Registro de auditoría en `ai_trace_logs` con `CorrelationId`, `RoutingTier`, tokens, latencia, hashes y TTL configurable + métricas EMF sin PII (`EmbeddedAiMetricsPublisher`) en `Sensus/Api` | `AiTraceLog`, `EmbeddedAiMetricsPublisher`, `AiMetricsTests` |
+| **Information Disclosure** | Fuga de PII, credenciales (`OPENAI_API_KEY`, `SONAR_TOKEN`, `SNYK_TOKEN`), prompt de sistema o respuestas equivocadas por rol/pantalla | Redacción previa de prompts/respuestas y exclusión total de caché FAQ cuando el prompt de entrada o la respuesta contienen PII; claves FAQ en Redis hasheadas con SHA-256; re-verificación de fugas/PII al leer caché; `store: false` en OpenAI; sanitización automática de reportes JSON/Markdown de Evals; tokens CI acotados al job específico y Secretos en SSM (`/sensus/<env>/*`) | `AiCacheKeys`, `HardRuleLeakDetector`, `PatternPiiAndSecretRedactor`, `run-ai-evals.mjs`, `ci.yml` |
+| **Denial of Service** | Agotamiento de presupuesto `EX-001`, inundación de MongoDB vía *cache hits* repetidos de FAQ, condiciones de carrera con `forceNew = true` o ReDoS | Todo *hit* de caché FAQ valida e incrementa cuota diaria en DynamoDB (`AiBudgetGuard`, fail-closed) antes de persistir en MongoDB; rate limiting por endpoint (`AiChatPolicy`); índice único parcial `ux_ai_conversations_owner_active` en `ai_conversations`; normalización sin regex en `AiCacheKeys` + timeout `1 s` en regex de presupuesto (`S6444`); deadline agéntico `≤ 25 s` | `SendAiMessageCommandHandler`, `AiBudgetGuard`, `MongoDbContext`, `AiCacheKeys` |
+| **Elevation of Privilege** | Acceso de `Consumidor`/`Invitado` a datos comerciales privados o ejecución de acciones no autorizadas en CI/CD | Catálogo MCP cerrado de solo lectura (sin herramientas de escritura); `get_my_merchant_offers` exige scope `merchant:read` y filtra `merchantOwnerId == callerUserId`; GitHub Actions fijadas por SHA de commit e imágenes Docker por digest SHA-256 con `permissions: contents: read` | `McpToolRegistry`, `ci.yml`, `ai-evals.yml` |
+
+---
+
 ## 6. Constitution Check
 
 | Principio / Sección | Estado | Evidencia / Condición |
 |---|---|---|
 | **I — SDD primero** | PASS | Spec, plan, tasks, checklist y OpenAPI actualizados antes de codificar |
 | **II — Clean Architecture y CQRS** | PASS | MCP *in-process* detrás de puertos en `Application`, compuesto en `Program.cs` |
-| **III — Seguridad por diseño** | PASS | JWT obligatorio, herencia de *scopes* por rol, moderación *fail-closed*, anti-inyección y redacción PII/credenciales |
-| **IV — Privacidad y secretos** | PASS | Keys en Secrets Manager / SSM; CloudWatch solo metadatos y hashes sin PII/prompts; MongoDB audit redactado con TTL y purga en `DELETE` y Spec 030 (`constitution.md` v2.0.0 P-IV) |
-| **V — Rendimiento y paginación** | PASS | Historial paginado `20/100`, índices MongoDB explícitos, *Prompt Caching* y deadline `≤ 25 s` |
-| **VI — AWS Free Tier y costo mínimo** | PASS CON OBSERVACIONES (`EX-001`) | `0.00 USD` en cómputo AWS (MCP *in-process* en Lambda existente); costo variable OpenAI acotado bajo excepción vigente `EX-001` (`5.00 USD/mes` con alarma 80 % y degradación determinista) |
-| **VII — Calidad, pruebas y DevSecOps** | PASS | Cobertura ≥ 80 % en Domain/Application + *Evals* deterministas bloqueantes por PR y *Evals* con modelo previas a release (Spec 047) |
-| **§2.1–§2.5 — Stack y restricciones** | PASS | Enmendado en `constitution.md` v2.0.0 (MAJOR) y [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) |
+| **III — Seguridad por diseño** | PASS | JWT obligatorio, herencia de *scopes* por rol, moderación *fail-closed*, anti-inyección, cuota en *cache-hits* y redacción PII/credenciales |
+| **IV — Privacidad y secretos** | PASS | Keys en SSM `/sensus/<env>/*`; CloudWatch solo metadatos y hashes sin PII/prompts; Redis FAQ hasheada con SHA-256 sin PII; MongoDB audit redactado con TTL y purga en `DELETE` y Spec 030 (`constitution.md` v2.0.0 P-IV) |
+| **V — Rendimiento y paginación** | PASS | Historial paginado `20/100`, índices MongoDB explícitos (incluido `ux_ai_conversations_owner_active`), *Prompt Caching* y deadline `≤ 25 s` |
+| **VI — AWS Free Tier y costo mínimo** | PASS CON OBSERVACIONES (`EX-001`) | `0.00 USD` en cómputo AWS; 4 métricas EMF sin dimensiones (9/10 Free Tier); costo variable OpenAI acotado bajo excepción vigente `EX-001` (`5.00 USD/mes` en DynamoDB on-demand, alerta 80 % y degradación determinista) |
+| **VII — Calidad, pruebas y DevSecOps** | PASS | Cobertura ≥ 80 % en Domain/Application + *Evals* deterministas verificadas por `--trx` + *Evals* reales con modelo fail-closed sin `OPENAI_API_KEY` (Spec 047) |
+| **VIII — Seguridad nivel fintech y DevSecOps (`constitution.md` v2.3.0 / v2.4.0)** | PASS CON OBSERVACIONES (Apéndice F) | STRIDE documentado; caché FAQ aislada y sujeta a cuota diaria; índice único parcial en MongoDB; allowlist SSRF en `OPENAI_BASE_URL`; tokens CI acotados por job; GitHub Actions fijadas por commit SHA e imágenes Docker por SHA-256. Brechas transversales del repositorio en pipeline (`G-01`..`G-13`, escaneo IaC, DAST y SBOM bloqueantes en `ci.yml`) permanecen registradas en Apéndice F de la constitución |
+| **§2.1–§2.5 — Stack y restricciones** | PASS | Enmendado en `constitution.md` v2.0.0 y v2.2.0, [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) y [ADR 0013](../../docs/adr/0013-contadores-presupuesto-dynamodb.md) |
 
 ---
 

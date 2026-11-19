@@ -55,35 +55,38 @@ public sealed class CreateOrResumeConversationCommandHandler
         }
 
         var validatedScreen = KnownScreenContexts.Normalize(request.ScreenContext);
+        var now = DateTime.UtcNow;
+        var existing = await _conversationRepository.GetActiveByUserIdAsync(userId, cancellationToken);
 
-        if (!request.ForceNew)
+        if (!request.ForceNew && existing is not null)
         {
-            var existing = await _conversationRepository.GetActiveByUserIdAsync(userId, cancellationToken);
-            if (existing is not null)
+            if (validatedScreen != null &&
+                !string.Equals(existing.LastScreenContext, validatedScreen, StringComparison.Ordinal))
             {
-                if (validatedScreen != null &&
-                    !string.Equals(existing.LastScreenContext, validatedScreen, StringComparison.Ordinal))
-                {
-                    existing.UpdateScreenContext(validatedScreen, DateTime.UtcNow);
-                    await _conversationRepository.UpdateAsync(existing, cancellationToken);
-                }
-
-                return Result.Success(new ConversationSummaryResponseDto(
-                    existing.Id.ToString(),
-                    existing.Status.ToString(),
-                    existing.AssignedModel,
-                    existing.RoutingTier.ToString(),
-                    existing.MessageCount,
-                    existing.LastScreenContext,
-                    existing.MarkdownVersion,
-                    existing.CreatedAtUtc,
-                    existing.LastModifiedAtUtc));
+                existing.UpdateScreenContext(validatedScreen, now);
+                await _conversationRepository.UpdateAsync(existing, cancellationToken);
             }
+
+            return Result.Success(new ConversationSummaryResponseDto(
+                existing.Id.ToString(),
+                existing.Status.ToString(),
+                existing.AssignedModel,
+                existing.RoutingTier.ToString(),
+                existing.MessageCount,
+                existing.LastScreenContext,
+                existing.MarkdownVersion,
+                existing.CreatedAtUtc,
+                existing.LastModifiedAtUtc));
+        }
+
+        if (request.ForceNew && existing is not null)
+        {
+            existing.Archive(now);
+            await _conversationRepository.UpdateAsync(existing, cancellationToken);
         }
 
         var initialRouting = _modelRouter.RouteInitialTurn(string.Empty);
         var knowledgeDoc = _knowledgeBaseProvider.GetDocument();
-        var now = DateTime.UtcNow;
 
         var activeRole = user.HasRole(RoleType.Comerciante) ? RoleType.Comerciante : RoleType.Consumidor;
         var createResult = AiConversation.Create(
