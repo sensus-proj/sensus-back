@@ -54,6 +54,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 010, 011, 012, 013 |
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
 | 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Parcial | 045, 046, 048 |
+| 051 | [Pausa nocturna de la infraestructura](051-pausa-nocturna-infraestructura/spec.md) | Plataforma | Nuevo | 7 | Implementado | 015, 045, 048 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
 
 ## Estados
@@ -72,4 +73,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **50 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 6, Ola 6: 7, Ola 7: 4, Backlog: 1.
+Total: **51 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 6, Ola 6: 7, Ola 7: 5, Backlog: 1.

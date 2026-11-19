@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **2.3.0** |
+| Versión | **2.4.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-19 (v2.3.0: Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil; v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
+| Última enmienda | 2026-11-19 (v2.4.0: Redis activo con ElastiCache Serverless Valkey en VPC, NAT administrado y pausa nocturna de 22:30 a 07:00, excepción EX-003; v2.3.0: Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil; v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -431,7 +431,9 @@ responsable, tarea y fecha. Todo cambio nuevo o modificado MUST cumplirlo desde 
 | Cómputo | AWS Lambda | — | Ejecución serverless |
 | API | AWS API Gateway | — | Exposición RESTful |
 | Multimedia y CDN | Cloudinary | — | Almacenamiento, transformación y distribución de contenido multimedia |
-| Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048). Opcional: la API MUST operar con Redis desactivado |
+| Caché distribuido | Amazon ElastiCache Serverless con motor Valkey (protocolo Redis) | Valkey 8 | Caché de lecturas recurrentes con TTL (fail-graceful, Spec 048 y ADR 0014). TLS obligatorio y acceso solo desde el grupo de seguridad de la API. La API MUST operar si la caché no responde (respaldo en memoria, FR-048-13) |
+| Red privada | Amazon VPC con NAT Gateway administrado | — | Subredes privadas para la Lambda y la caché; el NAT solo existe de día (Spec 051) y DynamoDB se alcanza por endpoint de puerta de enlace gratuito |
+| Programación | Amazon EventBridge Scheduler | — | Pausa nocturna de la infraestructura de 22:30 a 07:00, `America/Mexico_City` (Spec 051) |
 | Contadores de presupuesto y cuota | Amazon DynamoDB (`PAY_PER_REQUEST`, TTL nativo) | — | Contadores atómicos de gasto mensual y mensajes diarios de Sensi IA (EX-001), con *fail-closed* ante indisponibilidad. Sin VPC. Dentro del nivel gratuito permanente (Spec 049 y ADR 0013) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
 | Moderación de contenido publicado | OpenAI `gpt-4o-mini` en modo visión con la política de Sensus | — | Moderación multimodal de ofertas, publicaciones y comentarios (Spec 017); detecta armas, drogas y simbología de odio que `omni-moderation-latest` dejaba pasar |
@@ -698,6 +700,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 2.0.0 | 2026-11-15 | **MAJOR** (redefine la prohibición de herramientas de §2.2 de la v1.4.0). Evolución agéntica en 7 capas de Sensi IA: habilitación de MCP *in-process* y *Function Calling* exclusivamente de solo lectura bajo validación de permisos JWT en el servidor (§2.1, §2.2, §2.4); separación entre logs técnicos sanitizados en CloudWatch y trazabilidad redactada de PII en MongoDB con TTL/purga (P-IV); *Prompt Caching*, *Model Router* con afinidad de sesión, *guardrails* duales y puerta bloqueante CI/CD de *Evals* (§2.5). Deriva de ADR 0012 y Specs 046 y 047. |
 | 2.1.0 | 2026-11-15 | **MINOR**. Moderación de contenido publicado con `gpt-4o-mini` en modo visión y política de Sensus (armas, drogas, simbología de odio), porque `omni-moderation-latest` dejaba pasar imágenes con armas; `omni-moderation-latest` queda para el texto de Sensi IA (§2.1, §2.4). Nueva excepción `EX-002` por el costo de la moderación (Apéndice E). Deriva de la decisión D28 y de las Specs 017 y 046. |
 | 2.2.0 | 2026-11-15 | **MINOR**. Alta de Amazon DynamoDB en el stack autorizado (§2.1) exclusivamente para los contadores atómicos de presupuesto y cuota diaria de Sensi IA (EX-001), con TTL nativo, modo `PAY_PER_REQUEST`, sin VPC y dentro del nivel gratuito permanente; Redis pasa a ser opcional y de solo caché de lecturas. Motivo: con Redis desactivado en el despliegue, `AiBudgetGuard` fallaba en modo cerrado y toda respuesta de Sensi salía degradada. Alternativas descartadas: ElastiCache (exige VPC y NAT Gateway, ≈ 40 USD/mes) y Redis de un proveedor externo (multi-nube, §2.2). Spec 049 y ADR 0013. |
+| 2.4.0 | 2026-11-19 | **MINOR**. Alta de Amazon ElastiCache Serverless (Valkey), Amazon VPC con NAT Gateway administrado y Amazon EventBridge Scheduler en el stack autorizado (§2.1); Redis pasa de opcional a activo en producción. Nueva excepción EX-003 por el costo y brecha G-14 (caché sin autenticación de usuarios). Pausa nocturna de 22:30 a 07:00. Specs 048 y 051, ADR 0014. |
 | 2.3.0 | 2026-11-19 | **MINOR**. Nuevo Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil: estándares ASVS 5.0 (L2 y L3 en flujos críticos), OWASP API Top 10, MASVS L2 + resiliencia, NIST 800-63B, SSDF y SLSA 2; modelado de amenazas, auditoría de solo adición, *step-up* para administradores, DAST, SBOM, gestión de vulnerabilidades con plazos y seguridad reforzada del móvil. Añade el Apéndice F (registro de brechas de adopción) y el régimen de transición. Verificación por release ampliada a ocho principios (§3.3, §3.4, §4.5). |
 
 ---
@@ -792,6 +795,7 @@ Excepciones registradas: [Apéndice E]
 |---|---|---|---|---|---|---|
 | EX-001 | VI | Costo variable del proveedor generativo de Sensi IA (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual (`5.00 USD/mes`, elevado desde `1.00 USD/mes` el 2026-11-15 por decisión del responsable del proyecto), *Prompt Caching* estático en dos bloques, *Model Router* con afinidad *sticky*, límite de tokens y mensajes diarios por persona, caché distribuida, puerta CI/CD de *Evals* y degradación determinista controlada (`NFR-046-02` y ADR 0012) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
 | EX-002 | VI | Costo variable de la moderación de contenido publicado con `gpt-4o-mini` (Spec 017) | `omni-moderation-latest` es gratuito pero dejaba pasar imágenes con armas y drogas, incompatibles con el giro de Sensus. Costo estimado ≈ 0.00013 USD por imagen (`detail: low`); techo de `1.00 USD/mes` (≈ 7,500 imágenes) con alarma al `80 %`. Al agotarse, el contenido va a cuarentena (fail-closed), nunca se publica sin veredicto. Se recomienda un proyecto y una clave de OpenAI independientes de Sensi IA para que el gasto de uno no bloquee al otro | Por asignar | Al cierre de la Spec 017 o al agotarse el techo de gasto mensual | Vigente |
+| EX-003 | VI | Costo de la red privada y la caché (NAT Gateway, IP elástica y ElastiCache Serverless Valkey, Spec 048 FR-048-14 y Spec 051) | El responsable del proyecto pidió activar Redis y aprobó el costo el 2026-11-19 (opción A), cubierto con créditos de AWS. Acotado por la pausa nocturna de 22:30 a 07:00 (≈ 29–32 USD/mes frente a ≈ 43 USD), límites de uso de la caché (1 GB y 5000 ECPU/s) y AWS Budgets a 40 USD/mes con alerta al 80 %. Alternativas sin costo descartadas en ADR 0014 | Rodrigo Sánchez | Al agotarse los créditos de AWS o al cierre del semestre, lo que ocurra primero | Vigente |
 
 ### Apéndice F — Registro de brechas de adopción del Principio VIII
 
@@ -813,8 +817,9 @@ vencida es una violación bloqueante (§4.5).
 | G-10 | Sin AWS WAF (supera el nivel gratuito) | 13 | Backend | Control compensatorio: *throttling* de API Gateway y límites de tasa; solicitar aprobación de costo para WAF | 2026-12-11 | Abierta |
 | G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Abierta |
 | G-12 | Clave de API de Figma en `mcp_config.json` local del móvil (ignorado por Git) | 5 | Móvil | Rotar la clave y moverla a variable de entorno del usuario | 2026-11-23 | Abierta |
+| G-14 | La caché Valkey Serverless no usa autenticación de usuarios (RBAC o IAM); el aislamiento depende del grupo de seguridad y de TLS | 2, 5 | Backend | Habilitar autenticación IAM de ElastiCache y generar el token en `RedisCacheService` | 2027-01-29 | Abierta |
 | G-13 | Pruebas de carga ausentes para los `NFR` de latencia | V, VII | Backend | k6 o similar contra entorno de pruebas | 2027-01-15 | Abierta |
 
 ---
 
-**Versión 2.3.0 — Ratificada el 2026-10-28, enmendada el 2026-11-19.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 2.4.0 — Ratificada el 2026-10-28, enmendada el 2026-11-19.** Toda modificación requiere el procedimiento de §4.3.

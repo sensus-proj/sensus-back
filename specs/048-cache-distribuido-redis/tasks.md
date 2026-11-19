@@ -36,6 +36,7 @@
 
 | T048-22 | Implementar `MemoryCacheService` (TTL acotado, tope de entradas, JSON inmutable) y seleccionar proveedor por configuración | Infrastructure | `FR-048-13` | T048-03 | Completada |
 | T048-23 | Pruebas de `MemoryCacheService`, selección de proveedor y `CacheHealthCheck` | Pruebas | `FR-048-13` | T048-22 | Completada |
+| T048-24 | Aprovisionar VPC, Valkey Serverless y Lambda en VPC con CDK (`SensusInfraStack.CacheAndSchedule.cs`); `Redis__Enabled=true` | IaC | `FR-048-14` | T048-22 | Hecho (pendiente de despliegue por CI) |
 
 ## Notas de ejecución
 

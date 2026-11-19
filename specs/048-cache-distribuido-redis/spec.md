@@ -60,6 +60,7 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 | FR-048-10 | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must |
 | FR-048-11 | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must |
 | FR-048-12 | Health check del caché integrado con `/health/ready` | Should |
+| FR-048-14 | Activar Redis en producción con ElastiCache Serverless (Valkey) en VPC, TLS y acceso solo desde la API, definido en `infra/` | Must |
 | FR-048-13 | Usar una caché en memoria de proceso, sin costo, cuando Redis está apagado o sin cadena de conexión (despliegue en Lambda sin ElastiCache) | Should |
 
 ## 5. Requisitos no funcionales

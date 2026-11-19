@@ -428,6 +428,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Implementado |
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Implementado |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Implementado |
+| `FR-048-14` | 048 | FR | Activar Redis en producción con ElastiCache Serverless (Valkey) en VPC | Must | Implementado |
 | `FR-048-13` | 048 | FR | Usar caché en memoria de proceso cuando Redis está apagado | Should | Implementado |
 | `NFR-048-06` | 048 | NFR | Desactualización entre instancias con caché en memoria | ≤ 60 s (`Cache:Memory:MaxTtlSeconds`) | Implementado |
 | `FR-049-01` | 049 | FR | Definir `IBudgetCounterStore` con incremento atómico numérico, lectura de contador y estado de disponibilidad | Must | Implementado |
@@ -450,5 +451,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-050-01` | 050 | NFR | Seguridad | 100 % de endpoints protegidos con `RegisteredUserPolicy` | Implementado |
 | `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
 | `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
+| `FR-051-01` | 051 | FR | Pausar a las 22:30 y reanudar a las 07:00 (America/Mexico_City) con EventBridge Scheduler | Must | Implementado |
+| `FR-051-02` | 051 | FR | Cortar el tráfico de la API durante la pausa | Must | Implementado |
+| `FR-051-03` | 051 | FR | Eliminar NAT, IP elástica y ruta de salida durante la pausa | Must | Implementado |
+| `FR-051-04` | 051 | FR | Reanudar NAT, ruta y tráfico solo con salida a internet | Must | Implementado |
+| `FR-051-05` | 051 | FR | Silenciar y reactivar las acciones de las alarmas | Must | Implementado |
+| `FR-051-06` | 051 | FR | Aplicar el estado según la hora al desplegar | Should | Implementado |
+| `FR-051-07` | 051 | FR | Horario y zona horaria configurables por contexto de CDK | Must | Implementado |
+| `NFR-051-01` | 051 | NFR | Ahorro | 8.5 h diarias sin NAT ni IP elástica | Implementado |
+| `NFR-051-02` | 051 | NFR | Mínimo privilegio | Solo recursos etiquetados y ARN propios | Implementado |
+| `NFR-051-03` | 051 | NFR | Tiempo de reanudación | ≤ 5 min | Implementado |
+| `NFR-051-04` | 051 | NFR | Idempotencia | Repetir una acción no duplica ni falla | Implementado |
 
-Total: **446 requisitos** en 50 specs.
+Total: **458 requisitos** en 51 specs.

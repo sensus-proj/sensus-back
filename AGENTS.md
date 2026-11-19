@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.3.0** |
+| Documento normativo | `constitution.md` **v2.4.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
@@ -224,7 +224,8 @@ Todo lo nuevo o modificado, en backend y móvil, cumple desde el primer commit:
 ## 10. AWS y costo
 
 - Todo recurso se define en `infra/` con AWS CDK en C#. **Prohibido** crear recursos en consola o por CLI.
-- Solo servicios del nivel gratuito. Cómputo exclusivamente Lambda detrás de API Gateway.
+- Solo servicios del nivel gratuito, salvo las excepciones vigentes del Apéndice E (EX-001 a EX-003). Cómputo exclusivamente Lambda detrás de API Gateway.
+- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). **Nunca** ejecutes `cdk deploy` desde una máquina local: se despliega por CI, que inyecta los secretos de la Lambda.
 - Multimedia en Cloudinary (Tier gratuito); observabilidad exclusivamente en CloudWatch.
 - Todo recurso etiquetado con `project`, `environment`, `owner`.
 - Toda decisión técnica declara su costo mensual estimado y su consumo frente al Free Tier.
@@ -328,4 +329,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.3.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v2.4.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
