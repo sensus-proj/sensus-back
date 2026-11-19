@@ -45,6 +45,8 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
     private readonly ICorrelationIdAccessor _correlationIdAccessor;
     private readonly SensiSettings _sensiSettings;
     private readonly ILogger<SendAiMessageCommandHandler> _logger;
+    private readonly ICacheService? _cacheService;
+    private readonly IAiMetricsPublisher? _metricsPublisher;
 
     public SendAiMessageCommandHandler(
         ICurrentUserService currentUserService,
@@ -68,7 +70,9 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         ICitedOfferEnricher offerEnricher,
         ICorrelationIdAccessor correlationIdAccessor,
         IOptions<SensiSettings> sensiOptions,
-        ILogger<SendAiMessageCommandHandler> logger)
+        ILogger<SendAiMessageCommandHandler> logger,
+        ICacheService? cacheService = null,
+        IAiMetricsPublisher? metricsPublisher = null)
     {
         _currentUserService = currentUserService;
         _userRepository = userRepository;
@@ -92,6 +96,8 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         _correlationIdAccessor = correlationIdAccessor;
         _sensiSettings = sensiOptions.Value;
         _logger = logger;
+        _cacheService = cacheService;
+        _metricsPublisher = metricsPublisher;
     }
 
     public async Task<Result<AiTurnResponseDto>> Handle(
@@ -123,6 +129,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         }
 
         var activeRole = user.HasRole(RoleType.Comerciante) ? RoleType.Comerciante : RoleType.Consumidor;
+        var turnStopwatch = Stopwatch.StartNew();
 
         // 2. Capa 5: Guardrails de Entrada (Longitud, Inyección, Moderación)
         if (string.IsNullOrWhiteSpace(request.Message))
@@ -141,6 +148,14 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         if (injectionCheck.IsSuspicious)
         {
             _logger.LogWarning("Inyección de prompt detectada en mensaje de usuario {UserId}: {Reason}", userId, injectionCheck.Reason);
+            _metricsPublisher?.PublishTurn(new AiTurnMetricEvent(
+                turnStopwatch.ElapsedMilliseconds,
+                0,
+                0m,
+                true,
+                "Blocked",
+                false,
+                correlationId));
             return Result.Failure<AiTurnResponseDto>(
                 Error.Validation("Ai.PromptInjectionDetected", "Tu mensaje contiene patrones no permitidos por nuestras normas de seguridad."));
         }
@@ -149,6 +164,14 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         if (!inputModeration.IsApproved)
         {
             _logger.LogWarning("Mensaje de usuario {UserId} bloqueado por moderación de texto. Decisión: {Decision}", userId, inputModeration.Decision);
+            _metricsPublisher?.PublishTurn(new AiTurnMetricEvent(
+                turnStopwatch.ElapsedMilliseconds,
+                0,
+                0m,
+                true,
+                "Blocked",
+                false,
+                correlationId));
             return Result.Failure<AiTurnResponseDto>(
                 Error.Validation("Ai.MessageBlockedByModeration", inputModeration.Message ?? "Tu mensaje no cumple con nuestras normas de contenido."));
         }
@@ -219,11 +242,14 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         var allowedTools = _toolRegistry.GetAllowedTools(callerScopes);
 
         // Guardar mensaje de usuario en repositorio
+        string redactedPrompt = _piiRedactor.Redact(request.Message);
+        bool promptContainsPii = !string.Equals(redactedPrompt, request.Message, StringComparison.Ordinal);
+
         var userMsgResult = AiMessage.Create(
             conversation.Id,
             userId,
             AiMessageRole.User,
-            _piiRedactor.Redact(request.Message),
+            redactedPrompt,
             false,
             null,
             null,
@@ -236,6 +262,150 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             await _messageRepository.AddAsync(userMsgResult.Value, cancellationToken);
             conversation.IncrementMessageCount(now);
             await _conversationRepository.UpdateAsync(conversation, cancellationToken);
+        }
+
+        var recentMessages = await _messageRepository.GetRecentByConversationIdAsync(
+            conversation.Id,
+            _sensiSettings.MaxTurnsHistory,
+            cancellationToken);
+
+        var historyItems = recentMessages
+            .Where(m => m.Id != (userMsgResult.IsSuccess ? userMsgResult.Value.Id : Guid.Empty))
+            .Select(m => new AiMessageHistoryItem(
+                m.Role == AiMessageRole.Assistant ? "assistant" : "user",
+                m.RedactedContent))
+            .ToList();
+
+        var userBudget = ExtractBudgetFromPrompt(request.Message);
+        string? effectiveScreen = validatedScreen ?? conversation.LastScreenContext;
+
+        // 4b. Caché distribuida de respuestas FAQ equivalentes (FR-046-13, Spec 048)
+        bool isFaqLookupEligible = _cacheService is not null
+            && _cacheService.IsAvailable
+            && historyItems.Count == 0
+            && !promptContainsPii
+            && !request.Latitude.HasValue
+            && !request.Longitude.HasValue
+            && userBudget is null;
+        string? faqCacheKey = isFaqLookupEligible
+            ? AiCacheKeys.Faq(knowledgeDoc.Version, activeRole, request.Message, effectiveScreen)
+            : null;
+
+        if (faqCacheKey is not null)
+        {
+            string? cachedFaqReply = null;
+            try
+            {
+                cachedFaqReply = await _cacheService!.GetAsync<string>(faqCacheKey, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error al consultar caché de FAQ de Sensi IA.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(cachedFaqReply))
+            {
+                // Respetar siempre la cuota diaria y el modo fail-closed del almacén de presupuesto
+                // antes de escribir mensajes/trazas en MongoDB.
+                bool canExecuteFaq = await _budgetGuard.CanExecuteTurnAsync(userId, 0m, cancellationToken);
+                if (!canExecuteFaq)
+                {
+                    _logger.LogWarning("Cuota diaria o almacén de presupuesto bloqueó turno FAQ cacheado para usuario {UserId}. Activando degradación determinista.", userId);
+                    return await ExecuteFallbackTurnAsync(
+                        request.Message,
+                        conversation,
+                        userId,
+                        correlationId,
+                        knowledgeDoc.Version,
+                        knowledgeDoc.HashSha256,
+                        "Límite de presupuesto mensual o cuota diaria de IA alcanzado.",
+                        turnStopwatch.ElapsedMilliseconds,
+                        cancellationToken);
+                }
+
+                var safeCachedReply = _hardRuleLeakDetector.ContainsForbiddenLeaks(cachedFaqReply)
+                    ? "Soy Sensi, el asistente virtual oficial de Sensus. Estoy aquí para ayudarte a descubrir y aprovechar las mejores ofertas locales."
+                    : _piiRedactor.Redact(cachedFaqReply);
+
+                var cachedNow = DateTime.UtcNow;
+                var cachedAssistantMsgResult = AiMessage.Create(
+                    conversation.Id,
+                    userId,
+                    AiMessageRole.Assistant,
+                    safeCachedReply,
+                    false,
+                    null,
+                    null,
+                    Array.Empty<string>(),
+                    Array.Empty<string>(),
+                    cachedNow);
+
+                var cachedAssistantMessage = cachedAssistantMsgResult.Value;
+                await _messageRepository.AddAsync(cachedAssistantMessage, cancellationToken);
+                conversation.IncrementMessageCount(cachedNow);
+                await _conversationRepository.UpdateAsync(conversation, cancellationToken);
+
+                var cachedTraceResult = AiTraceLog.Create(
+                    conversation.Id,
+                    userId,
+                    correlationId,
+                    knowledgeDoc.Version,
+                    knowledgeDoc.HashSha256,
+                    conversation.RoutingTier,
+                    "faq-cache",
+                    redactedPrompt,
+                    safeCachedReply,
+                    Array.Empty<string>(),
+                    0,
+                    0,
+                    0,
+                    turnStopwatch.ElapsedMilliseconds,
+                    0m,
+                    cachedNow,
+                    TimeSpan.FromDays(_sensiSettings.TraceRetentionDays));
+
+                if (cachedTraceResult.IsSuccess)
+                {
+                    await _traceLogRepository.AddAsync(cachedTraceResult.Value, cancellationToken);
+                }
+
+                await _budgetGuard.RecordSpendAsync(userId, 0m, AiRoutingTier.Fast, cancellationToken);
+
+                _metricsPublisher?.PublishTurn(new AiTurnMetricEvent(
+                    turnStopwatch.ElapsedMilliseconds,
+                    0,
+                    0m,
+                    false,
+                    conversation.RoutingTier.ToString(),
+                    true,
+                    correlationId));
+
+                _logger.LogInformation(
+                    "Turno Sensi IA completado desde caché FAQ. CorrelationId={CorrelationId} MarkdownVersion={MarkdownVersion} RoutingTier={RoutingTier} FaqCacheHit={FaqCacheHit} LatencyMs={LatencyMs}",
+                    correlationId,
+                    knowledgeDoc.Version,
+                    conversation.RoutingTier,
+                    true,
+                    turnStopwatch.ElapsedMilliseconds);
+
+                return Result.Success(new AiTurnResponseDto(
+                    conversation.Id.ToString(),
+                    cachedAssistantMessage.Id.ToString(),
+                    safeCachedReply,
+                    null,
+                    null,
+                    Array.Empty<string>(),
+                    false,
+                    null,
+                    conversation.RoutingTier.ToString(),
+                    knowledgeDoc.Version,
+                    correlationId,
+                    new AiUsageSummaryDto(0, 0, 0, true)));
+            }
         }
 
         // 5. Verificación de Presupuesto (Capa 6 - EX-001)
@@ -256,6 +426,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
                 knowledgeDoc.Version,
                 knowledgeDoc.HashSha256,
                 "Límite de presupuesto mensual o cuota diaria de IA alcanzado.",
+                turnStopwatch.ElapsedMilliseconds,
                 cancellationToken);
         }
 
@@ -266,18 +437,6 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             request.Latitude,
             request.Longitude,
             request.RadiusKm);
-
-        var recentMessages = await _messageRepository.GetRecentByConversationIdAsync(
-            conversation.Id,
-            _sensiSettings.MaxTurnsHistory,
-            cancellationToken);
-
-        var historyItems = recentMessages
-            .Where(m => m.Id != (userMsgResult.IsSuccess ? userMsgResult.Value.Id : Guid.Empty))
-            .Select(m => new AiMessageHistoryItem(
-                m.Role == AiMessageRole.Assistant ? "assistant" : "user",
-                m.RedactedContent))
-            .ToList();
 
         var stopwatch = Stopwatch.StartNew();
         var toolsInvoked = new List<string>();
@@ -366,6 +525,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
                     knowledgeDoc.Version,
                     knowledgeDoc.HashSha256,
                     "Rondas agénticas agotadas sin respuesta final.",
+                    turnStopwatch.ElapsedMilliseconds,
                     cancellationToken);
             }
         }
@@ -387,14 +547,17 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
                 knowledgeDoc.Version,
                 knowledgeDoc.HashSha256,
                 "Fallo o timeout en la llamada al modelo de IA.",
+                turnStopwatch.ElapsedMilliseconds,
                 cancellationToken);
         }
 
         // 7. Capa 5 & 1: Guardrails de Salida (Hard Rules, Moderación y Redacción PII)
+        bool outputReplacedByGuardrail = false;
         if (_hardRuleLeakDetector.ContainsForbiddenLeaks(replyText))
         {
             _logger.LogWarning("Fuga de Hard Rule detectada en respuesta del modelo. Sustituyendo por respuesta oficial segura.");
             replyText = "Soy Sensi, el asistente virtual oficial de Sensus. Estoy aquí para ayudarte a descubrir y aprovechar las mejores ofertas locales.";
+            outputReplacedByGuardrail = true;
         }
 
         var outputModeration = await _textModerationService.ModerateTextAsync(replyText, cancellationToken);
@@ -402,6 +565,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         {
             _logger.LogWarning("Respuesta del modelo bloqueada por moderación de salida. Activando respuesta segura.");
             replyText = "No puedo generar esa respuesta en este momento debido a nuestras políticas de seguridad.";
+            outputReplacedByGuardrail = true;
         }
 
         var sanitizedReply = _piiRedactor.Redact(replyText);
@@ -417,7 +581,6 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
 
         // Punto 9: Validar y construir paquete de ofertas si el usuario especificó presupuesto
         RecommendedPackageDto? recommendedPackageDto = null;
-        var userBudget = ExtractBudgetFromPrompt(request.Message);
         if (userBudget.HasValue && userBudget.Value > 0 && packageCandidates.Count > 0)
         {
             var packageResult = BudgetCalculator.BuildPackage(userBudget.Value, packageCandidates);
@@ -466,7 +629,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             knowledgeDoc.HashSha256,
             conversation.RoutingTier,
             conversation.AssignedModel,
-            _piiRedactor.Redact(request.Message),
+            redactedPrompt,
             sanitizedReply,
             toolsInvoked,
             promptTokensTotal,
@@ -481,6 +644,51 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         {
             await _traceLogRepository.AddAsync(traceLogResult.Value, cancellationToken);
         }
+
+        if (isFaqLookupEligible
+            && faqCacheKey is not null
+            && !outputReplacedByGuardrail
+            && toolsInvoked.Count == 0
+            && citedOfferIds.Count == 0
+            && recommendedPackageDto is null
+            && string.Equals(sanitizedReply, replyText, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(sanitizedReply))
+        {
+            try
+            {
+                await _cacheService!.SetForEntityAsync(faqCacheKey, sanitizedReply, AiCacheKeys.FaqEntityName, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error al almacenar caché de FAQ de Sensi IA.");
+            }
+        }
+
+        _metricsPublisher?.PublishTurn(new AiTurnMetricEvent(
+            stopwatch.ElapsedMilliseconds,
+            cachedTokensTotal,
+            actualCostUsd,
+            false,
+            conversation.RoutingTier.ToString(),
+            false,
+            correlationId));
+
+        _logger.LogInformation(
+            "Turno Sensi IA completado. CorrelationId={CorrelationId} MarkdownVersion={MarkdownVersion} MarkdownHash={MarkdownHash} RoutingTier={RoutingTier} PromptTokens={PromptTokens} CachedTokens={CachedTokens} CompletionTokens={CompletionTokens} ToolsCount={ToolsCount} LatencyMs={LatencyMs} FaqCacheHit={FaqCacheHit}",
+            correlationId,
+            knowledgeDoc.Version,
+            knowledgeDoc.HashSha256,
+            conversation.RoutingTier,
+            promptTokensTotal,
+            cachedTokensTotal,
+            completionTokensTotal,
+            toolsInvoked.Count,
+            stopwatch.ElapsedMilliseconds,
+            false);
 
         var usage = new AiUsageSummaryDto(
             promptTokensTotal,
@@ -625,6 +833,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         string markdownVersion,
         string markdownHash,
         string degradationReason,
+        long elapsedMs,
         CancellationToken cancellationToken)
     {
         var userBudget = ExtractBudgetFromPrompt(userPrompt);
@@ -671,6 +880,15 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
         {
             await _traceLogRepository.AddAsync(traceLogResult.Value, cancellationToken);
         }
+
+        _metricsPublisher?.PublishTurn(new AiTurnMetricEvent(
+            elapsedMs,
+            0,
+            0m,
+            true,
+            conversation.RoutingTier.ToString(),
+            false,
+            correlationId));
 
         RecommendedPackageDto? packageDto = null;
         if (fallback.RecommendedPackage is not null)

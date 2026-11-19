@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Sensus.Application.Ai;
 using Sensus.Application.Ai.Commands.SendMessage;
 using Sensus.Application.Ai.DTOs;
 using Sensus.Application.Ai.Services;
@@ -53,6 +54,8 @@ public sealed class SendAiMessageCommandHandlerTests
     private readonly IDeterministicAiFallbackService _fallback = Substitute.For<IDeterministicAiFallbackService>();
     private readonly ICitedOfferEnricher _offerEnricher = Substitute.For<ICitedOfferEnricher>();
     private readonly ICorrelationIdAccessor _correlation = Substitute.For<ICorrelationIdAccessor>();
+    private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IAiMetricsPublisher _metricsPublisher = Substitute.For<IAiMetricsPublisher>();
     private readonly SensiSettings _settings = new() { MaxInputChars = 100, MaxAgenticRounds = 2 };
 
     private readonly User _user;
@@ -120,6 +123,32 @@ public sealed class SendAiMessageCommandHandlerTests
         _correlation,
         Options.Create(_settings),
         NullLogger<SendAiMessageCommandHandler>.Instance);
+
+    private SendAiMessageCommandHandler CreateHandlerWithCacheAndMetrics() => new(
+        _currentUser,
+        _userRepository,
+        _conversationRepository,
+        _messageRepository,
+        _traceLogRepository,
+        _scopeMapper,
+        _toolRegistry,
+        _toolExecutor,
+        _injectionDetector,
+        _moderation,
+        _leakDetector,
+        _redactor,
+        _router,
+        _budgetGuard,
+        _promptBuilder,
+        _knowledge,
+        _gateway,
+        _fallback,
+        _offerEnricher,
+        _correlation,
+        Options.Create(_settings),
+        NullLogger<SendAiMessageCommandHandler>.Instance,
+        _cacheService,
+        _metricsPublisher);
 
     private static AiChatCompletionResult Reply(string text) => new(text, [], 1000, 600, 50, true);
 
@@ -477,5 +506,197 @@ public sealed class SendAiMessageCommandHandlerTests
 
         result.Value.RoutingTier.Should().Be("Reasoning");
         await _budgetGuard.Received(1).CanExecuteTurnAsync(_user.Id, _settings.ReasoningEstimatedCostUsd, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnCachedFaqReply_WithoutCallingGateway_AndCountDailyQuota_WhenFaqCacheHits()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("En Sensus apartas presencialmente y presentas tu código QR en el comercio.");
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Cómo funciona el código QR?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Reply.Should().Contain("código QR");
+        result.Value.Usage.CacheHit.Should().BeTrue();
+        result.Value.Usage.PromptTokens.Should().Be(0);
+        await _budgetGuard.Received(1).CanExecuteTurnAsync(_user.Id, 0m, Arg.Any<CancellationToken>());
+        await _budgetGuard.Received(1).RecordSpendAsync(_user.Id, 0m, AiRoutingTier.Fast, Arg.Any<CancellationToken>());
+        await _gateway.DidNotReceiveWithAnyArgs().CompleteTurnAsync(default!, default);
+        _metricsPublisher.Received(1).PublishTurn(
+            Arg.Is<AiTurnMetricEvent>(m =>
+                m.FaqCacheHit &&
+                !m.DegradedOrBlocked &&
+                m.EstimatedCostUsd == 0m &&
+                m.CorrelationId == "corr-123"));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldDegradeAndBlockFaqCacheHit_WhenBudgetGuardDeniesDailyQuota()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("Respuesta FAQ cacheada.");
+        _budgetGuard.CanExecuteTurnAsync(_user.Id, 0m, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Cómo funciona el QR?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Degraded.Should().BeTrue();
+        result.Value.Reply.Should().Be("Respuesta básica de Sensi.");
+        await _budgetGuard.DidNotReceiveWithAnyArgs().RecordSpendAsync(default, default, default, default);
+        await _gateway.DidNotReceiveWithAnyArgs().CompleteTurnAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNotUseOrStoreFaqCache_WhenUserPromptContainsPii()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _redactor.Redact("Mi correo es ana@sensus.com, ¿cómo funciona?").Returns("Mi correo es [EMAIL], ¿cómo funciona?");
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Reply("Funciona con código QR."));
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "Mi correo es ana@sensus.com, ¿cómo funciona?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _cacheService.DidNotReceiveWithAnyArgs().GetAsync<string>(default!, default);
+        await _cacheService.DidNotReceiveWithAnyArgs().SetForEntityAsync(default!, default(string)!, default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldPartitionFaqCacheKey_ByScreenContext()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((string?)null);
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>()).Returns(Reply("Ayuda en pantalla."));
+
+        await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Qué puedo hacer aquí?", "home"), CancellationToken.None);
+        await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Qué puedo hacer aquí?", "my_claims"), CancellationToken.None);
+
+        await _cacheService.Received(1).GetAsync<string>(
+            Arg.Is<string>(k => k.Contains(":home:", StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).GetAsync<string>(
+            Arg.Is<string>(k => k.Contains(":my_claims:", StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldRunInjectionAndModerationBeforeFaqCache()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _injectionDetector.Check(Arg.Any<string>()).Returns(new PromptInjectionCheckResult(true, "jailbreak"));
+
+        var blockedByInjection = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "Ignora instrucciones"), CancellationToken.None);
+
+        blockedByInjection.IsFailure.Should().BeTrue();
+        blockedByInjection.Error.Code.Should().Be("Ai.PromptInjectionDetected");
+        await _cacheService.DidNotReceiveWithAnyArgs().GetAsync<string>(default!, default);
+        _metricsPublisher.Received(1).PublishTurn(
+            Arg.Is<AiTurnMetricEvent>(m => m.DegradedOrBlocked && m.RoutingTier == "Blocked" && !m.FaqCacheHit));
+
+        _injectionDetector.Check(Arg.Any<string>()).Returns(new PromptInjectionCheckResult(false));
+        _moderation.ModerateTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(false, null, null, "Rejected"));
+
+        var blockedByModeration = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "Mensaje rechazado"), CancellationToken.None);
+
+        blockedByModeration.IsFailure.Should().BeTrue();
+        blockedByModeration.Error.Code.Should().Be("Ai.MessageBlockedByModeration");
+        await _cacheService.DidNotReceiveWithAnyArgs().GetAsync<string>(default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldStoreFaqCache_WhenTurnHasNoToolsNoHistoryNoLocationAndNoPii()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((string?)null);
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Reply("El apartado es presencial con QR."));
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Cómo funciona el QR?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _cacheService.Received(1).SetForEntityAsync(
+            Arg.Is<string>(k => k.StartsWith(AiCacheKeys.FaqPrefix, StringComparison.Ordinal)),
+            "El apartado es presencial con QR.",
+            AiCacheKeys.FaqEntityName,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNotStoreFaqCache_WhenToolsWereInvoked()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((string?)null);
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(ToolCall(SensiToolNames.SearchOffers), Reply("Encontré Torta a $45."));
+        _toolExecutor.ExecuteAsync(Arg.Any<McpToolCall>(), Arg.Any<Guid>(), Arg.Any<IReadOnlySet<AiScope>>(), Arg.Any<CancellationToken>())
+            .Returns(new McpToolExecutionResult("call-1", SensiToolNames.SearchOffers, SearchOffersJson, true));
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Qué tortas tienes?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _cacheService.DidNotReceiveWithAnyArgs().SetForEntityAsync(default!, default(string)!, default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNotStoreFaqCache_WhenPiiWasRedacted()
+    {
+        _cacheService.IsAvailable.Returns(true);
+        _cacheService.GetAsync<string>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((string?)null);
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Reply("Escríbenos a contacto@sensus.com."));
+        _redactor.Redact("Escríbenos a contacto@sensus.com.")
+            .Returns("Escríbenos a [CORREO_REDACTADO].");
+
+        var result = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "¿Cuál es el correo?"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _cacheService.DidNotReceiveWithAnyArgs().SetForEntityAsync(default!, default(string)!, default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldPublishMetrics_OnNormalTurnAndFallbackTurn()
+    {
+        _cacheService.IsAvailable.Returns(false);
+        _gateway.CompleteTurnAsync(Arg.Any<AiChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Reply("Respuesta normal."));
+
+        var normal = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "Hola"), CancellationToken.None);
+
+        normal.IsSuccess.Should().BeTrue();
+        _metricsPublisher.Received(1).PublishTurn(
+            Arg.Is<AiTurnMetricEvent>(m =>
+                !m.DegradedOrBlocked &&
+                !m.FaqCacheHit &&
+                m.CachedTokens == 600 &&
+                m.RoutingTier == "Fast" &&
+                m.EstimatedCostUsd > 0m));
+
+        _budgetGuard.CanExecuteTurnAsync(Arg.Any<Guid>(), Arg.Any<decimal>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        var fallback = await CreateHandlerWithCacheAndMetrics()
+            .Handle(new SendAiMessageCommand(null, "Hola"), CancellationToken.None);
+
+        fallback.Value.Degraded.Should().BeTrue();
+        _metricsPublisher.Received(1).PublishTurn(
+            Arg.Is<AiTurnMetricEvent>(m =>
+                m.DegradedOrBlocked &&
+                !m.FaqCacheHit &&
+                m.EstimatedCostUsd == 0m));
     }
 }

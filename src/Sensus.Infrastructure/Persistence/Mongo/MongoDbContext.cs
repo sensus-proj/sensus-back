@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using Sensus.Domain.Enums;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
 namespace Sensus.Infrastructure.Persistence.Mongo;
@@ -384,6 +385,20 @@ public sealed class MongoDbContext
                 .Ascending(c => c.OwnerUserId)
                 .Ascending(c => c.Status);
             AiConversations.Indexes.CreateOne(new CreateIndexModel<AiConversationDocument>(conversationOwnerKeys));
+
+            // Índice único parcial para impedir más de una conversación Active por usuario bajo concurrencia
+            var activeConversationUniqueKeys = Builders<AiConversationDocument>.IndexKeys
+                .Ascending(c => c.OwnerUserId);
+            var activeConversationUniqueOptions = new CreateIndexOptions<AiConversationDocument>
+            {
+                Name = "ux_ai_conversations_owner_active",
+                Unique = true,
+                PartialFilterExpression = Builders<AiConversationDocument>.Filter.Eq(
+                    c => c.Status,
+                    AiConversationStatus.Active.ToString())
+            };
+            AiConversations.Indexes.CreateOne(
+                new CreateIndexModel<AiConversationDocument>(activeConversationUniqueKeys, activeConversationUniqueOptions));
 
             // Índices para mensajes de Sensi IA
             var messageConvKeys = Builders<AiMessageDocument>.IndexKeys

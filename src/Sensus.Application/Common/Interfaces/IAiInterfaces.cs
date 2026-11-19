@@ -153,3 +153,17 @@ public interface ICitedOfferEnricher
         double? longitude,
         CancellationToken cancellationToken = default);
 }
+
+public sealed record AiTurnMetricEvent(
+    double LatencyMs,
+    int CachedTokens,
+    decimal EstimatedCostUsd,
+    bool DegradedOrBlocked,
+    string RoutingTier,
+    bool FaqCacheHit,
+    string CorrelationId);
+
+public interface IAiMetricsPublisher
+{
+    void PublishTurn(AiTurnMetricEvent metric);
+}
