@@ -90,15 +90,24 @@ def live_nat_gateways():
     return response.get("NatGateways", [])
 
 
+def free_addresses():
+    """IP elásticas propias sin asociar (sobrantes de una ejecución anterior)."""
+    addresses = EC2.describe_addresses(Filters=[tag_filter()]).get("Addresses", [])
+    return [a["AllocationId"] for a in addresses if not a.get("AssociationId")]
+
+
 def start():
     gateways = live_nat_gateways()
     if gateways:
         nat_id = gateways[0]["NatGatewayId"]
     else:
-        allocation = EC2.allocate_address(Domain="vpc", TagSpecifications=tags("elastic-ip"))
+        # Se reutiliza una IP libre propia antes de reservar otra: un fallo a mitad de camino no deja IPs sueltas.
+        free = free_addresses()
+        allocation_id = free[0] if free else EC2.allocate_address(
+            Domain="vpc", TagSpecifications=tags("elastic-ip"))["AllocationId"]
         nat = EC2.create_nat_gateway(
             SubnetId=PUBLIC_SUBNET_ID,
-            AllocationId=allocation["AllocationId"],
+            AllocationId=allocation_id,
             ConnectivityType="public",
             TagSpecifications=tags("natgateway"),
         )
@@ -106,6 +115,13 @@ def start():
 
     EC2.get_waiter("nat_gateway_available").wait(
         NatGatewayIds=[nat_id], WaiterConfig={"Delay": 10, "MaxAttempts": WAIT_SECONDS // 10})
+
+    # Con el NAT disponible su IP ya está asociada: las que siguen libres son sobrantes de intentos fallidos.
+    for leftover in free_addresses():
+        try:
+            EC2.release_address(AllocationId=leftover)
+        except ClientError as error:
+            LOG.warning(json.dumps({"event": "release-address-failed", "code": error.response["Error"]["Code"]}))
 
     for route_table_id in PRIVATE_ROUTE_TABLE_IDS:
         try:

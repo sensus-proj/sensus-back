@@ -314,9 +314,11 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 - **Commits**: Conventional Commits con requisito — `feat(FR-012-03): ...`, `fix(FR-030-01): ...`.
 - **Repositorio**: `origin` = `https://github.com/sensus-proj/sensus-back.git`. El remote `legacy`
   (`Elrorro334/sensus-back`) es archivo de solo lectura y no recibe push. La rama de integración es
-  `Sprint1` y `main` debe quedar siempre desplegable.
-- **Ramas**: una por requisito (`FR-NNN-nn` / `NFR-NNN-nn`) desde `Sprint1`, y PR a `Sprint1`. Prohibido
-  el push directo a `main` y el `push --force` sobre ramas compartidas.
+  `develop` y `main` debe quedar siempre desplegable: todo merge a `main` despliega a producción por CI.
+- **Ramas**: flujo `rama de trabajo → develop → main`. Las ramas de trabajo (por requisito, `FR-NNN-nn` /
+  `NFR-NNN-nn`, o personales como `Back_<nombre>`) salen de `develop` y vuelven por PR a `develop`; `main`
+  solo recibe PR desde `develop`. El CI (escáneres y pruebas) corre en todo push y PR a `develop` y `main`.
+  Prohibido el push directo a `main` o `develop` y el `push --force` sobre ramas compartidas.
 - **C#**: `nullable` habilitado, `async/await` sin `.Result` ni `.Wait()`, `record` para DTOs,
   `CancellationToken` en toda operación de E/S.
 - **Nombres**: código e identificadores en inglés; specs y documentación en español.
