@@ -414,7 +414,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-02` | 047 | FR | Ejecuta pruebas unitarias sin integración en job aislado | Must | Implementado |
 | `FR-047-03` | 047 | FR | Ejecuta pruebas de integración contra MongoDB real en job separado con servicio Docker | Must | Implementado |
 | `FR-047-04` | 047 | FR | Ejecuta Snyk `test` con severidad ≥ high como paso bloqueante | Must | Implementado |
-| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante | Must | Implementado |
+| `FR-047-05` | 047 | FR | Ejecuta SonarCloud análisis con calidad gate bloqueante en todos los PR (`develop` y `main`) y en `push` a `main` | Must | Implementado |
 | `FR-047-06` | 047 | FR | Ejecuta Stryker.NET pruebas de mutación como paso advisory | Should | Implementado |
 | `FR-047-07` | 047 | FR | Ejecuta gitleaks escaneo de secretos como paso bloqueante | Must | Implementado |
 | `FR-047-08` | 047 | FR | Verifica cobertura ≥ 80 % en `Sensus.Domain` y `Sensus.Application` como paso bloqueante | Must | Implementado |
