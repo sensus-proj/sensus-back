@@ -16,13 +16,19 @@ namespace Sensus.IntegrationTests.Persistence;
 /// </summary>
 public sealed class DynamoDbBudgetCounterStoreIntegrationTests : IAsyncLifetime, IDisposable
 {
-    private static readonly DateTimeOffset InitialNow = new(2026, 11, 19, 15, 0, 0, TimeSpan.Zero);
+    private readonly DateTimeOffset _initialNow =
+        DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
     private readonly string? _endpoint = Environment.GetEnvironmentVariable("DYNAMODB_LOCAL_ENDPOINT");
     private readonly string _tableName = $"sensus_budget_test_{Guid.NewGuid():N}";
-    private readonly MutableTimeProvider _time = new(InitialNow);
+    private readonly MutableTimeProvider _time;
     private AmazonDynamoDBClient? _client;
     private DynamoDbBudgetCounterStore? _store;
+
+    public DynamoDbBudgetCounterStoreIntegrationTests()
+    {
+        _time = new MutableTimeProvider(_initialNow);
+    }
 
     public async Task InitializeAsync()
     {
@@ -148,7 +154,8 @@ public sealed class DynamoDbBudgetCounterStoreIntegrationTests : IAsyncLifetime,
                 [DynamoDbBudgetCounterStore.KeyAttribute] = new() { S = key }
             }
         });
-        long expectedExp = InitialNow.AddHours(1).ToUnixTimeSeconds();
+        long expectedExp = _initialNow.AddHours(1).ToUnixTimeSeconds();
+        rawItem.IsItemSet.Should().BeTrue();
         rawItem.Item[DynamoDbBudgetCounterStore.ExpiresAttribute].N.Should().Be(
             expectedExp.ToString(CultureInfo.InvariantCulture));
     }
@@ -163,7 +170,7 @@ public sealed class DynamoDbBudgetCounterStoreIntegrationTests : IAsyncLifetime,
 
         (await _store.GetAsync(key)).Should().Be(3d);
 
-        _time.SetUtcNow(InitialNow.AddMinutes(31));
+        _time.SetUtcNow(_initialNow.AddMinutes(31));
 
         (await _store.GetAsync(key)).Should().Be(0d);
     }
