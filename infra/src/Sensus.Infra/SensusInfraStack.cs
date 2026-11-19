@@ -31,7 +31,10 @@ public sealed partial class SensusInfraStack : Stack
         : base(scope, id, props)
     {
         var envName = (Node.TryGetContext("environment") as string ?? "prod").ToLowerInvariant();
-        var budgetEmail = Node.TryGetContext("budgetEmail") as string ?? "alerts@sensus.local";
+        // Correo de alarmas y presupuesto: llega por contexto desde la variable de GitHub ALERTS_EMAIL; nunca se versiona.
+        var budgetEmail = Node.TryGetContext("budgetEmail") is string email && !string.IsNullOrWhiteSpace(email)
+            ? email
+            : "alerts@sensus.local";
         var allowedOrigins = ResolveAllowedOrigins();
 
         // Spec 051: pausa nocturna configurable por contexto (por defecto 22:30 a 07:00, hora del centro de México).
@@ -95,7 +98,12 @@ public sealed partial class SensusInfraStack : Stack
             Sid = "AllowSsmParameterStoreRead",
             Effect = Effect.ALLOW,
             Actions = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"],
-            Resources = [$"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}/*"]
+            // GetParametersByPath se autoriza sobre la ruta misma; GetParameter(s), sobre cada parámetro.
+            Resources =
+            [
+                $"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}",
+                $"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}/*"
+            ]
         }));
 
         // 3. Función AWS Lambda para .NET 10 sobre Amazon Linux 2023 ARM64 / Graviton2 (FR-045-03)
@@ -117,28 +125,8 @@ public sealed partial class SensusInfraStack : Stack
             ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
         };
 
-        string[] passthroughKeys =
-        [
-            "MongoDbSettings__ConnectionString",
-            "MONGODB_CONNECTION_STRING",
-            "MONGO_URI",
-            "JwtSettings__Secret",
-            "ClaimCodeSettings__Secret",
-            "Cloudinary__CloudName",
-            "Cloudinary__ApiKey",
-            "Cloudinary__ApiSecret",
-            "OpenAiSettings__ApiKey",
-            "MailerSettings__ApiKey"
-        ];
-
-        foreach (var key in passthroughKeys)
-        {
-            var val = System.Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrWhiteSpace(val))
-            {
-                lambdaEnv[key] = val;
-            }
-        }
+        // Los secretos (MongoDB, JWT, código de apartado, Cloudinary, OpenAI, correo) ya no viajan como variables de
+        // entorno: la API los lee de SSM Parameter Store bajo AWS_SSM_PARAMETER_PREFIX (Principio VIII, brecha G-01).
 
         var apiFunction = new Function(this, "SensusApiFunction", new FunctionProps
         {

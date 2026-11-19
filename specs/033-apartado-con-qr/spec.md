@@ -1,16 +1,16 @@
-﻿# Spec 033 — Apartado de oferta con código QR
+# Spec 033 — Apartado de oferta con código QR
 
 | Campo | Valor |
 |---|---|
 | ID | 033 |
 | Slug | `apartado-con-qr` |
-| Estado | Implementado |
+| Estado | Parcial |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 007, 032, 037 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
 
@@ -53,6 +53,8 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 | FR-033-06 | Exponer POST /api/v1/offers/claims/{code}/redeem para el comerciante propietario | Must |
 | FR-033-07 | Marcar el canje como usado y rechazar un segundo canje del mismo código | Must |
 | FR-033-08 | Impedir que un comerciante canjee códigos de otro comercio | Must |
+| FR-033-09 | Tras confirmar el apartado, avisar al comprador y a la cuenta propietaria del comercio en sus dispositivos activos, respetando `pushEnabled` | Must |
+| FR-033-10 | Entregar al comprador `claimId`, `offerId` y `expiresAtUtc` en el push para mostrar el límite de recogida | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -94,6 +96,11 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 - **Cuando** se ejecuta la liberación
 - **Entonces** stock devuelto y código inválido
 
+### CA-033-06
+
+- Un cambio de estado o apartado rechazado genera cero avisos de apartado. Un apartado confirmado genera un aviso por dispositivo activo de cada destinatario con push habilitado. Un reintento del despacho sobre el mismo apartado no solicita nuevamente los envíos ya reservados.
+- La confirmación, el código QR y `expiresAtUtc` conservan su contrato HTTP si el envío falla. El aviso del comprador incluye el vencimiento absoluto y permite que el cliente calcule la cuenta regresiva. El push no incluye QR, código de canje ni datos personales.
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -118,7 +125,22 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`
+- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`, `FR-033-09`, `FR-033-10`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
+
+### Contrato push para Android (FR-033-09 y FR-033-10)
+
+El backend envía un mensaje FCM con `notification.title`, `notification.body` y `data`. Los valores de `data` son cadenas.
+
+| `data.type` | Destinatario | Campos adicionales | Destino |
+|---|---|---|---|
+| `claim_confirmed` | Comprador | `claimId`, `offerId`, `expiresAtUtc` en ISO 8601 UTC | Detalle del apartado por `claimId`. |
+| `merchant_offer_claimed` | Titular del comercio activo | `claimId`, `offerId` | Detalle del apartado por `claimId`. |
+
+El QR queda fuera del payload push. El comprador lo obtiene desde las respuestas autenticadas de creación o lectura del apartado mientras el código siga vigente. La cuenta regresiva se calcula a partir de `expiresAtUtc`.
+
+### FR-033-11 — Abrir el apartado desde el aviso
+
+`GET /api/v1/offers/claims/{claimId}` devuelve el apartado al comprador o titular del comercio activo asociado. Terceros y apartados inexistentes reciben 404. El comprador puede recuperar el QR mientras siga vigente, si la firma coincide con el hash persistido. El comercio recibe los metadatos sin QR. La respuesta lleva Cache-Control: no-store. Este destino sustituye el detalle de oferta como destino primario del aviso.

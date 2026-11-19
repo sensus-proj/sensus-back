@@ -77,3 +77,5 @@ Evaluación previa a la implementación.
 8. `T004-08` Implementar las pruebas de integración del flujo completo
 9. `T004-09` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 10. `T004-10` Registrar evidencias del Constitution Check
+
+FR-004-05 reutiliza la búsqueda por usuario y dispositivo y la desactivación condicional por token. El comando ejecuta la desactivación antes de revocar para permitir reintentar si la persistencia falla. Sin servicios adicionales ni costo incremental de infraestructura.

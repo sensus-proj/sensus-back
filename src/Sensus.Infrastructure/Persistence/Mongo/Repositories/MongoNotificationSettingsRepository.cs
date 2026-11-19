@@ -29,6 +29,20 @@ public sealed class MongoNotificationSettingsRepository : INotificationSettingsR
         return document?.ToDomain();
     }
 
+    public async Task<IReadOnlyList<NotificationSettings>> GetByUserIdsAsync(IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Índice único por userId (FR-044-01).
+        FilterDefinition<NotificationSettingsDocument> filter = Builders<NotificationSettingsDocument>.Filter.In(d => d.UserId, userIds);
+        List<NotificationSettingsDocument> documents = await _collection.Find(filter).ToListAsync(cancellationToken);
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
     public async Task AddAsync(NotificationSettings settings, CancellationToken cancellationToken = default)
     {
         NotificationSettingsDocument document = NotificationSettingsDocument.FromDomain(settings);

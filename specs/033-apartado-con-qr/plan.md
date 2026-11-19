@@ -6,7 +6,7 @@
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ## 1. Resumen técnico
 
@@ -20,6 +20,10 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 | Application | ClaimOfferCommand, RedeemClaimCommand y ExpireClaimsJob |
 | Infrastructure | Actualización atómica con findOneAndUpdate, firma HMAC y generación de QR |
 | Api | Endpoints de apartado y canje |
+
+Para `FR-033-09` y `FR-033-10`, Application avisa después de persistir el apartado y usa `IPushDispatcher`. La clave por apartado y dispositivo reserva como máximo un intento para evitar duplicados incluso cuando el resultado de FCM es incierto. Infrastructure registra la reserva atómica en MongoDB con TTL sobre `expiresAtUtc`. Se intenta avisar a ambos destinatarios en paralelo dentro de un presupuesto compartido de dos segundos; medir el impacto sobre NFR-033-01 antes de desplegar. Si se agota el tiempo, la confirmación del apartado conserva su respuesta y la entrega no se reintenta automáticamente. El móvil consumirá `expiresAtUtc` para mostrar la cuenta regresiva. No se modifica el contrato HTTP ni se provisionan servicios AWS nuevos.
+
+Las pruebas de MongoDB usan `Testcontainers.MongoDb` 4.16.0 (licencia MIT, costo de licencia cero, dependencia exclusivamente de pruebas) y la imagen `mongo:7.0` que usa el repositorio en CI.
 
 ## 3. Modelo de datos e índices
 
@@ -46,6 +50,7 @@ Sin costo incremental: Lambda y API Gateway dentro del Free Tier.
 - Unitarias de la máquina de estados
 - Integración de concurrencia por la última unidad
 - Prueba de canje duplicado y de código ajeno
+- Probar destinatarios, preferencias, duplicados y fallo de despacho sin revertir el apartado. Verificar unicidad de la reserva con MongoDB real.
 
 ## 8. Constitution Check
 
@@ -82,3 +87,5 @@ Evaluación previa a la implementación.
 10. `T033-10` Implementar las pruebas de integración del flujo completo
 11. `T033-11` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 12. `T033-12` Registrar evidencias del Constitution Check
+
+FR-033-11 utiliza el índice _id de apartados, el repositorio de comercios y el firmador existente. CQRS de lectura, DTO explícito y verificación del propietario antes de regenerar el QR. Sin infraestructura nueva ni costo incremental.

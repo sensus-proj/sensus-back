@@ -27,6 +27,9 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 
 ## 4. Seguridad
 
+- Dependencia para `FR-044-08`: registrar el vínculo entre la oferta vigente y la decisión de moderación conjunta de su título, descripción e imagen. La decisión debe proceder de un registro interno con propietario y contenido verificables. El estado `Published` por sí solo y la aprobación aislada de un activo multimedia no acreditan `FR-034-03`.
+- Para conservar clientes existentes, evaluar un vínculo opcional en el contrato de oferta y exigirlo para entrar al flujo de alertas. Las ediciones de contenido invalidan el vínculo hasta nueva moderación. Las ofertas programadas deben evaluarse al iniciar su vigencia. Falta diseñar el enlace y el mecanismo de programación antes de activar alertas, con contratos y pruebas trazados a las specs 034, 035 y 044.
+
 - El comercio proviene del token
 - Moderación previa obligatoria
 - Sin publicar imágenes antes del veredicto
@@ -79,3 +82,17 @@ Evaluación previa a la implementación.
 10. `T034-10` Implementar las pruebas de integración del flujo completo
 11. `T034-11` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 12. `T034-12` Registrar evidencias del Constitution Check
+
+### Diseño pendiente de implementación para FR-034-03
+
+Usar el flujo de carga de medios como origen de una decisión conjunta. Moderar los bytes y el contexto de título y descripción antes de enviar a Cloudinary. Persistir el veredicto, categorías, puntajes, umbral, acción y fecha, vinculados internamente al propietario, al activo y a una huella del contexto que recibió el proveedor. Las decisiones automáticas históricas sin huella y las liberaciones manuales sin evidencia conjunta quedan excluidas de las alertas. La creación y edición deben validar que el activo aprobado pertenece al comerciante y que la huella coincide con el contenido de la versión a publicar. Un cambio de texto o imagen exige otra decisión. La versión de oferta debe conservar la referencia a la evidencia para que el despacho pueda reevaluarla.
+
+La cuarentena por fallo del proveedor debe resolverse antes de activar este diseño. El flujo actual sube a Cloudinary antes de moderar y no conserva el contexto de la decisión. El Constitution Check del cambio permanece abierto. Utilizar el proveedor existente bajo EX-002 y cuantificar el consumo al incorporar moderación de versiones.
+
+### Propuesta de enmienda conforme a §4.3 — Cuarentena previa a Cloudinary
+
+- Estado propuesto, pendiente de aprobación. Principios afectados IV y VI, y §2.4 de constitution.md v2.2.0.
+- Motivación. Ante timeout o fallo se debe conservar el contenido en cuarentena. El plan 019 vigente usa Cloudinary para retenerlo y el Principio IV impide escribir allí antes de moderar. El Principio VI reserva el almacenamiento multimedia a Cloudinary.
+- Redacción propuesta. Permitir retención temporal de imágenes de ofertas pendientes de veredicto en una colección privada de MongoDB, sin URL ni acceso de clientes, con expiración por TTL y máximo efectivo conforme a la spec 019. Mantener Cloudinary como destino de las imágenes aprobadas. Excluir expresamente el contenido prohibido de persistir según §2.3. Mantener cerrado el acceso a contenido inconcluso, rechazado o expirado.
+- Impacto. Actualizar 017, 019, 034 y 044 antes de implementar. El flujo de ofertas puede recibir la imagen en la propia solicitud de publicación y las ediciones de contenido quedan sujetas a una nueva evidencia. Las rutas ajenas al flujo de ofertas quedan fuera de este cambio. Verificar capacidad de MongoDB Free Tier, tamaño máximo por documento, acceso interno, TTL, costo y eliminación antes de aprobar el plan de implementación.
+- Criterio de verificación. Con timeout o respuesta inválida, cero escrituras en Cloudinary, oferta no visible, imagen inaccesible a clientes y registro de cuarentena con vencimiento. Con aprobación conjunta válida, se habilita la imagen y se puede programar la alerta de la versión aprobada.

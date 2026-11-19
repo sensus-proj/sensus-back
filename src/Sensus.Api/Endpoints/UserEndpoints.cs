@@ -4,6 +4,7 @@ using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.GeneratePhotoSignature;
+using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
 using Sensus.Application.Users.Commands.UpdateNotificationSettings;
 using Sensus.Application.Users.Commands.UpdateProfile;
@@ -93,7 +94,9 @@ public static class UserEndpoints
         .Produces<DeviceTokenResponseDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         if (isV1) registerDevice.WithName("RegisterDevice");
 
@@ -132,6 +135,26 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound);
 
         if (isV1) updateSettings.WithName("UpdateNotificationSettings");
+
+        group.MapPut("/notification-location", async (
+            ShareNotificationLocationCommand command, ISender sender, CancellationToken ct) =>
+            (await sender.Send(command, ct)).ToHttpResult())
+            .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+            .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+            .WithName("ShareNotificationLocation")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        group.MapDelete("/notification-location", async (ISender sender, CancellationToken ct) =>
+            (await sender.Send(new DeleteNotificationLocationCommand(), ct)).ToHttpResult())
+            .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+            .WithName("DeleteNotificationLocation")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         // SE-009: Eliminación definitiva de cuenta y datos asociados
         RouteHandlerBuilder deleteAccount = group.MapDelete("/account", async (

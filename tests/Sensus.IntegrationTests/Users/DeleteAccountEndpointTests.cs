@@ -8,6 +8,7 @@ using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Repositories;
 using Sensus.IntegrationTests.Infrastructure;
 
 namespace Sensus.IntegrationTests.Users;
@@ -130,6 +131,8 @@ public class DeleteAccountEndpointTests : IClassFixture<CustomWebApplicationFact
         await _factory.ComercioRepository.Received(1).DeleteByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>());
         await _factory.PasswordResetTokenRepository.Received(1).InvalidateExistingTokensForUserAsync(user.Id, Arg.Any<CancellationToken>());
         await _factory.UserRepository.Received(1).DeleteAsync(user.Id, Arg.Any<CancellationToken>());
+        await _factory.Services.GetRequiredService<INotificationLocationRepository>().Received(1)
+            .DeleteAsync(user.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]

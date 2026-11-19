@@ -60,6 +60,8 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 | FR-045-08 | Configurar rol IAM de mínimo privilegio para la función Lambda (únicamente escritura en CloudWatch Logs y lectura de parámetros SSM de Sensus) | Must |
 | FR-045-09 | Aplicar etiquetas obligatorias (`project=sensus`, `environment`, `owner=sensus-team`) a todos los recursos del stack | Must |
 | FR-045-10 | Exponer como `CfnOutput` la URL pública del API Gateway y el ARN de la función Lambda | Must |
+| FR-045-11 | Leer los secretos de la API desde SSM Parameter Store (`SecureString`, ruta `/sensus/<entorno>/`) como fuente obligatoria al arrancar, sin variables de entorno con secretos; sin secreto JWT la API no arranca en Lambda | Must |
+| FR-045-12 | Recibir el correo de alarmas y presupuesto por contexto de CDK desde la variable de repositorio `ALERTS_EMAIL`, nunca versionado | Must |
 
 ## 5. Requisitos no funcionales
 

@@ -69,15 +69,17 @@ public static class AuthEndpoints
 
         // SE-004: Cierre de sesión y revocación de token
         var logout = group.MapPost("/logout", async (
+            string? deviceId,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new LogoutCommand(), ct);
+            var result = await sender.Send(new LogoutCommand(deviceId), ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization()
         .WithSummary("SE-004: Cierra la sesión activa revocando el token JWT actual de forma verificable e idempotente")
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         if (isV1) logout.WithName("LogoutUser");

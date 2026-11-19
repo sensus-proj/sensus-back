@@ -4,6 +4,7 @@ using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
@@ -127,5 +128,27 @@ public class CreateOfferCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Offer.ExpiredEndDate");
         await _offerRepository.DidNotReceive().AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNotifyNearbyUsersAfterPersisting()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+        var notifier = Substitute.For<INearbyOfferNotifier>();
+        var handler = new CreateOfferCommandHandler(
+            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _cacheService, notifier);
+        var command = new CreateOfferCommand(
+            "Detergente", "Detergente líquido de 3 litros", 100m, 20, 10, _now, _now.AddDays(5), null);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        Received.InOrder(() =>
+        {
+            _offerRepository.AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+            notifier.NotifyAsync(Arg.Is<Offer>(o => o.Id == result.Value.Id), _userId, Arg.Any<CancellationToken>());
+        });
     }
 }

@@ -11,11 +11,12 @@ public class LogoutCommandHandlerTests
 {
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
+    private readonly IDeviceRepository _deviceRepository = Substitute.For<IDeviceRepository>();
     private readonly LogoutCommandHandler _handler;
 
     public LogoutCommandHandlerTests()
     {
-        _handler = new LogoutCommandHandler(_userRepository, _currentUserService);
+        _handler = new LogoutCommandHandler(_userRepository, _currentUserService, _deviceRepository);
     }
 
     [Fact]
@@ -44,6 +45,32 @@ public class LogoutCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         user.SecurityStamp.Should().NotBe(originalStamp);
         await _userRepository.Received(1).UpdateAsync(user, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldDeactivateOnlyTheRequestedDeviceOfTheAuthenticatedAccount()
+    {
+        User user = User.Create("Test Logout User", "logout@sensus.com", "hashed-password", true, DateTime.UtcNow).Value;
+        Device device = Device.Create(user.Id, "installation", "Android", "test-device-token", DateTime.UtcNow);
+        _currentUserService.UserId.Returns(user.Id.ToString());
+        _userRepository.GetByIdAsync(user.Id, CancellationToken.None).Returns(user);
+        _deviceRepository.GetByUserAndDeviceIdAsync(user.Id, device.DeviceId, CancellationToken.None).Returns(device);
+
+        var result = await _handler.Handle(new LogoutCommand(device.DeviceId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _deviceRepository.Received(1).DeactivateByTokenAsync(device.Id, device.Token, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldRejectInvalidDeviceIdBeforeChangingTheSession()
+    {
+        _currentUserService.UserId.Returns(Guid.NewGuid().ToString());
+
+        var result = await _handler.Handle(new LogoutCommand(" "), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Device.InvalidDeviceId");
+        await _userRepository.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

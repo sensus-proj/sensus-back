@@ -17,6 +17,7 @@ public sealed class SendFriendRequestCommandHandler
     private readonly IFriendRequestRepository _friendRequestRepository;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPushDispatcher _pushDispatcher;
+    private readonly INotificationSettingsRepository _notificationSettings;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public SendFriendRequestCommandHandler(
@@ -25,13 +26,15 @@ public sealed class SendFriendRequestCommandHandler
         IFriendRequestRepository friendRequestRepository,
         IDeviceRepository deviceRepository,
         IPushDispatcher pushDispatcher,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        INotificationSettingsRepository notificationSettings)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
         _friendRequestRepository = friendRequestRepository;
         _deviceRepository = deviceRepository;
         _pushDispatcher = pushDispatcher;
+        _notificationSettings = notificationSettings;
         _dateTimeProvider = dateTimeProvider;
     }
 
@@ -113,6 +116,7 @@ public sealed class SendFriendRequestCommandHandler
         await FriendRequestMappingExtensions.NotifyUserDevicesAsync(
             _deviceRepository,
             _pushDispatcher,
+            _notificationSettings,
             target.Id,
             title: "Nueva solicitud de amistad",
             body: $"{sender.NombreCompleto} quiere agregarte como amigo en Sensus.",
@@ -150,6 +154,7 @@ public sealed class SendFriendRequestCommandHandler
         await FriendRequestMappingExtensions.NotifyUserDevicesAsync(
             _deviceRepository,
             _pushDispatcher,
+            _notificationSettings,
             target.Id,
             title: "Solicitud aceptada",
             body: $"{sender.NombreCompleto} y tú ahora son amigos en Sensus.",
