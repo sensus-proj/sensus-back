@@ -210,6 +210,7 @@ public sealed class MongoAiRepositoriesTests : IAsyncLifetime
 
         var userId = Guid.NewGuid();
         var targetConv = AiConversation.Create(userId, RoleType.Consumidor, "gpt-4o-mini", AiRoutingTier.Fast, "1.0.0", null, Now).Value;
+        targetConv.Archive(Now.AddSeconds(30));
         var keepConv = AiConversation.Create(userId, RoleType.Consumidor, "gpt-4o-mini", AiRoutingTier.Fast, "1.0.0", null, Now.AddMinutes(1)).Value;
         await _conversations!.AddAsync(targetConv);
         await _conversations.AddAsync(keepConv);
