@@ -805,7 +805,7 @@ vencida es una violación bloqueante (§4.5).
 
 | ID | Brecha | Regla | Ámbito | Remediación | Fecha objetivo | Estado |
 |---|---|---|---|---|---|---|
-| G-01 | Secretos (JWT, Mongo, Cloudinary, OpenAI, correo) inyectados como variables de entorno de Lambda | 5 | Backend | Migrar a SSM *SecureString* (gratuito) y leerlos en tiempo de arranque | 2026-12-18 | Abierta |
+| G-01 | Secretos (JWT, Mongo, Cloudinary, OpenAI, correo) inyectados como variables de entorno de Lambda | 5 | Backend | Migrar a SSM *SecureString* (gratuito) y leerlos en tiempo de arranque | 2026-12-18 | Cerrada en código el 2026-11-19 (Spec 045, FR-045-11); queda cargar los parámetros en `/sensus/prod/` |
 | G-02 | Sin DAST | 8 | Backend | ZAP *baseline* contra el entorno de pruebas desplegado | 2027-01-15 | Abierta |
 | G-03 | Sin escaneo de IaC | 8 | Backend | `cdk-nag` o Checkov bloqueante en CI | 2026-12-11 | Abierta |
 | G-04 | Sin SBOM ni procedencia de artefactos | 8 | Backend y móvil | CycloneDX y atestación en CI | 2026-12-18 | Abierta |
@@ -818,6 +818,7 @@ vencida es una violación bloqueante (§4.5).
 | G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Abierta |
 | G-12 | Clave de API de Figma en `mcp_config.json` local del móvil (ignorado por Git) | 5 | Móvil | Rotar la clave y moverla a variable de entorno del usuario | 2026-11-23 | Abierta |
 | G-14 | La caché Valkey Serverless no usa autenticación de usuarios (RBAC o IAM); el aislamiento depende del grupo de seguridad y de TLS | 2, 5 | Backend | Habilitar autenticación IAM de ElastiCache y generar el token en `RedisCacheService` | 2027-01-29 | Abierta |
+| G-15 | Swagger UI y el documento OpenAPI están públicos en producción (`Program.cs`), lo que expone la superficie completa de la API | 3 | Backend | Restringir a Development o protegerlos con `AdminOnly` | 2026-12-11 | Abierta |
 | G-13 | Pruebas de carga ausentes para los `NFR` de latencia | V, VII | Backend | k6 o similar contra entorno de pruebas | 2027-01-15 | Abierta |
 
 ---
