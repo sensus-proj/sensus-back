@@ -64,16 +64,28 @@ internal static class FriendRequestMappingExtensions
     public static async Task NotifyUserDevicesAsync(
         IDeviceRepository deviceRepository,
         IPushDispatcher pushDispatcher,
+        INotificationSettingsRepository notificationSettings,
         Guid targetUserId,
         string title,
         string body,
         IReadOnlyDictionary<string, string> data,
         CancellationToken cancellationToken)
     {
+        NotificationSettings settings = await notificationSettings.GetByUserIdAsync(targetUserId, cancellationToken)
+            ?? NotificationSettings.CreateDefaults(targetUserId);
+        if (!settings.PushEnabled || !settings.SocialAlerts)
+        {
+            return;
+        }
+
         List<Device> devices = await deviceRepository.GetActiveByUserAsync(targetUserId, cancellationToken);
         foreach (Device device in devices)
         {
-            await pushDispatcher.SendAsync(device.Token, title, body, data, cancellationToken);
+            PushResult result = await pushDispatcher.SendAsync(device.Token, title, body, data, cancellationToken);
+            if (result == PushResult.InvalidToken)
+            {
+                await deviceRepository.DeactivateByTokenAsync(device.Id, device.Token, cancellationToken);
+            }
         }
     }
 }

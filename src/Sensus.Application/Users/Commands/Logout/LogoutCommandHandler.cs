@@ -13,13 +13,16 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result
 {
     private readonly IUserRepository _userRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IDeviceRepository _deviceRepository;
 
     public LogoutCommandHandler(
         IUserRepository userRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IDeviceRepository deviceRepository)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
+        _deviceRepository = deviceRepository;
     }
 
     public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
@@ -30,11 +33,25 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result
             return Result.Failure(Error.Unauthorized("Auth.Unauthorized", "Se requiere una sesión activa para cerrar sesión."));
         }
 
+        if (request.DeviceId is { } deviceId && (string.IsNullOrWhiteSpace(deviceId) || deviceId.Length > 100))
+        {
+            return Result.Failure(Error.Validation("Device.InvalidDeviceId", "El identificador del dispositivo es inválido."));
+        }
+
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
         {
             // Idempotencia: si el usuario ya no existe, la sesión ya no tiene efecto
             return Result.Success();
+        }
+
+        if (request.DeviceId is { } installationId)
+        {
+            var device = await _deviceRepository.GetByUserAndDeviceIdAsync(userId, installationId, cancellationToken);
+            if (device is { IsActive: true })
+            {
+                await _deviceRepository.DeactivateByTokenAsync(device.Id, device.Token, cancellationToken);
+            }
         }
 
         user.RotateSecurityStamp();
