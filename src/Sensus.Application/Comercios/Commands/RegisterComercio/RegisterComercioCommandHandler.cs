@@ -95,7 +95,8 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
             latitud,
             longitud,
             now,
-            categoria);
+            categoria,
+            request.FotoFachadaUrl);
 
         if (comercioResult.IsFailure)
         {

@@ -24,6 +24,11 @@ public class User : BaseEntity, IAggregateRoot
 
     public IReadOnlyCollection<string> Roles => _roles.AsReadOnly();
 
+    /// <summary>
+    /// Suspensión vigente por sanción (Spec 020). Se denormaliza en el usuario para bloquear sin consultas extra.
+    /// </summary>
+    public UserSuspension? Suspension { get; private set; }
+
     // Constructor privado para serialización / ORM
     private User() : base()
     {
@@ -178,4 +183,56 @@ public class User : BaseEntity, IAggregateRoot
     {
         Estatus = true;
     }
+
+    /// <summary>
+    /// Indica si el usuario está bloqueado por una sanción en el instante indicado (Spec 020, FR-020-04).
+    /// Una suspensión con fecha de fin vencida deja de bloquear sin intervención (CA-020-06).
+    /// </summary>
+    public bool IsSuspended(DateTime nowUtc) =>
+        Suspension is not null && (Suspension.EndsAtUtc is null || Suspension.EndsAtUtc > nowUtc);
+
+    /// <summary>
+    /// Suspende al usuario e invalida sus sesiones. Si ya existe una suspensión vigente más severa se conserva.
+    /// </summary>
+    public void Suspend(Guid sanctionId, DateTime? endsAtUtc, DateTime nowUtc)
+    {
+        var candidate = new UserSuspension(sanctionId, endsAtUtc);
+        if (!IsSuspended(nowUtc) || candidate.IsAtLeastAsSevereAs(Suspension!))
+        {
+            Suspension = candidate;
+        }
+
+        RotateSecurityStamp();
+    }
+
+    /// <summary>
+    /// Levanta la suspensión sin tocar datos del usuario (NFR-020-02). Solo aplica si corresponde a la sanción indicada.
+    /// </summary>
+    public bool LiftSuspension(Guid sanctionId)
+    {
+        if (Suspension is null || Suspension.SanctionId != sanctionId)
+        {
+            return false;
+        }
+
+        Suspension = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Restaura una suspensión persistida. Uso exclusivo de la capa de persistencia: no rota el stamp.
+    /// </summary>
+    public void RestoreSuspension(Guid sanctionId, DateTime? endsAtUtc)
+    {
+        Suspension = new UserSuspension(sanctionId, endsAtUtc);
+    }
+}
+
+/// <summary>
+/// Suspensión vigente de un usuario; <see cref="EndsAtUtc"/> nulo indica baneo permanente.
+/// </summary>
+public sealed record UserSuspension(Guid SanctionId, DateTime? EndsAtUtc)
+{
+    public bool IsAtLeastAsSevereAs(UserSuspension other) =>
+        EndsAtUtc is null || (other.EndsAtUtc is not null && EndsAtUtc >= other.EndsAtUtc);
 }

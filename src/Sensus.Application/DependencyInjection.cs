@@ -22,6 +22,9 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
 
+        // Sanciones y baneo (Spec 020)
+        services.AddScoped<Sensus.Application.Common.Interfaces.ISanctionNotifier, Sensus.Application.Sanctions.Services.SanctionNotifier>();
+
         // Sensi IA (Spec 046)
         services.AddSingleton<Sensus.Application.Ai.Services.ITwoBlockPromptBuilder, Sensus.Application.Ai.Services.TwoBlockPromptBuilder>();
         services.AddScoped<Sensus.Application.Common.Interfaces.IDeterministicAiFallbackService, Sensus.Application.Ai.Services.DeterministicAiFallbackService>();

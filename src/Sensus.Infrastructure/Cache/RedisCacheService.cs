@@ -192,6 +192,8 @@ public sealed class RedisCacheService : ICacheService
 
     public bool IsAvailable => _settings.Enabled && _connection is not null && _connection.IsConnected;
 
+    public string Provider => _settings.Enabled ? "redis" : "none";
+
     public async Task<double?> IncrementByFloatAsync(string key, double value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))

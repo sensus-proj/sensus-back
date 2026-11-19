@@ -4,12 +4,15 @@ using Amazon.CDK.AWS.Budgets;
 using Amazon.CDK.AWS.CloudWatch;
 using Amazon.CDK.AWS.CloudWatch.Actions;
 using Amazon.CDK.AWS.DynamoDB;
+using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.SNS;
 using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
+using CfnRoute = Amazon.CDK.AWS.Apigatewayv2.CfnRoute;
+using CfnRouteProps = Amazon.CDK.AWS.Apigatewayv2.CfnRouteProps;
 
 namespace Sensus.Infra;
 
@@ -19,7 +22,7 @@ namespace Sensus.Infra;
 /// Amazon CloudWatch Logs (7 días de retención), alarmas operativas, acceso a SSM Parameter Store
 /// y alarma presupuestaria en AWS Budgets.
 /// </summary>
-public sealed class SensusInfraStack : Stack
+public sealed partial class SensusInfraStack : Stack
 {
     /// <summary>Espacio de nombres de las métricas de aplicación; coincide con <c>Observability:Metrics:Namespace</c>.</summary>
     public const string AppMetricsNamespace = "Sensus/Api";
@@ -30,6 +33,16 @@ public sealed class SensusInfraStack : Stack
         var envName = (Node.TryGetContext("environment") as string ?? "prod").ToLowerInvariant();
         var budgetEmail = Node.TryGetContext("budgetEmail") as string ?? "alerts@sensus.local";
         var allowedOrigins = ResolveAllowedOrigins();
+
+        // Spec 051: pausa nocturna configurable por contexto (por defecto 22:30 a 07:00, hora del centro de México).
+        var scheduleTimeZone = Node.TryGetContext("scheduleTimeZone") as string ?? "America/Mexico_City";
+        var nightStopAt = Node.TryGetContext("nightStopAt") as string ?? "22:30";
+        var morningStartAt = Node.TryGetContext("morningStartAt") as string ?? "07:00";
+        var monthlyBudgetUsd = double.TryParse(
+            Node.TryGetContext("monthlyBudgetUsd")?.ToString(),
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var parsedBudget) ? parsedBudget : 40.0;
 
         // 1. Grupo de Logs en Amazon CloudWatch con retención de 7 días (FR-045-05, NFR-045-03)
         // Garantiza mantenerse permanentemente dentro de los 5 GB gratuitos de CloudWatch.
@@ -86,14 +99,18 @@ public sealed class SensusInfraStack : Stack
         }));
 
         // 3. Función AWS Lambda para .NET 10 sobre Amazon Linux 2023 ARM64 / Graviton2 (FR-045-03)
-        // Sin VPC ni NAT Gateway para garantizar costo 0.00 USD y salida directa a MongoDB Atlas, Cloudinary y OpenAI.
+        // Spec 048 (FR-048-14) y ADR 0014: la Lambda vive en subredes privadas para alcanzar la caché Valkey; sale a
+        // MongoDB Atlas, Cloudinary, OpenAI y FCM por un NAT que la pausa nocturna crea de día y destruye de noche.
         var assetPath = ResolveLambdaAssetPath();
+        var cacheNetwork = CreateCacheNetwork(envName);
+        lambdaRole.AddManagedPolicy(ManagedPolicy.FromAwsManagedPolicyName("service-role/AWSLambdaVPCAccessExecutionRole"));
 
         var lambdaEnv = new Dictionary<string, string>
         {
             ["ASPNETCORE_ENVIRONMENT"] = "Production",
             ["AWS_SSM_PARAMETER_PREFIX"] = $"/sensus/{envName}",
-            ["Redis__Enabled"] = "false",
+            ["Redis__Enabled"] = "true",
+            ["Redis__ConnectionString"] = cacheNetwork.RedisConnectionString,
             ["AiBudgetStore__TableName"] = budgetTable.TableName,
             ["Observability__Metrics__Enabled"] = "true",
             ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
@@ -132,6 +149,9 @@ public sealed class SensusInfraStack : Stack
             Handler = "bootstrap",
             Code = Code.FromAsset(assetPath),
             Role = lambdaRole,
+            Vpc = cacheNetwork.Vpc,
+            VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+            SecurityGroups = [cacheNetwork.ApiSecurityGroup],
             MemorySize = 512,
             Timeout = Duration.Seconds(29),
             LogGroup = apiLogGroup,
@@ -301,10 +321,14 @@ public sealed class SensusInfraStack : Stack
         });
 
         // NFR-015-01: 5 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
-        foreach (var alarm in new[] { errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm })
+        Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm];
+        foreach (var alarm in operationalAlarms)
         {
             alarm.AddAlarmAction(alarmAction);
         }
+
+        // Spec 051: de noche la API no acepta tráfico y las alarmas se silencian para no notificar fallos esperados.
+        CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, scheduleTimeZone, nightStopAt, morningStartAt);
 
         // Panel mínimo de operación (alcance de la Spec 015); CloudWatch incluye 3 paneles gratuitos.
         var dashboard = new Dashboard(this, "SensusOperationsDashboard", new DashboardProps
@@ -335,7 +359,7 @@ public sealed class SensusInfraStack : Stack
                 TimeUnit = "MONTHLY",
                 BudgetLimit = new CfnBudget.SpendProperty
                 {
-                    Amount = 1.0,
+                    Amount = monthlyBudgetUsd,
                     Unit = "USD"
                 }
             },

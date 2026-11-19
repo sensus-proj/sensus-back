@@ -114,6 +114,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<SharedOfferDocument>(_settings.SharedOffersCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<SanctionDocument> Sanctions =>
+        _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
     /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
@@ -142,6 +146,34 @@ public sealed class MongoDbContext
     private void ConfigureIndexes()
     {
         if (_database is null) return;
+
+        try
+        {
+            // Spec 020 (NFR-020-04): índices de las consultas de sanciones, declarados y justificados.
+            IMongoCollection<SanctionDocument> sanctions = _database.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName);
+
+            // Reincidencia y listado por usuario, del más reciente al más antiguo.
+            sanctions.Indexes.CreateOne(new CreateIndexModel<SanctionDocument>(
+                Builders<SanctionDocument>.IndexKeys.Ascending(s => s.UserId).Descending(s => s.StartsAtUtc)));
+
+            // Listado general ordenado por fecha.
+            sanctions.Indexes.CreateOne(new CreateIndexModel<SanctionDocument>(
+                Builders<SanctionDocument>.IndexKeys.Descending(s => s.StartsAtUtc)));
+
+            // Idempotencia: una sola sanción automática por activo (parcial: solo documentos con mediaId).
+            sanctions.Indexes.CreateOne(new CreateIndexModel<SanctionDocument>(
+                Builders<SanctionDocument>.IndexKeys.Ascending("evidence.mediaId"),
+                new CreateIndexOptions<SanctionDocument>
+                {
+                    Unique = true,
+                    PartialFilterExpression = Builders<SanctionDocument>.Filter.Type("evidence.mediaId", MongoDB.Bson.BsonType.String)
+                }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de sanciones ya existen o el clúster aún no está disponible.");
+        }
+
 
         try
         {

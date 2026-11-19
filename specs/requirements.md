@@ -129,12 +129,19 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-019-04` | 019 | FR | Permitir la liberación del contenido tras aprobación | Should | Implementado |
 | `NFR-019-01` | 019 | NFR | Retención | Máximo definido en la spec (propuesta: 30 días) | Implementado |
 | `NFR-019-02` | 019 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Pendiente |
-| `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Pendiente |
-| `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Pendiente |
-| `FR-020-03` | 020 | FR | Registrar motivo, evidencia y responsable | Must | Pendiente |
-| `FR-020-04` | 020 | FR | Bloquear el acceso del usuario sancionado | Must | Pendiente |
-| `NFR-020-01` | 020 | NFR | Efectividad del bloqueo | < 1 s | Pendiente |
-| `NFR-020-02` | 020 | NFR | Reversibilidad | Sin pérdida de datos del usuario | Pendiente |
+| `FR-020-01` | 020 | FR | Aplicar baneo cuando la banda sea alta | Must | Implementado |
+| `FR-020-02` | 020 | FR | Permitir revertir una sanción | Must | Implementado |
+| `FR-020-03` | 020 | FR | Registrar motivo, evidencia y responsable | Must | Implementado |
+| `FR-020-04` | 020 | FR | Bloquear el acceso del usuario sancionado | Must | Implementado |
+| `NFR-020-01` | 020 | NFR | Efectividad del bloqueo | < 1 s | Implementado |
+| `NFR-020-02` | 020 | NFR | Reversibilidad | Sin pérdida de datos del usuario | Implementado |
+| `FR-020-05` | 020 | FR | Consultar sanciones con filtros y paginación (administrador) | Must | Implementado |
+| `FR-020-06` | 020 | FR | Escalar la duración de la sanción por reincidencia hasta el baneo permanente | Should | Implementado |
+| `FR-020-07` | 020 | FR | Aplicar una sanción manual temporal o permanente (administrador) | Should | Implementado |
+| `NFR-020-03` | 020 | NFR | Privacidad y observabilidad | 0 PII en logs; métricas de sanciones aplicadas y revertidas | Implementado |
+| `NFR-020-04` | 020 | NFR | Rendimiento de consulta | Paginación 20/100 sobre índices declarados | Implementado |
+| `FR-020-08` | 020 | FR | Notificar por push al usuario al aplicar y al revertir una sanción | Must | Implementado |
+| `NFR-020-05` | 020 | NFR | Seguridad de nivel fintech (Principio VIII) | Sin enumeración de cuentas; autorización en borde y caso de uso | Implementado |
 | `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Pendiente |
 | `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Pendiente |
 | `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Pendiente |
@@ -410,23 +417,26 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-047-04` | 047 | NFR | Secretos en código o YAML del workflow | 0 | Implementado |
 | `NFR-047-05` | 047 | NFR | Fallo de cualquier verificación bloqueante | Bloquea fusión (merge) | Implementado |
 | `NFR-047-06` | 047 | NFR | Umbrales de Evals de Sensi IA | Deterministas 100 %; con modelo: precisión ≥ 90 %, tono/identidad ≥ 95 %, inyección ≥ 95 %, 0 revelaciones | Implementado |
-| `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Pendiente |
-| `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Pendiente |
-| `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Pendiente |
+| `FR-048-01` | 048 | FR | Definir interfaz `ICacheService` con métodos `GetAsync`, `SetAsync`, `RemoveAsync`, `ExistsAsync` | Must | Implementado |
+| `FR-048-02` | 048 | FR | Implementar `RedisCacheService` en `Sensus.Infrastructure` usando `StackExchange.Redis` | Must | Implementado |
+| `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Implementado |
 | `FR-048-04` | 048 | FR | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must | Implementado |
 | `FR-048-05` | 048 | FR | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must | Implementado |
 | `FR-048-06` | 048 | FR | Cachear respuestas de `GET /feed/nearby` con TTL configurable | Must | Pendiente |
 | `FR-048-07` | 048 | FR | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must | Implementado |
 | `FR-048-08` | 048 | FR | Invalidar caché de feed al crear, actualizar o eliminar una publicación | Must | Pendiente |
-| `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Pendiente |
+| `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Implementado |
 | `FR-048-10` | 048 | FR | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must | Implementado |
-| `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Pendiente |
-| `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Pendiente |
+| `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Implementado |
+| `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Implementado |
 | `NFR-048-01` | 048 | NFR | Latencia de lectura con caché | p95 < 300 ms | Pendiente |
 | `NFR-048-02` | 048 | NFR | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms | Pendiente |
-| `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Pendiente |
-| `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Pendiente |
-| `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Pendiente |
+| `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Implementado |
+| `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Implementado |
+| `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Implementado |
+| `FR-048-14` | 048 | FR | Activar Redis en producción con ElastiCache Serverless (Valkey) en VPC | Must | Implementado |
+| `FR-048-13` | 048 | FR | Usar caché en memoria de proceso cuando Redis está apagado | Should | Implementado |
+| `NFR-048-06` | 048 | NFR | Desactualización entre instancias con caché en memoria | ≤ 60 s (`Cache:Memory:MaxTtlSeconds`) | Implementado |
 | `FR-049-01` | 049 | FR | Definir `IBudgetCounterStore` con incremento atómico numérico, lectura de contador y estado de disponibilidad | Must | Implementado |
 | `FR-049-02` | 049 | FR | Implementar `DynamoDbBudgetCounterStore` con `UpdateItem ... ADD` atómico, lectura consistente y expiración por atributo TTL | Must | Implementado |
 | `FR-049-03` | 049 | FR | `AiBudgetGuard` usa `IBudgetCounterStore` y opera *fail-closed* si el almacén no está disponible, falla o expira | Must | Implementado |
@@ -447,5 +457,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-050-01` | 050 | NFR | Seguridad | 100 % de endpoints protegidos con `RegisteredUserPolicy` | Implementado |
 | `NFR-050-02` | 050 | NFR | Privacidad | Sin exposición de correo, credenciales ni coordenadas en DTOs | Implementado |
 | `NFR-050-03` | 050 | NFR | Arquitectura | Reglas de capas y sufijos validadas con `Sensus.ArchitectureTests` | Implementado |
+| `FR-051-01` | 051 | FR | Pausar a las 22:30 y reanudar a las 07:00 (America/Mexico_City) con EventBridge Scheduler | Must | Implementado |
+| `FR-051-02` | 051 | FR | Cortar el tráfico de la API durante la pausa | Must | Implementado |
+| `FR-051-03` | 051 | FR | Eliminar NAT, IP elástica y ruta de salida durante la pausa | Must | Implementado |
+| `FR-051-04` | 051 | FR | Reanudar NAT, ruta y tráfico solo con salida a internet | Must | Implementado |
+| `FR-051-05` | 051 | FR | Silenciar y reactivar las acciones de las alarmas | Must | Implementado |
+| `FR-051-06` | 051 | FR | Aplicar el estado según la hora al desplegar | Should | Implementado |
+| `FR-051-07` | 051 | FR | Horario y zona horaria configurables por contexto de CDK | Must | Implementado |
+| `NFR-051-01` | 051 | NFR | Ahorro | 8.5 h diarias sin NAT ni IP elástica | Implementado |
+| `NFR-051-02` | 051 | NFR | Mínimo privilegio | Solo recursos etiquetados y ARN propios | Implementado |
+| `NFR-051-03` | 051 | NFR | Tiempo de reanudación | ≤ 5 min | Implementado |
+| `NFR-051-04` | 051 | NFR | Idempotencia | Repetir una acción no duplica ni falla | Implementado |
 
-Total: **441 requisitos** en 50 specs.
+Total: **464 requisitos** en 51 specs.

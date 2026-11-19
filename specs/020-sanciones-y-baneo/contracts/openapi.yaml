@@ -1,0 +1,227 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 020 Sanciones y baneo de usuario"
+  version: 2.1.0
+  description: >
+    Consulta, aplicación manual y reversión de sanciones por un administrador. La sanción automática por
+    decisión de banda alta no tiene endpoint: la dispara la moderación de medios (FR-020-01).
+    Todas las rutas exigen JWT con rol Administrador. El bloqueo del usuario sancionado se refleja en
+    POST /api/v1/auth/login (403 Auth.UserSanctioned) y en el rechazo 401 de sus tokens previos.
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/moderation/sanctions:
+    get:
+      summary: Lista paginada de sanciones
+      operationId: listSanctions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/SanctionStatus' }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Página de sanciones
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SanctionPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Aplica una sanción manual (temporal o permanente)
+      operationId: createManualSanction
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSanctionRequest' }
+      responses:
+        '201':
+          description: Sanción creada; el usuario queda bloqueado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sanction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: Sin rol Administrador, o el objetivo es el propio administrador u otro administrador (Sanction.TargetNotAllowed)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: El usuario objetivo no existe
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/moderation/sanctions/{id}:
+    get:
+      summary: Detalle de una sanción
+      operationId: getSanction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SanctionId'
+      responses:
+        '200':
+          description: Sanción
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sanction' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/moderation/sanctions/{id}/revert:
+    post:
+      summary: Revierte una sanción activa y restaura el acceso del usuario
+      operationId: revertSanction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SanctionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RevertSanctionRequest' }
+      responses:
+        '200':
+          description: Sanción revertida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sanction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: La sanción ya fue revertida o ya venció (Sanction.NotActive)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    SanctionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Problem:
+      description: Error estándar RFC 7807
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+  schemas:
+    SanctionStatus:
+      type: string
+      description: "Expired se deriva de endsAtUtc; no se almacena."
+      enum: [Active, Expired, Reverted]
+    SanctionType:
+      type: string
+      enum: [Automatic, Manual]
+    Sanction:
+      type: object
+      required: [id, userId, type, status, reason, appliedBy, startsAtUtc]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/SanctionType' }
+        status: { $ref: '#/components/schemas/SanctionStatus' }
+        reason: { type: string, maxLength: 500 }
+        evidence: { $ref: '#/components/schemas/SanctionEvidence' }
+        appliedBy:
+          type: string
+          description: "'system' o el identificador del administrador"
+        startsAtUtc: { type: string, format: date-time }
+        endsAtUtc:
+          type: [string, 'null']
+          format: date-time
+          description: Nulo si la sanción es permanente
+        revertedBy: { type: [string, 'null'], format: uuid }
+        revertedAtUtc: { type: [string, 'null'], format: date-time }
+        revertReason: { type: [string, 'null'], maxLength: 500 }
+    SanctionEvidence:
+      type: object
+      description: Sin contenido moderado ni PII
+      properties:
+        mediaId: { type: [string, 'null'], format: uuid }
+        decision: { type: string }
+        categories:
+          type: array
+          items: { type: string }
+        scores:
+          type: object
+          additionalProperties: { type: number }
+        thresholdApplied: { type: [number, 'null'] }
+        action: { type: string }
+    CreateSanctionRequest:
+      type: object
+      required: [userId, reason]
+      properties:
+        userId: { type: string, format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        durationHours:
+          type: [integer, 'null']
+          minimum: 1
+          description: Nulo o ausente = baneo permanente
+    RevertSanctionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    SanctionPage:
+      type: object
+      required: [items, totalCount, pageNumber, pageSize, totalPages, hasPreviousPage, hasNextPage]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Sanction' }
+        pageNumber: { type: integer }
+        pageSize: { type: integer }
+        totalCount: { type: integer }
+        totalPages: { type: integer }
+        hasPreviousPage: { type: boolean }
+        hasNextPage: { type: boolean }
+    LoginSanctionedProblem:
+      description: >
+        Respuesta 403 de POST /api/v1/auth/login para un usuario sancionado (CA-020-03). No incluye evidencia.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            title:
+              type: string
+              enum: [Auth.UserSanctioned]
+              description: El código de error viaja en title
+            sanctionEndsAtUtc:
+              type: [string, 'null']
+              format: date-time
+              description: Nulo si el baneo es permanente
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

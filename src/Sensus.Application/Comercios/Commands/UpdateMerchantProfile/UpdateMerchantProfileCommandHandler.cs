@@ -76,11 +76,21 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
             request.CodigoPostal,
             latitud,
             longitud,
-            ParseCategoria(request.Categoria));
+            ParseCategoria(request.Categoria),
+            request.FotoFachadaUrl);
 
         if (updateResult.IsFailure)
         {
             return Result.Failure<ComercioDto>(updateResult.Error);
+        }
+
+        if (request.Activo == true)
+        {
+            comercio.Activate();
+        }
+        else if (request.Activo == false)
+        {
+            comercio.Deactivate();
         }
 
         // Actualizar horarios de atención si se proporcionaron
