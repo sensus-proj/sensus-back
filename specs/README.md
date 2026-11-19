@@ -55,6 +55,8 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
 | 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Parcial | 045, 046, 048 |
 | 051 | [Pausa nocturna de la infraestructura](051-pausa-nocturna-infraestructura/spec.md) | Plataforma | Nuevo | 7 | Implementado | 015, 045, 048 |
+| 052 | [Sesión de invitado](052-sesion-invitado/spec.md) | Autenticación | Retro-spec | 1 | Parcial (retro-spec) | 002, 013 |
+| 053 | [Comercios cercanos](053-comercios-cercanos/spec.md) | Comercios | Retro-spec | 2 | Parcial (retro-spec) | 005, 010, 013, 052 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
 
 ## Estados
@@ -73,4 +75,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **51 specs** — Ola 0: 3, Ola 1: 5, Ola 2: 10, Ola 3: 5, Ola 4: 9, Ola 5: 6, Ola 6: 7, Ola 7: 5, Backlog: 1.
+Total: **53 specs** — Ola 0: 3, Ola 1: 6, Ola 2: 11, Ola 3: 5, Ola 4: 9, Ola 5: 6, Ola 6: 7, Ola 7: 5, Backlog: 1.

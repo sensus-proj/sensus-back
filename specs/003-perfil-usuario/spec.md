@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 002, 022 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -48,6 +48,9 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 | FR-003-04 | Actualizar nombre completo y avatar del propio usuario | Must |
 | FR-003-05 | Rechazar cambios de correo o roles desde este endpoint | Must |
 | FR-003-06 | Aceptar solo avatares subidos por el propio usuario y aprobados | Must |
+| FR-003-07 | Emitir parámetros firmados (`POST /users/photo-signature`) para subir la foto de perfil a Cloudinary, limitados a la carpeta `sensus/profiles/{userId}`; solo usuarios registrados | Must |
+| FR-003-08 | Moderar la foto de perfil antes de publicarla o guardarla en el perfil (Principio IV); hoy la app sube directo a Cloudinary con la firma y nada la modera | Must |
+| FR-003-09 | Limitar la tasa de emisión de firmas (`sensitive-write`) | Should |
 
 ## 5. Requisitos no funcionales
 
@@ -88,12 +91,31 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 - **Cuando** PUT /api/v1/users/profile
 - **Entonces** 403
 
+### CA-003-06
+
+- **Dado** un usuario registrado
+- **Cuando** llama a `POST /api/v1/users/photo-signature`
+- **Entonces** recibe `200` con `cloudName`, `apiKey`, `timestamp`, `folder = sensus/profiles/{userId}` y `signature`, sin el secreto de Cloudinary
+
+### CA-003-07
+
+- **Dado** un invitado o una solicitud sin token
+- **Cuando** llama al endpoint
+- **Entonces** recibe `403` o `401`
+
+### CA-003-08 (pendiente, FR-003-06 y FR-003-08)
+
+- **Dado** una `fotoPerfilUrl` de otro dominio (`https://malcloudinary.com/...`), de otra cuenta de Cloudinary o de otra carpeta
+- **Cuando** se actualiza el perfil
+- **Entonces** recibe `400`; y una imagen inapropiada nunca queda como foto de perfil
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
 | GET | `/api/v1/users/profile` | JWT |
 | PUT | `/api/v1/users/profile` | JWT |
+| POST | `/api/v1/users/photo-signature` | JWT de usuario registrado |
 
 ## 8. Dependencias y supuestos
 
@@ -111,7 +133,7 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-003-01`, `FR-003-02`, `FR-003-03`, `FR-003-04`, `FR-003-05`, `FR-003-06`
+- Requisitos de este spec: `FR-003-01`, `FR-003-02`, `FR-003-03`, `FR-003-04`, `FR-003-05`, `FR-003-06`, `FR-003-07`, `FR-003-08`, `FR-003-09`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
