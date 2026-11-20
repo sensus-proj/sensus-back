@@ -69,7 +69,7 @@ public sealed class GetFriendsCommunityActivityQueryHandler
             .Where(id => id != Guid.Empty)
             .ToHashSet();
 
-        // FR-056-02: Incluye también la actividad del usuario actual para que sus amigos la vean y él vea su historial reciente.
+        // FR-058-02: Incluye también la actividad del usuario actual para que sus amigos la vean y él vea su historial reciente.
         visibleActorIds.Add(userId);
 
         IReadOnlyList<OfferLike> likes = await _offerLikeRepository.GetByUserIdsAsync(

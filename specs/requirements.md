@@ -499,37 +499,37 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
-| `FR-054-01` | 054 | FR | Consultar resumen estilo Play Store y reseñas de comercio vía `GET /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
-| `FR-054-02` | 054 | FR | Publicar calificación (1..5 estrellas) y comentario (1–600 chars) vía `POST /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
-| `FR-054-03` | 054 | FR | Alternar «Me gusta» en reseña vía `POST /api/v1/merchants/reviews/{reviewId}/like` | Must | Implementado |
-| `FR-054-04` | 054 | FR | Responder en hilo a una reseña (1–500 chars) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` | Must | Implementado |
-| `FR-054-05` | 054 | FR | Moderar reseñas y respuestas con `ProfanityFilter` + `ITextModerationService` (*fail-closed*) | Must | Implementado |
-| `FR-054-06` | 054 | FR | Calcular `AverageRating` y `ReviewCount` reales en `ComercioDto` e invalidar caché tras reseña | Must | Implementado |
-| `FR-054-07` | 054 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Pendiente |
-| `NFR-054-01` | 054 | NFR | Seguridad y límites de tasa (`read-heavy`/`sensitive-write`) | 100 % endpoints | Implementado |
-| `NFR-054-02` | 054 | NFR | Índice compuesto `(MerchantId asc, CreatedAtUtc desc)` en `store_reviews` | Sin full-scan por comercio | Implementado |
-| `NFR-054-03` | 054 | NFR | Privacidad en DTOs de reseña | 0 campos de correo/credenciales | Implementado |
-| `FR-055-01` | 055 | FR | Alternar «Me gusta» de producto vía `POST /api/v1/offers/{id}/like` devolviendo `OfferLikeStatusDto` | Must | Implementado |
-| `FR-055-02` | 055 | FR | Exponer `LikesCount` e `IsLikedByMe` reales en `OfferDetailDto`, `NearbyOfferDto` y `OfferDto` | Must | Implementado |
-| `FR-055-03` | 055 | FR | Garantizar unicidad `(UserId, OfferId)` y devolver `404` ante ofertas inexistentes o archivadas | Must | Implementado |
-| `FR-055-04` | 055 | FR | Invalidar caché de detalle (`OfferCacheKeys.Detail`) al alternar like sin alterar `OfferCategory` | Must | Implementado |
-| `NFR-055-01` | 055 | NFR | Seguridad (`RegisteredUserPolicy` + `SensitiveWritePolicy`) | 403 para invitados | Implementado |
-| `NFR-055-02` | 055 | NFR | Índices único `(UserId, OfferId)` y `(OfferId, CreatedAtUtc desc)` en `offer_likes` | Sin full-scan | Implementado |
-| `NFR-055-03` | 055 | NFR | Privacidad en conteo de likes de productos | 0 PII expuesta | Implementado |
-| `FR-056-01` | 056 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
-| `FR-056-02` | 056 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
-| `FR-056-03` | 056 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
-| `FR-056-04` | 056 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
-| `NFR-056-01` | 056 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
-| `NFR-056-02` | 056 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
-| `NFR-056-03` | 056 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |
-| `FR-057-01` | 057 | FR | Filtrar groserías, frases y *leetspeak* de forma determinística en `ProfanityFilter` | Must | Implementado |
-| `FR-057-02` | 057 | FR | Aplicar `ContentModerationHelper` a textos de usuario, comercio, ofertas, reseñas y respuestas | Must | Implementado |
-| `FR-057-03` | 057 | FR | Mantener `OpenAiTextModerationService` 100 % *fail-closed* en errores, timeouts y ausencia de clave | Must | Implementado |
-| `FR-057-04` | 057 | FR | Leer todos los umbrales exclusivamente desde `IOptions<OpenAiSettings>` / configuración, nunca fijos en código | Must | Implementado |
-| `FR-057-05` | 057 | FR | Declarar `Model`, `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` explícitos en `appsettings.json` | Must | Implementado |
-| `NFR-057-01` | 057 | NFR | Timeout explícito anti-ReDoS en expresiones regulares de `ProfanityFilter` | 0 vulnerabilidades S6444 | Implementado |
-| `NFR-057-02` | 057 | NFR | Cero rutas *fail-open* ante fallos de moderación externa | 100 % fail-closed | Implementado |
-| `NFR-057-03` | 057 | NFR | Pruebas unitarias y de integración sobre filtro, umbrales configurados y *fail-closed* | Cobertura >= 80 % | Implementado |
+| `FR-056-01` | 056 | FR | Consultar resumen estilo Play Store y reseñas de comercio vía `GET /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-02` | 056 | FR | Publicar calificación (1..5 estrellas) y comentario (1–600 chars) vía `POST /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-03` | 056 | FR | Alternar «Me gusta» en reseña vía `POST /api/v1/merchants/reviews/{reviewId}/like` | Must | Implementado |
+| `FR-056-04` | 056 | FR | Responder en hilo a una reseña (1–500 chars) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` | Must | Implementado |
+| `FR-056-05` | 056 | FR | Moderar reseñas y respuestas con `ProfanityFilter` + `ITextModerationService` (*fail-closed*) | Must | Implementado |
+| `FR-056-06` | 056 | FR | Calcular `AverageRating` y `ReviewCount` reales en `ComercioDto` e invalidar caché tras reseña | Must | Implementado |
+| `FR-056-07` | 056 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Pendiente |
+| `NFR-056-01` | 056 | NFR | Seguridad y límites de tasa (`read-heavy`/`sensitive-write`) | 100 % endpoints | Implementado |
+| `NFR-056-02` | 056 | NFR | Índice compuesto `(MerchantId asc, CreatedAtUtc desc)` en `store_reviews` | Sin full-scan por comercio | Implementado |
+| `NFR-056-03` | 056 | NFR | Privacidad en DTOs de reseña | 0 campos de correo/credenciales | Implementado |
+| `FR-057-01` | 057 | FR | Alternar «Me gusta» de producto vía `POST /api/v1/offers/{id}/like` devolviendo `OfferLikeStatusDto` | Must | Implementado |
+| `FR-057-02` | 057 | FR | Exponer `LikesCount` e `IsLikedByMe` reales en `OfferDetailDto`, `NearbyOfferDto` y `OfferDto` | Must | Implementado |
+| `FR-057-03` | 057 | FR | Garantizar unicidad `(UserId, OfferId)` y devolver `404` ante ofertas inexistentes o archivadas | Must | Implementado |
+| `FR-057-04` | 057 | FR | Invalidar caché de detalle (`OfferCacheKeys.Detail`) al alternar like sin alterar `OfferCategory` | Must | Implementado |
+| `NFR-057-01` | 057 | NFR | Seguridad (`RegisteredUserPolicy` + `SensitiveWritePolicy`) | 403 para invitados | Implementado |
+| `NFR-057-02` | 057 | NFR | Índices único `(UserId, OfferId)` y `(OfferId, CreatedAtUtc desc)` en `offer_likes` | Sin full-scan | Implementado |
+| `NFR-057-03` | 057 | NFR | Privacidad en conteo de likes de productos | 0 PII expuesta | Implementado |
+| `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
+| `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
+| `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
+| `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
+| `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
+| `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |
+| `FR-059-01` | 059 | FR | Filtrar groserías, frases y *leetspeak* de forma determinística en `ProfanityFilter` | Must | Implementado |
+| `FR-059-02` | 059 | FR | Aplicar `ContentModerationHelper` a textos de usuario, comercio, ofertas, reseñas y respuestas | Must | Implementado |
+| `FR-059-03` | 059 | FR | Mantener `OpenAiTextModerationService` 100 % *fail-closed* en errores, timeouts y ausencia de clave | Must | Implementado |
+| `FR-059-04` | 059 | FR | Leer todos los umbrales exclusivamente desde `IOptions<OpenAiSettings>` / configuración, nunca fijos en código | Must | Implementado |
+| `FR-059-05` | 059 | FR | Declarar `Model`, `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` explícitos en `appsettings.json` | Must | Implementado |
+| `NFR-059-01` | 059 | NFR | Timeout explícito anti-ReDoS en expresiones regulares de `ProfanityFilter` | 0 vulnerabilidades S6444 | Implementado |
+| `NFR-059-02` | 059 | NFR | Cero rutas *fail-open* ante fallos de moderación externa | 100 % fail-closed | Implementado |
+| `NFR-059-03` | 059 | NFR | Pruebas unitarias y de integración sobre filtro, umbrales configurados y *fail-closed* | Cobertura >= 80 % | Implementado |
 
 Total: **527 requisitos** en 57 specs.

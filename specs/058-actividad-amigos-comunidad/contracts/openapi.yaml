@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sensus API — Spec 056 Actividad de amigos en comunidad"
+  title: "Sensus API — Spec 058 Actividad de amigos en comunidad"
   version: 1.0.0
   description: >
     Actividad social exclusiva entre amigos aceptados y el usuario autenticado

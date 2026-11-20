@@ -47,7 +47,7 @@ public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyCo
         var dtos = comercios.Select(c => c.ToDto()).ToList();
         if (_storeReviewRepository is not null && dtos.Count > 0)
         {
-            // FR-054-06: Poblar promedio y conteo real en comercios cercanos.
+            // FR-056-06: Poblar promedio y conteo real en comercios cercanos.
             var summaries = await _storeReviewRepository.GetRatingSummariesByMerchantIdsAsync(
                 dtos.Select(d => d.Id),
                 cancellationToken) ?? [];

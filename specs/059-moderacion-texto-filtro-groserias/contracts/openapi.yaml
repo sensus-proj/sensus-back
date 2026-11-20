@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sensus API — Spec 057 Contrato transversal de moderación textual y filtro de groserías"
+  title: "Sensus API — Spec 059 Contrato transversal de moderación textual y filtro de groserías"
   version: 1.0.0
   description: >
     Define el contrato estándar RFC 7807 ProblemDetails devuelto por cualquier endpoint de escritura

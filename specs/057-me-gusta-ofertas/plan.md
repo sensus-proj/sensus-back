@@ -1,4 +1,4 @@
-# Plan 055 — Me gusta en ofertas (`OfferLike`)
+# Plan 057 — Me gusta en ofertas (`OfferLike`)
 
 | Campo | Valor |
 |---|---|
@@ -57,7 +57,7 @@ Se agrega la entidad `OfferLike` y su puerto `IOfferLikeRepository` en `Sensus.D
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | PASS | Spec `055-me-gusta-ofertas` con separación clara de Spec 039 |
+| I. Especificación y trazabilidad | PASS | Spec `057-me-gusta-ofertas` con separación clara de Spec 039 |
 | II. Clean Architecture | PASS | Sin acoplamiento inverso entre capas |
 | III. Calidad y pruebas | PASS | MediatR + `Result<T>` + `OfferLikeStatusDto` |
 | IV. Seguridad y moderación | PASS | `RegisteredUserPolicy` y `SensitiveWritePolicy` |
@@ -72,7 +72,7 @@ Se agrega la entidad `OfferLike` y su puerto `IOfferLikeRepository` en `Sensus.D
 
 ## 10. Orden de implementación
 
-1. `T055-01` Documentar `OfferLike`, `ToggleOfferLikeCommand` y enriquecimiento de DTOs
-2. `T055-02` Publicar `contracts/openapi.yaml`
-3. `T055-03` Referencias `FR-055-*` en código y verificación de nulos en repositorios
-4. `T055-04` Pruebas de integración en `SocialEndpointsIntegrationTests` y `MongoSocialRepositoriesTests`
+1. `T057-01` Documentar `OfferLike`, `ToggleOfferLikeCommand` y enriquecimiento de DTOs
+2. `T057-02` Publicar `contracts/openapi.yaml`
+3. `T057-03` Referencias `FR-057-*` en código y verificación de nulos en repositorios
+4. `T057-04` Pruebas de integración en `SocialEndpointsIntegrationTests` y `MongoSocialRepositoriesTests`

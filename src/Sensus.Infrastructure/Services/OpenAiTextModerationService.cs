@@ -279,7 +279,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             var threshold = GetThresholdForCategory(category);
             if (threshold.Low <= 0 || threshold.High <= 0 || threshold.Low > threshold.High)
             {
-                // FR-057-03 / FR-057-04: umbrales inválidos o no configurados activan fail-closed.
+                // FR-059-03 / FR-059-04: umbrales inválidos o no configurados activan fail-closed.
                 quarantineCategories.Add(category);
                 continue;
             }
@@ -335,7 +335,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             CategoryScores: categoryScores);
     }
 
-    // FR-057-04: Todos los umbrales se resuelven exclusivamente desde IOptions<OpenAiSettings>.
+    // FR-059-04: Todos los umbrales se resuelven exclusivamente desde IOptions<OpenAiSettings>.
     private CategoryThreshold GetThresholdForCategory(string category)
     {
         if (_openAiSettings.Sensi?.TextModerationThresholds != null &&

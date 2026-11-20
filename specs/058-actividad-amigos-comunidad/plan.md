@@ -1,11 +1,11 @@
-# Plan 056 — Actividad de amigos en comunidad (`CommunityEndpoints`)
+# Plan 058 — Actividad de amigos en comunidad (`CommunityEndpoints`)
 
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Retro-spec alineada a implementación |
 | Versión | 1.0.0 |
-| Constitution Check | FAIL (retro-spec con brecha registrada `FR-056-04`) |
+| Constitution Check | FAIL (retro-spec con brecha registrada `FR-058-04`) |
 | Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
@@ -24,7 +24,7 @@
 
 ## 3. Modelo de datos e índices
 
-- Reutiliza colecciones `friend_requests` (Spec 050), `offer_likes` (Spec 055) y `store_reviews` (Spec 054).
+- Reutiliza colecciones `friend_requests` (Spec 050), `offer_likes` (Spec 057) y `store_reviews` (Spec 056).
 - Consultas filtran por `$in` sobre `visibleActorIds` ordenado por `CreatedAtUtc desc` con `Limit(effectiveLimit)`.
 
 ## 4. Seguridad
@@ -54,23 +54,23 @@
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | PASS | Spec `056-actividad-amigos-comunidad` separada explícitamente de 024–026 |
+| I. Especificación y trazabilidad | PASS | Spec `058-actividad-amigos-comunidad` separada explícitamente de 024–026 |
 | II. Clean Architecture | PASS | Sin violaciones de dependencias entre capas |
 | III. Calidad y pruebas | PASS | Query MediatR + `CommunityActivityItemDto` |
 | IV. Seguridad y moderación | PASS | `RegisteredUserPolicy`, `ReadHeavyPolicy`, solo amigos aceptados |
 | V. Cobertura y pruebas reales | PASS | Unitarias + integración real |
 | VI. Costo AWS | PASS | 0 USD |
-| VII. Paginación e índices | FAIL | Brecha `FR-056-04`: usa `limit` acotado `[1, 100]` en lugar de `PagedResult` |
+| VII. Paginación e índices | FAIL | Brecha `FR-058-04`: usa `limit` acotado `[1, 100]` en lugar de `PagedResult` |
 | VIII. DevSecOps / STRIDE | PASS | STRIDE evaluado y privacidad de red social verificada |
 
 ## 9. Riesgos de implementación
 
-- Si una oferta o comercio fue archivado o eliminado después de la actividad, el handler debe aplicar respaldo seguro sin lanzar `NullReferenceException` (`NFR-056-03`).
+- Si una oferta o comercio fue archivado o eliminado después de la actividad, el handler debe aplicar respaldo seguro sin lanzar `NullReferenceException` (`NFR-058-03`).
 
 ## 10. Orden de implementación
 
-1. `T056-01` Documentar `CommunityEndpoints`, `GetFriendsCommunityActivityQuery` y `CommunityActivityItemDto`
-2. `T056-02` Publicar `contracts/openapi.yaml`
-3. `T056-03` Trazabilidad `FR-056-*` y guardas ante nulos de repositorios/ofertas eliminadas
-4. `T056-04` Pruebas de integración en `SocialEndpointsIntegrationTests` y `MongoSocialRepositoriesTests`
-5. `T056-05` Deuda futura: migrar respuesta a `PagedResult` (`FR-056-04`)
+1. `T058-01` Documentar `CommunityEndpoints`, `GetFriendsCommunityActivityQuery` y `CommunityActivityItemDto`
+2. `T058-02` Publicar `contracts/openapi.yaml`
+3. `T058-03` Trazabilidad `FR-058-*` y guardas ante nulos de repositorios/ofertas eliminadas
+4. `T058-04` Pruebas de integración en `SocialEndpointsIntegrationTests` y `MongoSocialRepositoriesTests`
+5. `T058-05` Deuda futura: migrar respuesta a `PagedResult` (`FR-058-04`)

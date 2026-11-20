@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sensus API — Spec 054 Reseñas y calificaciones de comercios"
+  title: "Sensus API — Spec 056 Reseñas y calificaciones de comercios"
   version: 1.0.0
   description: >
     Calificaciones de 1 a 5 estrellas, comentarios moderados, likes sobre reseñas y respuestas en hilo

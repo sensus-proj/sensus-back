@@ -1,11 +1,11 @@
-# Plan 054 — Reseñas y calificaciones de comercios (`StoreReview`)
+# Plan 056 — Reseñas y calificaciones de comercios (`StoreReview`)
 
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Retro-spec alineada a implementación |
 | Versión | 1.0.0 |
-| Constitution Check | FAIL (retro-spec con brecha registrada `FR-054-07`) |
+| Constitution Check | FAIL (retro-spec con brecha registrada `FR-056-07`) |
 | Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
@@ -56,23 +56,23 @@ Se introduce el agregado `StoreReview` (con entidad hija `StoreReviewReply`) en 
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | PASS | Spec `054-resenas-comercios` con requisitos `FR-054-*` / `NFR-054-*` |
+| I. Especificación y trazabilidad | PASS | Spec `056-resenas-comercios` con requisitos `FR-056-*` / `NFR-056-*` |
 | II. Clean Architecture | PASS | `Sensus.ArchitectureTests` sin dependencias prohibidas |
 | III. Calidad y pruebas | PASS | MediatR + `Result<T>` + DTOs explícitos; sin advertencias |
 | IV. Seguridad y moderación | PASS | `RegisteredUserPolicy`, `SensitiveWritePolicy`, moderación fail-closed |
 | V. Cobertura y pruebas reales | PASS | Unitarias + integración endpoints + MongoDB real (`MONGO_CONNECTION_STRING`) |
 | VI. Costo AWS | PASS | 0 USD adicionales |
-| VII. Paginación e índices | FAIL | Brecha `FR-054-07`: listado de reseñas aún sin `PagedResult`; índice `(MerchantId, CreatedAtUtc)` presente |
+| VII. Paginación e índices | FAIL | Brecha `FR-056-07`: listado de reseñas aún sin `PagedResult`; índice `(MerchantId, CreatedAtUtc)` presente |
 | VIII. DevSecOps / STRIDE | PASS | Matriz STRIDE evaluada y validaciones de longitud/rango |
 
 ## 9. Riesgos de implementación
 
-- Comercios con cientos de reseñas requerirán implementar `FR-054-07` (`PagedResult`) en una iteración siguiente sin romper el contrato del resumen de cabecera.
+- Comercios con cientos de reseñas requerirán implementar `FR-056-07` (`PagedResult`) en una iteración siguiente sin romper el contrato del resumen de cabecera.
 
 ## 10. Orden de implementación
 
-1. `T054-01` Documentar `StoreReview`, `StoreReviewReply` y `StoreReviewEndpoints`
-2. `T054-02` Publicar `contracts/openapi.yaml`
-3. `T054-03` Trazabilidad `FR-054-*` en handlers/entidades y validar `AverageRating` real
-4. `T054-04` Pruebas de integración de endpoints y MongoDB real para `store_reviews`
-5. `T054-05` Deuda futura: paginación `PagedResult` en `GET /api/v1/merchants/{merchantId}/reviews` (`FR-054-07`)
+1. `T056-01` Documentar `StoreReview`, `StoreReviewReply` y `StoreReviewEndpoints`
+2. `T056-02` Publicar `contracts/openapi.yaml`
+3. `T056-03` Trazabilidad `FR-056-*` en handlers/entidades y validar `AverageRating` real
+4. `T056-04` Pruebas de integración de endpoints y MongoDB real para `store_reviews`
+5. `T056-05` Deuda futura: paginación `PagedResult` en `GET /api/v1/merchants/{merchantId}/reviews` (`FR-056-07`)

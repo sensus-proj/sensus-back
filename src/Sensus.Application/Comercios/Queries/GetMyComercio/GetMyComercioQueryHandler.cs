@@ -71,7 +71,7 @@ public sealed class GetMyComercioQueryHandler : IRequestHandler<GetMyComercioQue
             return dto;
         }
 
-        // FR-054-06: Calcular calificación promedio y conteo real del comercio.
+        // FR-056-06: Calcular calificación promedio y conteo real del comercio.
         var summaries = await _storeReviewRepository.GetRatingSummariesByMerchantIdsAsync(
             [dto.Id],
             cancellationToken) ?? [];

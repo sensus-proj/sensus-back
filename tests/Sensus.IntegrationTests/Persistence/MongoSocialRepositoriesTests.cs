@@ -10,7 +10,7 @@ using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 namespace Sensus.IntegrationTests.Persistence;
 
 /// <summary>
-/// Pruebas de persistencia y mapeo social para OfferLike y StoreReview (Specs 054, 055, FR-054-01..06, FR-055-01..03, NFR-054-02, NFR-055-02).
+/// Pruebas de persistencia y mapeo social para OfferLike y StoreReview (Specs 056, 057, FR-056-01..06, FR-057-01..03, NFR-056-02, NFR-057-02).
 /// Los round-trips de documentos corren siempre; las pruebas contra MongoDB real se ejecutan cuando
 /// <c>MONGO_CONNECTION_STRING</c> está definida (job <c>integration-tests</c> de CI).
 /// </summary>

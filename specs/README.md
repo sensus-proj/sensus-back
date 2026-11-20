@@ -58,10 +58,10 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 052 | [Sesión de invitado](052-sesion-invitado/spec.md) | Autenticación | Retro-spec | 1 | Parcial (retro-spec) | 002, 013 |
 | 053 | [Comercios cercanos](053-comercios-cercanos/spec.md) | Comercios | Retro-spec | 2 | Parcial (retro-spec) | 005, 010, 013, 052 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
-| 054 | [Reseñas y calificaciones de comercios (`StoreReview`)](054-resenas-comercios/spec.md) | Social | Retro-spec | 3 | Implementado (retro-spec) | 001, 005, 006, 017, 052, 057 |
-| 055 | [Me gusta en ofertas (`OfferLike`)](055-me-gusta-ofertas/spec.md) | Ofertas | Retro-spec | 3 | Implementado (retro-spec) | 001, 007, 032, 034, 052 |
-| 056 | [Actividad de amigos en comunidad (`CommunityEndpoints`)](056-actividad-amigos-comunidad/spec.md) | Social | Retro-spec | 5 | Implementado (retro-spec) | 050, 054, 055 |
-| 057 | [Filtro de groserías y moderación textual fail-closed](057-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Parcial | 017, 018, 046, 054 |
+| 056 | [Reseñas y calificaciones de comercios (`StoreReview`)](056-resenas-comercios/spec.md) | Social | Retro-spec | 3 | Implementado (retro-spec) | 001, 005, 006, 017, 052, 059 |
+| 057 | [Me gusta en ofertas (`OfferLike`)](057-me-gusta-ofertas/spec.md) | Ofertas | Retro-spec | 3 | Implementado (retro-spec) | 001, 007, 032, 034, 052 |
+| 058 | [Actividad de amigos en comunidad (`CommunityEndpoints`)](058-actividad-amigos-comunidad/spec.md) | Social | Retro-spec | 5 | Implementado (retro-spec) | 050, 056, 057 |
+| 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Parcial | 017, 018, 046, 056 |
 
 ## Estados
 

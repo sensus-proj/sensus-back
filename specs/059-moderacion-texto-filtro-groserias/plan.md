@@ -1,11 +1,11 @@
-# Plan 057 — Filtro de groserías y moderación textual fail-closed
+# Plan 059 — Filtro de groserías y moderación textual fail-closed
 
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Retro-spec + remediación de umbrales en configuración |
 | Versión | 1.0.0 |
-| Constitution Check | PASS tras remediación `T057-03` |
+| Constitution Check | PASS tras remediación `T059-03` |
 | Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
@@ -57,10 +57,10 @@ No crea colecciones propias; protege escrituras sobre `usuarios`, `comercios`, `
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | PASS | Spec `057-moderacion-texto-filtro-groserias` con requisitos `FR-057-*` |
+| I. Especificación y trazabilidad | PASS | Spec `059-moderacion-texto-filtro-groserias` con requisitos `FR-059-*` |
 | II. Clean Architecture | PASS | Reglas en `Application`, cliente OpenAI en `Infrastructure` |
 | III. Calidad y pruebas | PASS | `ProfanityFilter` y `OpenAiTextModerationServiceTests` cubren ramas |
-| IV. Seguridad y moderación | PASS | *Fail-closed* integral; umbrales en `appsettings.json` tras `T057-03` |
+| IV. Seguridad y moderación | PASS | *Fail-closed* integral; umbrales en `appsettings.json` tras `T059-03` |
 | V. Cobertura y pruebas reales | PASS | Cobertura en `Application` >= 80 % |
 | VI. Costo AWS | PASS | 0 USD AWS; pre-filtro local ahorra cuota |
 | VII. Paginación e índices | PASS | No aplica (servicio de validación) |
@@ -72,7 +72,7 @@ No crea colecciones propias; protege escrituras sobre `usuarios`, `comercios`, `
 
 ## 10. Orden de implementación
 
-1. `T057-01` Documentar `ProfanityFilter`, `ContentModerationHelper` y handlers protegidos
-2. `T057-02` Publicar contrato de errores en `contracts/openapi.yaml`
-3. `T057-03` Externalizar `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` a `appsettings.json` y eliminar literales `0.35`/`0.75` de `OpenAiTextModerationService.cs`, agregando regex timeout explícito en `ProfanityFilter.cs` si falta
-4. `T057-04` Ampliar pruebas unitarias e integración verificando umbrales configurados y *fail-closed*
+1. `T059-01` Documentar `ProfanityFilter`, `ContentModerationHelper` y handlers protegidos
+2. `T059-02` Publicar contrato de errores en `contracts/openapi.yaml`
+3. `T059-03` Externalizar `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` a `appsettings.json` y eliminar literales `0.35`/`0.75` de `OpenAiTextModerationService.cs`, agregando regex timeout explícito en `ProfanityFilter.cs` si falta
+4. `T059-04` Ampliar pruebas unitarias e integración verificando umbrales configurados y *fail-closed*

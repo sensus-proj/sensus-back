@@ -128,7 +128,7 @@ public sealed class GetNearbyOffersQueryHandler
             return page;
         }
 
-        // FR-055-02: Enriquecer ofertas cercanas con likes públicos reales.
+        // FR-057-02: Enriquecer ofertas cercanas con likes públicos reales.
         var offerIds = page.Items.Select(o => o.Id).ToList();
         var counts = await _offerLikeRepository.CountByOfferIdsAsync(offerIds, cancellationToken) ?? [];
         HashSet<Guid> likedByMe = (!_currentUserService.IsGuest

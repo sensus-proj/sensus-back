@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sensus API — Spec 055 Me gusta en ofertas"
+  title: "Sensus API — Spec 057 Me gusta en ofertas"
   version: 1.0.0
   description: >
     Alternancia de 'Me gusta' sobre publicaciones de productos/ofertas comerciales

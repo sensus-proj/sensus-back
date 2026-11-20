@@ -15,8 +15,8 @@ using Sensus.IntegrationTests.Infrastructure;
 namespace Sensus.IntegrationTests.Social;
 
 /// <summary>
-/// Pruebas de integración HTTP para reseñas de comercio (Spec 054), likes de ofertas (Spec 055)
-/// y actividad de amigos en comunidad (Spec 056), más moderación determinística anti-groserías (Spec 057).
+/// Pruebas de integración HTTP para reseñas de comercio (Spec 056), likes de ofertas (Spec 057)
+/// y actividad de amigos en comunidad (Spec 058), más moderación determinística anti-groserías (Spec 059).
 /// </summary>
 public sealed class SocialEndpointsIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 {

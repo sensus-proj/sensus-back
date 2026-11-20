@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Sensus.Application.Common.Moderation;
 
 /// <summary>
-/// Filtro determinístico local de lenguaje ofensivo / groserías (español e inglés, FR-057-01, NFR-057-01).
+/// Filtro determinístico local de lenguaje ofensivo / groserías (español e inglés, FR-059-01, NFR-059-01).
 /// Actúa como primera línea de defensa instantánea y sin costo de red antes de la moderación con IA.
 /// </summary>
 public static partial class ProfanityFilter
@@ -125,7 +125,7 @@ public static partial class ProfanityFilter
         }
         catch (RegexMatchTimeoutException)
         {
-            // NFR-057-01: fail-closed si una entrada maliciosa dispara timeout en regex.
+            // NFR-059-01: fail-closed si una entrada maliciosa dispara timeout en regex.
             return true;
         }
     }
