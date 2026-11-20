@@ -225,7 +225,7 @@ Todo lo nuevo o modificado, en backend y móvil, cumple desde el primer commit:
 
 - Todo recurso se define en `infra/` con AWS CDK en C#. **Prohibido** crear recursos en consola o por CLI.
 - Solo servicios del nivel gratuito, salvo las excepciones vigentes del Apéndice E (EX-001 a EX-003). Cómputo exclusivamente Lambda detrás de API Gateway.
-- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). Se despliega solo por CI. Los secretos de la API viven en SSM Parameter Store bajo `/sensus/<entorno>/` y la API los lee al arrancar; ningún despliegue los toca. El correo de alarmas llega por la variable de repositorio `ALERTS_EMAIL`.
+- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). Se despliega solo por CI. Los secretos de la API viven en SSM Parameter Store bajo `/sensus/<entorno>/` y la API los lee al arrancar; ningún despliegue los toca. El correo de alarmas llega por el **secreto** de repositorio `ALERTS_EMAIL` (nunca como variable: las variables se imprimen en claro en los logs de CI).
 - Multimedia en Cloudinary (Tier gratuito); observabilidad exclusivamente en CloudWatch.
 - Todo recurso etiquetado con `project`, `environment`, `owner`.
 - Toda decisión técnica declara su costo mensual estimado y su consumo frente al Free Tier.
