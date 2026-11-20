@@ -24,6 +24,8 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryAiTraceLogRepository AiTraceLogRepository { get; } = new();
     public InMemoryFriendRequestRepository FriendRequestRepository { get; } = new();
     public InMemorySharedOfferRepository SharedOfferRepository { get; } = new();
+    public InMemoryOfferLikeRepository OfferLikeRepository { get; } = new();
+    public InMemoryStoreReviewRepository StoreReviewRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -74,6 +76,27 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton<ISharedOfferRepository>(SharedOfferRepository);
+
+            services.RemoveAll<IOfferLikeRepository>();
+            services.AddSingleton<IOfferLikeRepository>(OfferLikeRepository);
+
+            services.RemoveAll<IStoreReviewRepository>();
+            services.AddSingleton<IStoreReviewRepository>(StoreReviewRepository);
+
+            services.RemoveAll<ITextModerationService>();
+            services.AddSingleton<ITextModerationService>(new FakeApprovingTextModerationService());
         });
+    }
+
+    private sealed class FakeApprovingTextModerationService : ITextModerationService
+    {
+        public Task<TextModerationResult> ModerateTextAsync(string text, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TextModerationResult(true, "Texto aprobado.", [], "Approved"));
+
+        public Task<TextModerationResult> ModerateContentTextAsync(
+            string text,
+            string contentContext,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TextModerationResult(true, "Texto aprobado.", [], "Approved"));
     }
 }

@@ -101,9 +101,10 @@ PROHIBICIONES ESTRICTAS:
 3. DROGAS O SUSTANCIAS ILÍCITAS: Estupefacientes, drogas ilegales, narcóticos o parafernalia de consumo.
 4. CONTENIDO SEXUAL O DESNUDEZ: Pornografía, desnudez total o parcial explícita, actos sexuales.
 5. VIOLENCIA O SANGRE: Violencia explícita, heridas graves, mutilaciones o muerte.
+6. LENGUAJE ANTISONANTE, GROSERÍAS O INSULTOS: Palabras antisonantes, vulgaridades, ofensas o mensajes obscenos en el texto adjunto o visibles dentro de la imagen.
 
 REGLAS DE CLASIFICACIÓN:
-- Si detectas armas (de fuego o réplicas indistinguibles), munición, esvásticas nazis, drogas o desnudez -> 'decision': 'Rejected'.
+- Si detectas armas (de fuego o réplicas indistinguibles), munición, esvásticas nazis, drogas, desnudez o lenguaje antisonante/ofensivo -> 'decision': 'Rejected'.
 - Si la imagen contiene un elemento sospechoso, ambiguo o potencialmente peligroso -> 'decision': 'Quarantine'.
 - Si es un producto comercial normal, comida, oferta segura o inocua -> 'decision': 'Approved'.
 

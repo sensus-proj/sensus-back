@@ -10,6 +10,7 @@ using Sensus.Application.Offers.Commands.ExpireOffers;
 using Sensus.Application.Offers.Commands.RedeemClaim;
 using Sensus.Application.Offers.Commands.RegisterOfferView;
 using Sensus.Application.Offers.Commands.RepublishOffer;
+using Sensus.Application.Offers.Commands.ToggleOfferLike;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
@@ -287,6 +288,24 @@ public static class OfferEndpoints
         .WithName("RegisterOfferView")
         .WithSummary("Spec 032: Registra una vista por usuario, oferta y día; responde 204 sin datos internos")
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Social: Alternar Me gusta en una publicación de producto
+        offersGroup.MapPost("/{id:guid}/like", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ToggleOfferLikeCommand(id), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("ToggleOfferLike")
+        .WithSummary("Alterna 'Me gusta' del usuario sobre una publicación de producto y devuelve el total de likes")
+        .Produces<OfferLikeStatusDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);

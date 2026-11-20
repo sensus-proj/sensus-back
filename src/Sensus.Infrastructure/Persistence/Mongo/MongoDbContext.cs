@@ -119,6 +119,14 @@ public sealed class MongoDbContext
         _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<OfferLikeDocument> OfferLikes =>
+        _database?.GetCollection<OfferLikeDocument>("offer_likes")
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<StoreReviewDocument> StoreReviews =>
+        _database?.GetCollection<StoreReviewDocument>("store_reviews")
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
     /// Devuelve false si no hay conexión configurada o si el servidor no responde; nunca expone detalles de conexión.
@@ -448,6 +456,30 @@ public sealed class MongoDbContext
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug(ex, "Nota: Los índices de amigos ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var offerLikeUniqueKeys = Builders<OfferLikeDocument>.IndexKeys
+                .Ascending(l => l.UserId)
+                .Ascending(l => l.OfferId);
+            OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(
+                offerLikeUniqueKeys,
+                new CreateIndexOptions { Unique = true }));
+
+            var offerLikeOfferKeys = Builders<OfferLikeDocument>.IndexKeys
+                .Ascending(l => l.OfferId)
+                .Descending(l => l.CreatedAtUtc);
+            OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(offerLikeOfferKeys));
+
+            var reviewMerchantKeys = Builders<StoreReviewDocument>.IndexKeys
+                .Ascending(r => r.MerchantId)
+                .Descending(r => r.CreatedAtUtc);
+            StoreReviews.Indexes.CreateOne(new CreateIndexModel<StoreReviewDocument>(reviewMerchantKeys));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices sociales de likes y reseñas ya existen o el clúster aún no está disponible.");
         }
     }
 }

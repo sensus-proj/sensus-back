@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -16,6 +17,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<RepublishOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly ITextModerationService? _textModerationService;
 
     public RepublishOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -23,7 +25,8 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<RepublishOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        ITextModerationService? textModerationService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -31,6 +34,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<OfferDto>> Handle(RepublishOfferCommand request, CancellationToken cancellationToken)
@@ -62,6 +66,19 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         if (republishResult.IsFailure)
         {
             return Result.Failure<OfferDto>(republishResult.Error);
+        }
+
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            $"Título: {offer.Title}\nDescripción: {offer.Description}\nCategoría: {offer.Category ?? string.Empty}",
+            "Republicación de producto u oferta comercial",
+            "Offer.ContentModerationRejected",
+            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(moderationResult.Error);
         }
 
         await _offerRepository.UpdateAsync(offer, cancellationToken);

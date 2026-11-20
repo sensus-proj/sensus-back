@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -17,6 +18,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly ITextModerationService? _textModerationService;
 
     public UpdateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -25,7 +27,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<UpdateOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        ITextModerationService? textModerationService = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -34,6 +37,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<OfferDto>> Handle(UpdateOfferCommand request, CancellationToken cancellationToken)
@@ -86,8 +90,21 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         if (contentChanged)
         {
             _logger.LogInformation(
-                "Contenido visible de la oferta {OfferId} modificado por el comercio {ComercioId}. Se requiere re-moderación.",
+                "Contenido visible de la oferta {OfferId} modificado por el comercio {ComercioId}. Ejecutando re-moderación.",
                 offer.Id, comercio.Id);
+
+            var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+                _textModerationService,
+                $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
+                "Edición de publicación de producto u oferta comercial",
+                "Offer.ContentModerationRejected",
+                "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+                cancellationToken);
+
+            if (moderationResult.IsFailure)
+            {
+                return Result.Failure<OfferDto>(moderationResult.Error);
+            }
         }
 
         bool updated = await _offerRepository.UpdateWithVersionCheckAsync(offer, request.ExpectedVersion, cancellationToken);

@@ -14,15 +14,18 @@ public sealed class GetMyComercioQueryHandler : IRequestHandler<GetMyComercioQue
     private readonly IComercioRepository _comercioRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly ICacheService? _cacheService;
+    private readonly IStoreReviewRepository? _storeReviewRepository;
 
     public GetMyComercioQueryHandler(
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IStoreReviewRepository? storeReviewRepository = null)
     {
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _cacheService = cacheService;
+        _storeReviewRepository = storeReviewRepository;
     }
 
     public async Task<Result<ComercioDto>> Handle(
@@ -41,7 +44,7 @@ public sealed class GetMyComercioQueryHandler : IRequestHandler<GetMyComercioQue
             var cached = await _cacheService.GetAsync<ComercioDto>(cacheKey, cancellationToken);
             if (cached is not null)
             {
-                return Result.Success(cached);
+                return Result.Success(await EnrichRatingAsync(cached, cancellationToken));
             }
         }
 
@@ -58,6 +61,29 @@ public sealed class GetMyComercioQueryHandler : IRequestHandler<GetMyComercioQue
             await _cacheService.SetForEntityAsync(cacheKey, dto, "MyComercio", cancellationToken);
         }
 
-        return Result.Success(dto);
+        return Result.Success(await EnrichRatingAsync(dto, cancellationToken));
+    }
+
+    private async Task<ComercioDto> EnrichRatingAsync(ComercioDto dto, CancellationToken cancellationToken)
+    {
+        if (_storeReviewRepository is null)
+        {
+            return dto;
+        }
+
+        var summaries = await _storeReviewRepository.GetRatingSummariesByMerchantIdsAsync(
+            [dto.Id],
+            cancellationToken);
+
+        if (!summaries.TryGetValue(dto.Id, out var summary))
+        {
+            return dto with { AverageRating = 0.0, ReviewCount = 0 };
+        }
+
+        return dto with
+        {
+            AverageRating = Math.Round(summary.AverageRating, 1),
+            ReviewCount = summary.ReviewCount,
+        };
     }
 }

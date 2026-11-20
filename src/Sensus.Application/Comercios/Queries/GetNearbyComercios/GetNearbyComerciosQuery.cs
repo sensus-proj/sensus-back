@@ -20,13 +20,16 @@ public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyCo
 {
     private readonly IComercioRepository _comercioRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IStoreReviewRepository? _storeReviewRepository;
 
     public GetNearbyComerciosQueryHandler(
         IComercioRepository comercioRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IStoreReviewRepository? storeReviewRepository = null)
     {
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
+        _storeReviewRepository = storeReviewRepository;
     }
 
     public async Task<Result<IReadOnlyList<ComercioDto>>> Handle(GetNearbyComerciosQuery request, CancellationToken cancellationToken)
@@ -42,6 +45,18 @@ public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyCo
             cancellationToken);
 
         var dtos = comercios.Select(c => c.ToDto()).ToList();
+        if (_storeReviewRepository is not null && dtos.Count > 0)
+        {
+            var summaries = await _storeReviewRepository.GetRatingSummariesByMerchantIdsAsync(
+                dtos.Select(d => d.Id),
+                cancellationToken);
+
+            dtos = dtos
+                .Select(d => summaries.TryGetValue(d.Id, out var summary)
+                    ? d with { AverageRating = Math.Round(summary.AverageRating, 1), ReviewCount = summary.ReviewCount }
+                    : d)
+                .ToList();
+        }
 
         return Result.Success<IReadOnlyList<ComercioDto>>(dtos);
     }

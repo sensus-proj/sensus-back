@@ -35,6 +35,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
     public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
+    public IOfferLikeRepository OfferLikeRepository { get; } = Substitute.For<IOfferLikeRepository>();
+    public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -118,6 +120,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             TextModerationService.ModerateTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new TextModerationResult(true, Decision: "Approved"));
+            TextModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new TextModerationResult(true, Decision: "Approved"));
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton(TextModerationService);
 
@@ -133,6 +137,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             BudgetCounterStore.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)1d);
             services.RemoveAll<IBudgetCounterStore>();
             services.AddSingleton(BudgetCounterStore);
+
+            services.RemoveAll<IOfferLikeRepository>();
+            services.AddSingleton(OfferLikeRepository);
+
+            services.RemoveAll<IStoreReviewRepository>();
+            services.AddSingleton(StoreReviewRepository);
         });
     }
 }

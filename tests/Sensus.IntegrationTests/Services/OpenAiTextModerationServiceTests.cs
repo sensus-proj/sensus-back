@@ -354,4 +354,133 @@ public sealed class OpenAiTextModerationServiceTests
         result.IsApproved.Should().BeFalse();
         result.Decision.Should().Be("Quarantine");
     }
+
+    [Fact]
+    public async Task ModerateContentTextAsync_WithGptModel_ShouldApproveCleanName()
+    {
+        // Arrange
+        var chatJson = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = """{"decision":"Approved","reason":"Nombre válido.","flagged_categories":[]}"""
+                    }
+                }
+            }
+        });
+
+        Uri? capturedUri = null;
+        var handler = new DelegatingMockHandler(req =>
+        {
+            capturedUri = req.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(chatJson, Encoding.UTF8, "application/json")
+            };
+        });
+
+        var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            Model = "gpt-4o-mini"
+        });
+        var sensiOptions = Options.Create(new SensiSettings());
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        // Act
+        var result = await service.ModerateContentTextAsync("Panadería La Esperanza", "Registro de comercio");
+
+        // Assert
+        capturedUri?.AbsolutePath.Should().EndWith("/chat/completions");
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+    }
+
+    [Fact]
+    public async Task ModerateContentTextAsync_WithGptModel_ShouldRejectProfanityWithReason()
+    {
+        // Arrange
+        var chatJson = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = """{"decision":"Rejected","reason":"Contiene palabras antisonantes u ofensivas.","flagged_categories":["profanity"]}"""
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(chatJson, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            Model = "gpt-4o-mini"
+        });
+        var sensiOptions = Options.Create(new SensiSettings());
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        // Act
+        var result = await service.ModerateContentTextAsync("Palabra ofensiva de prueba", "Nombre de usuario");
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
+        result.Message.Should().Be("Contiene palabras antisonantes u ofensivas.");
+        result.FlaggedCategories.Should().Contain("profanity");
+    }
+
+    [Fact]
+    public async Task ModerateContentTextAsync_WithGptModel_WhenMalformedJson_ReturnsQuarantine_FailClosed()
+    {
+        // Arrange
+        var chatJson = JsonSerializer.Serialize(new
+        {
+            choices = new[]
+            {
+                new
+                {
+                    message = new
+                    {
+                        content = "{invalid-json"
+                    }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(chatJson, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            Model = "gpt-4o-mini"
+        });
+        var sensiOptions = Options.Create(new SensiSettings());
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        // Act
+        var result = await service.ModerateContentTextAsync("Oferta de prueba", "Publicación de producto");
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+        result.Message.Should().Be(OpenAiTextModerationService.QuarantineMessage);
+    }
 }

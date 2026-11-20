@@ -30,17 +30,20 @@ public sealed class GetNearbyOffersQueryHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ICacheService? _cacheService;
+    private readonly IOfferLikeRepository? _offerLikeRepository;
 
     public GetNearbyOffersQueryHandler(
         IOfferRepository offerRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOfferLikeRepository? offerLikeRepository = null)
     {
         _offerRepository = offerRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _cacheService = cacheService;
+        _offerLikeRepository = offerLikeRepository;
     }
 
     public async Task<Result<PagedResult<NearbyOfferDto>>> Handle(
@@ -86,7 +89,7 @@ public sealed class GetNearbyOffersQueryHandler
                 cancellationToken);
             if (cached is not null)
             {
-                return Result.Success(cached);
+                return Result.Success(await EnrichLikesAsync(cached, cancellationToken));
             }
         }
 
@@ -113,7 +116,34 @@ public sealed class GetNearbyOffersQueryHandler
             await _cacheService.SetForEntityAsync(cacheKey, result, OfferCacheKeys.EntityName, cancellationToken);
         }
 
-        return Result.Success(result);
+        return Result.Success(await EnrichLikesAsync(result, cancellationToken));
+    }
+
+    private async Task<PagedResult<NearbyOfferDto>> EnrichLikesAsync(
+        PagedResult<NearbyOfferDto> page,
+        CancellationToken cancellationToken)
+    {
+        if (_offerLikeRepository is null || page.Items.Count == 0)
+        {
+            return page;
+        }
+
+        var offerIds = page.Items.Select(o => o.Id).ToList();
+        var counts = await _offerLikeRepository.CountByOfferIdsAsync(offerIds, cancellationToken);
+        HashSet<Guid> likedByMe = !_currentUserService.IsGuest
+            && Guid.TryParse(_currentUserService.UserId, out Guid userId)
+            ? await _offerLikeRepository.GetLikedOfferIdsAsync(userId, offerIds, cancellationToken)
+            : [];
+
+        var enriched = page.Items
+            .Select(item => item with
+            {
+                LikesCount = counts.GetValueOrDefault(item.Id, 0),
+                IsLikedByMe = likedByMe.Contains(item.Id),
+            })
+            .ToList();
+
+        return new PagedResult<NearbyOfferDto>(enriched, page.TotalCount, page.PageNumber, page.PageSize);
     }
 
     private static NearbyOfferDto ToDto(NearbyOfferHit hit) =>
