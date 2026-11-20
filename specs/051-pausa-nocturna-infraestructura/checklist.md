@@ -18,6 +18,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] Horario y zona horaria en contexto de CDK
 - [x] La función es idempotente
 - [ ] Verificado en AWS tras el despliegue (T051-08)
+- [x] Alarma de errores de la función que la pausa nunca silencia (T051-10; `cdk synth` y `cdk diff` revisados: solo se agrega la alarma)
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -55,3 +56,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 |---|---|---|---|
 | 2026-11-19 | Rodrigo Sánchez (con asistente) | Implementado, pendiente de despliegue | Se despliega por CI al llegar a `main` |
 | 2026-11-19 | Rodrigo Sánchez (con asistente) | Defecto en producción | El arranque de las 07:00 falló con `UnauthorizedOperation` en `CreateNatGateway` sobre la IP elástica: la condición `aws:RequestTag` no aplica a recursos existentes. Cada reintento dejó una IP suelta (3). Corregido en T051-09 y verificado con `iam simulate-custom-policy` |
+| 2026-11-20 | Rodrigo Sánchez (con asistente) | T051-10 implementada | Alarma `sensus-night-switch-errors-<entorno>` sobre la métrica `Errors` de la función (≥ 1 en 5 min) con acción al tema SNS de alertas; fuera de `ALARM_NAMES` y sin permiso del rol de la función, verificado en la plantilla sintetizada. `cdk diff` contra producción: solo `[+]` de la alarma, sin reemplazos. Séptima alarma de 10 gratuitas. Pendiente CA-051-05 tras el despliegue. |

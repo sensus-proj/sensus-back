@@ -56,6 +56,7 @@ el 2026-11-19 pausar la infraestructura en ese horario para no pagar esas horas.
 | FR-051-05 | Silenciar las acciones de las alarmas durante la pausa y reactivarlas al reanudar | Must |
 | FR-051-06 | Aplicar el estado según la hora actual al desplegar | Should |
 | FR-051-07 | Configurar horario y zona horaria por contexto de CDK | Must |
+| FR-051-08 | Alertar por correo cuando la función de la pausa nocturna falle (por ejemplo, un arranque de las 07:00 que no restaura la API), con una alarma que la propia pausa nunca silencia | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -92,6 +93,13 @@ el 2026-11-19 pausar la infraestructura en ese horario para no pagar esas horas.
 - **Cuando** se repite
 - **Entonces** termina sin error y sin recursos duplicados
 
+### CA-051-05
+
+- **Dado** que la función de la pausa termina con error (por ejemplo, `UnauthorizedOperation` al recrear el NAT)
+- **Cuando** CloudWatch evalúa la métrica `Errors` de la función
+- **Entonces** la alarma `sensus-night-switch-errors-<entorno>` pasa a `ALARM` y se envía el correo de alertas, aunque las
+  alarmas operativas estén silenciadas por la pausa
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -119,7 +127,7 @@ Ninguna.
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-051-01` a `FR-051-07` y `NFR-051-01` a `NFR-051-04`
+- Requisitos de este spec: `FR-051-01` a `FR-051-08` y `NFR-051-01` a `NFR-051-04`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
