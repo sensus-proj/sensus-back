@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Implementado (retro-spec) |
+| Estado | Parcial (retro-spec) |
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |
-| Depende de | [001](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/001-registro/spec.md), [005](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/005-activar-comercio/spec.md), [006](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/006-mi-comercio/spec.md), [017](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/017-moderacion-multimodal/spec.md), [052](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/052-sesion-invitado/spec.md), [059](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/059-moderacion-texto-filtro-groserias/spec.md) |
+| Depende de | [001](../001-registro-usuario/spec.md), [005](../005-activacion-comerciante/spec.md), [006](../006-consulta-mi-comercio/spec.md), [017](../017-moderacion-multimodal/spec.md), [052](../052-sesion-invitado/spec.md), [059](../059-moderacion-texto-filtro-groserias/spec.md) |
 
 ## 1. Contexto y objetivo
 

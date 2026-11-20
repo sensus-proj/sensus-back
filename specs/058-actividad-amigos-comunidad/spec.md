@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Implementado (retro-spec) |
+| Estado | Parcial (retro-spec) |
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |
-| Depende de | [050](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/050-amigos-y-solicitudes/spec.md), [056](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/056-resenas-comercios/spec.md), [057](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/057-me-gusta-ofertas/spec.md) |
+| Depende de | [050](../050-amigos-y-solicitudes/spec.md), [056](../056-resenas-comercios/spec.md), [057](../057-me-gusta-ofertas/spec.md) |
 
 ## 1. Contexto y objetivo
 

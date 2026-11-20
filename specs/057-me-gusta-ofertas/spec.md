@@ -6,7 +6,7 @@
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |
-| Depende de | [001](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/001-registro/spec.md), [007](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/007-ofertas-cercanas/spec.md), [032](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/032-detalle-oferta/spec.md), [034](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/034-creacion-oferta/spec.md), [052](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/052-sesion-invitado/spec.md) |
+| Depende de | [001](../001-registro-usuario/spec.md), [007](../007-ofertas-cercanas/spec.md), [032](../032-detalle-oferta-y-vistas/spec.md), [034](../034-creacion-oferta/spec.md), [052](../052-sesion-invitado/spec.md) |
 
 ## 1. Contexto y objetivo
 

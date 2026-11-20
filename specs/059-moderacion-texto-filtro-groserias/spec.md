@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Parcial (retro-spec + remediación constitucional) |
+| Estado | Implementado (retro-spec) |
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |
-| Depende de | [017](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/017-moderacion-multimodal/spec.md), [018](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/018-umbrales-y-bandas/spec.md), [046](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/046-asistente-sensi-ia/spec.md), [056](file:///c:/Users/czalb/Downloads/integradora%20final/sensus-back/specs/056-resenas-comercios/spec.md) |
+| Depende de | [017](../017-moderacion-multimodal/spec.md), [018](../018-umbrales-y-bandas/spec.md), [046](../046-asistente-sensi-ia/spec.md), [056](../056-resenas-comercios/spec.md) |
 
 ## 1. Contexto y objetivo
 
@@ -40,11 +40,11 @@ Resolver la evasión de lenguaje vulgar en español e inglés (`"pito"`, `"puta"
 | `FR-059-01` | FR | Detectar de forma determinística groserías, frases compuestas, variantes *leetspeak* y repeticiones en `ProfanityFilter` con timeout regex anti-ReDoS | Must | Implementado |
 | `FR-059-02` | FR | Aplicar `ContentModerationHelper.EnsureApprovedAsync` en registro/perfil de usuario, registro/perfil de comercio, crear/editar/republicar ofertas, reseñas y respuestas | Must | Implementado |
 | `FR-059-03` | FR | Mantener `OpenAiTextModerationService.ModerateTextAsync` y `ModerateContentTextAsync` 100 % *fail-closed* ante ausencia de `ApiKey`, error HTTP, timeout o respuesta malformada | Must | Implementado |
-| `FR-059-04` | FR | Resolver todos los umbrales (`Sensi:TextModerationThresholds`, `CategoryThresholds`, `DefaultLowThreshold`, `DefaultHighThreshold`) desde `IOptions<OpenAiSettings>` / `appsettings.json`, eliminando constantes de umbral fijas en `OpenAiTextModerationService` | Must | En remediación |
-| `FR-059-05` | FR | Configurar `OpenAiSettings` de publicación (`Model`, `DefaultLowThreshold`, `DefaultHighThreshold`, `CategoryThresholds`) explícitamente en `appsettings.json` | Must | En remediación |
+| `FR-059-04` | FR | Resolver todos los umbrales (`Sensi:TextModerationThresholds`, `CategoryThresholds`, `DefaultLowThreshold`, `DefaultHighThreshold`) desde `IOptions<OpenAiSettings>` / `appsettings.json`, eliminando constantes de umbral fijas en `OpenAiTextModerationService` | Must | Implementado |
+| `FR-059-05` | FR | Configurar `OpenAiSettings` de publicación (`Model`, `DefaultLowThreshold`, `DefaultHighThreshold`, `CategoryThresholds`) explícitamente en `appsettings.json` | Must | Implementado |
 | `NFR-059-01` | NFR | Resiliencia ReDoS: toda expresión regular de `ProfanityFilter` utiliza timeout explícito (`<= 1 s`) | 0 vulnerabilidades S6444 | Implementado |
 | `NFR-059-02` | NFR | Fail-closed garantizado: 100 % de fallos del proveedor de moderación textual impiden la publicación o actualización | 0 % fail-open | Implementado |
-| `NFR-059-03` | NFR | Cobertura unitaria e integración sobre casos positivos, negativos, *leetspeak*, umbrales configurados y fallos de red | Cobertura >= 80 % | En progreso |
+| `NFR-059-03` | NFR | Cobertura unitaria e integración sobre casos positivos, negativos, *leetspeak*, umbrales configurados y fallos de red | Cobertura >= 80 % | Implementado |
 
 ## 5. Criterios de aceptación
 
