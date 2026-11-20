@@ -24,6 +24,9 @@
 | T045-10 | Actualizar `specs/README.md`, `specs/requirements.md` y `memory.md` | Docs | `FR-045-02` | T045-09 | Completada |
 | T045-11 | Cargar secretos desde SSM (`SecretsConfigurationExtensions`), quitar la inyección por variables de entorno en CDK y en el workflow, permiso `GetParametersByPath` sobre la ruta, y fail-closed del secreto JWT en Lambda | Api e IaC | `FR-045-11` | T045-10 | Hecho (pendiente de cargar parámetros) |
 | T045-12 | Pasar `ALERTS_EMAIL` como contexto `budgetEmail` en `deploy-serverless.yml` | IaC | `FR-045-12` | T045-10 | Hecho |
+| T045-13 | Leer `ALERTS_EMAIL` como secreto, `cdk synth --quiet` y suscripción SNS con identificador fijo | IaC | `FR-045-12`, `FR-045-13` | T045-12 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
+| T045-14 | Presupuesto notificado por el tema SNS (con su política) y renombrado a `-v2` | IaC | `FR-045-14` | T045-13 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
+| T045-15 | Fallar el despliegue si `ALERTS_EMAIL` está vacío y quitar el correo de relleno del CDK | IaC | `FR-045-15` | T045-13 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
 
 ## Notas de ejecución
 

@@ -41,6 +41,17 @@ No aplica: la persistencia reside en MongoDB Atlas (M0 Free Tier).
 - **Alarmas de CloudWatch**:
   - `SensusApi5xxAlarm`: Se activa cuando los errores 5xx superan el umbral en un periodo de 5 minutos.
   - `SensusLambdaErrorsAlarm`: Se activa ante fallos o *throttling* en la invocación de la Lambda.
+- **Correo de alertas (FR-045-12 a FR-045-15, T045-13 a T045-15)** — corrección tras el despliegue fallido del 2026-11-20:
+  - `ALERTS_EMAIL` pasa de variable a **secreto** de GitHub: los secretos se enmascaran (`***`) en los logs; las variables no.
+    El repositorio es público y el correo se imprimía en claro en cada paso del job.
+  - `cdk synth --quiet`: la plantilla completa (con el correo, el ID de cuenta y los orígenes CORS) dejaba de imprimirse en el log.
+  - La suscripción de correo del tema SNS se crea con el identificador fijo `SensusAlarmEmailSubscription`; antes CDK derivaba
+    el identificador lógico del propio correo.
+  - El presupuesto notifica al tema SNS (`SubscriptionType: SNS`) en lugar de a un correo directo. En CloudFormation, cambiar
+    los suscriptores de un `AWS::Budgets::Budget` obliga a recrearlo, y con nombre fijo AWS rechaza el duplicado. El tema
+    recibe una política que permite publicar solo a `budgets.amazonaws.com` desde esta cuenta (`aws:SourceAccount`).
+  - El nombre pasa a `sensus-zero-cost-budget-<entorno>-v2` para que el reemplazo de esta única vez no choque con el existente.
+  - El workflow falla antes de desplegar si `ALERTS_EMAIL` está vacío; el CDK ya no usa `alerts@sensus.local` como relleno.
 - **Rendimiento ARM64**: La arquitectura `ARM_64` en Graviton2 ofrece mejor rendimiento precio/cómputo para cargas `.NET`.
 
 ## 6. Costo AWS
