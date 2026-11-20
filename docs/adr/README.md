@@ -18,6 +18,8 @@ cambiarla se crea una nueva que la sustituya y se marca la anterior como `Sustit
 | [0011](0011-asistente-generativo-sensi.md) | Asistente generativo Sensi con recuperación determinista en el backend | Sustituida por ADR 0012 | 2026-11-13 |
 | [0012](0012-sensi-ia-agentico-mcp-router-evals.md) | Arquitectura por 7 capas de Sensi IA agéntico (MCP *in-process*, *Prompt Caching*, *Model Router*, *Guardrails* y *Evals*) | Aceptada | 2026-11-15 |
 | [0013](0013-contadores-presupuesto-dynamodb.md) | Contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB | Aceptada | 2026-11-15 |
+| [0014](0014-redis-en-vpc-y-pausa-nocturna.md) | Redis (Valkey Serverless) en VPC y pausa nocturna de la infraestructura | Aceptada | 2026-11-19 |
+| [0015](0015-ranking-aprendido-mlnet.md) | Ranking aprendido del feed con Random Forest en ML.NET | Propuesta (diferida hasta tener datos) | 2026-11-20 |
 
 ---
 

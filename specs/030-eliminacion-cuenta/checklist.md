@@ -18,6 +18,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] El token deja de servir de inmediato
 - [x] La purga cubre users, profiles y tokens
 - [ ] La auditoría queda anonimizada
+- [x] Intereses e interacciones del feed borrados al eliminar la cuenta (T030-13)
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -57,3 +58,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `DELETE /api/v1/users/account` con contraseña; borra foto, comercio, tokens de recuperación y usuario. Defecto: ofertas huérfanas quedan Published. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
 | 2026-11-15 | Equipo Sensus | Corrección FR-030-06 | `DeleteAccountCommandHandler` archiva las ofertas no archivadas del comercio e invalida su caché antes de borrarlo. Regresión `DeleteAccount_ShouldArchiveMerchantOffers_WhenAccountOwnsMerchant` (falló antes del arreglo) y 2 unitarias nuevas. Build sin advertencias, formato limpio; 525 unitarias, 4 de arquitectura, 117 de integración y 3 E2E en verde. Sigue pendiente T030-09 (apartados activos). |
+| 2026-11-20 | Ingeniería Sensus (con asistente) | Cierre FR-030-08 (`T030-13`) | `DeleteAccountCommandHandler` purga de inmediato `user_interests` (054), `offer_interactions` con todas las versiones HMAC vigentes (`IOfferInteractionRecorder.PurgeByUserAsync`, 055) y la caché `feed:affinity:{userId}`. Pruebas de regresión `CA-030-06` unitaria (`DeleteAccountCommandHandlerTests`) e integración (`DeleteAccountEndpointTests`). Siguen pendientes en Spec 030 las tareas previas fuera de este alcance (`T030-06`..`T030-09`). |

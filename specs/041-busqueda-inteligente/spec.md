@@ -8,9 +8,9 @@
 | Ola | 5 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
-| Dependencias | 007, 010, 011 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Dependencias | 007, 010, 011, 013, 052 |
+| Versión | 1.1.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -37,7 +37,8 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 
 ## 3. Actores
 
-- Usuario autenticado
+- Usuario registrado
+- Invitado (spec 052), con radio recortado a 2 km
 
 ## 4. Requisitos funcionales
 
@@ -50,6 +51,10 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 | FR-041-05 | Devolver ofertas cercanas cuando la consulta esté vacía | Should |
 | FR-041-06 | Excluir del resultado las ofertas de comercios inactivos | Must |
 | FR-041-07 | Versionar y configurar los pesos del ranking por entorno | Must |
+| FR-041-08 | Validar con lista de permitidos: `q` de 0 a 80 caracteres sin caracteres de control, `lat` [-90, 90], `lng` [-180, 180], `radiusKm` [1, 50] y `pageSize` ≤ 100 | Must |
+| FR-041-09 | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must |
+| FR-041-10 | Responder `400` y `401` con `ProblemDetails` uniforme, sin nombres de índices ni detalles del motor | Must |
+| FR-041-11 | Permitir la búsqueda a invitados (spec 052) recortando el radio a 2 km en el servidor con `GuestRadiusPolicy` | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -64,13 +69,13 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 ### CA-041-01
 
 - **Dado** consulta "panadería" con ofertas cercanas
-- **Cuando** GET /api/v1/ml/search?q=panadería
+- **Cuando** GET /api/v1/offers/search?q=panadería
 - **Entonces** 200 con resultados ordenados por puntaje
 
 ### CA-041-02
 
 - **Dado** consulta vacía
-- **Cuando** GET /api/v1/ml/search
+- **Cuando** GET /api/v1/offers/search
 - **Entonces** 200 con ofertas cercanas como fallback
 
 ### CA-041-03
@@ -85,15 +90,33 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 - **Cuando** se ejecuta dos veces
 - **Entonces** orden idéntico
 
+### CA-041-05 — Entrada inválida
+
+- **Dado** `q` de 81 caracteres, `lat` fuera de rango o `pageSize` > 100
+- **Cuando** se busca
+- **Entonces** `400` con `ProblemDetails` sin detalles internos
+
+### CA-041-06 — Sin token
+
+- **Dado** ninguna cabecera `Authorization`
+- **Cuando** se busca
+- **Entonces** `401` con `ProblemDetails`
+
+### CA-041-07 — Invitado
+
+- **Dado** un token de invitado y `radiusKm=10`
+- **Cuando** `GET /api/v1/offers/search?q=pan`
+- **Entonces** `200` solo con ofertas a 2 km o menos
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
-| GET | `/api/v1/ml/search` | JWT |
+| GET | `/api/v1/offers/search` | JWT |
 
 ## 8. Dependencias y supuestos
 
-- Depende de: 007, 010, 011
+- Depende de: 007, 010, 011, 013, 052
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 
@@ -104,11 +127,12 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 
 ## 10. Preguntas abiertas
 
+- Resuelto (2026-11-20): la ruta es `GET /api/v1/offers/search` y los invitados buscan con radio recortado a 2 km.
 - ¿Se requiere análisis morfológico en español o basta con coincidencia de prefijos?
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-041-01`, `FR-041-02`, `FR-041-03`, `FR-041-04`, `FR-041-05`, `FR-041-06`, `FR-041-07`
+- Requisitos de este spec: `FR-041-01`, `FR-041-02`, `FR-041-03`, `FR-041-04`, `FR-041-05`, `FR-041-06`, `FR-041-07`, `FR-041-08`, `FR-041-09`, `FR-041-10`, `FR-041-11`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

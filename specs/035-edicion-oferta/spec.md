@@ -49,6 +49,7 @@ Permitir que el comerciante corrija una oferta existente sin romper apartados ac
 | FR-035-05 | Rechazar ediciones concurrentes con 409 usando version | Must |
 | FR-035-06 | No cambiar el identificador ni los apartados existentes | Must |
 | FR-035-07 | Mantener la oferta oculta mientras la re-moderación está pendiente | Must |
+| FR-035-08 | Rechazar con `400` una edición que quite la categoría de una oferta publicada o use un valor fuera de `OfferCategory` (spec 034) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -83,6 +84,12 @@ Permitir que el comerciante corrija una oferta existente sin romper apartados ac
 - **Cuando** se envían en paralelo
 - **Entonces** una recibe 200 y otra 409
 
+### CA-035-05 — Categoría en edición
+
+- **Dado** una oferta publicada
+- **Cuando** `PUT /api/v1/offers/{id}` con `category` vacía o `"Moda"`
+- **Entonces** `400` y la oferta conserva su categoría
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -106,7 +113,7 @@ Permitir que el comerciante corrija una oferta existente sin romper apartados ac
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-035-01`, `FR-035-02`, `FR-035-03`, `FR-035-04`, `FR-035-05`, `FR-035-06`, `FR-035-07`
+- Requisitos de este spec: `FR-035-01`, `FR-035-02`, `FR-035-03`, `FR-035-04`, `FR-035-05`, `FR-035-06`, `FR-035-07`, `FR-035-08`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

@@ -18,6 +18,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] El comercio proviene del token
 - [x] El precio final se calcula en el servidor
 - [ ] El límite por comercio está probado
+- [x] La categoría de producto es obligatoria al publicar (detrás de `OfferCategory:RequireStrictValidation=false` hasta publicar móvil T15.15) y la migración idempotente está implementada (`OfferCategoryMigrationService`, `T034-13`, `T034-14`)
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -58,3 +59,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `POST /api/v1/offers` con invariantes en `Offer.Create`. Faltan Draft, límite de 20 activas y respuesta 202. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-20 | Antigravity | PARCIAL (FR-034-08/09 cerrados) | `OfferCategory` + `OfferCategoryCatalog` en Domain; `OfferCategorySettings.RequireStrictValidation` (`false` por defecto hasta publicar móvil T15.15) en `CreateOfferCommandValidator`/`Handler`/`Offer.Create`; `OfferCategoryMigrationService` idempotente (`offer_category_v1` en `schema_migrations`). Cubierto por `OfferCategoryCatalogTests`, `OfferTests`, `CreateOfferCommandValidatorTests`, `CreateOfferCommandHandlerTests`, `OfferCategoryEndpointsTests` y `OfferCategoryMigrationServiceTests`. |

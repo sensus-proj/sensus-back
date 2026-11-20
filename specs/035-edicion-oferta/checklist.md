@@ -56,3 +56,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `PUT /api/v1/offers/{id}` con 403 por propietario, 409 por versión y stock ≥ apartados activos. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-20 | Antigravity | PARCIAL (FR-035-08 cerrado) | `UpdateOfferCommandValidator`, `UpdateOfferCommandHandler` y `Offer.Update` validan `OfferCategory` detrás de `OfferCategory:RequireStrictValidation` (`false` por defecto hasta publicar móvil T15.15). Pruebas en `OfferTests`, `UpdateOfferCommandValidatorTests`, `UpdateOfferCommandHandlerTests` y `OfferCategoryEndpointsTests`. |

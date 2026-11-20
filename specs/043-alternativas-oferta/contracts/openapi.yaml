@@ -1,19 +1,25 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 043 Alternativas a una oferta"
-  version: 1.0.0
+  version: 1.1.0
   description: "Borrador del contrato del spec 043. Completar esquemas antes de implementar."
 servers:
   - url: https://localhost:5001
 paths:
-  /api/v1/ml/alternatives:
+  /api/v1/offers/{id}/alternatives:
     get:
-      summary: "Borrador de GET /api/v1/ml/alternatives"
+      summary: "Borrador de GET /api/v1/offers/{id}/alternatives"
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '200': { description: OK }
         '400': { description: Solicitud inválida }
         '401': { description: No autenticado }
+        '404': { description: Oferta inexistente o no visible (respuesta idéntica) }
 components:
   securitySchemes:
     bearerAuth:

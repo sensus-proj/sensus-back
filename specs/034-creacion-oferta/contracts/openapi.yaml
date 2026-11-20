@@ -1,22 +1,88 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 034 Creación de oferta"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 034. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: "Contrato de POST /api/v1/offers con catálogo OfferCategory (FR-034-08)."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers:
     post:
-      summary: "Borrador de POST /api/v1/offers"
+      summary: "Crear una oferta comercial"
+      operationId: createOffer
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOfferRequest' }
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
+        '201':
+          description: Oferta creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferDto' }
+        '400':
+          description: Solicitud inválida (incluye categoría ausente o fuera de OfferCategory cuando OfferCategory:RequireStrictValidation=true)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401': { description: No autenticado }
+        '403': { description: Comercio no activo o rol insuficiente }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferCategory:
+      type: string
+      enum: [Grocery, CleaningHome, Perishables, Dairy, Food, Bakery, Beverages, Pets, Pharmacy]
+      description: Catálogo de producto OfferCategory (distinto de MerchantCategory).
+    CreateOfferRequest:
+      type: object
+      required: [title, description, originalPrice, discountPercentage, stock, startsAt, endsAt]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, minLength: 5, maxLength: 500 }
+        originalPrice: { type: number, exclusiveMinimum: 0 }
+        discountPercentage: { type: integer, minimum: 1, maximum: 90 }
+        stock: { type: integer, minimum: 1 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        imageUrl: { type: [string, 'null'], format: uri }
+        category:
+          oneOf:
+            - $ref: '#/components/schemas/OfferCategory'
+            - type: 'null'
+          description: Obligatoria al publicar cuando OfferCategory:RequireStrictValidation=true (tras publicar móvil T15.15).
+    OfferDto:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        originalPrice: { type: number }
+        discountPercentage: { type: integer }
+        discountedPrice: { type: number }
+        stock: { type: integer }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { type: string }
+        imageUrl: { type: [string, 'null'] }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        createdAtUtc: { type: string, format: date-time }
+        lastModifiedAtUtc: { type: [string, 'null'], format: date-time }
+        version: { type: integer }
+        category: { type: [string, 'null'] }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

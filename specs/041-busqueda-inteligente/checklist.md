@@ -1,6 +1,6 @@
 # Checklist 041 — Búsqueda de ofertas
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -39,6 +39,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [ ] **V. Verificación automatizada** — PASS
 - [ ] **VI. Costo cero e IaC** — PASS
 - [ ] **VII. Rendimiento y observabilidad** — PASS
+- [ ] **VIII. Seguridad de nivel fintech** — PASS (STRIDE en el plan)
 
 ## E. Evidencia
 

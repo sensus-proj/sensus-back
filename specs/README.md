@@ -42,11 +42,11 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 033 |
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 035 |
 | 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 033, 010 |
-| 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 042 |
+| 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032 |
 | 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 013 |
 | 040 | [Reportes de contenido](040-reportes-contenido/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 025, 017, 018 |
 | 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 010, 011 |
-| 042 | [Recomendaciones personalizadas](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 038, 039, 041 |
+| 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 010, 013, 032, 033, 048, 052, 054, 055 |
 | 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 041 |
 | 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 027, 034 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
@@ -57,6 +57,8 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 051 | [Pausa nocturna de la infraestructura](051-pausa-nocturna-infraestructura/spec.md) | Plataforma | Nuevo | 7 | Implementado | 015, 045, 048 |
 | 052 | [Sesión de invitado](052-sesion-invitado/spec.md) | Autenticación | Retro-spec | 1 | Parcial (retro-spec) | 002, 013 |
 | 053 | [Comercios cercanos](053-comercios-cercanos/spec.md) | Comercios | Retro-spec | 2 | Parcial (retro-spec) | 005, 010, 013, 052 |
+| 054 | [Intereses del usuario](054-intereses-usuario/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 002, 003, 013, 030, 052 |
+| 055 | [Registro de interacciones con ofertas](055-interacciones-ofertas/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 014, 030, 032, 033, 042 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
 
 ## Estados
