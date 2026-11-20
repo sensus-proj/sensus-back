@@ -321,6 +321,8 @@ app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();
 app.MapFeedEndpoints();
+app.MapStoreReviewEndpoints();
+app.MapCommunityEndpoints();
 
 await app.RunAsync();
 

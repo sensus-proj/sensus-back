@@ -60,6 +60,10 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 054 | [Intereses del usuario](054-intereses-usuario/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 002, 003, 013, 030, 052 |
 | 055 | [Registro de interacciones con ofertas](055-interacciones-ofertas/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 014, 030, 032, 033, 042 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
+| 056 | [Reseñas y calificaciones de comercios (`StoreReview`)](056-resenas-comercios/spec.md) | Social | Retro-spec | 3 | Parcial (retro-spec) | 001, 005, 006, 017, 052, 059 |
+| 057 | [Me gusta en ofertas (`OfferLike`)](057-me-gusta-ofertas/spec.md) | Ofertas | Retro-spec | 3 | Implementado (retro-spec) | 001, 007, 032, 034, 052 |
+| 058 | [Actividad de amigos en comunidad (`CommunityEndpoints`)](058-actividad-amigos-comunidad/spec.md) | Social | Retro-spec | 5 | Parcial (retro-spec) | 050, 056, 057 |
+| 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Implementado (retro-spec) | 017, 018, 046, 056 |
 
 ## Estados
 
@@ -77,4 +81,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **53 specs** — Ola 0: 3, Ola 1: 6, Ola 2: 11, Ola 3: 5, Ola 4: 9, Ola 5: 6, Ola 6: 7, Ola 7: 5, Backlog: 1.
+Total: **57 specs** — Ola 0: 3, Ola 1: 6, Ola 2: 11, Ola 3: 7, Ola 4: 10, Ola 5: 7, Ola 6: 7, Ola 7: 5, Backlog: 1.
