@@ -223,6 +223,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-029-03` | 029 | NFR | Límite de solicitudes | 3 por correo y hora | Pendiente |
 | `FR-029-08` | 029 | FR | Alias `POST /auth/reset-password` de `/auth/recover/confirm` | Must | Implementado |
 | `FR-029-09` | 029 | FR | Retirar el alias cuando el móvil use la ruta canónica | Should | Pendiente |
+| `FR-029-10` | 029 | FR | HTTP hacia el servicio de correo solo para el host y el plazo de EX-004 | Must | Hecho |
+| `FR-029-11` | 029 | FR | Rotar la clave del servicio de correo cada 30 días mientras EX-004 esté vigente | Must | Pendiente |
+| `FR-029-12` | 029 | FR | Migrar el correo a un canal con TLS antes del 2026-12-20 y retirar EX-004 | Must | Pendiente |
 | `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado |
 | `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Parcial |
 | `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado |

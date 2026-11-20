@@ -18,6 +18,9 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] El token solo se guarda hasheado
 - [ ] El enlace caduca a los 30 minutos
 - [x] Las sesiones previas quedan revocadas
+- [x] HTTP hacia el servicio de correo solo para el host y el plazo de EX-004 (T029-15)
+- [ ] Clave del servicio de correo rotada en los últimos 30 días (T029-16)
+- [ ] EX-004 cerrada con envío por TLS antes del 2026-12-20 (T029-17)
 
 ## C. Antes de entregar (Definition of Done)
 
