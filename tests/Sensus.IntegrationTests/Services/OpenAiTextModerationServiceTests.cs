@@ -483,4 +483,93 @@ public sealed class OpenAiTextModerationServiceTests
         result.Decision.Should().Be("Quarantine");
         result.Message.Should().Be(OpenAiTextModerationService.QuarantineMessage);
     }
+
+    [Fact]
+    public async Task ModerateContentTextAsync_UsesConfiguredCategoryThresholds_WithoutHardcodedFallback()
+    {
+        // Arrange: umbral personalizado estrictamente en configuracion (Low = 0.10, High = 0.25)
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-text-cfg",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool> { ["harassment"] = false },
+                    category_scores = new Dictionary<string, double> { ["harassment"] = 0.28 }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            Model = "omni-moderation-latest",
+            CategoryThresholds = new Dictionary<string, CategoryThreshold>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["harassment"] = new CategoryThreshold { Low = 0.10, High = 0.25 }
+            }
+        });
+        var sensiOptions = Options.Create(new SensiSettings());
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        // Act
+        var result = await service.ModerateContentTextAsync("Texto evaluado con umbral configurado", "Reseña");
+
+        // Assert: 0.28 >= High (0.25) => Rejected aun por debajo de 0.75
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Rejected");
+        result.FlaggedCategories.Should().Contain("harassment");
+    }
+
+    [Fact]
+    public async Task ModerateContentTextAsync_WhenDefaultThresholdsAreZeroOrInvalid_FailsClosed()
+    {
+        // Arrange: sin umbrales validos (0/0) debe fallar cerrado en cuarentena
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-text-zero-threshold",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool> { ["hate"] = false },
+                    category_scores = new Dictionary<string, double> { ["hate"] = 0.01 }
+                }
+            }
+        });
+
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+
+        var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings
+        {
+            ApiKey = "sk-valid-key",
+            Model = "omni-moderation-latest",
+            DefaultLowThreshold = 0,
+            DefaultHighThreshold = 0
+        });
+        var sensiOptions = Options.Create(new SensiSettings());
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        // Act
+        var result = await service.ModerateContentTextAsync("Texto con configuracion invalida", "Oferta");
+
+        // Assert
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
 }

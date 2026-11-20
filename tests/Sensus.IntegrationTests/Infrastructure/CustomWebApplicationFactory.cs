@@ -37,6 +37,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
     public IOfferLikeRepository OfferLikeRepository { get; } = Substitute.For<IOfferLikeRepository>();
     public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
+    public IFriendRequestRepository FriendRequestRepository { get; } = Substitute.For<IFriendRequestRepository>();
+    public ISharedOfferRepository SharedOfferRepository { get; } = Substitute.For<ISharedOfferRepository>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -138,11 +140,31 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IBudgetCounterStore>();
             services.AddSingleton(BudgetCounterStore);
 
+            OfferLikeRepository.CountByOfferIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, int>());
+            OfferLikeRepository.GetLikedOfferIdsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            OfferLikeRepository.GetByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
             services.RemoveAll<IOfferLikeRepository>();
             services.AddSingleton(OfferLikeRepository);
 
+            StoreReviewRepository.GetByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            StoreReviewRepository.GetRatingSummariesByMerchantIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, (double AverageRating, int ReviewCount)>());
+            StoreReviewRepository.GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
             services.RemoveAll<IStoreReviewRepository>();
             services.AddSingleton(StoreReviewRepository);
+
+            FriendRequestRepository.GetForUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IFriendRequestRepository>();
+            services.AddSingleton(FriendRequestRepository);
+
+            services.RemoveAll<ISharedOfferRepository>();
+            services.AddSingleton(SharedOfferRepository);
         });
     }
 }

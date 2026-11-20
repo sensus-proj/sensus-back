@@ -111,11 +111,12 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
             return (0, false);
         }
 
+        // FR-055-02: Likes públicos y estado propio del detalle de oferta.
         int likesCount = await _offerLikeRepository.CountByOfferIdAsync(offerId, cancellationToken);
         bool isLikedByMe = false;
         if (!_currentUserService.IsGuest && Guid.TryParse(_currentUserService.UserId, out Guid userId))
         {
-            HashSet<Guid> likedIds = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, [offerId], cancellationToken);
+            HashSet<Guid> likedIds = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, [offerId], cancellationToken) ?? [];
             isLikedByMe = likedIds.Contains(offerId);
         }
 

@@ -51,8 +51,9 @@ public sealed class GetMerchantOffersQueryHandler : IRequestHandler<GetMerchantO
         List<OfferDto> dtos = offers.Select(o => o.ToDto()).ToList();
         if (_offerLikeRepository is not null && dtos.Count > 0)
         {
-            var counts = await _offerLikeRepository.CountByOfferIdsAsync(dtos.Select(d => d.Id), cancellationToken);
-            var liked = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, dtos.Select(d => d.Id), cancellationToken);
+            // FR-055-02: Enriquecer inventario del comerciante con likes reales.
+            var counts = await _offerLikeRepository.CountByOfferIdsAsync(dtos.Select(d => d.Id), cancellationToken) ?? [];
+            var liked = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, dtos.Select(d => d.Id), cancellationToken) ?? [];
             dtos = dtos
                 .Select(d => d with
                 {

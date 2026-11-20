@@ -277,6 +277,13 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         foreach (var (category, score) in categoryScores)
         {
             var threshold = GetThresholdForCategory(category);
+            if (threshold.Low <= 0 || threshold.High <= 0 || threshold.Low > threshold.High)
+            {
+                // FR-057-03 / FR-057-04: umbrales inválidos o no configurados activan fail-closed.
+                quarantineCategories.Add(category);
+                continue;
+            }
+
             if (score >= threshold.High)
             {
                 flaggedCategories.Add(category);
@@ -328,6 +335,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             CategoryScores: categoryScores);
     }
 
+    // FR-057-04: Todos los umbrales se resuelven exclusivamente desde IOptions<OpenAiSettings>.
     private CategoryThreshold GetThresholdForCategory(string category)
     {
         if (_openAiSettings.Sensi?.TextModerationThresholds != null &&
@@ -341,10 +349,21 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             };
         }
 
+        if (_openAiSettings.CategoryThresholds != null &&
+            _openAiSettings.CategoryThresholds.TryGetValue(category, out var configuredThreshold) &&
+            configuredThreshold != null)
+        {
+            return new CategoryThreshold
+            {
+                Low = configuredThreshold.Low,
+                High = configuredThreshold.High
+            };
+        }
+
         return new CategoryThreshold
         {
-            Low = _openAiSettings.DefaultLowThreshold > 0 ? _openAiSettings.DefaultLowThreshold : 0.35,
-            High = _openAiSettings.DefaultHighThreshold > 0 ? _openAiSettings.DefaultHighThreshold : 0.75
+            Low = _openAiSettings.DefaultLowThreshold,
+            High = _openAiSettings.DefaultHighThreshold
         };
     }
 

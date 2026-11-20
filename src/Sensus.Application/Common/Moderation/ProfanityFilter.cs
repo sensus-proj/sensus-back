@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Sensus.Application.Common.Moderation;
 
 /// <summary>
-/// Filtro determinístico local de lenguaje ofensivo / groserías (español e inglés).
+/// Filtro determinístico local de lenguaje ofensivo / groserías (español e inglés, FR-057-01, NFR-057-01).
 /// Actúa como primera línea de defensa instantánea y sin costo de red antes de la moderación con IA.
 /// </summary>
 public static partial class ProfanityFilter
@@ -84,42 +84,50 @@ public static partial class ProfanityFilter
             return false;
         }
 
-        // 1. Coincidencia por palabra completa (incluye l33t y repetición de 3+ letras)
-        string[] tokens = TokenSplitRegex().Split(normalized);
-        foreach (string token in tokens)
+        try
         {
-            if (string.IsNullOrEmpty(token))
+            // 1. Coincidencia por palabra completa (incluye l33t y repetición de 3+ letras)
+            string[] tokens = TokenSplitRegex().Split(normalized);
+            foreach (string token in tokens)
             {
-                continue;
+                if (string.IsNullOrEmpty(token))
+                {
+                    continue;
+                }
+
+                if (IsBannedWord(token))
+                {
+                    return true;
+                }
             }
 
-            if (IsBannedWord(token))
+            // 2. Frases ofensivas exactas separadas por espacios simples
+            string spaced = string.Join(' ', tokens.Where(t => !string.IsNullOrEmpty(t)));
+            foreach (string phrase in BannedPhrases)
             {
-                return true;
+                if (ContainsWholePhrase(spaced, phrase))
+                {
+                    return true;
+                }
             }
+
+            // 3. Ofuscación separando letras con espacios/símbolos (e.g. "p.u.t.a", "p i t o")
+            foreach (Match match in SeparatedSingleCharsRegex().Matches(normalized))
+            {
+                string joined = NonAlnumRegex().Replace(match.Value, string.Empty);
+                if (IsBannedWord(joined))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
-
-        // 2. Frases ofensivas exactas separadas por espacios simples
-        string spaced = string.Join(' ', tokens.Where(t => !string.IsNullOrEmpty(t)));
-        foreach (string phrase in BannedPhrases)
+        catch (RegexMatchTimeoutException)
         {
-            if (ContainsWholePhrase(spaced, phrase))
-            {
-                return true;
-            }
+            // NFR-057-01: fail-closed si una entrada maliciosa dispara timeout en regex.
+            return true;
         }
-
-        // 3. Ofuscación separando letras con espacios/símbolos (e.g. "p.u.t.a", "p i t o")
-        foreach (Match match in SeparatedSingleCharsRegex().Matches(normalized))
-        {
-            string joined = NonAlnumRegex().Replace(match.Value, string.Empty);
-            if (IsBannedWord(joined))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool IsBannedWord(string token)
@@ -187,15 +195,15 @@ public static partial class ProfanityFilter
         return sb.ToString();
     }
 
-    [GeneratedRegex("[^a-z0-9ñ]+", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("[^a-z0-9ñ]+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 500)]
     private static partial Regex TokenSplitRegex();
 
-    [GeneratedRegex("([a-z0-9ñ])\\1{2,}", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("([a-z0-9ñ])\\1{2,}", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 500)]
     private static partial Regex TripleOrMoreCharsRegex();
 
-    [GeneratedRegex("(?:\\b[a-z0-9ñ]\\b[\\s._\\-*]+){2,}\\b[a-z0-9ñ]\\b", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("(?:\\b[a-z0-9ñ]\\b[\\s._\\-*]+){2,}\\b[a-z0-9ñ]\\b", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 500)]
     private static partial Regex SeparatedSingleCharsRegex();
 
-    [GeneratedRegex("[^a-z0-9ñ]+", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("[^a-z0-9ñ]+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 500)]
     private static partial Regex NonAlnumRegex();
 }

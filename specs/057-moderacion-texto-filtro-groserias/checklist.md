@@ -1,0 +1,9 @@
+# Checklist 057 — Filtro de groserías y moderación textual fail-closed
+
+| Criterio | Estado | Verificación |
+|---|---|---|
+| Spec 057 completa con 4 artefactos y `contracts/openapi.yaml` | `[x]` | `check-specs.mjs specs` |
+| Constitución: STRIDE y 8 principios evaluados en `plan.md` | `[x]` | `plan.md` §8 |
+| Moderación textual 100 % fail-closed ante errores, timeouts o ausencia de clave | `[ ]` | `OpenAiTextModerationServiceTests` |
+| Cero umbrales numéricos hardcodeados en `OpenAiTextModerationService` | `[ ]` | Revisión de `GetThresholdForCategory` + `appsettings.json` |
+| Cobertura Domain y Application >= 80 % | `[ ]` | `dotnet test` + cobertura |

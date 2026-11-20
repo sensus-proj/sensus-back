@@ -61,25 +61,26 @@ public sealed class GetFriendsCommunityActivityQueryHandler
 
         int effectiveLimit = Math.Clamp(request.Limit, 1, 100);
 
-        IReadOnlyList<FriendRequest> friendships = await _friendRequestRepository.GetForUserAsync(userId, cancellationToken);
+        IReadOnlyList<FriendRequest> friendships =
+            await _friendRequestRepository.GetForUserAsync(userId, cancellationToken) ?? [];
         HashSet<Guid> visibleActorIds = friendships
             .Where(f => f.Status == FriendRequestStatus.Accepted)
             .Select(f => f.CounterpartIdFor(userId))
             .Where(id => id != Guid.Empty)
             .ToHashSet();
 
-        // Incluye también la actividad del usuario actual para que sus amigos la vean y él vea su historial reciente.
+        // FR-056-02: Incluye también la actividad del usuario actual para que sus amigos la vean y él vea su historial reciente.
         visibleActorIds.Add(userId);
 
         IReadOnlyList<OfferLike> likes = await _offerLikeRepository.GetByUserIdsAsync(
             visibleActorIds,
             effectiveLimit,
-            cancellationToken);
+            cancellationToken) ?? [];
 
         IReadOnlyList<StoreReview> reviews = await _storeReviewRepository.GetRecentActivityByUserIdsAsync(
             visibleActorIds,
             effectiveLimit,
-            cancellationToken);
+            cancellationToken) ?? [];
 
         Dictionary<Guid, Offer?> offersById = await LoadOffersAsync(likes, cancellationToken);
         Dictionary<Guid, Comercio?> comerciosById = await LoadComerciosAsync(offersById.Values, reviews, cancellationToken);

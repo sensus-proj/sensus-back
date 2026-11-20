@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 055 Me gusta en ofertas"
+  version: 1.0.0
+  description: >
+    Alternancia de 'Me gusta' sobre publicaciones de productos/ofertas comerciales
+    (distinta de Spec 039 para publicaciones de feed).
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/offers/{id}/like:
+    post:
+      summary: Alternar Me gusta del usuario autenticado sobre una oferta
+      operationId: toggleOfferLike
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Estado actualizado de Me gusta y conteo total de la oferta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferLikeStatusDto' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Oferta inexistente o archivada
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de escritura excedido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    OfferLikeStatusDto:
+      type: object
+      properties:
+        offerId: { type: string, format: uuid }
+        likesCount: { type: integer, minimum: 0 }
+        isLikedByMe: { type: boolean }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
