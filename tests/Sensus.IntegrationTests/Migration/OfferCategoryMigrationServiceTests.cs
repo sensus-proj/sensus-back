@@ -162,4 +162,48 @@ public sealed class OfferCategoryMigrationServiceTests : IAsyncLifetime
         secondRun.ConvertedCount.Should().Be(9);
         secondRun.NulledCount.Should().Be(1);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_InRealMongo_ConcurrentStartups_ShouldRegisterMarkerOnceWithoutErrors()
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        Guid merchantId = Guid.NewGuid();
+        string[] legacy = ["Abarrotes", "Panadería", "Lácteos", "Bebidas"];
+        List<OfferDocument> docs = legacy.Select((cat, idx) => OfferDocument.FromDomain(Offer.Create(
+            merchantId,
+            $"Oferta concurrente {idx}",
+            "Descripción de prueba suficientemente larga",
+            100m,
+            20,
+            5,
+            Now.AddMinutes(5),
+            Now.AddDays(1),
+            nowUtc: Now,
+            category: cat).Value)).ToList();
+        await _context!.Offers.InsertManyAsync(docs);
+
+        var clock = new FakeDateTimeProvider();
+        clock.Set(Now);
+        var otherInstance = new OfferCategoryMigrationService(
+            _context,
+            clock,
+            NullLogger<OfferCategoryMigrationService>.Instance);
+
+        OfferCategoryMigrationResult[] results = await Task.WhenAll(
+            _service!.ExecuteAsync(),
+            otherInstance.ExecuteAsync());
+
+        results.Count(r => !r.AlreadyExecuted).Should().Be(1, "solo una instancia registra el marcador (insert-once)");
+
+        long markers = await _context.SchemaMigrations.CountDocumentsAsync(
+            Builders<SchemaMigrationDocument>.Filter.Eq(m => m.Id, OfferCategoryMigrationService.MigrationId));
+        markers.Should().Be(1);
+
+        List<OfferDocument> persisted = await _context.Offers.Find(FilterDefinition<OfferDocument>.Empty).ToListAsync();
+        persisted.Select(d => d.Category).Should().BeEquivalentTo(["Grocery", "Bakery", "Dairy", "Beverages"]);
+    }
 }
