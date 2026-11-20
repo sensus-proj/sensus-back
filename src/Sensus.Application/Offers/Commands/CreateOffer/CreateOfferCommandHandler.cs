@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
@@ -21,6 +22,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly ICacheService? _cacheService;
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
     private readonly IOptions<OfferCategorySettings>? _categorySettings;
+    private readonly ITextModerationService? _textModerationService;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -30,7 +32,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         ILogger<CreateOfferCommandHandler> logger,
         ICacheService? cacheService = null,
         INearbyOfferNotifier? nearbyOfferNotifier = null,
-        IOptions<OfferCategorySettings>? categorySettings = null)
+        IOptions<OfferCategorySettings>? categorySettings = null,
+        ITextModerationService? textModerationService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -40,6 +43,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _cacheService = cacheService;
         _nearbyOfferNotifier = nearbyOfferNotifier;
         _categorySettings = categorySettings;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -56,6 +60,18 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
+            "Publicación de producto u oferta comercial",
+            "Offer.ContentModerationRejected",
+            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(moderationResult.Error);
+        }
 
         Result<Offer> offerResult = Offer.Create(
             comercio.Id,

@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Repositories;
@@ -12,17 +13,20 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
     private readonly ICurrentUserService _currentUserService;
     private readonly IProfileImageStorage? _imageStorage;
     private readonly ICacheService? _cacheService;
+    private readonly ITextModerationService? _textModerationService;
 
     public UpdateProfileCommandHandler(
         IUserRepository userRepository,
         ICurrentUserService currentUserService,
         IProfileImageStorage? imageStorage = null,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        ITextModerationService? textModerationService = null)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
         _imageStorage = imageStorage;
         _cacheService = cacheService;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<UserDto>> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -37,6 +41,19 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
         if (user is null || !user.Estatus)
         {
             return Result.Failure<UserDto>(Error.NotFound("User.NotFound", "El usuario no existe o se encuentra inactivo."));
+        }
+
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            request.NombreCompleto,
+            "Actualización de nombre de usuario",
+            "User.NameModerationRejected",
+            "El nombre de usuario contiene lenguaje antisonante u ofensivo.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<UserDto>(moderationResult.Error);
         }
 
         var previousPhotoUrl = user.FotoPerfilUrl;

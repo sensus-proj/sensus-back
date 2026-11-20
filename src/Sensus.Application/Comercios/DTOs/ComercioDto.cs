@@ -24,4 +24,6 @@ public sealed record ComercioDto(
     DateTime FechaRegistro,
     IReadOnlyList<HorarioDiaDto>? Horarios = null,
     string Categoria = "Otros",
-    string? FotoFachadaUrl = null);
+    string? FotoFachadaUrl = null,
+    double AverageRating = 0.0,
+    int ReviewCount = 0);
