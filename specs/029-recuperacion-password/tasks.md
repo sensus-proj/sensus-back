@@ -26,6 +26,9 @@
 | T029-12 | Registrar evidencias del Constitution Check | Docs | `FR-029-01` | T029-11 | Hecho |
 | T029-13 | Documentar el alias `POST /auth/reset-password` y su contrato | Docs | `FR-029-08` | — | Hecho |
 | T029-14 | Retirar el alias cuando la app móvil use `/auth/recover/confirm` | Api | `FR-029-09` | T029-13 | Pendiente |
+| T029-15 | `MailerTransportPolicy`: HTTP solo hacia el host exceptuado y antes de la fecha de expiración; `BaseUrl` en `http://` y pruebas | Infrastructure | `FR-029-10` | — | Hecho |
+| T029-16 | Rotar `MailerSettings:ApiKey` en SSM y en el servicio de correo cada 30 días mientras EX-004 esté vigente | Operación | `FR-029-11` | T029-15 | Pendiente |
+| T029-17 | Migrar el envío a un canal con TLS (SES, SMTP con STARTTLS o el servicio con HTTPS) antes del 2026-12-20 y cerrar EX-004 | Infrastructure | `FR-029-12` | T029-15 | Pendiente |
 
 ## Notas de ejecución
 
