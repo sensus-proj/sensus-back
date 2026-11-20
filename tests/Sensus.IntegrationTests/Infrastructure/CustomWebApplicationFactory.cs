@@ -35,6 +35,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
     public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
+    public IUserInterestsRepository UserInterestsRepository { get; } = Substitute.For<IUserInterestsRepository>();
+    public IOfferInteractionRecorder OfferInteractionRecorder { get; } = Substitute.For<IOfferInteractionRecorder>();
+    public IUserAffinityReader UserAffinityReader { get; } = Substitute.For<IUserAffinityReader>();
+    public IFeedSnapshotStore FeedSnapshotStore { get; } = Substitute.For<IFeedSnapshotStore>();
+    public IFeedMetricsPublisher FeedMetricsPublisher { get; } = Substitute.For<IFeedMetricsPublisher>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -133,6 +138,28 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             BudgetCounterStore.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)1d);
             services.RemoveAll<IBudgetCounterStore>();
             services.AddSingleton(BudgetCounterStore);
+
+            // Intereses del usuario (Spec 054)
+            services.RemoveAll<IUserInterestsRepository>();
+            services.AddSingleton(UserInterestsRepository);
+
+            // Registro de interacciones (Spec 055)
+            services.RemoveAll<IOfferInteractionRecorder>();
+            services.AddSingleton(OfferInteractionRecorder);
+
+            // Feed de promociones (Spec 042)
+            UserAffinityReader.GetCategoryAffinitiesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<string, double>());
+            services.RemoveAll<IUserAffinityReader>();
+            services.AddSingleton(UserAffinityReader);
+
+            FeedSnapshotStore.SaveAsync(Arg.Any<Guid>(), Arg.Any<FeedSnapshot>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+                .Returns(true);
+            services.RemoveAll<IFeedSnapshotStore>();
+            services.AddSingleton(FeedSnapshotStore);
+
+            services.RemoveAll<IFeedMetricsPublisher>();
+            services.AddSingleton(FeedMetricsPublisher);
         });
     }
 }

@@ -21,4 +21,6 @@ public sealed class MongoDbSettings
     public string FriendRequestsCollectionName { get; set; } = "friend_requests";
     public string SharedOffersCollectionName { get; set; } = "shared_offers";
     public string SanctionsCollectionName { get; set; } = "sanctions";
+    public string UserInterestsCollectionName { get; set; } = "user_interests";
+    public string OfferInteractionsCollectionName { get; set; } = "offer_interactions";
 }

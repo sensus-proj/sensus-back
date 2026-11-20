@@ -1,28 +1,84 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 043 Alternativas a una oferta"
-  version: 1.1.0
-  description: "Borrador del contrato del spec 043. Completar esquemas antes de implementar."
+  version: 1.2.0
+  description: >
+    Alternativas visibles cercanas dentro de la misma categoría y con precio final
+    comparable (<= 120 % del precio final de la oferta original).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers/{id}/alternatives:
     get:
-      summary: "Borrador de GET /api/v1/offers/{id}/alternatives"
+      summary: Lista alternativas cercanas de la misma categoría y precio final comparable
+      operationId: getOfferAlternatives
       security: [{ bearerAuth: [] }]
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          description: Límite de resultados (1..10, 5 por defecto)
+          schema: { type: integer, minimum: 1, maximum: 10, default: 5 }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: Oferta inexistente o no visible (respuesta idéntica) }
+        '200':
+          description: Lista de alternativas (puede ser vacía)
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10
+                items: { $ref: '#/components/schemas/OfferAlternativeItem' }
+        '400':
+          description: Identificador o límite inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: Sin token o token inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Oferta inexistente o no visible (respuesta idéntica)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de tasa excedido (read-heavy)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferAlternativeItem:
+      type: object
+      required: [offerId, title, category, finalPrice, distanceMeters, expiresAtUtc, merchantId, merchantName]
+      properties:
+        offerId: { type: string, format: uuid }
+        title: { type: string }
+        category: { type: string }
+        imageUrl: { type: [string, 'null'], format: uri }
+        originalPrice: { type: number }
+        finalPrice: { type: number }
+        stock: { type: integer }
+        distanceMeters: { type: integer }
+        expiresAtUtc: { type: string, format: date-time }
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        traceId: { type: string }

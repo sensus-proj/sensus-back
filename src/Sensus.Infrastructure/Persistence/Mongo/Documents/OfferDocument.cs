@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver.GeoJsonObjectModel;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 
 namespace Sensus.Infrastructure.Persistence.Mongo.Documents;
 
@@ -53,6 +54,15 @@ public sealed class OfferDocument
 
     [BsonElement("category")]
     public string? Category { get; set; }
+
+    [BsonElement("titleNormalized")]
+    public string TitleNormalized { get; set; } = string.Empty;
+
+    [BsonElement("categorySearchText")]
+    public string CategorySearchText { get; set; } = string.Empty;
+
+    [BsonElement("merchantName")]
+    public string? MerchantName { get; set; }
 
     [BsonElement("viewCount")]
     public int ViewCount { get; set; }
@@ -126,6 +136,8 @@ public sealed class OfferDocument
             Status = offer.Status.ToString(),
             ImageUrl = offer.ImageUrl,
             Category = offer.Category,
+            TitleNormalized = OfferTextNormalizer.Normalize(offer.Title),
+            CategorySearchText = OfferTextNormalizer.BuildCategorySearchText(offer.Category),
             Latitude = offer.Latitude,
             Longitude = offer.Longitude,
             ViewCount = offer.ViewCount,

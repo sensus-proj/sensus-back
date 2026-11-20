@@ -1,7 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
 using Sensus.Application.Offers.Notifications;
@@ -150,5 +152,40 @@ public class CreateOfferCommandHandlerTests
             _offerRepository.AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
             notifier.NotifyAsync(Arg.Is<Offer>(o => o.Id == result.Value.Id), _userId, Arg.Any<CancellationToken>());
         });
+    }
+
+    [Fact]
+    public async Task Handle_WhenStrictCategoryEnabled_ShouldRejectMissingOrInvalidAndAcceptValidCode()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var strictHandler = new CreateOfferCommandHandler(
+            _offerRepository,
+            _comercioRepository,
+            _currentUserService,
+            _dateTimeProvider,
+            _logger,
+            _cacheService,
+            categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var missingResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: null),
+            CancellationToken.None);
+        missingResult.IsFailure.Should().BeTrue();
+        missingResult.Error.Code.Should().Be("Offer.CategoryRequired");
+
+        var invalidResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: "Moda"),
+            CancellationToken.None);
+        invalidResult.IsFailure.Should().BeTrue();
+        invalidResult.Error.Code.Should().Be("Offer.InvalidCategory");
+
+        var validResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: "Bakery"),
+            CancellationToken.None);
+        validResult.IsSuccess.Should().BeTrue();
+        validResult.Value.Category.Should().Be("Bakery");
     }
 }

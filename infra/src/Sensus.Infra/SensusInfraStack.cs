@@ -122,11 +122,13 @@ public sealed partial class SensusInfraStack : Stack
             ["AiBudgetStore__TableName"] = budgetTable.TableName,
             ["Observability__Metrics__Enabled"] = "true",
             ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
+            ["Interactions__Enabled"] = "true",
             ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
         };
 
-        // Los secretos (MongoDB, JWT, código de apartado, Cloudinary, OpenAI, correo) ya no viajan como variables de
-        // entorno: la API los lee de SSM Parameter Store bajo AWS_SSM_PARAMETER_PREFIX (Principio VIII, brecha G-01).
+        // Los secretos (MongoDB, JWT, código de apartado, Cloudinary, OpenAI, correo, clave HMAC de interacciones
+        // /sensus/<env>/Interactions/HmacKeysJson) ya no viajan como variables de entorno: la API los lee de SSM
+        // Parameter Store bajo AWS_SSM_PARAMETER_PREFIX (Principio VIII, brecha G-01 y Spec 055 FR-055-04).
 
         var apiFunction = new Function(this, "SensusApiFunction", new FunctionProps
         {
@@ -308,8 +310,29 @@ public sealed partial class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        // NFR-015-01: 5 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
-        Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm];
+        // Spec 055 (NFR-055-04, T055-08): alarma al 70 % del tope de 150 MB de offer_interactions o del clúster M0 (512 MB).
+        // Usa la décima métrica personalizada gratuita (10/10) y la sexta alarma gratuita (6/10) en CloudWatch.
+        var interactionsStorageMaxPctMetric = new Metric(new MetricProps
+        {
+            Namespace = AppMetricsNamespace,
+            MetricName = "InteractionStorageMaxPct",
+            Period = Duration.Hours(24),
+            Statistic = "Maximum"
+        });
+
+        var interactionsStorageAlarm = new Alarm(this, "SensusInteractionsStorageAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-interactions-storage-70pct-{envName}",
+            AlarmDescription = "Alerta cuando offer_interactions supera 70 % de 150 MB o el cluster Atlas M0 supera 70 % de 512 MB",
+            Metric = interactionsStorageMaxPctMetric,
+            Threshold = 70,
+            EvaluationPeriods = 1,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+
+        // NFR-015-01 / Spec 055: 6 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
+        Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm, interactionsStorageAlarm];
         foreach (var alarm in operationalAlarms)
         {
             alarm.AddAlarmAction(alarmAction);
@@ -391,6 +414,12 @@ public sealed partial class SensusInfraStack : Stack
         {
             Description = "Nombre del grupo de logs en Amazon CloudWatch",
             Value = apiLogGroup.LogGroupName
+        });
+
+        _ = new CfnOutput(this, "InteractionsHmacSsmParameterPath", new CfnOutputProps
+        {
+            Description = "Ruta SSM SecureString para las claves HMAC versionadas de Spec 055 (rotacion <= 90 dias)",
+            Value = $"/sensus/{envName}/Interactions/HmacKeysJson"
         });
     }
 

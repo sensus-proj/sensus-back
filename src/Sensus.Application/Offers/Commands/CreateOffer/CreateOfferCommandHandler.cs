@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
@@ -18,6 +20,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
+    private readonly IOptions<OfferCategorySettings>? _categorySettings;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -26,7 +29,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateOfferCommandHandler> logger,
         ICacheService? cacheService = null,
-        INearbyOfferNotifier? nearbyOfferNotifier = null)
+        INearbyOfferNotifier? nearbyOfferNotifier = null,
+        IOptions<OfferCategorySettings>? categorySettings = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -35,6 +39,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _logger = logger;
         _cacheService = cacheService;
         _nearbyOfferNotifier = nearbyOfferNotifier;
+        _categorySettings = categorySettings;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -50,6 +55,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado para publicar ofertas."));
         }
 
+        bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
+
         Result<Offer> offerResult = Offer.Create(
             comercio.Id,
             request.Title,
@@ -63,7 +70,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             comercio.Latitud,
             comercio.Longitud,
             _dateTimeProvider.UtcNow,
-            request.Category);
+            request.Category,
+            requireStrictCategory);
 
         if (offerResult.IsFailure)
         {

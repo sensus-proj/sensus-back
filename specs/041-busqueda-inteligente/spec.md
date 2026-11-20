@@ -128,7 +128,7 @@ Permitir buscar ofertas por texto combinando relevancia y cercanía, con un rank
 ## 10. Preguntas abiertas
 
 - Resuelto (2026-11-20): la ruta es `GET /api/v1/offers/search` y los invitados buscan con radio recortado a 2 km.
-- ¿Se requiere análisis morfológico en español o basta con coincidencia de prefijos?
+- Resuelto (2026-11-20): enfoque híbrido determinista sin lematización externa — índice de texto MongoDB con `default_language: "spanish"` (stemming integrado) para palabras completas, más coincidencia por prefijo sobre un campo de título normalizado (`titleNormalized`: minúsculas y sin acentos) con índice B-tree propio (`ix_offers_title_normalized`) para consultas de 2 o más caracteres mientras el usuario escribe.
 
 ## 11. Trazabilidad
 

@@ -13,17 +13,20 @@ public sealed class RegisterOfferViewCommandHandler : IRequestHandler<RegisterOf
     private readonly IOfferViewRepository _offerViewRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IOfferInteractionRecorder? _interactionRecorder;
 
     public RegisterOfferViewCommandHandler(
         IOfferRepository offerRepository,
         IOfferViewRepository offerViewRepository,
         ICurrentUserService currentUserService,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IOfferInteractionRecorder? interactionRecorder = null)
     {
         _offerRepository = offerRepository;
         _offerViewRepository = offerViewRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
+        _interactionRecorder = interactionRecorder;
     }
 
     public async Task<Result> Handle(
@@ -51,14 +54,36 @@ public sealed class RegisterOfferViewCommandHandler : IRequestHandler<RegisterOf
         }
 
         bool registered = await _offerViewRepository.TryRegisterAsync(viewResult.Value, cancellationToken);
-        if (!registered)
+        if (registered)
         {
-            // Vista duplicada del mismo día: la operación es idempotente y no altera el contador.
-            return Result.Success();
+            Result incrementResult = await IncrementCounterAsync(offer, cancellationToken);
+            if (incrementResult.IsFailure)
+            {
+                return incrementResult;
+            }
         }
 
-        Result incrementResult = await IncrementCounterAsync(offer, cancellationToken);
-        return incrementResult.IsFailure ? incrementResult : Result.Success();
+        // Spec 055 (FR-055-02, FR-055-09): registrar evento open solo para usuarios registrados.
+        if (!_currentUserService.IsGuest && _interactionRecorder is not null)
+        {
+            Result<OfferInteractionItem> itemResult = OfferInteractionItem.Create(
+                offer.Id,
+                position: 1,
+                FeedSlot.Direct,
+                offer.Category,
+                DistanceBucket.Unknown);
+
+            if (itemResult.IsSuccess)
+            {
+                await _interactionRecorder.RecordSingleAsync(
+                    userId,
+                    OfferInteractionType.Open,
+                    itemResult.Value,
+                    cancellationToken: cancellationToken);
+            }
+        }
+
+        return Result.Success();
     }
 
     private async Task<Result> IncrementCounterAsync(Offer offer, CancellationToken cancellationToken)
