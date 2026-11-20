@@ -153,4 +153,42 @@ public class DeleteAccountCommandHandlerTests
         result.Error.Code.Should().Be("Auth.InvalidCredentials");
         await _userRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default, default);
     }
+
+    // Regresión FR-030-08 / CA-030-06: purga de intereses (054), interacciones (055) y caché de afinidad.
+    [Fact]
+    public async Task Handle_WhenValid_ShouldPurgeInterestsInteractionsAndAffinityCache()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        var user = User.Create("Consumidor", "purge@sensus.com", "hashed-secret", true, DateTime.UtcNow).Value;
+        typeof(User).GetProperty("Id")?.SetValue(user, userId);
+
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword("ValidPass123#", "hashed-secret").Returns(true);
+
+        var cache = Substitute.For<ICacheService>();
+        var interestsRepo = Substitute.For<IUserInterestsRepository>();
+        var interactionRecorder = Substitute.For<IOfferInteractionRecorder>();
+
+        var handler = new DeleteAccountCommandHandler(
+            _userRepository,
+            _comercioRepository,
+            _tokenRepository,
+            _currentUserService,
+            _passwordHasher,
+            _imageStorage,
+            _offerRepository,
+            _dateTimeProvider,
+            cacheService: cache,
+            userInterestsRepository: interestsRepo,
+            offerInteractionRecorder: interactionRecorder);
+
+        var result = await handler.Handle(new DeleteAccountCommand("ValidPass123#"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await interestsRepo.Received(1).DeleteByUserIdAsync(userId, Arg.Any<CancellationToken>());
+        await interactionRecorder.Received(1).PurgeByUserAsync(userId, Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveAsync(Sensus.Application.Offers.FeedCacheKeys.Affinity(userId), Arg.Any<CancellationToken>());
+    }
 }

@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 058 Actividad de amigos en comunidad"
+  version: 1.0.0
+  description: >
+    Actividad social exclusiva entre amigos aceptados y el usuario autenticado
+    (likes de productos y comentarios/respuestas en comercios), distinta de Specs 024-026.
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/community/friends-activity:
+    get:
+      summary: Obtener comentarios y likes de productos de tus amigos conectados y tuyos
+      operationId: getFriendsCommunityActivity
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad máxima de eventos a devolver (acotado al rango 1..100, por defecto 50)
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Lista ordenada cronológicamente descendente de actividad social entre amigos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CommunityActivityItemDto' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CommunityActivityItemDto:
+      type: object
+      properties:
+        id: { type: string }
+        activityType:
+          type: string
+          enum: [OfferLike, StoreReview, ReviewReply]
+        actorUserId: { type: string, format: uuid }
+        actorName: { type: string }
+        actorPhotoUrl: { type: string, nullable: true }
+        offerId: { type: string, format: uuid, nullable: true }
+        merchantId: { type: string, format: uuid, nullable: true }
+        targetTitle: { type: string }
+        targetSubtitle: { type: string, nullable: true }
+        commentText: { type: string, nullable: true }
+        rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        createdAtUtc: { type: string, format: date-time }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

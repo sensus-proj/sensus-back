@@ -24,6 +24,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 ## 3. Modelo de datos e índices
 
 - users con deletedAt; offers y posts anonimizados; moderation_audit sin PII
+- `user_interests` (054) borrado por `userId` y `offer_interactions` (055) borrado por `pseudoUserId` calculado con cada versión de clave HMAC vigente (FR-030-08)
 
 ## 4. Seguridad
 

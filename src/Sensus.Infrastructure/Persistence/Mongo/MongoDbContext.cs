@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using Sensus.Application.Common.Settings;
 using Sensus.Domain.Enums;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
@@ -15,13 +16,18 @@ public sealed class MongoDbContext
     private readonly IMongoDatabase? _database;
     private readonly ILogger<MongoDbContext> _logger;
     private readonly MongoDbSettings _settings;
+    private readonly int _interactionRetentionDays;
 
     public MongoDbContext(
         IOptions<MongoDbSettings> settings,
-        ILogger<MongoDbContext> logger)
+        ILogger<MongoDbContext> logger,
+        IOptions<InteractionSettings>? interactionSettings = null)
     {
         _settings = settings.Value;
         _logger = logger;
+        _interactionRetentionDays = interactionSettings?.Value.RetentionDays > 0
+            ? interactionSettings.Value.RetentionDays
+            : 180;
 
         var resolvedConnectionString = ResolveConnectionString(_settings.ConnectionString);
         if (string.IsNullOrWhiteSpace(resolvedConnectionString))
@@ -117,6 +123,30 @@ public sealed class MongoDbContext
 
     public IMongoCollection<SanctionDocument> Sanctions =>
         _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<SchemaMigrationDocument> SchemaMigrations =>
+        _database?.GetCollection<SchemaMigrationDocument>("schema_migrations")
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<UserInterestsDocument> UserInterests =>
+        _database?.GetCollection<UserInterestsDocument>(_settings.UserInterestsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferInteractionDocument> OfferInteractions =>
+        _database?.GetCollection<OfferInteractionDocument>(_settings.OfferInteractionsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferLikeDocument> OfferLikes =>
+        _database?.GetCollection<OfferLikeDocument>("offer_likes")
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<StoreReviewDocument> StoreReviews =>
+        _database?.GetCollection<StoreReviewDocument>("store_reviews")
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoDatabase Database =>
+        _database
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
     /// <summary>
@@ -249,11 +279,24 @@ public sealed class MongoDbContext
             var offerGeoKeys = Builders<OfferDocument>.IndexKeys.Geo2DSphere(o => o.Ubicacion);
             offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(offerGeoKeys));
 
-            // Índice de texto en (Title, Description) para búsqueda inteligente (spec 041, FR-046-06)
-            var textIndexKeys = Builders<OfferDocument>.IndexKeys
-                .Text(o => o.Title)
-                .Text(o => o.Description);
-            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(textIndexKeys));
+            // Índice único de texto en español (Spec 041): stemming nativo en español sobre título, comercio, categoría y descripción.
+            EnsureSpanishTextIndex(offersCollection);
+
+            // Índice ascendente sobre TitleNormalized para coincidencia rápida por prefijo sin acentos (Spec 041, T041-06).
+            var titleNormKeys = Builders<OfferDocument>.IndexKeys.Ascending(o => o.TitleNormalized);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                titleNormKeys,
+                new CreateIndexOptions { Name = "ix_offers_title_normalized" }));
+
+            // Índice compuesto (Category, Status, DiscountedPrice, EndsAt) para alternativas comparables (Spec 043, T043-06).
+            var alternativesKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.Category)
+                .Ascending(o => o.Status)
+                .Ascending(o => o.DiscountedPrice)
+                .Ascending(o => o.EndsAt);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                alternativesKeys,
+                new CreateIndexOptions { Name = "ix_offers_category_status_price" }));
         }
         catch (Exception ex)
         {
@@ -449,5 +492,135 @@ public sealed class MongoDbContext
         {
             _logger.LogDebug(ex, "Nota: Los índices de amigos ya existen o el clúster aún no está disponible.");
         }
+
+        try
+        {
+            // Spec 054: índice único por userId en user_interests para lecturas y upserts O(1)
+            var userInterestsKeys = Builders<UserInterestsDocument>.IndexKeys.Ascending(u => u.UserId);
+            UserInterests.Indexes.CreateOne(new CreateIndexModel<UserInterestsDocument>(
+                userInterestsKeys,
+                new CreateIndexOptions { Name = "ux_user_interests_user_id", Unique = true }));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: El índice de user_interests ya existe o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var offerLikeUniqueKeys = Builders<OfferLikeDocument>.IndexKeys
+                .Ascending(l => l.UserId)
+                .Ascending(l => l.OfferId);
+            OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(
+                offerLikeUniqueKeys,
+                new CreateIndexOptions { Unique = true }));
+
+            var offerLikeOfferKeys = Builders<OfferLikeDocument>.IndexKeys
+                .Ascending(l => l.OfferId)
+                .Descending(l => l.CreatedAtUtc);
+            OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(offerLikeOfferKeys));
+
+            var reviewMerchantKeys = Builders<StoreReviewDocument>.IndexKeys
+                .Ascending(r => r.MerchantId)
+                .Descending(r => r.CreatedAtUtc);
+            StoreReviews.Indexes.CreateOne(new CreateIndexModel<StoreReviewDocument>(reviewMerchantKeys));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices sociales de likes y reseñas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Spec 055: TTL 180 días (FR-055-06), purga por seudónimo+versión (FR-055-07) y agregación diaria (FR-055-10)
+            var interactionTtlKeys = Builders<OfferInteractionDocument>.IndexKeys.Ascending(i => i.OccurredAtUtc);
+            OfferInteractions.Indexes.CreateOne(new CreateIndexModel<OfferInteractionDocument>(
+                interactionTtlKeys,
+                new CreateIndexOptions
+                {
+                    Name = "ttl_offer_interactions_occurred_at",
+                    ExpireAfter = TimeSpan.FromDays(_interactionRetentionDays)
+                }));
+
+            var interactionPurgeKeys = Builders<OfferInteractionDocument>.IndexKeys
+                .Ascending(i => i.PseudoUserId)
+                .Ascending(i => i.KeyVersion);
+            OfferInteractions.Indexes.CreateOne(new CreateIndexModel<OfferInteractionDocument>(
+                interactionPurgeKeys,
+                new CreateIndexOptions { Name = "ix_offer_interactions_pseudo_key" }));
+
+            var interactionQualityKeys = Builders<OfferInteractionDocument>.IndexKeys
+                .Ascending(i => i.RankingVersion)
+                .Ascending(i => i.Type)
+                .Ascending(i => i.OccurredAtUtc);
+            OfferInteractions.Indexes.CreateOne(new CreateIndexModel<OfferInteractionDocument>(
+                interactionQualityKeys,
+                new CreateIndexOptions { Name = "ix_offer_interactions_quality" }));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de offer_interactions ya existen o el clúster aún no está disponible.");
+        }
+    }
+
+    private static void EnsureSpanishTextIndex(IMongoCollection<OfferDocument> offersCollection)
+    {
+        const string SpanishTextIndexName = "txt_offers_spanish";
+
+        List<MongoDB.Bson.BsonDocument> existing = offersCollection.Indexes.List().ToList();
+        bool targetExists = false;
+
+        foreach (MongoDB.Bson.BsonDocument index in existing)
+        {
+            string? name = index.TryGetValue("name", out MongoDB.Bson.BsonValue nameVal) && nameVal.IsString
+                ? nameVal.AsString
+                : null;
+            bool isTextIndex = index.TryGetValue("key", out MongoDB.Bson.BsonValue keyVal) &&
+                               keyVal.IsBsonDocument &&
+                               keyVal.AsBsonDocument.Elements.Any(e => e.Value.IsString && e.Value.AsString == "text")
+                               || index.Contains("weights");
+
+            if (!isTextIndex)
+            {
+                continue;
+            }
+
+            if (string.Equals(name, SpanishTextIndexName, StringComparison.Ordinal))
+            {
+                targetExists = true;
+            }
+            else if (!string.IsNullOrWhiteSpace(name))
+            {
+                offersCollection.Indexes.DropOne(name);
+            }
+        }
+
+        if (targetExists)
+        {
+            return;
+        }
+
+        var textIndexKeys = Builders<OfferDocument>.IndexKeys
+            .Text(o => o.Title)
+            .Text(o => o.MerchantName)
+            .Text(o => o.CategorySearchText)
+            .Text(o => o.Category)
+            .Text(o => o.Description);
+
+        var textOptions = new CreateIndexOptions<OfferDocument>
+        {
+            Name = SpanishTextIndexName,
+            DefaultLanguage = "spanish",
+            Weights = new MongoDB.Bson.BsonDocument
+            {
+                { "title", 10 },
+                { "merchantName", 6 },
+                { "categorySearchText", 5 },
+                { "category", 4 },
+                { "description", 2 }
+            }
+        };
+
+        offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(textIndexKeys, textOptions));
     }
 }

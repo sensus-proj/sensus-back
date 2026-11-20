@@ -35,6 +35,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
     public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
+    public IUserInterestsRepository UserInterestsRepository { get; } = Substitute.For<IUserInterestsRepository>();
+    public IOfferInteractionRecorder OfferInteractionRecorder { get; } = Substitute.For<IOfferInteractionRecorder>();
+    public IUserAffinityReader UserAffinityReader { get; } = Substitute.For<IUserAffinityReader>();
+    public IFeedSnapshotStore FeedSnapshotStore { get; } = Substitute.For<IFeedSnapshotStore>();
+    public IFeedMetricsPublisher FeedMetricsPublisher { get; } = Substitute.For<IFeedMetricsPublisher>();
+    public IOfferLikeRepository OfferLikeRepository { get; } = Substitute.For<IOfferLikeRepository>();
+    public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
+    public IFriendRequestRepository FriendRequestRepository { get; } = Substitute.For<IFriendRequestRepository>();
+    public ISharedOfferRepository SharedOfferRepository { get; } = Substitute.For<ISharedOfferRepository>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -118,6 +127,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             TextModerationService.ModerateTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new TextModerationResult(true, Decision: "Approved"));
+            TextModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new TextModerationResult(true, Decision: "Approved"));
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton(TextModerationService);
 
@@ -133,6 +144,53 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             BudgetCounterStore.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)1d);
             services.RemoveAll<IBudgetCounterStore>();
             services.AddSingleton(BudgetCounterStore);
+
+            // Intereses del usuario (Spec 054)
+            services.RemoveAll<IUserInterestsRepository>();
+            services.AddSingleton(UserInterestsRepository);
+
+            // Registro de interacciones (Spec 055)
+            services.RemoveAll<IOfferInteractionRecorder>();
+            services.AddSingleton(OfferInteractionRecorder);
+
+            // Feed de promociones (Spec 042)
+            UserAffinityReader.GetCategoryAffinitiesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<string, double>());
+            services.RemoveAll<IUserAffinityReader>();
+            services.AddSingleton(UserAffinityReader);
+
+            FeedSnapshotStore.SaveAsync(Arg.Any<Guid>(), Arg.Any<FeedSnapshot>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+                .Returns(true);
+            services.RemoveAll<IFeedSnapshotStore>();
+            services.AddSingleton(FeedSnapshotStore);
+
+            services.RemoveAll<IFeedMetricsPublisher>();
+            services.AddSingleton(FeedMetricsPublisher);
+            OfferLikeRepository.CountByOfferIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, int>());
+            OfferLikeRepository.GetLikedOfferIdsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            OfferLikeRepository.GetByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IOfferLikeRepository>();
+            services.AddSingleton(OfferLikeRepository);
+
+            StoreReviewRepository.GetByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            StoreReviewRepository.GetRatingSummariesByMerchantIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, (double AverageRating, int ReviewCount)>());
+            StoreReviewRepository.GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IStoreReviewRepository>();
+            services.AddSingleton(StoreReviewRepository);
+
+            FriendRequestRepository.GetForUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IFriendRequestRepository>();
+            services.AddSingleton(FriendRequestRepository);
+
+            services.RemoveAll<ISharedOfferRepository>();
+            services.AddSingleton(SharedOfferRepository);
         });
     }
 }

@@ -52,6 +52,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 | FR-030-05 | Anonimizar publicaciones y comentarios del usuario en lugar de conservarlos asociados | Must |
 | FR-030-06 | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must |
 | FR-030-07 | Conservar la auditoría de moderación anonimizada durante 90 días | Must |
+| FR-030-08 | Borrar de inmediato, al eliminar la cuenta, los intereses (`user_interests`, spec 054) y las interacciones seudonimizadas (`offer_interactions`, spec 055, con todas las versiones de clave HMAC vigentes) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -93,6 +94,12 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 - **Cuando** se consultan sus ofertas
 - **Entonces** ofertas desactivadas y no visibles
 
+### CA-030-06
+
+- **Dado** un usuario con intereses e interacciones registradas con dos versiones de clave
+- **Cuando** elimina su cuenta
+- **Entonces** no queda ningún documento suyo en `user_interests` ni en `offer_interactions`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -102,6 +109,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 ## 8. Dependencias y supuestos
 
 - Depende de: 003, 004, 020
+- Purga además los datos de las specs 054 y 055 (feed de promociones), sin esperar los 30 días.
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 
@@ -116,7 +124,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-030-01`, `FR-030-02`, `FR-030-03`, `FR-030-04`, `FR-030-05`, `FR-030-06`, `FR-030-07`
+- Requisitos de este spec: `FR-030-01`, `FR-030-02`, `FR-030-03`, `FR-030-04`, `FR-030-05`, `FR-030-06`, `FR-030-07`, `FR-030-08`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

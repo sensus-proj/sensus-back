@@ -1,22 +1,119 @@
 openapi: 3.1.0
 info:
-  title: "Sensus API — Spec 042 Recomendaciones personalizadas"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 042. Completar esquemas antes de implementar."
+  title: "Sensus API — Spec 042 Feed de promociones por intereses"
+  version: 2.0.0
+  description: >
+    Feed paginado de ofertas cercanas ordenado por intereses del usuario registrado, con diversidad,
+    exploración y orden estable entre páginas mediante una instantánea (snapshotId). Sustituye a
+    GET /api/v1/ml/recommendations (v1.0.0, nunca implementado).
 servers:
   - url: https://localhost:5001
 paths:
-  /api/v1/ml/recommendations:
+  /api/v1/feed/offers:
     get:
-      summary: "Borrador de GET /api/v1/ml/recommendations"
+      summary: Feed de promociones por intereses
+      operationId: getOfferFeed
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, format: double, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, format: double, minimum: -180, maximum: 180 }
+        - name: radiusKm
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: snapshotId
+          in: query
+          required: false
+          description: Identificador de la instantánea devuelto en la página 1. Si falta o venció, se genera otra.
+          schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Página del feed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferFeedPage' }
+        '400':
+          description: Parámetros fuera de la lista de permitidos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: Sin token o token inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Sesión de invitado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de tasa excedido (read-heavy)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferFeedPage:
+      type: object
+      required: [items, page, pageSize, totalCount, totalPages, rankingVersion]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/OfferFeedItem' }
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalCount: { type: integer, maximum: 500 }
+        totalPages: { type: integer }
+        snapshotId:
+          type: [string, 'null']
+          format: uuid
+          description: Nulo cuando la caché no está disponible (paginación sin garantía de estabilidad)
+        rankingVersion: { type: string, example: "feed-v1" }
+    OfferFeedItem:
+      type: object
+      required: [offerId, title, category, finalPrice, distanceMeters, expiresAtUtc, merchantName, slot]
+      properties:
+        offerId: { type: string, format: uuid }
+        title: { type: string }
+        category: { type: string, description: Código de OfferCategory (spec 034) }
+        imageUrl: { type: [string, 'null'], format: uri }
+        originalPrice: { type: number }
+        finalPrice: { type: number }
+        stock: { type: integer }
+        distanceMeters: { type: integer }
+        expiresAtUtc: { type: string, format: date-time }
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+        slot:
+          type: string
+          enum: [ranked, exploration]
+          description: Origen de la posición; permite medir la exploración en el cliente y en la spec 055
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        traceId: { type: string }

@@ -25,4 +25,6 @@ public sealed record OfferDetailDto(
     int ViewCount,
     bool HasActiveClaim,
     DateTime CreatedAtUtc,
-    DateTime? LastModifiedAtUtc);
+    DateTime? LastModifiedAtUtc,
+    int LikesCount = 0,
+    bool IsLikedByMe = false);

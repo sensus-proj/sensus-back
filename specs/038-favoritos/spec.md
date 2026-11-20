@@ -8,7 +8,7 @@
 | Ola | 5 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
-| Dependencias | 032, 042 |
+| Dependencias | 032 (es señal opcional de la spec 042, que no la requiere) |
 | Versión | 1.0.0 |
 | Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
 
@@ -89,7 +89,7 @@ Permitir que un usuario marque o desmarque una oferta como favorita, alimentando
 
 ## 8. Dependencias y supuestos
 
-- Depende de: 032, 042
+- Depende de: 032. La spec 042 consume los favoritos como señal opcional; no es una dependencia de esta spec.
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 

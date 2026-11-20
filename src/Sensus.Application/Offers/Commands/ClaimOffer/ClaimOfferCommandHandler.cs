@@ -4,6 +4,7 @@ using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.ClaimOffer;
@@ -17,6 +18,7 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ICacheService? _cacheService;
     private readonly IClaimPushNotifier? _claimPushNotifier;
+    private readonly IOfferInteractionRecorder? _interactionRecorder;
 
     public ClaimOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -25,7 +27,8 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         IClaimCodeService claimCodeService,
         IDateTimeProvider dateTimeProvider,
         ICacheService? cacheService = null,
-        IClaimPushNotifier? claimPushNotifier = null)
+        IClaimPushNotifier? claimPushNotifier = null,
+        IOfferInteractionRecorder? interactionRecorder = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -34,6 +37,7 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         _dateTimeProvider = dateTimeProvider;
         _cacheService = cacheService;
         _claimPushNotifier = claimPushNotifier;
+        _interactionRecorder = interactionRecorder;
     }
 
     public async Task<Result<ClaimOfferResultDto>> Handle(
@@ -104,6 +108,26 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         if (_claimPushNotifier is not null)
         {
             await _claimPushNotifier.NotifyAsync(claim, cancellationToken);
+        }
+
+        // Spec 055 (FR-055-03, FR-055-09): registrar interacción claim sin bloquear el apartado.
+        if (!_currentUserService.IsGuest && _interactionRecorder is not null)
+        {
+            Result<OfferInteractionItem> itemResult = OfferInteractionItem.Create(
+                offer.Id,
+                position: 1,
+                FeedSlot.Direct,
+                offer.Category,
+                DistanceBucket.Unknown);
+
+            if (itemResult.IsSuccess)
+            {
+                await _interactionRecorder.RecordSingleAsync(
+                    userId,
+                    OfferInteractionType.Claim,
+                    itemResult.Value,
+                    cancellationToken: cancellationToken);
+            }
         }
 
         return Result.Success(new ClaimOfferResultDto(

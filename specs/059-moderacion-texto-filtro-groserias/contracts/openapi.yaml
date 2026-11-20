@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 059 Contrato transversal de moderación textual y filtro de groserías"
+  version: 1.0.0
+  description: >
+    Define el contrato estándar RFC 7807 ProblemDetails devuelto por cualquier endpoint de escritura
+    protegido por ProfanityFilter e ITextModerationService fail-closed cuando el texto contiene
+    lenguaje ofensivo o no puede verificarse.
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/merchants/{merchantId}/reviews:
+    post:
+      summary: Ejemplo de operación protegida contra lenguaje ofensivo y fallos de moderación
+      operationId: moderatedStoreReviewCheck
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, comment]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, minLength: 1, maxLength: 600 }
+      responses:
+        '200':
+          description: Contenido aprobado por ProfanityFilter y OpenAiTextModerationService
+        '400':
+          description: Contenido rechazado por lenguaje ofensivo o cuarentena fail-closed
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ModerationProblemDetails' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ModerationProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer, example: 400 }
+        detail: { type: string }
+        code: { type: string }

@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -13,17 +14,20 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ITextModerationService? _textModerationService;
 
     public RegisterUserCommandHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ITextModerationService? textModerationService = null)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
         _dateTimeProvider = dateTimeProvider;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<AuthResponseDto>> Handle(
@@ -35,6 +39,19 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
         {
             return Result.Failure<AuthResponseDto>(
                 Error.Conflict("User.EmailExists", "El correo electrónico ya se encuentra registrado."));
+        }
+
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            request.NombreCompleto,
+            "Nombre de usuario en registro de cuenta",
+            "User.NameModerationRejected",
+            "El nombre de usuario contiene lenguaje antisonante u ofensivo.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<AuthResponseDto>(moderationResult.Error);
         }
 
         var passwordHash = _passwordHasher.HashPassword(request.Password);

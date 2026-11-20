@@ -230,6 +230,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-030-05` | 030 | FR | Anonimizar publicaciones y comentarios del usuario en lugar de conservarlos asociados | Must | Pendiente |
 | `FR-030-06` | 030 | FR | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must | Implementado |
 | `FR-030-07` | 030 | FR | Conservar la auditoría de moderación anonimizada durante 90 días | Must | Pendiente |
+| `FR-030-08` | 030 | FR | Borrar de inmediato intereses (054) e interacciones seudonimizadas (055) al eliminar la cuenta | Must | Implementado |
 | `NFR-030-01` | 030 | NFR | Efectividad del bloqueo | < 1 s desde la eliminación | Pendiente |
 | `NFR-030-02` | 030 | NFR | Purga | 100 % de cuentas marcadas, en ≤ 31 días | Pendiente |
 | `NFR-030-03` | 030 | NFR | Trazabilidad | Toda eliminación registrada sin PII | Pendiente |
@@ -271,6 +272,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
+| `FR-034-08` | 034 | FR | Exigir para publicar una categoría del catálogo de producto `OfferCategory` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets` y `Pharmacy`); un valor ausente o fuera del catálogo responde `400`. Un borrador (`FR-034-04`) puede guardarse sin categoría | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
+| `FR-034-09` | 034 | FR | Normalizar una sola vez las ofertas existentes: los nombres en español que enviaba el móvil se convierten al código (Abarrotes → `Grocery`, Limpieza y Hogar → `CleaningHome`, Perecederos → `Perishables`, Lácteos → `Dairy`, Comida → `Food`, Panadería → `Bakery`, Bebidas → `Beverages`, Mascotas → `Pets`, Farmacia → `Pharmacy`); los valores no reconocibles quedan nulos y se cuentan en la evidencia de la migración | Must | Implementado |
 | `NFR-034-01` | 034 | NFR | Latencia de creación | p95 < 1 s sin moderación | Pendiente |
 | `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Pendiente |
 | `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Implementado |
@@ -280,6 +283,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-035-05` | 035 | FR | Rechazar ediciones concurrentes con 409 usando version | Must | Implementado |
 | `FR-035-06` | 035 | FR | No cambiar el identificador ni los apartados existentes | Must | Implementado |
 | `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Pendiente |
+| `FR-035-08` | 035 | FR | Rechazar con `400` una edición que quite la categoría de una oferta publicada o use un valor fuera de `OfferCategory` (spec 034) | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
 | `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Pendiente |
 | `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Pendiente |
 | `FR-036-01` | 036 | FR | Cambiar el estado de una oferta propia entre Published, Paused y Archived | Must | Implementado |
@@ -328,35 +332,54 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-040-08` | 040 | FR | No revelar al reportado la identidad del reportante | Must | Pendiente |
 | `NFR-040-01` | 040 | NFR | Latencia de creación | p95 < 400 ms | Pendiente |
 | `NFR-040-02` | 040 | NFR | Privacidad | Cero exposición de la identidad del reportante | Pendiente |
-| `FR-041-01` | 041 | FR | Buscar ofertas visibles por texto libre de 2 a 80 caracteres | Must | Pendiente |
-| `FR-041-02` | 041 | FR | Calcular un puntaje determinista con pesos de texto, distancia y popularidad | Must | Pendiente |
-| `FR-041-03` | 041 | FR | Excluir ofertas vencidas, pausadas o sin stock | Must | Pendiente |
-| `FR-041-04` | 041 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-041-05` | 041 | FR | Devolver ofertas cercanas cuando la consulta esté vacía | Should | Pendiente |
-| `FR-041-06` | 041 | FR | Excluir del resultado las ofertas de comercios inactivos | Must | Pendiente |
-| `FR-041-07` | 041 | FR | Versionar y configurar los pesos del ranking por entorno | Must | Pendiente |
-| `NFR-041-01` | 041 | NFR | Latencia de búsqueda | p95 < 600 ms | Pendiente |
-| `NFR-041-02` | 041 | NFR | Relevancia | ≥ 90 % de consultas con coincidencia exacta de categoría en el top 10 | Pendiente |
-| `NFR-041-03` | 041 | NFR | Determinismo | Mismo conjunto de datos y consulta produce el mismo orden | Pendiente |
-| `FR-042-01` | 042 | FR | Devolver un máximo de 20 ofertas recomendadas para el usuario | Must | Pendiente |
-| `FR-042-02` | 042 | FR | Calcular el puntaje con pesos configurables de proximidad, afinidad, vigencia y popularidad | Must | Pendiente |
-| `FR-042-03` | 042 | FR | Derivar la afinidad de favoritos, me gusta y apartados del usuario | Should | Pendiente |
-| `FR-042-04` | 042 | FR | Excluir ofertas vencidas, pausadas, sin stock o de comercios inactivos | Must | Pendiente |
-| `FR-042-05` | 042 | FR | Aplicar un fallback a ofertas cercanas cuando no haya señales del usuario | Must | Pendiente |
-| `FR-042-06` | 042 | FR | Devolver resultados estables para el mismo usuario e insumos | Must | Pendiente |
-| `FR-042-07` | 042 | FR | No usar datos personales sensibles en el cálculo | Must | Pendiente |
-| `NFR-042-01` | 042 | NFR | Latencia | p95 < 800 ms | Pendiente |
-| `NFR-042-02` | 042 | NFR | Cobertura | ≥ 90 % de usuarios con al menos 5 recomendaciones válidas | Pendiente |
-| `NFR-042-03` | 042 | NFR | Explicabilidad | 100 % de los pesos documentados y versionados | Pendiente |
-| `FR-043-01` | 043 | FR | Devolver alternativas visibles de la misma categoría que la oferta consultada | Must | Pendiente |
-| `FR-043-02` | 043 | FR | Limitar la distancia a 10 km de la oferta original | Must | Pendiente |
-| `FR-043-03` | 043 | FR | Excluir la oferta original del resultado | Must | Pendiente |
-| `FR-043-04` | 043 | FR | Filtrar por precio final dentro del 120 % del precio de la oferta original | Should | Pendiente |
-| `FR-043-05` | 043 | FR | Ordenar por cercanía y vigencia | Must | Pendiente |
-| `FR-043-06` | 043 | FR | Responder 404 si la oferta original no existe o no es visible | Must | Pendiente |
-| `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Pendiente |
-| `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Pendiente |
-| `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Pendiente |
+| `FR-041-01` | 041 | FR | Buscar ofertas visibles por texto libre de 2 a 80 caracteres | Must | Implementado |
+| `FR-041-02` | 041 | FR | Calcular un puntaje determinista con pesos de texto, distancia y popularidad | Must | Implementado |
+| `FR-041-03` | 041 | FR | Excluir ofertas vencidas, pausadas o sin stock | Must | Implementado |
+| `FR-041-04` | 041 | FR | Aplicar paginación estándar | Must | Implementado |
+| `FR-041-05` | 041 | FR | Devolver ofertas cercanas cuando la consulta esté vacía | Should | Implementado |
+| `FR-041-06` | 041 | FR | Excluir del resultado las ofertas de comercios inactivos | Must | Implementado |
+| `FR-041-07` | 041 | FR | Versionar y configurar los pesos del ranking por entorno | Must | Implementado |
+| `FR-041-08` | 041 | FR | Validar con lista de permitidos: `q` de 0 a 80 caracteres sin caracteres de control, `lat` [-90, 90], `lng` [-180, 180], `radiusKm` [1, 50] y `pageSize` ≤ 100 | Must | Implementado |
+| `FR-041-09` | 041 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Implementado |
+| `FR-041-10` | 041 | FR | Responder `400` y `401` con `ProblemDetails` uniforme, sin nombres de índices ni detalles del motor | Must | Implementado |
+| `FR-041-11` | 041 | FR | Permitir la búsqueda a invitados (spec 052) recortando el radio a 2 km en el servidor con `GuestRadiusPolicy` | Must | Implementado |
+| `NFR-041-01` | 041 | NFR | Latencia de búsqueda | p95 < 600 ms | Parcial (carga G-13) |
+| `NFR-041-02` | 041 | NFR | Relevancia | ≥ 90 % de consultas con coincidencia exacta de categoría en el top 10 | Implementado |
+| `NFR-041-03` | 041 | NFR | Determinismo | Mismo conjunto de datos y consulta produce el mismo orden | Implementado |
+| `FR-042-01` | 042 | FR | Exponer `GET /api/v1/feed/offers` paginado (20 por defecto, 100 máximo) | Must | Implementado |
+| `FR-042-02` | 042 | FR | Puntaje con pesos configurables de interés explícito, afinidad, cercanía, urgencia y popularidad | Must | Implementado |
+| `FR-042-03` | 042 | FR | Tomar el interés explícito de las categorías del usuario (spec 054) | Must | Implementado |
+| `FR-042-04` | 042 | FR | Derivar la afinidad de vistas, apartados y favoritos cuando existan | Should | Implementado |
+| `FR-042-05` | 042 | FR | Excluir ofertas vencidas, pausadas, sin stock, de comercios inactivos y propias | Must | Implementado |
+| `FR-042-06` | 042 | FR | Diversidad: máximo de ofertas consecutivas de una misma categoría (3 por defecto) | Must | Implementado |
+| `FR-042-07` | 042 | FR | Cuota de exploración determinista (1 de cada 5 por defecto) | Must | Implementado |
+| `FR-042-08` | 042 | FR | Orden estable entre páginas con instantánea `snapshotId` en Redis | Must | Implementado |
+| `FR-042-09` | 042 | FR | Fallback por cercanía y urgencia sin intereses ni señales | Must | Implementado |
+| `FR-042-10` | 042 | FR | `403` a invitados y `401` sin token | Must | Implementado |
+| `FR-042-11` | 042 | FR | Devolver `rankingVersion` y emitir impresiones a la spec 055 | Must | Implementado |
+| `FR-042-12` | 042 | FR | No usar datos personales sensibles en el cálculo | Must | Implementado |
+| `FR-042-13` | 042 | FR | Radio 1–50 km (10 por defecto) y coordenadas validadas con lista de permitidos | Must | Implementado |
+| `FR-042-14` | 042 | FR | Política de límite de tasa `read-heavy` | Must | Implementado |
+| `NFR-042-01` | 042 | NFR | Latencia primera página | p95 < 800 ms | Parcial (carga G-13) |
+| `NFR-042-02` | 042 | NFR | Latencia páginas con instantánea | p95 < 300 ms | Parcial (carga G-13) |
+| `NFR-042-03` | 042 | NFR | Cobertura | ≥ 90 % de usuarios con 20 ofertas en la primera página si existen | Implementado |
+| `NFR-042-04` | 042 | NFR | Relevancia | ≥ 60 % del top 10 en categorías de interés | Implementado |
+| `NFR-042-05` | 042 | NFR | Diversidad | 100 % de páginas cumplen FR-042-06 | Implementado |
+| `NFR-042-06` | 042 | NFR | Determinismo | Mismos insumos, fecha y pesos producen el mismo orden | Implementado |
+| `NFR-042-07` | 042 | NFR | Explicabilidad | 100 % de pesos documentados y versionados | Implementado |
+| `FR-043-01` | 043 | FR | Devolver alternativas visibles de la misma categoría que la oferta consultada | Must | Implementado |
+| `FR-043-02` | 043 | FR | Limitar la distancia a 10 km de la oferta original | Must | Implementado |
+| `FR-043-03` | 043 | FR | Excluir la oferta original del resultado | Must | Implementado |
+| `FR-043-04` | 043 | FR | Filtrar por precio final dentro del 120 % del precio de la oferta original | Should | Implementado |
+| `FR-043-05` | 043 | FR | Ordenar por cercanía y vigencia | Must | Implementado |
+| `FR-043-06` | 043 | FR | Responder 404 si la oferta original no existe o no es visible | Must | Implementado |
+| `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Implementado |
+| `FR-043-08` | 043 | FR | Validar con lista de permitidos: `offerId` con formato GUID y `limit` [1, 10] | Must | Implementado |
+| `FR-043-09` | 043 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Implementado |
+| `FR-043-10` | 043 | FR | Responder `404` idéntico para oferta inexistente y no visible, sin revelar cuál de los dos casos aplica | Must | Implementado |
+| `FR-043-11` | 043 | FR | Permitir la consulta a invitados (spec 052) recortando la distancia máxima a 2 km de la oferta original | Must | Implementado |
+| `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Parcial (carga G-13) |
+| `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Implementado |
 | `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Implementado |
 | `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Implementado |
 | `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Implementado |
@@ -499,5 +522,61 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
+| `FR-054-01` | 054 | FR | Exponer `GET /api/v1/users/me/interests` | Must | Implementado |
+| `FR-054-02` | 054 | FR | Exponer `PUT /api/v1/users/me/interests` que reemplaza la lista | Must | Implementado |
+| `FR-054-03` | 054 | FR | Solo categorías de `OfferCategory` (034), sin duplicados, máximo 5 | Must | Implementado |
+| `FR-054-04` | 054 | FR | Aceptar y devolver la lista vacía | Must | Implementado |
+| `FR-054-05` | 054 | FR | `403` a invitados y `401` sin token | Must | Implementado |
+| `FR-054-06` | 054 | FR | Purgar los intereses al eliminar la cuenta (030) | Must | Implementado |
+| `FR-054-07` | 054 | FR | Límite de tasa `read-heavy` y `sensitive-write` | Must | Implementado |
+| `FR-054-08` | 054 | FR | Invalidar la caché de afinidad del feed al actualizar | Should | Implementado |
+| `NFR-054-01` | 054 | NFR | Latencia | p95 < 200 ms | Parcial (carga G-13) |
+| `NFR-054-02` | 054 | NFR | Privacidad | 0 categorías ni identificadores en logs | Implementado |
+| `FR-055-01` | 055 | FR | Registrar `impression` por oferta servida en el feed con posición, `slot`, `rankingVersion` y `snapshotId` | Must | Implementado |
+| `FR-055-02` | 055 | FR | Registrar `open` al abrir el detalle de una oferta (032) | Must | Implementado |
+| `FR-055-03` | 055 | FR | Registrar `claim` al crear un apartado (033) | Must | Implementado |
+| `FR-055-04` | 055 | FR | Seudónimo `HMAC-SHA256` con clave versionada en SSM *SecureString* | Must | Implementado |
+| `FR-055-05` | 055 | FR | Distancia como rango, nunca coordenadas | Must | Implementado |
+| `FR-055-06` | 055 | FR | Purga a los 180 días con índice TTL | Must | Implementado |
+| `FR-055-07` | 055 | FR | Purga por usuario en eliminación de cuenta con todas las versiones de clave | Must | Implementado |
+| `FR-055-08` | 055 | FR | Registro de mejor esfuerzo sin afectar la operación principal | Must | Implementado |
+| `FR-055-09` | 055 | FR | No registrar eventos de invitados | Must | Implementado |
+| `FR-055-10` | 055 | FR | Métricas diarias de apertura y apartado por `slot` y `rankingVersion` | Should | Implementado |
+| `NFR-055-01` | 055 | NFR | Sobrecarga en la operación principal | p95 < 20 ms | Parcial (carga G-13) |
+| `NFR-055-02` | 055 | NFR | Privacidad | 0 identificadores, correos, nombres o coordenadas | Implementado |
+| `NFR-055-03` | 055 | NFR | Pérdida de eventos | < 1 % diario | Implementado |
+| `NFR-055-04` | 055 | NFR | Almacenamiento | `offer_interactions` ≤ 150 MB (≈ 30 % del clúster Atlas M0) | Implementado |
+| `FR-056-01` | 056 | FR | Consultar resumen estilo Play Store y reseñas de comercio vía `GET /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-02` | 056 | FR | Publicar calificación (1..5 estrellas) y comentario (1–600 chars) vía `POST /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-03` | 056 | FR | Alternar «Me gusta» en reseña vía `POST /api/v1/merchants/reviews/{reviewId}/like` | Must | Implementado |
+| `FR-056-04` | 056 | FR | Responder en hilo a una reseña (1–500 chars) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` | Must | Implementado |
+| `FR-056-05` | 056 | FR | Moderar reseñas y respuestas con `ProfanityFilter` + `ITextModerationService` (*fail-closed*) | Must | Implementado |
+| `FR-056-06` | 056 | FR | Calcular `AverageRating` y `ReviewCount` reales en `ComercioDto` e invalidar caché tras reseña | Must | Implementado |
+| `FR-056-07` | 056 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Pendiente |
+| `NFR-056-01` | 056 | NFR | Seguridad y límites de tasa (`read-heavy`/`sensitive-write`) | 100 % endpoints | Implementado |
+| `NFR-056-02` | 056 | NFR | Índice compuesto `(MerchantId asc, CreatedAtUtc desc)` en `store_reviews` | Sin full-scan por comercio | Implementado |
+| `NFR-056-03` | 056 | NFR | Privacidad en DTOs de reseña | 0 campos de correo/credenciales | Implementado |
+| `FR-057-01` | 057 | FR | Alternar «Me gusta» de producto vía `POST /api/v1/offers/{id}/like` devolviendo `OfferLikeStatusDto` | Must | Implementado |
+| `FR-057-02` | 057 | FR | Exponer `LikesCount` e `IsLikedByMe` reales en `OfferDetailDto`, `NearbyOfferDto` y `OfferDto` | Must | Implementado |
+| `FR-057-03` | 057 | FR | Garantizar unicidad `(UserId, OfferId)` y devolver `404` ante ofertas inexistentes o archivadas | Must | Implementado |
+| `FR-057-04` | 057 | FR | Invalidar caché de detalle (`OfferCacheKeys.Detail`) al alternar like sin alterar `OfferCategory` | Must | Implementado |
+| `NFR-057-01` | 057 | NFR | Seguridad (`RegisteredUserPolicy` + `SensitiveWritePolicy`) | 403 para invitados | Implementado |
+| `NFR-057-02` | 057 | NFR | Índices único `(UserId, OfferId)` y `(OfferId, CreatedAtUtc desc)` en `offer_likes` | Sin full-scan | Implementado |
+| `NFR-057-03` | 057 | NFR | Privacidad en conteo de likes de productos | 0 PII expuesta | Implementado |
+| `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
+| `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
+| `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
+| `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
+| `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
+| `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |
+| `FR-059-01` | 059 | FR | Filtrar groserías, frases y *leetspeak* de forma determinística en `ProfanityFilter` | Must | Implementado |
+| `FR-059-02` | 059 | FR | Aplicar `ContentModerationHelper` a textos de usuario, comercio, ofertas, reseñas y respuestas | Must | Implementado |
+| `FR-059-03` | 059 | FR | Mantener `OpenAiTextModerationService` 100 % *fail-closed* en errores, timeouts y ausencia de clave | Must | Implementado |
+| `FR-059-04` | 059 | FR | Leer todos los umbrales exclusivamente desde `IOptions<OpenAiSettings>` / configuración, nunca fijos en código | Must | Implementado |
+| `FR-059-05` | 059 | FR | Declarar `Model`, `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` explícitos en `appsettings.json` | Must | Implementado |
+| `NFR-059-01` | 059 | NFR | Timeout explícito anti-ReDoS en expresiones regulares de `ProfanityFilter` | 0 vulnerabilidades S6444 | Implementado |
+| `NFR-059-02` | 059 | NFR | Cero rutas *fail-open* ante fallos de moderación externa | 100 % fail-closed | Implementado |
+| `NFR-059-03` | 059 | NFR | Pruebas unitarias y de integración sobre filtro, umbrales configurados y *fail-closed* | Cobertura >= 80 % | Implementado |
 
-Total: **495 requisitos** en 53 specs.
+Total: **527 requisitos** en 57 specs.

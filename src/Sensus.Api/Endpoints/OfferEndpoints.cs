@@ -10,12 +10,15 @@ using Sensus.Application.Offers.Commands.ExpireOffers;
 using Sensus.Application.Offers.Commands.RedeemClaim;
 using Sensus.Application.Offers.Commands.RegisterOfferView;
 using Sensus.Application.Offers.Commands.RepublishOffer;
+using Sensus.Application.Offers.Commands.ToggleOfferLike;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
 using Sensus.Application.Offers.Queries.GetNearbyOffers;
+using Sensus.Application.Offers.Queries.GetOfferAlternatives;
 using Sensus.Application.Offers.Queries.GetOfferClaim;
 using Sensus.Application.Offers.Queries.GetOfferDetail;
+using Sensus.Application.Offers.Queries.SearchOffers;
 
 namespace Sensus.Api.Endpoints;
 
@@ -175,6 +178,37 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 041: Búsqueda híbrida determinista por texto (stemming español y prefijo) y cercanía (FR-041-01 a FR-041-11)
+        offersGroup.MapGet("/search", async (
+            [FromQuery] string? q,
+            [FromQuery] double? lat,
+            [FromQuery] double? lng,
+            [FromQuery] double? radiusKm,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new SearchOffersQuery(
+                q,
+                lat ?? double.NaN,
+                lng ?? double.NaN,
+                radiusKm,
+                page ?? 1,
+                pageSize ?? 20);
+
+            var result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("SearchOffers")
+        .WithSummary("Spec 041: Búsqueda determinista de ofertas por texto (stemming español y prefijo) y cercanía")
+        .Produces<PagedResult<OfferSearchItemDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 033: Apartado de una unidad con código firmado de un solo uso
         offersGroup.MapPost("/{id:guid}/claim", async (
             Guid id,
@@ -272,6 +306,30 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 043: Alternativas cercanas de la misma categoría y precio final comparable (FR-043-01 a FR-043-11)
+        offersGroup.MapGet("/{id:guid}/alternatives", async (
+            Guid id,
+            [FromQuery] int? limit,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new GetOfferAlternativesQuery(
+                id,
+                limit ?? Sensus.Domain.Models.OfferAlternativesPolicy.DefaultLimit);
+
+            var result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("GetOfferAlternatives")
+        .WithSummary("Spec 043: Alternativas cercanas de la misma categoría y precio final dentro del 120 %")
+        .Produces<IReadOnlyList<OfferAlternativeItemDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 032: Registro de vista deduplicado por usuario y día
         offersGroup.MapPost("/{id:guid}/view", async (
             Guid id,
@@ -287,6 +345,24 @@ public static class OfferEndpoints
         .WithName("RegisterOfferView")
         .WithSummary("Spec 032: Registra una vista por usuario, oferta y día; responde 204 sin datos internos")
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Social: Alternar Me gusta en una publicación de producto
+        offersGroup.MapPost("/{id:guid}/like", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ToggleOfferLikeCommand(id), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("ToggleOfferLike")
+        .WithSummary("Alterna 'Me gusta' del usuario sobre una publicación de producto y devuelve el total de likes")
+        .Produces<OfferLikeStatusDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);

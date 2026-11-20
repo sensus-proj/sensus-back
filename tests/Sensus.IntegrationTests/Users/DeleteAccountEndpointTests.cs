@@ -71,6 +71,7 @@ public class DeleteAccountEndpointTests : IClassFixture<CustomWebApplicationFact
         paused.Status.Should().Be(OfferStatus.Archived);
         await _factory.OfferRepository.Received(1).UpdateAsync(published, Arg.Any<CancellationToken>());
         await _factory.OfferRepository.Received(1).UpdateAsync(paused, Arg.Any<CancellationToken>());
+        await _factory.UserInterestsRepository.Received(1).DeleteByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
     }
 
     private static Offer BuildOffer(Guid merchantId) =>
@@ -253,5 +254,40 @@ public class DeleteAccountEndpointTests : IClassFixture<CustomWebApplicationFact
         await _factory.AiConversationRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
         await _factory.AiMessageRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
         await _factory.AiTraceLogRepository.Received(1).PurgeAllByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+    }
+
+    // Regresión FR-030-08 / CA-030-06: borrado inmediato de user_interests e interacciones seudonimizadas
+    [Fact]
+    public async Task DeleteAccount_ShouldPurgeInterestsAndInteractions_WhenAccountIsDeleted()
+    {
+        var passwordHasher = _factory.Services.GetRequiredService<IPasswordHasher>();
+        var rawPassword = $"Sensus-{Guid.NewGuid():N}-Aa1#";
+
+        var user = User.Create(
+            "User with Feed Data",
+            $"feed.{Guid.NewGuid():N}@sensus.com",
+            passwordHasher.HashPassword(rawPassword),
+            true,
+            DateTime.UtcNow).Value;
+
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _factory.UserInterestsRepository.ClearReceivedCalls();
+        _factory.OfferInteractionRecorder.ClearReceivedCalls();
+        _factory.CacheService.ClearReceivedCalls();
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/users/account")
+        {
+            Content = JsonContent.Create(new DeleteAccountCommand(rawPassword))
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateTokenForUser(user));
+
+        HttpResponseMessage response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.UserInterestsRepository.Received(1).DeleteByUserIdAsync(user.Id, Arg.Any<CancellationToken>());
+        await _factory.OfferInteractionRecorder.Received(1).PurgeByUserAsync(user.Id, Arg.Any<CancellationToken>());
+        await _factory.CacheService.Received(1).RemoveAsync(
+            Sensus.Application.Offers.FeedCacheKeys.Affinity(user.Id),
+            Arg.Any<CancellationToken>());
     }
 }
