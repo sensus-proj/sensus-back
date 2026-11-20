@@ -23,6 +23,7 @@
 | T035-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-035-01` | T035-08 | Pendiente |
 | T035-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-035-01` | T035-09 | Completada |
 | T035-11 | Registrar evidencias del Constitution Check | Docs | `FR-035-01` | T035-10 | Completada |
+| T035-12 | Validar `OfferCategory` en la edición con pruebas de `400` (controlada por `OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) | Application | `FR-035-08` | T035-11 | Completada |
 
 ## Notas de ejecución
 

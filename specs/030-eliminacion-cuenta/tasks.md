@@ -24,6 +24,7 @@
 | T030-10 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-030-01` | T030-09 | Completada |
 | T030-11 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-030-01` | T030-10 | Completada |
 | T030-12 | Registrar evidencias del Constitution Check | Docs | `FR-030-01` | T030-11 | Completada |
+| T030-13 | Borrar `user_interests` y `offer_interactions` al eliminar la cuenta, con prueba de regresión (CA-030-06) | Infrastructure | `FR-030-08` | T054-04, T055-03 | Completada |
 
 ## Notas de ejecución
 

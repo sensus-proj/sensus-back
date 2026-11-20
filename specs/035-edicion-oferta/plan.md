@@ -29,6 +29,7 @@ Permitir que el comerciante corrija una oferta existente sin romper apartados ac
 
 - Autorización por propietario
 - Re-moderación obligatoria del contenido visible
+- Validación de `OfferCategory` en edición (`FR-035-08`) controlada por `OfferCategory:RequireStrictValidation` (`false` por defecto hasta publicar móvil T15.15; cuando es `true`, rechaza con `400` limpiar categoría en ofertas publicadas o usar un valor fuera del catálogo)
 
 ## 5. Observabilidad y rendimiento
 
