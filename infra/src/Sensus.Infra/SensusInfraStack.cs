@@ -9,7 +9,6 @@ using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.SNS;
-using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
 using CfnRoute = Amazon.CDK.AWS.Apigatewayv2.CfnRoute;
 using CfnRouteProps = Amazon.CDK.AWS.Apigatewayv2.CfnRouteProps;
@@ -31,10 +30,11 @@ public sealed partial class SensusInfraStack : Stack
         : base(scope, id, props)
     {
         var envName = (Node.TryGetContext("environment") as string ?? "prod").ToLowerInvariant();
-        // Correo de alarmas y presupuesto: llega por contexto desde la variable de GitHub ALERTS_EMAIL; nunca se versiona.
-        var budgetEmail = Node.TryGetContext("budgetEmail") is string email && !string.IsNullOrWhiteSpace(email)
-            ? email
-            : "alerts@sensus.local";
+        // Correo de alarmas: llega por contexto desde el SECRETO de GitHub ALERTS_EMAIL; nunca se versiona (FR-045-12).
+        // Sin correo no se usa un relleno: el workflow de despliegue falla antes (FR-045-15) y la síntesis de CI no crea suscripción.
+        string? alertsEmail = Node.TryGetContext("budgetEmail") is string email && !string.IsNullOrWhiteSpace(email)
+            ? email.Trim()
+            : null;
         var allowedOrigins = ResolveAllowedOrigins();
 
         // Spec 051: pausa nocturna configurable por contexto (por defecto 22:30 a 07:00, hora del centro de México).
@@ -198,13 +198,38 @@ public sealed partial class SensusInfraStack : Stack
 
         // 5. Alarmas de Observabilidad en Amazon CloudWatch (FR-045-06, Spec 015)
         // FR-015-03: canal de notificación único (SNS con suscripción por correo) para todas las alarmas.
-        var alarmEmail = Node.TryGetContext("alarmEmail") as string ?? budgetEmail;
+        var alarmEmail = Node.TryGetContext("alarmEmail") as string ?? alertsEmail;
         var alarmTopic = new Topic(this, "SensusAlarmTopic", new TopicProps
         {
             TopicName = $"sensus-alarms-{envName}",
             DisplayName = "Alarmas de Sensus Backend"
         });
-        alarmTopic.AddSubscription(new EmailSubscription(alarmEmail));
+        if (!string.IsNullOrWhiteSpace(alarmEmail))
+        {
+            // FR-045-13: identificador fijo. AddSubscription(new EmailSubscription(...)) derivaba el identificador lógico del
+            // propio correo, que terminaba en la plantilla y en los logs de CI de un repositorio público.
+            _ = new Subscription(this, "SensusAlarmEmailSubscription", new SubscriptionProps
+            {
+                Topic = alarmTopic,
+                Protocol = SubscriptionProtocol.EMAIL,
+                Endpoint = alarmEmail
+            });
+        }
+
+        // FR-045-14: AWS Budgets publica en el tema (solo desde esta cuenta), así el presupuesto no depende del correo.
+        var budgetsPublish = alarmTopic.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "AllowBudgetsPublish",
+            Effect = Effect.ALLOW,
+            Principals = [new ServicePrincipal("budgets.amazonaws.com")],
+            Actions = ["SNS:Publish"],
+            Resources = [alarmTopic.TopicArn],
+            Conditions = new Dictionary<string, object>
+            {
+                ["StringEquals"] = new Dictionary<string, string> { ["aws:SourceAccount"] = Account },
+                ["ArnLike"] = new Dictionary<string, string> { ["aws:SourceArn"] = $"arn:aws:budgets::{Account}:*" }
+            }
+        }));
         var alarmAction = new SnsAction(alarmTopic);
 
         var errorsAlarm = new Alarm(this, "SensusLambdaErrorsAlarm", new AlarmProps
@@ -362,11 +387,13 @@ public sealed partial class SensusInfraStack : Stack
             }));
 
         // 6. Presupuesto Mensual en AWS Budgets con Alarma de Costo (FR-045-07, Principio VI)
-        _ = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps
+        // FR-045-14: el presupuesto notifica al tema SNS; cambiar el correo ya no obliga a recrearlo. El sufijo -v2 permite el
+        // reemplazo de esta única vez (de suscriptor EMAIL a SNS) sin chocar con el nombre del presupuesto existente.
+        var budget = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps
         {
             Budget = new CfnBudget.BudgetDataProperty
             {
-                BudgetName = $"sensus-zero-cost-budget-{envName}",
+                BudgetName = $"sensus-zero-cost-budget-{envName}-v2",
                 BudgetType = "COST",
                 TimeUnit = "MONTHLY",
                 BudgetLimit = new CfnBudget.SpendProperty
@@ -390,13 +417,17 @@ public sealed partial class SensusInfraStack : Stack
                     {
                         new CfnBudget.SubscriberProperty
                         {
-                            SubscriptionType = "EMAIL",
-                            Address = budgetEmail
+                            SubscriptionType = "SNS",
+                            Address = alarmTopic.TopicArn
                         }
                     }
                 }
             }
         });
+        if (budgetsPublish.PolicyDependable is not null)
+        {
+            budget.Node.AddDependency(budgetsPublish.PolicyDependable);
+        }
 
         // 7. Salidas del Stack (FR-045-10)
         _ = new CfnOutput(this, "ApiGatewayUrl", new CfnOutputProps

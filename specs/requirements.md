@@ -401,7 +401,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-045-09` | 045 | FR | Aplicar etiquetas obligatorias (`project`, `environment`, `owner`) a todos los recursos | Must | Implementado |
 | `FR-045-10` | 045 | FR | Exponer como `CfnOutput` la URL pública del API Gateway y el ARN de la función Lambda | Must | Implementado |
 | `FR-045-11` | 045 | FR | Leer los secretos de la API desde SSM Parameter Store; sin secreto JWT no arranca en Lambda | Must | Implementado |
-| `FR-045-12` | 045 | FR | Correo de alarmas y presupuesto desde la variable de repositorio `ALERTS_EMAIL` | Must | Implementado |
+| `FR-045-12` | 045 | FR | Correo de alarmas y presupuesto desde el secreto de repositorio `ALERTS_EMAIL` | Must | Implementado |
+| `FR-045-13` | 045 | FR | Mantener el correo de alertas fuera de los logs de CI y de los identificadores de recursos: la síntesis no imprime la plantilla y la suscripción usa un identificador fijo | Must | Implementado |
+| `FR-045-14` | 045 | FR | Notificar el presupuesto a través del tema SNS de alarmas, de modo que cambiar el correo de alertas no reemplace el presupuesto ni rompa el despliegue | Must | Implementado |
+| `FR-045-15` | 045 | FR | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must | Implementado |
 | `NFR-045-01` | 045 | NFR | Costo mensual de infraestructura en AWS | 0.00 USD (Free Tier) | Implementado |
 | `NFR-045-02` | 045 | NFR | Tiempo de síntesis (`cdk synth`) en CI | < 60 segundos | Implementado |
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |

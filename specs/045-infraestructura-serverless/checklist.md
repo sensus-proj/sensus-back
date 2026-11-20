@@ -25,6 +25,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] Rol IAM de mínimo privilegio con acceso a SSM Parameter Store (sin costo de Secrets Manager) y sin NAT Gateway
 - [x] Etiquetas normativas (`project`, `environment`, `owner`) aplicadas al stack
 
+- [x] Correo de alertas como secreto, fuera de logs e identificadores, y presupuesto por SNS (T045-13 a T045-15; `cdk synth` con correo de prueba sin el correo en identificadores ni metadatos, y `cdk diff` contra producción: solo se reemplazan el presupuesto `-v2` y la suscripción)
+
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde (4/4 pruebas de arquitectura superadas)

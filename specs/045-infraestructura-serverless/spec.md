@@ -61,7 +61,10 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 | FR-045-09 | Aplicar etiquetas obligatorias (`project=sensus`, `environment`, `owner=sensus-team`) a todos los recursos del stack | Must |
 | FR-045-10 | Exponer como `CfnOutput` la URL pública del API Gateway y el ARN de la función Lambda | Must |
 | FR-045-11 | Leer los secretos de la API desde SSM Parameter Store (`SecureString`, ruta `/sensus/<entorno>/`) como fuente obligatoria al arrancar, sin variables de entorno con secretos; sin secreto JWT la API no arranca en Lambda | Must |
-| FR-045-12 | Recibir el correo de alarmas y presupuesto por contexto de CDK desde la variable de repositorio `ALERTS_EMAIL`, nunca versionado | Must |
+| FR-045-12 | Recibir el correo de alarmas y presupuesto por contexto de CDK desde el **secreto** de repositorio `ALERTS_EMAIL` (enmascarado en los logs de CI), nunca versionado | Must |
+| FR-045-13 | Mantener el correo de alertas fuera de los logs de CI y de los identificadores de recursos: la síntesis no imprime la plantilla y la suscripción usa un identificador fijo | Must |
+| FR-045-14 | Notificar el presupuesto a través del tema SNS de alarmas, de modo que cambiar el correo de alertas no reemplace el presupuesto ni rompa el despliegue | Must |
+| FR-045-15 | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -94,6 +97,21 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 - **Dado**: el stack `SensusInfraStack`
 - **Cuando**: se sintetizan los recursos
 - **Entonces**: el stack aplica las etiquetas `project`, `environment` y `owner`
+
+### CA-045-05: Correo de alertas sin exposición
+- **Dado**: un despliegue por CI con `ALERTS_EMAIL` configurado como secreto
+- **Cuando**: se revisa el log del job y la plantilla sintetizada
+- **Entonces**: el correo aparece como `***` en el log, la plantilla no se imprime y ningún identificador lógico de recurso contiene el correo
+
+### CA-045-06: Cambio de correo sin romper el despliegue
+- **Dado**: el stack desplegado con un correo de alertas
+- **Cuando**: se cambia `ALERTS_EMAIL` y se vuelve a desplegar
+- **Entonces**: solo se reemplaza la suscripción SNS; el presupuesto no se recrea y el despliegue termina en `UPDATE_COMPLETE`
+
+### CA-045-07: Correo vacío
+- **Dado**: `ALERTS_EMAIL` vacío o ausente
+- **Cuando**: corre el workflow de despliegue
+- **Entonces**: el job falla antes de `cdk deploy` con un mensaje que indica configurar el secreto
 
 ## 7. Contratos
 
