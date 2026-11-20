@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -17,6 +19,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly IOptions<OfferCategorySettings>? _categorySettings;
 
     public UpdateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -25,7 +28,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<UpdateOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOptions<OfferCategorySettings>? categorySettings = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -34,6 +38,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _categorySettings = categorySettings;
     }
 
     public async Task<Result<OfferDto>> Handle(UpdateOfferCommand request, CancellationToken cancellationToken)
@@ -63,6 +68,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         int activeClaimsCount = await _offerClaimRepository.GetActiveClaimCountAsync(offer.Id, cancellationToken);
 
         DateTime now = _dateTimeProvider.UtcNow;
+        bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
         Result<bool> updateResult = offer.Update(
             request.Title,
             request.Description,
@@ -75,7 +81,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
             activeClaimsCount,
             request.ExpectedVersion,
             now,
-            request.Category);
+            request.Category,
+            requireStrictCategory);
 
         if (updateResult.IsFailure)
         {

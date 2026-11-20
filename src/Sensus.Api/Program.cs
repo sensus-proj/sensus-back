@@ -67,6 +67,24 @@ builder.Services.AddOptions<NotificationLocationSettings>()
     .BindConfiguration("NotificationLocation")
     .Validate(settings => settings.LifetimeHours is > 0 and <= 24, "Location lifetime must be between 1 and 24 hours.")
     .ValidateOnStart();
+builder.Services.AddOptions<Sensus.Application.Common.Settings.OfferSearchSettings>()
+    .BindConfiguration(Sensus.Application.Common.Settings.OfferSearchSettings.SectionName)
+    .Validate(s => s.DefaultRadiusKm is >= 1d and <= 50d, "OfferSearch:DefaultRadiusKm must be between 1 and 50.")
+    .Validate(s => s.MaxRadiusKm is >= 1d and <= 50d, "OfferSearch:MaxRadiusKm must be between 1 and 50.")
+    .Validate(s => s.GuestMaxRadiusKm is >= 1d and <= 2d, "OfferSearch:GuestMaxRadiusKm must be between 1 and 2.")
+    .Validate(s => s.MaxCandidates is >= 10 and <= 500, "OfferSearch:MaxCandidates must be between 10 and 500.")
+    .Validate(s => s.Weights.Text >= 0 && s.Weights.CategoryMatch >= 0 && s.Weights.Proximity >= 0 && s.Weights.Popularity >= 0 &&
+                   (s.Weights.Text + s.Weights.CategoryMatch + s.Weights.Proximity + s.Weights.Popularity) > 0d,
+        "OfferSearch:Weights must be non-negative and sum above 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<Sensus.Application.Common.Settings.OfferAlternativesSettings>()
+    .BindConfiguration(Sensus.Application.Common.Settings.OfferAlternativesSettings.SectionName)
+    .Validate(s => s.DefaultLimit is >= 1 and <= 10, "OfferAlternatives:DefaultLimit must be between 1 and 10.")
+    .Validate(s => s.MaxLimit is >= 1 and <= 10, "OfferAlternatives:MaxLimit must be between 1 and 10.")
+    .Validate(s => s.RegisteredMaxDistanceMeters is >= 100 and <= 50000, "OfferAlternatives:RegisteredMaxDistanceMeters must be between 100 and 50000.")
+    .Validate(s => s.GuestMaxDistanceMeters is >= 100 and <= 2000, "OfferAlternatives:GuestMaxDistanceMeters must be between 100 and 2000.")
+    .Validate(s => s.ComparablePriceRatio is > 0m and <= 5.0m, "OfferAlternatives:ComparablePriceRatio must be between 0 and 5.0.")
+    .ValidateOnStart();
 bool allowSimulatedPush = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 if (allowSimulatedPush && builder.Configuration.GetValue("Push:Simulate", true))
 {
@@ -180,6 +198,7 @@ builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
+builder.Services.AddHostedService<InteractionStatsBackgroundService>();
 
 // Manejo global de excepciones con ProblemDetails (RFC 7807)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -301,6 +320,7 @@ app.MapMediaEndpoints();
 app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();
+app.MapFeedEndpoints();
 
 await app.RunAsync();
 

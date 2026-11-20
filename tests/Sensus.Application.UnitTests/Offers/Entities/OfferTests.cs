@@ -910,4 +910,125 @@ public class OfferTests
         updated.IsSuccess.Should().BeTrue();
         offer.Category.Should().Be("Abarrotes");
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Create_WhenStrictCategoryRequired_ShouldFail_IfCategoryMissing(string? category)
+    {
+        var result = Offer.Create(
+            _merchantId,
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            category: category,
+            nowUtc: _now,
+            requireValidCategory: true);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.CategoryRequired");
+    }
+
+    [Theory]
+    [InlineData("Moda")]
+    [InlineData("Panadería")]
+    [InlineData("1")]
+    public void Create_WhenStrictCategoryRequired_ShouldFail_IfOutsideCatalog(string category)
+    {
+        var result = Offer.Create(
+            _merchantId,
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            category: category,
+            nowUtc: _now,
+            requireValidCategory: true);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.InvalidCategory");
+    }
+
+    [Fact]
+    public void Create_AndUpdate_WhenStrictCategoryRequired_ShouldNormalizeAndProtectPublishedCategory()
+    {
+        var offer = Offer.Create(
+            _merchantId,
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            category: "bakery",
+            nowUtc: _now,
+            requireValidCategory: true).Value;
+
+        offer.Category.Should().Be("Bakery");
+
+        var cleared = offer.Update(
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now,
+            category: "",
+            requireValidCategory: true);
+
+        cleared.IsFailure.Should().BeTrue();
+        cleared.Error.Code.Should().Be("Offer.CategoryRequired");
+        offer.Category.Should().Be("Bakery");
+
+        var invalid = offer.Update(
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now,
+            category: "Moda",
+            requireValidCategory: true);
+
+        invalid.IsFailure.Should().BeTrue();
+        invalid.Error.Code.Should().Be("Offer.InvalidCategory");
+        offer.Category.Should().Be("Bakery");
+
+        var validUpdate = offer.Update(
+            "Bolillo",
+            "Pan artesanal del día",
+            20m,
+            25,
+            12,
+            _now.AddHours(1),
+            _now.AddDays(1),
+            null,
+            activeClaimCount: 0,
+            expectedVersion: 1,
+            _now,
+            category: "dairy",
+            requireValidCategory: true);
+
+        validUpdate.IsSuccess.Should().BeTrue();
+        offer.Category.Should().Be("Dairy");
+    }
 }

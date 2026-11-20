@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 
 namespace Sensus.Application.UnitTests.Offers.Commands;
@@ -67,5 +69,30 @@ public class UpdateOfferCommandValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateOfferCommand.ExpectedVersion));
+    }
+
+    [Fact]
+    public void Validate_WhenStrictCategoryFlagEnabled_ShouldFail_ForInvalidCategory()
+    {
+        var strictValidator = new UpdateOfferCommandValidator(
+            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var command = new UpdateOfferCommand(
+            Guid.NewGuid(),
+            "Título Válido",
+            "Descripción suficientemente larga",
+            100.00m,
+            15,
+            10,
+            DateTime.UtcNow.AddHours(1),
+            DateTime.UtcNow.AddDays(2),
+            null,
+            1,
+            Category: "Moda");
+
+        var result = strictValidator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateOfferCommand.Category));
     }
 }

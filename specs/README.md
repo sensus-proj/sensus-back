@@ -45,9 +45,9 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032 |
 | 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 013 |
 | 040 | [Reportes de contenido](040-reportes-contenido/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 025, 017, 018 |
-| 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 010, 011 |
-| 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 007, 010, 013, 032, 033, 048, 052, 054, 055 |
-| 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032, 041 |
+| 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 011, 013, 052 |
+| 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 013, 032, 033, 048, 052, 054, 055 |
+| 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 013, 032, 041, 052 |
 | 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 027, 034 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
 | 046 | [Asistente agéntico Sensi IA (7 capas)](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Parcial | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |

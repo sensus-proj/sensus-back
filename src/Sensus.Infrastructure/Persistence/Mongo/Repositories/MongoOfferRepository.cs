@@ -474,4 +474,545 @@ public sealed class MongoOfferRepository : IOfferRepository
 
         return (documents.Select(d => d.ToDomain()).ToList(), totalCount);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<FeedOfferCandidate>> GetFeedCandidatesAsync(
+        double latitude,
+        double longitude,
+        int radiusMeters,
+        Guid excludeMerchantOwnerUserId,
+        int maxCandidates,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        string comerciosCollection = _context.Comercios.CollectionNamespace.CollectionName;
+        int safeMax = Math.Clamp(maxCandidates, 1, 500);
+
+        var pipeline = new List<BsonDocument>
+        {
+            new("$geoNear", new BsonDocument
+            {
+                { "near", new BsonDocument
+                    {
+                        { "type", "Point" },
+                        { "coordinates", new BsonArray { longitude, latitude } }
+                    }
+                },
+                { "distanceField", "distanceMeters" },
+                { "maxDistance", radiusMeters },
+                { "spherical", true },
+                { "query", BuildVisibilityFilter(nowUtc) }
+            }),
+            new("$lookup", new BsonDocument
+            {
+                { "from", comerciosCollection },
+                { "localField", "merchantId" },
+                { "foreignField", "_id" },
+                { "as", "merchant" }
+            }),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument
+            {
+                { "merchant.activo", true },
+                { "merchant.usuarioId", new BsonDocument("$ne", excludeMerchantOwnerUserId.ToString()) }
+            }),
+            new("$limit", safeMax)
+        };
+
+        List<BsonDocument> docs = await _context.Offers
+            .Aggregate<BsonDocument>(pipeline, cancellationToken: cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        return docs.Select(d => MapFeedCandidate(d, GetNullableDouble(d, "distanceMeters") ?? 0d)).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<FeedOfferCandidate>> GetFeedCandidatesByIdsAsync(
+        IReadOnlyCollection<Guid> offerIds,
+        double referenceLatitude,
+        double referenceLongitude,
+        Guid excludeMerchantOwnerUserId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (offerIds.Count == 0)
+        {
+            return Array.Empty<FeedOfferCandidate>();
+        }
+
+        string comerciosCollection = _context.Comercios.CollectionNamespace.CollectionName;
+        BsonDocument matchFilter = BuildVisibilityFilter(nowUtc);
+        matchFilter["_id"] = new BsonDocument("$in", new BsonArray(offerIds.Select(id => id.ToString())));
+
+        var pipeline = new List<BsonDocument>
+        {
+            new("$match", matchFilter),
+            new("$lookup", new BsonDocument
+            {
+                { "from", comerciosCollection },
+                { "localField", "merchantId" },
+                { "foreignField", "_id" },
+                { "as", "merchant" }
+            }),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument
+            {
+                { "merchant.activo", true },
+                { "merchant.usuarioId", new BsonDocument("$ne", excludeMerchantOwnerUserId.ToString()) }
+            })
+        };
+
+        List<BsonDocument> docs = await _context.Offers
+            .Aggregate<BsonDocument>(pipeline, cancellationToken: cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        var candidates = new List<FeedOfferCandidate>(docs.Count);
+        foreach (BsonDocument doc in docs)
+        {
+            BsonDocument? merchantDoc = doc.TryGetValue("merchant", out BsonValue mv) && mv.IsBsonDocument ? mv.AsBsonDocument : null;
+            double? lat = (merchantDoc is not null ? GetNullableDouble(merchantDoc, "latitud") : null) ?? GetNullableDouble(doc, "latitude");
+            double? lng = (merchantDoc is not null ? GetNullableDouble(merchantDoc, "longitud") : null) ?? GetNullableDouble(doc, "longitude");
+            double distanceMeters = lat.HasValue && lng.HasValue
+                ? ComputeHaversineMeters(referenceLatitude, referenceLongitude, lat.Value, lng.Value)
+                : 0d;
+
+            candidates.Add(MapFeedCandidate(doc, distanceMeters));
+        }
+
+        return candidates;
+    }
+
+    private static FeedOfferCandidate MapFeedCandidate(BsonDocument document, double distanceMeters)
+    {
+        BsonDocument? merchantDoc = document.TryGetValue("merchant", out BsonValue merchantValue) && merchantValue.IsBsonDocument
+            ? merchantValue.AsBsonDocument
+            : null;
+
+        string merchantName = (merchantDoc is not null ? GetString(merchantDoc, "nombreComercial") : null)
+            ?? GetString(document, "merchantName")
+            ?? string.Empty;
+
+        string? rawCategory = GetString(document, "category");
+        string normalizedCategory = OfferCategoryCatalog.TryNormalizeLegacy(rawCategory, out OfferCategory parsedCategory)
+            ? parsedCategory.ToString()
+            : OfferInteractionItem.UncategorizedCategory;
+
+        return new FeedOfferCandidate(
+            ParseGuid(document, "_id"),
+            GetString(document, "title") ?? string.Empty,
+            normalizedCategory,
+            GetString(document, "imageUrl"),
+            GetDecimal(document, "originalPrice"),
+            GetDecimal(document, "discountedPrice"),
+            GetInt32(document, "stock"),
+            distanceMeters,
+            GetRequiredDateUtc(document, "createdAtUtc"),
+            GetRequiredDateUtc(document, "endsAt"),
+            ParseGuid(document, "merchantId"),
+            merchantName,
+            GetInt32(document, "viewCount"));
+    }
+
+    private static double ComputeHaversineMeters(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double earthRadiusMeters = 6_371_000d;
+        double dLat = (lat2 - lat1) * Math.PI / 180d;
+        double dLon = (lon2 - lon1) * Math.PI / 180d;
+        double a = Math.Pow(Math.Sin(dLat / 2d), 2d) +
+            Math.Cos(lat1 * Math.PI / 180d) * Math.Cos(lat2 * Math.PI / 180d) * Math.Pow(Math.Sin(dLon / 2d), 2d);
+        return 2d * earthRadiusMeters * Math.Asin(Math.Min(1d, Math.Sqrt(a)));
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<OfferSearchCandidate>> SearchOffersHybridAsync(
+        string? normalizedQuery,
+        string? rawQuery,
+        double latitude,
+        double longitude,
+        int radiusMeters,
+        int maxCandidates,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        string comerciosCollection = _context.Comercios.CollectionNamespace.CollectionName;
+        IMongoCollection<BsonDocument> offersBson = _context.Database.GetCollection<BsonDocument>(
+            _context.Offers.CollectionNamespace.CollectionName);
+        int safeMax = Math.Clamp(maxCandidates, 1, 500);
+
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            var fallbackPipeline = new List<BsonDocument>
+            {
+                new("$geoNear", new BsonDocument
+                {
+                    { "near", new BsonDocument
+                        {
+                            { "type", "Point" },
+                            { "coordinates", new BsonArray { longitude, latitude } }
+                        }
+                    },
+                    { "distanceField", "distanceMeters" },
+                    { "maxDistance", radiusMeters },
+                    { "spherical", true },
+                    { "query", BuildVisibilityFilter(nowUtc) }
+                }),
+                LookupMerchantStage(comerciosCollection),
+                new("$unwind", "$merchant"),
+                new("$match", new BsonDocument("merchant.activo", true)),
+                new("$sort", new BsonDocument { { "distanceMeters", 1 }, { "viewCount", -1 } }),
+                new("$limit", safeMax)
+            };
+
+            List<BsonDocument> fallbackDocs = await offersBson
+                .Aggregate<BsonDocument>(fallbackPipeline, cancellationToken: cancellationToken)
+                .ToListAsync(cancellationToken);
+
+            return fallbackDocs
+                .Select(d => MapSearchCandidate(d, latitude, longitude, GetNullableDouble(d, "distanceMeters")))
+                .Where(c => c.DistanceMeters <= radiusMeters)
+                .ToList();
+        }
+
+        double radiusRadians = Math.Max(1, radiusMeters) / 6_371_000d;
+        var geoWithinFilter = new BsonDocument("ubicacion", new BsonDocument("$geoWithin", new BsonDocument(
+            "$centerSphere",
+            new BsonArray { new BsonArray { longitude, latitude }, radiusRadians })));
+        BsonDocument visibilityFilter = BuildVisibilityFilter(nowUtc);
+
+        var merged = new Dictionary<Guid, OfferSearchCandidate>();
+
+        void MergeDocuments(IEnumerable<BsonDocument> docs)
+        {
+            foreach (BsonDocument doc in docs)
+            {
+                OfferSearchCandidate candidate = MapSearchCandidate(doc, latitude, longitude, GetNullableDouble(doc, "distanceMeters"));
+                if (candidate.OfferId == Guid.Empty || candidate.DistanceMeters > radiusMeters)
+                {
+                    continue;
+                }
+
+                if (merged.TryGetValue(candidate.OfferId, out OfferSearchCandidate? existing))
+                {
+                    if (candidate.MongoTextScore > existing.MongoTextScore)
+                    {
+                        merged[candidate.OfferId] = candidate;
+                    }
+                }
+                else
+                {
+                    merged[candidate.OfferId] = candidate;
+                }
+            }
+        }
+
+        // Canal A: índice de texto MongoDB con default_language = "spanish" (stemming español)
+        string safeRawQuery = rawQuery ?? normalizedQuery;
+        var textMatchFilter = new BsonDocument("$and", new BsonArray
+        {
+            visibilityFilter,
+            geoWithinFilter,
+            new BsonDocument("$text", new BsonDocument
+            {
+                { "$search", safeRawQuery },
+                { "$language", "spanish" }
+            })
+        });
+
+        var textPipeline = new List<BsonDocument>
+        {
+            new("$match", textMatchFilter),
+            new("$addFields", new BsonDocument("textScore", new BsonDocument("$meta", "textScore"))),
+            new("$sort", new BsonDocument { { "textScore", -1 }, { "createdAtUtc", -1 } }),
+            new("$limit", safeMax),
+            LookupMerchantStage(comerciosCollection),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument("merchant.activo", true))
+        };
+
+        List<BsonDocument> textDocs = await offersBson
+            .Aggregate<BsonDocument>(textPipeline, cancellationToken: cancellationToken)
+            .ToListAsync(cancellationToken);
+        MergeDocuments(textDocs);
+
+        // Canal B: índice ascendente ix_offers_title_normalized para coincidencia por prefijo (>= 2 chars)
+        string escapedPrefix = Regex.Escape(normalizedQuery);
+        var prefixRegex = new BsonRegularExpression($"^{escapedPrefix}");
+        var prefixMatchFilter = new BsonDocument("$and", new BsonArray
+        {
+            visibilityFilter,
+            geoWithinFilter,
+            new BsonDocument("titleNormalized", prefixRegex)
+        });
+
+        var prefixPipeline = new List<BsonDocument>
+        {
+            new("$match", prefixMatchFilter),
+            new("$limit", safeMax),
+            LookupMerchantStage(comerciosCollection),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument("merchant.activo", true))
+        };
+
+        List<BsonDocument> prefixDocs = await offersBson
+            .Aggregate<BsonDocument>(prefixPipeline, cancellationToken: cancellationToken)
+            .ToListAsync(cancellationToken);
+        MergeDocuments(prefixDocs);
+
+        // Canal C: coincidencia exacta de categoría del catálogo y comercios activos por nombre
+        HashSet<OfferCategory> matchedCategories = OfferTextNormalizer.ExtractMatchingCategories(normalizedQuery);
+        if (matchedCategories.Count > 0)
+        {
+            var categoryTokens = new BsonArray();
+            foreach (OfferCategory cat in matchedCategories)
+            {
+                categoryTokens.Add(cat.ToString());
+                categoryTokens.Add(OfferCategoryCatalog.GetSpanishName(cat));
+            }
+
+            var categoryPipeline = new List<BsonDocument>
+            {
+                new("$match", new BsonDocument("$and", new BsonArray
+                {
+                    visibilityFilter,
+                    geoWithinFilter,
+                    new BsonDocument("category", new BsonDocument("$in", categoryTokens))
+                })),
+                new("$limit", safeMax),
+                LookupMerchantStage(comerciosCollection),
+                new("$unwind", "$merchant"),
+                new("$match", new BsonDocument("merchant.activo", true))
+            };
+
+            List<BsonDocument> categoryDocs = await offersBson
+                .Aggregate<BsonDocument>(categoryPipeline, cancellationToken: cancellationToken)
+                .ToListAsync(cancellationToken);
+            MergeDocuments(categoryDocs);
+        }
+
+        IMongoCollection<BsonDocument> comerciosBson = _context.Database.GetCollection<BsonDocument>(comerciosCollection);
+        List<BsonDocument> activeMerchants = await comerciosBson
+            .Find(new BsonDocument("$and", new BsonArray
+            {
+                new BsonDocument("activo", true),
+                new BsonDocument("ubicacion", new BsonDocument("$geoWithin", new BsonDocument(
+                    "$centerSphere",
+                    new BsonArray { new BsonArray { longitude, latitude }, radiusRadians })))
+            }))
+            .Project(new BsonDocument { { "_id", 1 }, { "nombreComercial", 1 } })
+            .Limit(safeMax)
+            .ToListAsync(cancellationToken);
+
+        List<string> matchingMerchantIds = activeMerchants
+            .Where(m =>
+            {
+                string merchantNorm = OfferTextNormalizer.Normalize(GetString(m, "nombreComercial"));
+                return !string.IsNullOrEmpty(merchantNorm) && merchantNorm.Contains(normalizedQuery, StringComparison.Ordinal);
+            })
+            .Select(m => GetString(m, "_id"))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToList();
+
+        if (matchingMerchantIds.Count > 0)
+        {
+            var merchantOffersPipeline = new List<BsonDocument>
+            {
+                new("$match", new BsonDocument("$and", new BsonArray
+                {
+                    visibilityFilter,
+                    geoWithinFilter,
+                    new BsonDocument("merchantId", new BsonDocument("$in", new BsonArray(matchingMerchantIds)))
+                })),
+                new("$limit", safeMax),
+                LookupMerchantStage(comerciosCollection),
+                new("$unwind", "$merchant"),
+                new("$match", new BsonDocument("merchant.activo", true))
+            };
+
+            List<BsonDocument> merchantOfferDocs = await offersBson
+                .Aggregate<BsonDocument>(merchantOffersPipeline, cancellationToken: cancellationToken)
+                .ToListAsync(cancellationToken);
+            MergeDocuments(merchantOfferDocs);
+        }
+
+        return merged.Values.ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<OfferAlternativesLookupResult> GetAlternativesAsync(
+        Guid offerId,
+        int maxDistanceMeters,
+        decimal comparablePriceRatio,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        string comerciosCollection = _context.Comercios.CollectionNamespace.CollectionName;
+        IMongoCollection<BsonDocument> offersBson = _context.Database.GetCollection<BsonDocument>(
+            _context.Offers.CollectionNamespace.CollectionName);
+
+        BsonDocument originMatch = BuildVisibilityFilter(nowUtc);
+        originMatch["_id"] = offerId.ToString();
+
+        var originPipeline = new List<BsonDocument>
+        {
+            new("$match", originMatch),
+            LookupMerchantStage(comerciosCollection),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument("merchant.activo", true)),
+            new("$limit", 1)
+        };
+
+        BsonDocument? originDoc = await offersBson
+            .Aggregate<BsonDocument>(originPipeline, cancellationToken: cancellationToken)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (originDoc is null)
+        {
+            return OfferAlternativesLookupResult.NotFoundOrUnavailable();
+        }
+
+        BsonDocument? originMerchant = originDoc.TryGetValue("merchant", out BsonValue mv) && mv.IsBsonDocument
+            ? mv.AsBsonDocument
+            : null;
+        double? originLat = GetNullableDouble(originDoc, "latitude") ?? (originMerchant is not null ? GetNullableDouble(originMerchant, "latitud") : null);
+        double? originLng = GetNullableDouble(originDoc, "longitude") ?? (originMerchant is not null ? GetNullableDouble(originMerchant, "longitud") : null);
+
+        if (!originLat.HasValue || !originLng.HasValue)
+        {
+            return OfferAlternativesLookupResult.NotFoundOrUnavailable();
+        }
+
+        string? rawCategory = GetString(originDoc, "category");
+        if (!OfferCategoryCatalog.TryNormalizeLegacy(rawCategory, out OfferCategory originCategory))
+        {
+            return OfferAlternativesLookupResult.NotFoundOrUnavailable();
+        }
+
+        decimal originFinalPrice = GetDecimal(originDoc, "discountedPrice");
+        decimal maxComparablePrice = OfferAlternativesPolicy.ComputeMaxComparableFinalPrice(originFinalPrice, comparablePriceRatio);
+
+        var acceptableCategories = new BsonArray
+        {
+            originCategory.ToString(),
+            OfferCategoryCatalog.GetSpanishName(originCategory),
+            OfferCategoryCatalog.RemoveDiacritics(OfferCategoryCatalog.GetSpanishName(originCategory))
+        };
+
+        BsonDocument candidateFilter = BuildVisibilityFilter(nowUtc);
+        candidateFilter["_id"] = new BsonDocument("$ne", offerId.ToString());
+        candidateFilter["category"] = new BsonDocument("$in", acceptableCategories);
+        candidateFilter["discountedPrice"] = new BsonDocument("$lte", new BsonDecimal128(maxComparablePrice));
+
+        var alternativesPipeline = new List<BsonDocument>
+        {
+            new("$geoNear", new BsonDocument
+            {
+                { "near", new BsonDocument
+                    {
+                        { "type", "Point" },
+                        { "coordinates", new BsonArray { originLng.Value, originLat.Value } }
+                    }
+                },
+                { "distanceField", "distanceMeters" },
+                { "maxDistance", maxDistanceMeters },
+                { "spherical", true },
+                { "query", candidateFilter }
+            }),
+            LookupMerchantStage(comerciosCollection),
+            new("$unwind", "$merchant"),
+            new("$match", new BsonDocument("merchant.activo", true)),
+            new("$sort", new BsonDocument { { "distanceMeters", 1 }, { "endsAt", -1 } }),
+            new("$limit", 20)
+        };
+
+        List<BsonDocument> docs = await offersBson
+            .Aggregate<BsonDocument>(alternativesPipeline, cancellationToken: cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        List<OfferAlternativeCandidate> candidates = docs.Select(doc =>
+        {
+            BsonDocument? merchantDoc = doc.TryGetValue("merchant", out BsonValue mVal) && mVal.IsBsonDocument
+                ? mVal.AsBsonDocument
+                : null;
+            string merchantName = (merchantDoc is not null ? GetString(merchantDoc, "nombreComercial") : null)
+                ?? GetString(doc, "merchantName")
+                ?? string.Empty;
+            string? docCategory = GetString(doc, "category");
+            string canonicalCategory = OfferCategoryCatalog.TryNormalizeLegacy(docCategory, out OfferCategory parsedCat)
+                ? parsedCat.ToString()
+                : docCategory ?? originCategory.ToString();
+
+            return new OfferAlternativeCandidate(
+                ParseGuid(doc, "_id"),
+                GetString(doc, "title") ?? string.Empty,
+                canonicalCategory,
+                GetString(doc, "imageUrl"),
+                GetDecimal(doc, "originalPrice"),
+                GetDecimal(doc, "discountedPrice"),
+                GetInt32(doc, "stock"),
+                GetNullableDouble(doc, "distanceMeters") ?? 0d,
+                GetRequiredDateUtc(doc, "endsAt"),
+                ParseGuid(doc, "merchantId"),
+                merchantName);
+        }).ToList();
+
+        return new OfferAlternativesLookupResult(true, candidates);
+    }
+
+    private static BsonDocument LookupMerchantStage(string comerciosCollection) =>
+        new("$lookup", new BsonDocument
+        {
+            { "from", comerciosCollection },
+            { "localField", "merchantId" },
+            { "foreignField", "_id" },
+            { "as", "merchant" }
+        });
+
+    private static OfferSearchCandidate MapSearchCandidate(
+        BsonDocument document,
+        double referenceLatitude,
+        double referenceLongitude,
+        double? precomputedDistanceMeters)
+    {
+        BsonDocument? merchantDoc = document.TryGetValue("merchant", out BsonValue merchantValue) && merchantValue.IsBsonDocument
+            ? merchantValue.AsBsonDocument
+            : null;
+
+        string merchantName = (merchantDoc is not null ? GetString(merchantDoc, "nombreComercial") : null)
+            ?? GetString(document, "merchantName")
+            ?? string.Empty;
+
+        double distanceMeters = precomputedDistanceMeters ?? 0d;
+        if (!precomputedDistanceMeters.HasValue)
+        {
+            double? lat = GetNullableDouble(document, "latitude")
+                ?? (merchantDoc is not null ? GetNullableDouble(merchantDoc, "latitud") : null);
+            double? lng = GetNullableDouble(document, "longitude")
+                ?? (merchantDoc is not null ? GetNullableDouble(merchantDoc, "longitud") : null);
+            distanceMeters = lat.HasValue && lng.HasValue
+                ? ComputeHaversineMeters(referenceLatitude, referenceLongitude, lat.Value, lng.Value)
+                : 0d;
+        }
+
+        string? rawCategory = GetString(document, "category");
+        string normalizedCategory = OfferCategoryCatalog.TryNormalizeLegacy(rawCategory, out OfferCategory parsedCategory)
+            ? parsedCategory.ToString()
+            : rawCategory ?? OfferInteractionItem.UncategorizedCategory;
+
+        return new OfferSearchCandidate(
+            ParseGuid(document, "_id"),
+            GetString(document, "title") ?? string.Empty,
+            GetString(document, "description") ?? string.Empty,
+            normalizedCategory,
+            GetString(document, "imageUrl"),
+            GetDecimal(document, "originalPrice"),
+            GetDecimal(document, "discountedPrice"),
+            GetInt32(document, "stock"),
+            distanceMeters,
+            GetRequiredDateUtc(document, "endsAt"),
+            ParseGuid(document, "merchantId"),
+            merchantName,
+            GetInt32(document, "viewCount"),
+            GetNullableDouble(document, "textScore") ?? 0d);
+    }
 }

@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.Commands.CreateOffer;
 
 namespace Sensus.Application.UnitTests.Offers.Commands;
@@ -183,5 +185,49 @@ public class CreateOfferCommandValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateOfferCommand.EndsAt));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Moda")]
+    public void Validate_WhenStrictCategoryFlagEnabled_ShouldFail_ForMissingOrInvalidCategory(string? category)
+    {
+        var strictValidator = new CreateOfferCommandValidator(
+            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var command = new CreateOfferCommand(
+            "Título válido",
+            "Descripción válida de prueba.",
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            Category: category);
+
+        var result = strictValidator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateOfferCommand.Category));
+    }
+
+    [Fact]
+    public void Validate_WhenStrictCategoryFlagEnabled_ShouldPass_ForValidOfferCategory()
+    {
+        var strictValidator = new CreateOfferCommandValidator(
+            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var command = new CreateOfferCommand(
+            "Título válido",
+            "Descripción válida de prueba.",
+            100m,
+            10,
+            5,
+            _now.AddHours(1),
+            _now.AddDays(2),
+            Category: "Bakery");
+
+        strictValidator.Validate(command).IsValid.Should().BeTrue();
     }
 }

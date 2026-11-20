@@ -124,7 +124,7 @@ Sugerir ofertas similares a una dada —misma categoría, cercanas y con precio 
 ## 10. Preguntas abiertas
 
 - Resuelto (2026-11-20): la ruta es `GET /api/v1/offers/{id}/alternatives` (subrecurso, ADR 0008) y los invitados la usan con radio de 2 km.
-- ¿El precio comparable debe calcularse sobre el precio final o el original?
+- Resuelto (2026-11-20): el precio comparable usa el **precio final** (`finalPrice` / `discountedPrice`): alternativa con `finalPrice <= 120 %` del `finalPrice` de la oferta original (`FR-043-04`).
 
 ## 11. Trazabilidad
 

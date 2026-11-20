@@ -22,7 +22,7 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] Pruebas unitarias e integración en verde; cobertura ≥ 80 % en Domain y Application
 - [x] Test de arquitectura en verde
 - [x] 0 PII en la colección y en logs (NFR-055-02)
-- [ ] IaC del parámetro SSM con `cdk diff` revisado (`Sensus.Infra.csproj` compila 0 errores/warnings; `cdk` CLI ausente en entorno local Windows y pendiente `cdk diff` en CI)
+- [ ] IaC del parámetro SSM con `cdk diff` revisado (`Sensus.Infra.csproj` compila 0 errores/warnings y `npx cdk synth --quiet` pasa en local; pendiente `cdk diff` con credenciales AWS en CI)
 - [x] Constitution Check en PASS tras la implementación
 - [x] `memory.md` actualizado
 
@@ -41,4 +41,4 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-20 | Rodrigo Sánchez (con asistente) | Spec creada | Base de datos de entrenamiento para un ranking aprendido futuro (requiere ADR nuevo) |
-| 2026-11-20 | Ingeniería Sensus (con asistente) | Implementado (`T055-01`..`T055-08`) | `OfferInteraction` + `OfferInteractionCatalog` (`DistanceBucket`), `HmacUserPseudonymizer` (SSM `/sensus/<env>/Interactions/HmacKeysJson`), `MongoOfferInteractionRecorder` (timeout 200 ms, muestreo solo `impression`), índices TTL 180 d + purga + calidad en `MongoDbContext`, integrado en 032/033 (042 en Paso 6), `EmbeddedInteractionMetricsPublisher` (`InteractionStorageMaxPct` 10/10 Free Tier + logs estructurados sin PII) y alarma CloudWatch al 70 % en `SensusInfraStack`. Pendientes externos: MongoDB real en CI (Docker detenido), `cdk synth`/`diff` en CI (`cdk` CLI ausente local), carga p95 (`G-13`) y aviso FT-23/landing. |
+| 2026-11-20 | Ingeniería Sensus (con asistente) | Implementado (`T055-01`..`T055-08`) | `OfferInteraction` + `OfferInteractionCatalog` (`DistanceBucket`), `HmacUserPseudonymizer` (SSM `/sensus/<env>/Interactions/HmacKeysJson`), `MongoOfferInteractionRecorder` (timeout 200 ms, muestreo solo `impression`), índices TTL 180 d + purga + calidad en `MongoDbContext`, integrado en 032/033/042, `EmbeddedInteractionMetricsPublisher` (`InteractionStorageMaxPct` 10/10 Free Tier + logs estructurados sin PII) y alarma CloudWatch al 70 % en `SensusInfraStack`. Probado en local contra MongoDB 7.0 real (`MongoOfferInteractionRepositoryTests`), suite completa (`1,252/1,252`) y `npx cdk synth --quiet`. Pendientes externos: `cdk diff` en CI (requiere credenciales AWS), carga p95 (`G-13`) y aviso FT-23/landing. |

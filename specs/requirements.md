@@ -332,54 +332,54 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-040-08` | 040 | FR | No revelar al reportado la identidad del reportante | Must | Pendiente |
 | `NFR-040-01` | 040 | NFR | Latencia de creación | p95 < 400 ms | Pendiente |
 | `NFR-040-02` | 040 | NFR | Privacidad | Cero exposición de la identidad del reportante | Pendiente |
-| `FR-041-01` | 041 | FR | Buscar ofertas visibles por texto libre de 2 a 80 caracteres | Must | Pendiente |
-| `FR-041-02` | 041 | FR | Calcular un puntaje determinista con pesos de texto, distancia y popularidad | Must | Pendiente |
-| `FR-041-03` | 041 | FR | Excluir ofertas vencidas, pausadas o sin stock | Must | Pendiente |
-| `FR-041-04` | 041 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-041-05` | 041 | FR | Devolver ofertas cercanas cuando la consulta esté vacía | Should | Pendiente |
-| `FR-041-06` | 041 | FR | Excluir del resultado las ofertas de comercios inactivos | Must | Pendiente |
-| `FR-041-07` | 041 | FR | Versionar y configurar los pesos del ranking por entorno | Must | Pendiente |
-| `FR-041-08` | 041 | FR | Validar con lista de permitidos: `q` de 0 a 80 caracteres sin caracteres de control, `lat` [-90, 90], `lng` [-180, 180], `radiusKm` [1, 50] y `pageSize` ≤ 100 | Must | Pendiente |
-| `FR-041-09` | 041 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Pendiente |
-| `FR-041-10` | 041 | FR | Responder `400` y `401` con `ProblemDetails` uniforme, sin nombres de índices ni detalles del motor | Must | Pendiente |
-| `FR-041-11` | 041 | FR | Permitir la búsqueda a invitados (spec 052) recortando el radio a 2 km en el servidor con `GuestRadiusPolicy` | Must | Pendiente |
-| `NFR-041-01` | 041 | NFR | Latencia de búsqueda | p95 < 600 ms | Pendiente |
-| `NFR-041-02` | 041 | NFR | Relevancia | ≥ 90 % de consultas con coincidencia exacta de categoría en el top 10 | Pendiente |
-| `NFR-041-03` | 041 | NFR | Determinismo | Mismo conjunto de datos y consulta produce el mismo orden | Pendiente |
-| `FR-042-01` | 042 | FR | Exponer `GET /api/v1/feed/offers` paginado (20 por defecto, 100 máximo) | Must | Pendiente |
-| `FR-042-02` | 042 | FR | Puntaje con pesos configurables de interés explícito, afinidad, cercanía, urgencia y popularidad | Must | Pendiente |
-| `FR-042-03` | 042 | FR | Tomar el interés explícito de las categorías del usuario (spec 054) | Must | Pendiente |
-| `FR-042-04` | 042 | FR | Derivar la afinidad de vistas, apartados y favoritos cuando existan | Should | Pendiente |
-| `FR-042-05` | 042 | FR | Excluir ofertas vencidas, pausadas, sin stock, de comercios inactivos y propias | Must | Pendiente |
-| `FR-042-06` | 042 | FR | Diversidad: máximo de ofertas consecutivas de una misma categoría (3 por defecto) | Must | Pendiente |
-| `FR-042-07` | 042 | FR | Cuota de exploración determinista (1 de cada 5 por defecto) | Must | Pendiente |
-| `FR-042-08` | 042 | FR | Orden estable entre páginas con instantánea `snapshotId` en Redis | Must | Pendiente |
-| `FR-042-09` | 042 | FR | Fallback por cercanía y urgencia sin intereses ni señales | Must | Pendiente |
-| `FR-042-10` | 042 | FR | `403` a invitados y `401` sin token | Must | Pendiente |
-| `FR-042-11` | 042 | FR | Devolver `rankingVersion` y emitir impresiones a la spec 055 | Must | Pendiente |
-| `FR-042-12` | 042 | FR | No usar datos personales sensibles en el cálculo | Must | Pendiente |
-| `FR-042-13` | 042 | FR | Radio 1–50 km (10 por defecto) y coordenadas validadas con lista de permitidos | Must | Pendiente |
-| `FR-042-14` | 042 | FR | Política de límite de tasa `read-heavy` | Must | Pendiente |
-| `NFR-042-01` | 042 | NFR | Latencia primera página | p95 < 800 ms | Pendiente |
-| `NFR-042-02` | 042 | NFR | Latencia páginas con instantánea | p95 < 300 ms | Pendiente |
-| `NFR-042-03` | 042 | NFR | Cobertura | ≥ 90 % de usuarios con 20 ofertas en la primera página si existen | Pendiente |
-| `NFR-042-04` | 042 | NFR | Relevancia | ≥ 60 % del top 10 en categorías de interés | Pendiente |
-| `NFR-042-05` | 042 | NFR | Diversidad | 100 % de páginas cumplen FR-042-06 | Pendiente |
-| `NFR-042-06` | 042 | NFR | Determinismo | Mismos insumos, fecha y pesos producen el mismo orden | Pendiente |
-| `NFR-042-07` | 042 | NFR | Explicabilidad | 100 % de pesos documentados y versionados | Pendiente |
-| `FR-043-01` | 043 | FR | Devolver alternativas visibles de la misma categoría que la oferta consultada | Must | Pendiente |
-| `FR-043-02` | 043 | FR | Limitar la distancia a 10 km de la oferta original | Must | Pendiente |
-| `FR-043-03` | 043 | FR | Excluir la oferta original del resultado | Must | Pendiente |
-| `FR-043-04` | 043 | FR | Filtrar por precio final dentro del 120 % del precio de la oferta original | Should | Pendiente |
-| `FR-043-05` | 043 | FR | Ordenar por cercanía y vigencia | Must | Pendiente |
-| `FR-043-06` | 043 | FR | Responder 404 si la oferta original no existe o no es visible | Must | Pendiente |
-| `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Pendiente |
-| `FR-043-08` | 043 | FR | Validar con lista de permitidos: `offerId` con formato GUID y `limit` [1, 10] | Must | Pendiente |
-| `FR-043-09` | 043 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Pendiente |
-| `FR-043-10` | 043 | FR | Responder `404` idéntico para oferta inexistente y no visible, sin revelar cuál de los dos casos aplica | Must | Pendiente |
-| `FR-043-11` | 043 | FR | Permitir la consulta a invitados (spec 052) recortando la distancia máxima a 2 km de la oferta original | Must | Pendiente |
-| `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Pendiente |
-| `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Pendiente |
+| `FR-041-01` | 041 | FR | Buscar ofertas visibles por texto libre de 2 a 80 caracteres | Must | Implementado |
+| `FR-041-02` | 041 | FR | Calcular un puntaje determinista con pesos de texto, distancia y popularidad | Must | Implementado |
+| `FR-041-03` | 041 | FR | Excluir ofertas vencidas, pausadas o sin stock | Must | Implementado |
+| `FR-041-04` | 041 | FR | Aplicar paginación estándar | Must | Implementado |
+| `FR-041-05` | 041 | FR | Devolver ofertas cercanas cuando la consulta esté vacía | Should | Implementado |
+| `FR-041-06` | 041 | FR | Excluir del resultado las ofertas de comercios inactivos | Must | Implementado |
+| `FR-041-07` | 041 | FR | Versionar y configurar los pesos del ranking por entorno | Must | Implementado |
+| `FR-041-08` | 041 | FR | Validar con lista de permitidos: `q` de 0 a 80 caracteres sin caracteres de control, `lat` [-90, 90], `lng` [-180, 180], `radiusKm` [1, 50] y `pageSize` ≤ 100 | Must | Implementado |
+| `FR-041-09` | 041 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Implementado |
+| `FR-041-10` | 041 | FR | Responder `400` y `401` con `ProblemDetails` uniforme, sin nombres de índices ni detalles del motor | Must | Implementado |
+| `FR-041-11` | 041 | FR | Permitir la búsqueda a invitados (spec 052) recortando el radio a 2 km en el servidor con `GuestRadiusPolicy` | Must | Implementado |
+| `NFR-041-01` | 041 | NFR | Latencia de búsqueda | p95 < 600 ms | Parcial (carga G-13) |
+| `NFR-041-02` | 041 | NFR | Relevancia | ≥ 90 % de consultas con coincidencia exacta de categoría en el top 10 | Implementado |
+| `NFR-041-03` | 041 | NFR | Determinismo | Mismo conjunto de datos y consulta produce el mismo orden | Implementado |
+| `FR-042-01` | 042 | FR | Exponer `GET /api/v1/feed/offers` paginado (20 por defecto, 100 máximo) | Must | Implementado |
+| `FR-042-02` | 042 | FR | Puntaje con pesos configurables de interés explícito, afinidad, cercanía, urgencia y popularidad | Must | Implementado |
+| `FR-042-03` | 042 | FR | Tomar el interés explícito de las categorías del usuario (spec 054) | Must | Implementado |
+| `FR-042-04` | 042 | FR | Derivar la afinidad de vistas, apartados y favoritos cuando existan | Should | Implementado |
+| `FR-042-05` | 042 | FR | Excluir ofertas vencidas, pausadas, sin stock, de comercios inactivos y propias | Must | Implementado |
+| `FR-042-06` | 042 | FR | Diversidad: máximo de ofertas consecutivas de una misma categoría (3 por defecto) | Must | Implementado |
+| `FR-042-07` | 042 | FR | Cuota de exploración determinista (1 de cada 5 por defecto) | Must | Implementado |
+| `FR-042-08` | 042 | FR | Orden estable entre páginas con instantánea `snapshotId` en Redis | Must | Implementado |
+| `FR-042-09` | 042 | FR | Fallback por cercanía y urgencia sin intereses ni señales | Must | Implementado |
+| `FR-042-10` | 042 | FR | `403` a invitados y `401` sin token | Must | Implementado |
+| `FR-042-11` | 042 | FR | Devolver `rankingVersion` y emitir impresiones a la spec 055 | Must | Implementado |
+| `FR-042-12` | 042 | FR | No usar datos personales sensibles en el cálculo | Must | Implementado |
+| `FR-042-13` | 042 | FR | Radio 1–50 km (10 por defecto) y coordenadas validadas con lista de permitidos | Must | Implementado |
+| `FR-042-14` | 042 | FR | Política de límite de tasa `read-heavy` | Must | Implementado |
+| `NFR-042-01` | 042 | NFR | Latencia primera página | p95 < 800 ms | Parcial (carga G-13) |
+| `NFR-042-02` | 042 | NFR | Latencia páginas con instantánea | p95 < 300 ms | Parcial (carga G-13) |
+| `NFR-042-03` | 042 | NFR | Cobertura | ≥ 90 % de usuarios con 20 ofertas en la primera página si existen | Implementado |
+| `NFR-042-04` | 042 | NFR | Relevancia | ≥ 60 % del top 10 en categorías de interés | Implementado |
+| `NFR-042-05` | 042 | NFR | Diversidad | 100 % de páginas cumplen FR-042-06 | Implementado |
+| `NFR-042-06` | 042 | NFR | Determinismo | Mismos insumos, fecha y pesos producen el mismo orden | Implementado |
+| `NFR-042-07` | 042 | NFR | Explicabilidad | 100 % de pesos documentados y versionados | Implementado |
+| `FR-043-01` | 043 | FR | Devolver alternativas visibles de la misma categoría que la oferta consultada | Must | Implementado |
+| `FR-043-02` | 043 | FR | Limitar la distancia a 10 km de la oferta original | Must | Implementado |
+| `FR-043-03` | 043 | FR | Excluir la oferta original del resultado | Must | Implementado |
+| `FR-043-04` | 043 | FR | Filtrar por precio final dentro del 120 % del precio de la oferta original | Should | Implementado |
+| `FR-043-05` | 043 | FR | Ordenar por cercanía y vigencia | Must | Implementado |
+| `FR-043-06` | 043 | FR | Responder 404 si la oferta original no existe o no es visible | Must | Implementado |
+| `FR-043-07` | 043 | FR | Limitar el resultado a 10 elementos, con 5 por defecto | Must | Implementado |
+| `FR-043-08` | 043 | FR | Validar con lista de permitidos: `offerId` con formato GUID y `limit` [1, 10] | Must | Implementado |
+| `FR-043-09` | 043 | FR | Aplicar la política de límite de tasa `read-heavy` (spec 013) | Must | Implementado |
+| `FR-043-10` | 043 | FR | Responder `404` idéntico para oferta inexistente y no visible, sin revelar cuál de los dos casos aplica | Must | Implementado |
+| `FR-043-11` | 043 | FR | Permitir la consulta a invitados (spec 052) recortando la distancia máxima a 2 km de la oferta original | Must | Implementado |
+| `NFR-043-01` | 043 | NFR | Latencia | p95 < 500 ms | Parcial (carga G-13) |
+| `NFR-043-02` | 043 | NFR | Calidad | ≥ 80 % de consultas devuelven al menos 3 alternativas válidas | Implementado |
 | `FR-044-01` | 044 | FR | Devolver las preferencias de notificación del usuario | Must | Implementado |
 | `FR-044-02` | 044 | FR | Actualizar pushEnabled, offerAlerts, socialAlerts y radiusKm | Must | Implementado |
 | `FR-044-03` | 044 | FR | Validar radiusKm entre 1 y 50 | Must | Implementado |
