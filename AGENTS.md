@@ -173,7 +173,8 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Autenticación con JWT sin estado; valida firma, emisor, audiencia y expiración.
 - Toda operación se autoriza en el servidor. El cliente nunca es fuente de verdad de permisos.
 - El cierre de sesión debe invalidar el token de forma verificable (spec 004).
-- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados.
+- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados. Única excepción
+  vigente: EX-004 (HTTP hacia el servicio de correo `mailersensus.somee.com` hasta el 2026-12-20, spec 029).
 - Rate limiting obligatorio en endpoints sensibles; umbrales en configuración (spec 013).
 - Secretos solo en AWS Secrets Manager o SSM. **Nunca** en código, `.env` versionado, logs ni tests.
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).

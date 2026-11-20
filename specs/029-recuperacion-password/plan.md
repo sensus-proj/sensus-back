@@ -32,6 +32,18 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 - Respuesta neutra ante correo inexistente
 - Revocación de sesiones
 - Sin token en logs
+- **Excepción EX-004 (FR-029-10 a FR-029-12, T029-15 a T029-17)**: el servicio de correo `mailersensus.somee.com` está en el
+  plan gratuito de Somee, que no ofrece HTTPS; desde el 2026-11-20 los envíos fallaban con error de TLS. El responsable aceptó
+  el riesgo y la constitución registra EX-004 hasta el 2026-12-20.
+  - `MailerTransportPolicy` (Infrastructure) decide antes de cada envío: HTTPS siempre se permite; HTTP solo si el host es
+    `MailerSettings:InsecureHttpAllowedHost` y la fecha (`IDateTimeProvider`) es anterior a `InsecureHttpAllowedUntil`. Sin
+    fecha, con fecha vencida, con otro host o con otro esquema, el envío se rechaza sin contactar al servicio (*fail-closed*).
+    Así, al vencer la excepción el envío se detiene solo, aunque nadie cambie la configuración.
+  - Controles compensatorios ya vigentes: token de un solo uso y 15 minutos, invalidación de tokens previos, límite `recover`
+    y revocación de sesiones. Se añade la rotación de la clave cada 30 días (T029-16).
+  - Modelo de amenazas (STRIDE) del tramo AWS → Somee: *Information disclosure* del token y de la clave (mitigado por la
+    vigencia corta, el uso único y la rotación); *Spoofing* del servicio de correo (el atacante en la ruta recibiría el token;
+    mismo control); *Tampering* del cuerpo (podría alterar el enlace; mismo control). Riesgo residual aceptado hasta T029-17.
 
 ## 5. Observabilidad y rendimiento
 
@@ -62,7 +74,7 @@ Evaluación previa a la implementación.
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
 
-> Sin excepciones registradas (Apéndice E de la constitución).
+> Excepción `EX-004` (Apéndice E): HTTP sin TLS solo hacia `mailersensus.somee.com` hasta el 2026-12-20 (§4).
 
 ## 9. Riesgos de implementación
 
