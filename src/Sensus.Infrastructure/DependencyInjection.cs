@@ -246,6 +246,7 @@ public static class DependencyInjection
             configuration.GetSection(Sensus.Application.Common.Settings.OfferCategorySettings.SectionName));
         services.AddScoped<SqlToMongoMigrationService>();
         services.AddScoped<OfferCategoryMigrationService>();
+        services.AddScoped<IOfferCategoryMigration>(sp => sp.GetRequiredService<OfferCategoryMigrationService>());
 
         return services;
     }

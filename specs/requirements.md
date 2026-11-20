@@ -501,6 +501,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-051-05` | 051 | FR | Silenciar y reactivar las acciones de las alarmas | Must | Implementado |
 | `FR-051-06` | 051 | FR | Aplicar el estado según la hora al desplegar | Should | Implementado |
 | `FR-051-07` | 051 | FR | Horario y zona horaria configurables por contexto de CDK | Must | Implementado |
+| `FR-051-08` | 051 | FR | Alertar por correo cuando la función de la pausa nocturna falle (por ejemplo, un arranque de las 07:00 que no restaura la API), con una alarma que la propia pausa nunca silencia | Must | Implementado |
 | `NFR-051-01` | 051 | NFR | Ahorro | 8.5 h diarias sin NAT ni IP elástica | Implementado |
 | `NFR-051-02` | 051 | NFR | Mínimo privilegio | Solo recursos etiquetados y ARN propios | Implementado |
 | `NFR-051-03` | 051 | NFR | Tiempo de reanudación | ≤ 5 min | Implementado |

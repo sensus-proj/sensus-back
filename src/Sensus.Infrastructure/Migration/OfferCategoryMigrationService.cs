@@ -23,7 +23,7 @@ public sealed record OfferCategoryMigrationResult(
 /// Migración única e idempotente de categorías legadas en español hacia el catálogo oficial
 /// <see cref="OfferCategory"/> en la colección <c>offers</c> (FR-034-09).
 /// </summary>
-public sealed class OfferCategoryMigrationService
+public sealed class OfferCategoryMigrationService : IOfferCategoryMigration
 {
     public const string MigrationId = "offer_category_v1";
     private const int BatchSize = 200;
@@ -139,11 +139,32 @@ public sealed class OfferCategoryMigrationService
             AlreadyNullCount = alreadyNullCount
         };
 
-        await _context.SchemaMigrations.ReplaceOneAsync(
-            existingFilter,
-            marker,
-            new ReplaceOptions { IsUpsert = true },
-            cancellationToken);
+        try
+        {
+            // Insert-once (T034-15): si otra instancia de la API registró el marcador mientras esta migraba,
+            // se conserva la evidencia de la primera ejecución en lugar de sobrescribirla.
+            await _context.SchemaMigrations.InsertOneAsync(marker, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            SchemaMigrationDocument winner = await _context.SchemaMigrations
+                .Find(existingFilter)
+                .FirstAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Migración {MigrationId} registrada en paralelo por otra instancia el {ExecutedAtUtc}. Se conserva su evidencia.",
+                MigrationId,
+                winner.ExecutedAtUtc);
+
+            return new OfferCategoryMigrationResult(
+                winner.TotalScanned,
+                winner.ConvertedCount,
+                winner.AlreadyCanonicalCount,
+                winner.NulledCount,
+                winner.AlreadyNullCount,
+                AlreadyExecuted: true,
+                winner.ExecutedAtUtc);
+        }
 
         _logger.LogInformation(
             "Migración {MigrationId} completada. Escaneadas={TotalScanned}, Convertidas={ConvertedCount}, YaCanónicas={AlreadyCanonicalCount}, Anuladas={NulledCount}, YaNulas={AlreadyNullCount}.",

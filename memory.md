@@ -322,3 +322,11 @@ Spec 030: nuevo `FR-030-08` (borrado inmediato de `user_interests` y `offer_inte
 - **Resolución:** commit `a148dc9` (`fix(NFR-051-02)`), desplegado hacia las 12:29; el arranque ejecutado al desplegar recreó el NAT y la API volvió a las 12:33.
 - **Verificación (2026-11-20, solo lectura en AWS):** la pausa de las 22:30 del 20/11 funcionó (concurrencia 0, sin NAT ni IP, alarmas silenciadas). El 20/11 a las 07:00 será la primera ejecución del `start` **programado** con el permiso corregido.
 - **Acciones pendientes:** (1) añadir a la Spec 051 una alarma sobre los errores de `sensus-night-switch-prod` que nunca se silencie; (2) cerrar T051-08 con la evidencia de los logs; (3) comprobar `GET /health/live` = 200 tras las 07:00.
+
+### 2026-11-20 — T034-15: migración de categorías al arrancar
+
+`OfferCategoryMigrationService` (FR-034-09) estaba implementado pero nunca se invocaba en producción. Se documentó T034-15 en la spec 034 antes de codificar y se añadió `OfferCategoryMigrationHostedService` (una ejecución por arranque, tolerante a fallos, idempotente por el marcador `offer_category_v1`). El marcador pasa de *upsert* a *insert-once* con manejo de clave duplicada para no sobrescribir la evidencia si dos instancias de la Lambda arrancan a la vez. Interfaz `IOfferCategoryMigration` para probar el servicio sin MongoDB. Pruebas: 3 del servicio de arranque y 1 de concurrencia contra MongoDB real. Tras desplegar, verificar en CloudWatch el log "Migración de categorías de ofertas al arrancar" con los conteos.
+
+### 2026-11-20 — T051-10: alarma de fallo de la pausa nocturna
+
+Acción correctiva del incidente del 2026-11-19. Spec 051 ampliada con `FR-051-08` y CA-051-05 antes de codificar. CDK: alarma `sensus-night-switch-errors-prod` sobre `Errors` de `sensus-night-switch-prod` (≥ 1 en 5 min, datos faltantes no incumplidos) con acción al tema SNS de alertas; no está en `ALARM_NAMES` ni en los permisos del rol de la función, así que la pausa no puede silenciarla. `cdk synth` y `cdk diff` contra producción: solo se agrega la alarma (7 de 10 gratuitas). Pendiente: verificar CA-051-05 tras el despliegue. Ojo: la variable `ALERTS_EMAIL` del workflow de despliegue llegó vacía en el último run; si está vacía, ninguna alarma tiene suscriptor de correo.

@@ -331,7 +331,7 @@ public sealed partial class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        // NFR-015-01 / Spec 055: 6 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
+        // NFR-015-01 / Spec 055 / Spec 051: 7 alarmas en total (6 operativas + errores de la pausa), dentro de las 10 gratuitas.
         Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm, interactionsStorageAlarm];
         foreach (var alarm in operationalAlarms)
         {
@@ -339,7 +339,8 @@ public sealed partial class SensusInfraStack : Stack
         }
 
         // Spec 051: de noche la API no acepta tráfico y las alarmas se silencian para no notificar fallos esperados.
-        CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, scheduleTimeZone, nightStopAt, morningStartAt);
+        // La alarma de errores de la propia pausa (FR-051-08) recibe la acción aparte para que nunca se silencie.
+        CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, alarmAction, scheduleTimeZone, nightStopAt, morningStartAt);
 
         // Panel mínimo de operación (alcance de la Spec 015); CloudWatch incluye 3 paneles gratuitos.
         var dashboard = new Dashboard(this, "SensusOperationsDashboard", new DashboardProps

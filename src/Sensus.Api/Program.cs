@@ -199,6 +199,7 @@ builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
 builder.Services.AddHostedService<InteractionStatsBackgroundService>();
+builder.Services.AddHostedService<OfferCategoryMigrationHostedService>();
 
 // Manejo global de excepciones con ProblemDetails (RFC 7807)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

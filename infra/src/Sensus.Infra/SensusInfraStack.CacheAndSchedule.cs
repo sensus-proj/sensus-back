@@ -98,6 +98,7 @@ public sealed partial class SensusInfraStack
         CacheNetwork network,
         Function apiFunction,
         IEnumerable<Alarm> alarms,
+        IAlarmAction failureAlarmAction,
         string timeZone,
         string stopAt,
         string startAt)
@@ -280,6 +281,24 @@ public sealed partial class SensusInfraStack
             InvocationType = InvocationType.REQUEST_RESPONSE,
             Timeout = Duration.Minutes(14)
         });
+
+        // FR-051-08 (T051-10): si la pausa o la reanudación fallan, avisar de inmediato. Esta alarma NO está en
+        // ALARM_NAMES ni en los permisos del rol de la función, así que la pausa nunca puede silenciarla.
+        var nightSwitchErrorsAlarm = new Alarm(this, "SensusNightSwitchErrorsAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-night-switch-errors-{envName}",
+            AlarmDescription = "Falló la pausa o la reanudación nocturna de Sensus; la API puede seguir sin tráfico (Spec 051, FR-051-08)",
+            Metric = nightSwitch.MetricErrors(new MetricOptions
+            {
+                Period = Duration.Minutes(5),
+                Statistic = "Sum"
+            }),
+            Threshold = 1,
+            EvaluationPeriods = 1,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+        nightSwitchErrorsAlarm.AddAlarmAction(failureAlarmAction);
 
         _ = new CfnOutput(this, "NightSwitchFunctionName", new CfnOutputProps
         {
