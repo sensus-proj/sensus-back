@@ -12,13 +12,13 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] El invitado no genera registros persistentes
 - [x] El radio se recorta en el servidor
 - [x] El invitado no accede a operaciones de registrado
-- [ ] La vigencia del token sale de configuración y cumple el Principio VIII (T052-03)
+- [x] La vigencia del token sale de configuración y cumple el Principio VIII (T052-03: `JwtSettings:GuestExpiryMinutes = 15`)
 
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Contrato OpenAPI documentado
 - [x] Pruebas de integración y E2E existentes
-- [ ] Constitution Check en PASS (IV y VIII en FAIL por FR-052-06, registrada como deuda)
+- [x] Constitution Check en PASS (brecha G-06 resuelta al externalizar y limitar vigencia de invitado a ≤ 15 min)
 
 ## D. Evidencia
 
@@ -26,10 +26,11 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 |---|---|---|
 | Spec | [`spec.md`](spec.md) | ☑ |
 | Contrato | [`contracts/openapi.yaml`](contracts/openapi.yaml) | ☑ |
-| Pruebas | `GuestSessionEndpointsTests.cs`, `GuestModeE2EJourneyTests.cs` | ☑ |
+| Pruebas | `GuestSessionEndpointsTests.cs`, `JwtSettingsValidatorTests.cs`, `GuestModeE2EJourneyTests.cs` | ☑ |
 
 ## E. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-19 | Rodrigo Sánchez (con asistente) | Retro-spec creada | Comportamiento leído del código en producción; brecha de vigencia registrada |
+| 2026-11-21 | Beto (Sprint 5) | CERRADA | `GuestExpiryMinutes = 15` movido a configuración con validación `[1..15]` y verificado en pruebas. |

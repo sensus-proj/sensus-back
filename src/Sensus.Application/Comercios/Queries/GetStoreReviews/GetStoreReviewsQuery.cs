@@ -1,6 +1,8 @@
+using FluentValidation;
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -8,9 +10,30 @@ using Sensus.Domain.Repositories;
 namespace Sensus.Application.Comercios.Queries.GetStoreReviews;
 
 /// <summary>
-/// Obtiene el resumen estilo Play Store (promedio de estrellas, desglose 5..1) y comentarios de un comercio.
+/// Obtiene el resumen estilo Play Store (promedio de estrellas, desglose 5..1) y comentarios paginados de un comercio (Spec 010 / T056-05).
 /// </summary>
-public sealed record GetStoreReviewsQuery(Guid MerchantId) : IRequest<Result<StoreReviewsSummaryDto>>;
+public sealed record GetStoreReviewsQuery(
+    Guid MerchantId,
+    int Page = PaginationPolicy.DefaultPageNumber,
+    int PageSize = PaginationPolicy.DefaultPageSize) : IRequest<Result<StoreReviewsSummaryDto>>;
+
+public sealed class GetStoreReviewsQueryValidator : AbstractValidator<GetStoreReviewsQuery>
+{
+    public GetStoreReviewsQueryValidator()
+    {
+        RuleFor(x => x.MerchantId)
+            .NotEmpty()
+            .WithMessage("El identificador del comercio es obligatorio.");
+
+        RuleFor(x => x.Page)
+            .GreaterThanOrEqualTo(1)
+            .WithMessage("El número de página debe ser al menos 1.");
+
+        RuleFor(x => x.PageSize)
+            .InclusiveBetween(1, PaginationPolicy.MaxPageSize)
+            .WithMessage($"El tamaño de página debe estar entre 1 y {PaginationPolicy.MaxPageSize}.");
+    }
+}
 
 public sealed class GetStoreReviewsQueryHandler : IRequestHandler<GetStoreReviewsQuery, Result<StoreReviewsSummaryDto>>
 {
@@ -47,6 +70,12 @@ public sealed class GetStoreReviewsQueryHandler : IRequestHandler<GetStoreReview
             && Guid.TryParse(_currentUserService.UserId, out Guid parsedUserId)
             ? parsedUserId
             : null;
-        return Result.Success(StoreReviewMappingExtensions.BuildSummary(comercio, reviews, currentUserId));
+        return Result.Success(
+            StoreReviewMappingExtensions.BuildSummary(
+                comercio,
+                reviews,
+                currentUserId,
+                request.Page,
+                request.PageSize));
     }
 }

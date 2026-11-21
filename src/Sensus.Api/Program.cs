@@ -205,38 +205,43 @@ builder.Services.AddHostedService<OfferCategoryMigrationHostedService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Documentación Swagger y OpenAPI con soporte para JWT Bearer
+// Documentación OpenAPI unificada (Spec 011): única fuente en /openapi/v1.json servida también por Swagger UI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddOpenApi(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    options.AddDocumentTransformer((document, _, _) =>
     {
-        Title = "Sensus API",
-        Version = "v1",
-        Description = "API backend empresarial de Sensus con Clean Architecture, CQRS, MongoDB Atlas y autenticación JWT."
-    });
-
-    var securityScheme = new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Description = "Pega aquí tu token JWT obtenido en /login",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT"
-    };
-
-    options.AddSecurityDefinition("Bearer", securityScheme);
-
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
+        document.Info = new OpenApiInfo
         {
-            new OpenApiSecuritySchemeReference("Bearer", document),
-            new List<string>()
-        }
+            Title = "Sensus API",
+            Version = "v1",
+            Description = "API backend empresarial de Sensus con Clean Architecture, CQRS, MongoDB Atlas y autenticación JWT."
+        };
+
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Description = "Pega aquí tu token JWT obtenido en /login",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT"
+        };
+
+        document.Security ??= [];
+        document.Security.Add(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecuritySchemeReference("Bearer", document),
+                new List<string>()
+            }
+        });
+
+        return Task.CompletedTask;
     });
 });
-builder.Services.AddOpenApi();
 
 // Health Checks
 builder.Services.AddHealthChecks()
@@ -278,13 +283,12 @@ app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
-    app.UseSwagger();
+    app.MapOpenApi();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sensus API v1");
+        c.SwaggerEndpoint("/openapi/v1.json", "Sensus API v1");
         c.RoutePrefix = "swagger";
     });
-    app.MapOpenApi();
 
     // Sembrado del usuario Administrador (si se configuran variables de entorno)
     using var scope = app.Services.CreateScope();
@@ -324,6 +328,7 @@ app.MapFriendEndpoints();
 app.MapFeedEndpoints();
 app.MapStoreReviewEndpoints();
 app.MapCommunityEndpoints();
+app.MapReportEndpoints();
 
 await app.RunAsync();
 

@@ -26,8 +26,11 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
     }
 
     [Fact]
-    public async Task CreateGuestSession_ShouldReturnTokenWith2KmMaxRadius()
+    public async Task CreateGuestSession_ShouldReturnTokenWith2KmMaxRadius_AndMax15MinutesTtl()
     {
+        DateTime fixedNow = new(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc);
+        _factory.FakeClock.Set(fixedNow);
+
         var response = await _client.PostAsync("/api/v1/auth/guest", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -36,6 +39,7 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
         dto!.Token.Should().NotBeNullOrWhiteSpace();
         dto.Role.Should().Be(RoleType.Invitado);
         dto.MaxRadiusMeters.Should().Be(2000);
+        dto.ExpiresAtUtc.Should().Be(fixedNow.AddMinutes(15));
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Sensus.Application.Comercios.DTOs;
+using Sensus.Application.Common.Models;
 using Sensus.Domain.Entities;
 
 namespace Sensus.Application.Comercios;
@@ -39,7 +40,9 @@ public static class StoreReviewMappingExtensions
     public static StoreReviewsSummaryDto BuildSummary(
         Comercio comercio,
         IReadOnlyList<StoreReview> reviews,
-        Guid? currentUserId)
+        Guid? currentUserId,
+        int pageNumber = PaginationPolicy.DefaultPageNumber,
+        int pageSize = PaginationPolicy.DefaultPageSize)
     {
         int total = reviews.Count;
         double avg = total == 0 ? 0.0 : Math.Round(reviews.Average(r => r.Rating), 1);
@@ -53,10 +56,18 @@ public static class StoreReviewMappingExtensions
             .Select(star => new RatingBreakdownItemDto(star, countsByStar.GetValueOrDefault(star, 0)))
             .ToList();
 
+        int safePage = Math.Max(1, pageNumber);
+        int safePageSize = Math.Clamp(pageSize, 1, PaginationPolicy.MaxPageSize);
+        int skip = (safePage - 1) * safePageSize;
+
         var orderedReviews = reviews
             .OrderByDescending(r => r.CreatedAtUtc)
+            .Skip(skip)
+            .Take(safePageSize)
             .Select(r => r.ToDto(currentUserId))
             .ToList();
+
+        int totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)safePageSize));
 
         return new StoreReviewsSummaryDto(
             comercio.Id,
@@ -64,6 +75,11 @@ public static class StoreReviewMappingExtensions
             avg,
             total,
             breakdown,
-            orderedReviews);
+            orderedReviews,
+            safePage,
+            safePageSize,
+            totalPages,
+            safePage < totalPages,
+            safePage > 1);
     }
 }

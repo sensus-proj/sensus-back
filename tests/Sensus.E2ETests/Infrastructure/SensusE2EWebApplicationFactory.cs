@@ -30,6 +30,11 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryOfferInteractionRepository OfferInteractionRepository { get; } = new();
     public InMemoryOfferLikeRepository OfferLikeRepository { get; } = new();
     public InMemoryStoreReviewRepository StoreReviewRepository { get; } = new();
+    public InMemoryFeedCommentRepository FeedCommentRepository { get; } = new();
+    public InMemoryFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = new();
+    public InMemoryContentReportRepository ContentReportRepository { get; } = new();
+    public InMemoryReportTargetService ReportTargetService { get; } = new();
+    public InMemoryOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -96,6 +101,21 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IStoreReviewRepository>();
             services.AddSingleton<IStoreReviewRepository>(StoreReviewRepository);
+
+            services.RemoveAll<IFeedCommentRepository>();
+            services.AddSingleton<IFeedCommentRepository>(FeedCommentRepository);
+
+            services.RemoveAll<IFeedPostVisibilityLookup>();
+            services.AddSingleton<IFeedPostVisibilityLookup>(FeedPostVisibilityLookup);
+
+            services.RemoveAll<IContentReportRepository>();
+            services.AddSingleton<IContentReportRepository>(ContentReportRepository);
+
+            services.RemoveAll<IReportTargetService>();
+            services.AddSingleton<IReportTargetService>(ReportTargetService);
+
+            services.RemoveAll<IOfferStatusHistoryRepository>();
+            services.AddSingleton<IOfferStatusHistoryRepository>(OfferStatusHistoryRepository);
 
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton<ITextModerationService>(new FakeApprovingTextModerationService());

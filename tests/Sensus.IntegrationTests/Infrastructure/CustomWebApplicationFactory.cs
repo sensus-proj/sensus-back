@@ -44,6 +44,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
     public IFriendRequestRepository FriendRequestRepository { get; } = Substitute.For<IFriendRequestRepository>();
     public ISharedOfferRepository SharedOfferRepository { get; } = Substitute.For<ISharedOfferRepository>();
+    public IFeedCommentRepository FeedCommentRepository { get; } = Substitute.For<IFeedCommentRepository>();
+    public IFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = Substitute.For<IFeedPostVisibilityLookup>();
+    public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
+    public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
+    public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -191,6 +196,23 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton(SharedOfferRepository);
+
+            FeedCommentRepository.GetByPostIdPagedAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IFeedCommentRepository>();
+            services.AddSingleton(FeedCommentRepository);
+
+            services.RemoveAll<IFeedPostVisibilityLookup>();
+            services.AddSingleton(FeedPostVisibilityLookup);
+
+            services.RemoveAll<IContentReportRepository>();
+            services.AddSingleton(ContentReportRepository);
+
+            services.RemoveAll<IReportTargetService>();
+            services.AddSingleton(ReportTargetService);
+
+            services.RemoveAll<IOfferStatusHistoryRepository>();
+            services.AddSingleton(OfferStatusHistoryRepository);
         });
     }
 }
