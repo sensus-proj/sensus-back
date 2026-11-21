@@ -21,7 +21,7 @@ public sealed class FriendEndpointsIntegrationTests : IClassFixture<CustomWebApp
     {
         _factory = factory;
         _client = factory.CreateClient();
-        _factory.FakeClock.Set(new DateTime(2026, 11, 21, 17, 0, 0, DateTimeKind.Utc));
+        _factory.FakeClock.Set(DateTime.UtcNow);
         _factory.FriendRequestRepository.ClearReceivedCalls();
         _factory.SharedOfferRepository.ClearReceivedCalls();
     }
@@ -100,6 +100,7 @@ public sealed class FriendEndpointsIntegrationTests : IClassFixture<CustomWebApp
         link.Accept(_factory.FakeClock.UtcNow);
 
         _factory.FriendRequestRepository.GetForUserAsync(me.Id, Arg.Any<CancellationToken>()).Returns([link]);
+        _factory.FriendRequestRepository.GetBetweenUsersAsync(me.Id, friend.Id, Arg.Any<CancellationToken>()).Returns(link);
         _factory.SharedOfferRepository.GetConversationAsync(me.Id, friend.Id, Arg.Any<CancellationToken>()).Returns([]);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

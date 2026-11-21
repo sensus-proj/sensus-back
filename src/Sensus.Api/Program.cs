@@ -207,39 +207,33 @@ builder.Services.AddProblemDetails();
 
 // Documentación OpenAPI unificada (Spec 011): única fuente en /openapi/v1.json servida también por Swagger UI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi(options =>
+builder.Services.AddSwaggerGen(options =>
 {
-    options.AddDocumentTransformer((document, _, _) =>
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        document.Info = new OpenApiInfo
-        {
-            Title = "Sensus API",
-            Version = "v1",
-            Description = "API backend empresarial de Sensus con Clean Architecture, CQRS, MongoDB Atlas y autenticación JWT."
-        };
+        Title = "Sensus API",
+        Version = "v1",
+        Description = "API backend empresarial de Sensus con Clean Architecture, CQRS, MongoDB Atlas y autenticación JWT."
+    });
 
-        document.Components ??= new OpenApiComponents();
-        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-            Description = "Pega aquí tu token JWT obtenido en /login",
-            In = ParameterLocation.Header,
-            Type = SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT"
-        };
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Pega aquí tu token JWT obtenido en /login",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    };
 
-        document.Security ??= [];
-        document.Security.Add(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecuritySchemeReference("Bearer", document),
-                new List<string>()
-            }
-        });
+    options.AddSecurityDefinition("Bearer", securityScheme);
 
-        return Task.CompletedTask;
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference("Bearer", document),
+            new List<string>()
+        }
     });
 });
 
@@ -283,7 +277,7 @@ app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
-    app.MapOpenApi();
+    app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/openapi/v1.json", "Sensus API v1");

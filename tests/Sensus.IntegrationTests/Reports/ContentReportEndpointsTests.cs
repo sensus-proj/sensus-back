@@ -21,7 +21,7 @@ public sealed class ContentReportEndpointsTests : IClassFixture<CustomWebApplica
     {
         _factory = factory;
         _client = factory.CreateClient();
-        _factory.FakeClock.Set(new DateTime(2026, 11, 21, 15, 0, 0, DateTimeKind.Utc));
+        _factory.FakeClock.Set(DateTime.UtcNow);
         _factory.ContentReportRepository.ClearReceivedCalls();
     }
 

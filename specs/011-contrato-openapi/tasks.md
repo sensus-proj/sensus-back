@@ -12,7 +12,7 @@
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T011-01 | Implementar: Configuración de OpenAPI y anotaciones | Api | `FR-011-01` | — | Completada (`AddOpenApi` con esquema Bearer JWT) |
+| T011-01 | Implementar: Configuración de OpenAPI y anotaciones | Api | `FR-011-01` | — | Completada (`AddSwaggerGen` con esquema Bearer JWT en `/openapi/v1.json`) |
 | T011-02 | Implementar: Paso de validación del documento | CI | `FR-011-01` | T011-01 | Completada (`OpenApiContractTests` + `check-specs.mjs`) |
 | T011-03 | Unificar la generación de OpenAPI en una sola fuente | Api | `FR-011-01` | T011-02 | Completada (`/openapi/v1.json` como fuente única y Swagger UI apuntando a él) |
 | T011-04 | Añadir validación del contrato al pipeline | CI | `FR-011-03` | T011-03 | Completada (`OpenApiContractTests`) |

@@ -51,4 +51,4 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| 2026-11-21 | Beto (Sprint 5) | IMPLEMENTADO | Fuente única `Microsoft.AspNetCore.OpenApi` (`/openapi/v1.json`) con esquema Bearer JWT consumida por Swagger UI y validada en `OpenApiContractTests`. |
+| 2026-11-21 | Beto (Sprint 5) | IMPLEMENTADO | Fuente única OpenAPI (`/openapi/v1.json`) servida por Swagger / Swagger UI con esquema Bearer JWT y validada en `OpenApiContractTests`. |

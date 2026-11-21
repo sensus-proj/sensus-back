@@ -21,7 +21,7 @@ public sealed class OfferLifecycleEndpointsTests : IClassFixture<CustomWebApplic
     {
         _factory = factory;
         _client = factory.CreateClient();
-        _factory.FakeClock.Set(new DateTime(2026, 11, 21, 16, 0, 0, DateTimeKind.Utc));
+        _factory.FakeClock.Set(DateTime.UtcNow);
         _factory.OfferStatusHistoryRepository.ClearReceivedCalls();
     }
 
@@ -66,7 +66,7 @@ public sealed class OfferLifecycleEndpointsTests : IClassFixture<CustomWebApplic
 
         HttpResponseMessage pauseResp = await _client.PutAsJsonAsync(
             $"/api/v1/offers/{offer.Id}/status",
-            new { status = "Paused" });
+            new { newStatus = "Paused" });
         pauseResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         await _factory.OfferStatusHistoryRepository.Received(1).AddAsync(
@@ -78,7 +78,7 @@ public sealed class OfferLifecycleEndpointsTests : IClassFixture<CustomWebApplic
 
         HttpResponseMessage archiveResp = await _client.PutAsJsonAsync(
             $"/api/v1/offers/{offer.Id}/status",
-            new { status = "Archived" });
+            new { newStatus = "Archived" });
         archiveResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         HttpResponseMessage republishResp = await _client.PostAsJsonAsync(
