@@ -49,7 +49,7 @@ public static class MediaEndpoints
 
         // Spec 022: Subida de imagen con validación, almacenamiento privado y moderación
         RouteHandlerBuilder upload = group.MapPost("/upload", async (
-            [FromForm] IFormFile? file,
+            IFormFile? file,
             [FromForm] string? textContext,
             ISender sender,
             CancellationToken ct) =>
