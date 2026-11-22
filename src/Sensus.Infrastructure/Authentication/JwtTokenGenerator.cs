@@ -65,7 +65,10 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
     public (string Token, DateTime ExpiresAtUtc) GenerateGuestToken(Guid? guestId = null, int? expiryMinutes = null)
     {
         var id = guestId ?? Guid.NewGuid();
-        var minutes = expiryMinutes ?? 120; // 2 horas de vigencia para sesión de invitado
+        var configuredMinutes = _jwtSettings.GuestExpiryMinutes is >= 1 and <= 15
+            ? _jwtSettings.GuestExpiryMinutes
+            : 15;
+        var minutes = expiryMinutes ?? configuredMinutes;
         var now = _dateTimeProvider.UtcNow;
         var expiresAtUtc = now.AddMinutes(minutes);
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));

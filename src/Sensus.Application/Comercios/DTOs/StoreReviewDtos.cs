@@ -31,7 +31,12 @@ public sealed record StoreReviewsSummaryDto(
     double AverageRating,
     int TotalReviews,
     IReadOnlyList<RatingBreakdownItemDto> Breakdown,
-    IReadOnlyList<StoreReviewDto> Reviews);
+    IReadOnlyList<StoreReviewDto> Reviews,
+    int PageNumber = 1,
+    int PageSize = 20,
+    int TotalPages = 1,
+    bool HasNextPage = false,
+    bool HasPreviousPage = false);
 
 public sealed record ReviewLikeStatusDto(
     Guid ReviewId,

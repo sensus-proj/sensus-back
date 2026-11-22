@@ -118,6 +118,7 @@ public static class OfferEndpoints
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("RepublishOffer")
         .WithSummary("SE-026: Marca y republica una oferta expirada o archivada con nuevas fechas de vigencia y stock")
         .Produces<OfferDto>(StatusCodes.Status200OK)
@@ -125,7 +126,8 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status409Conflict);
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // SE-022 a SE-025: Disparador de expiración automática (Sustituto de Trigger/Job SQL para AWS EventBridge o llamadas programadas)
         offersGroup.MapPost("/expire-check", async (

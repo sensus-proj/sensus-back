@@ -31,6 +31,11 @@ public sealed class JwtSettingsValidator : IValidateOptions<JwtSettings>
             return ValidateOptionsResult.Fail("JwtSettings:ExpiryMinutes debe ser mayor a 0.");
         }
 
+        if (options.GuestExpiryMinutes is < 1 or > 15)
+        {
+            return ValidateOptionsResult.Fail("JwtSettings:GuestExpiryMinutes debe estar entre 1 y 15 minutos.");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }

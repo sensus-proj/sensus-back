@@ -1,6 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
+using Sensus.Application.Common.Models;
+using Sensus.Application.Feed.Commands.CreateFeedComment;
+using Sensus.Application.Feed.DTOs;
+using Sensus.Application.Feed.Queries.GetPostComments;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetOfferFeed;
 
@@ -73,6 +77,55 @@ public static class FeedEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 025: Comentarios moderados en publicaciones del feed
+        group.MapPost("/posts/{id:guid}/comments", async (
+            Guid id,
+            [FromBody] CreateFeedCommentBody body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            string text = body.Content ?? body.Text ?? string.Empty;
+            var result = await sender.Send(new CreateFeedCommentCommand(id, text), ct);
+            return result.ToCreatedAtResult($"/api/v1/feed/posts/{id}/comments");
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("CreateFeedPostComment")
+        .WithSummary("Spec 025: Publica un comentario moderado en una publicación del feed")
+        .Produces<FeedCommentDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        group.MapGet("/posts/{id:guid}/comments", async (
+            Guid id,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new GetPostCommentsQuery(
+                    id,
+                    page ?? PaginationPolicy.DefaultPageNumber,
+                    pageSize ?? PaginationPolicy.DefaultPageSize),
+                ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("GetFeedPostComments")
+        .WithSummary("Spec 025: Lista comentarios paginados de una publicación ordenados cronológicamente")
+        .Produces<PagedResult<FeedCommentDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         return app;
     }
 }
+
+public sealed record CreateFeedCommentBody(string? Content = null, string? Text = null);

@@ -18,9 +18,9 @@ Alineado a `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0.
 
 - [x] `dotnet build sensus-back.sln --configuration Release` sin errores ni advertencias
 - [x] `dotnet format sensus-back.sln --verify-no-changes` limpio
-- [x] `Sensus.ArchitectureTests` (4/4) y `Sensus.Application.UnitTests` (629/629) en verde
+- [x] `Sensus.ArchitectureTests`, `Sensus.Application.UnitTests`, `FriendEndpointsIntegrationTests` y `MongoSocialRepositoriesTests` añadidas
 - [x] `tasks.md` refleja el estado real (pendiente despliegue AWS)
-- [ ] Pruebas de integración contra contenedor MongoDB (requiere Docker) y verificación tras despliegue en AWS
+- [ ] Ejecución en vivo contra clúster MongoDB real (`MONGO_CONNECTION_STRING`) y verificación tras despliegue en AWS
 
 ## D. Evidencia
 
@@ -29,6 +29,7 @@ Alineado a `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0.
 | Spec | [`spec.md`](spec.md) | ☑ |
 | Plan | [`plan.md`](plan.md) | ☑ |
 | Tareas | [`tasks.md`](tasks.md) | ☑ |
-| Pruebas unitarias | [`FriendHandlersTests.cs`](../../tests/Sensus.Application.UnitTests/Friends/FriendHandlersTests.cs) | ☑ (5 pruebas en verde) |
-| Arquitectura | `tests/Sensus.ArchitectureTests/` | ☑ (4/4 en verde) |
+| Pruebas unitarias | [`FriendHandlersTests.cs`](../../tests/Sensus.Application.UnitTests/Friends/FriendHandlersTests.cs) | ☑ |
+| Pruebas HTTP / Mongo | [`FriendEndpointsIntegrationTests.cs`](../../tests/Sensus.IntegrationTests/Friends/FriendEndpointsIntegrationTests.cs), [`MongoSocialRepositoriesTests.cs`](../../tests/Sensus.IntegrationTests/Persistence/MongoSocialRepositoriesTests.cs) | ☑ |
+| Arquitectura | `tests/Sensus.ArchitectureTests/` | ☑ |
 | Fakes E2E | `tests/Sensus.TestKit/Fakes/InMemoryFriendRequestRepository.cs` | ☑ |
