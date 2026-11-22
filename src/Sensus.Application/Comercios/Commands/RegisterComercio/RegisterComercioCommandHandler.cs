@@ -21,6 +21,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public RegisterComercioCommandHandler(
         IUserRepository userRepository,
@@ -29,6 +30,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         IGeocodingService geocodingService,
         IJwtTokenGenerator jwtTokenGenerator,
         IDateTimeProvider dateTimeProvider,
+        IModerationAuditRecorder auditRecorder,
         ITextModerationService? textModerationService = null)
     {
         _userRepository = userRepository;
@@ -37,6 +39,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         _geocodingService = geocodingService;
         _jwtTokenGenerator = jwtTokenGenerator;
         _dateTimeProvider = dateTimeProvider;
+        _auditRecorder = auditRecorder;
         _textModerationService = textModerationService;
     }
 
@@ -64,7 +67,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
                 Error.Conflict("Comercio.AlreadyExists", "El usuario ya posee un comercio activo registrado."));
         }
 
-        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
             $"Nombre del comercio: {request.NombreComercial}\nDirección: {request.Direccion}",
             "Registro de nombre y datos de comercio",
@@ -72,9 +75,27 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
             "El nombre o datos del comercio contienen lenguaje antisonante u ofensivo.",
             cancellationToken);
 
-        if (moderationResult.IsFailure)
+        var auditEntry = new ModerationAuditEntry(
+            usuarioId,
+            ModerationTargetType.Comercio,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "comercio_register",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores,
+            ActorId: usuarioId.ToString(),
+            ActorType: ModerationActorType.User);
+
+        if (!evaluation.IsApproved)
         {
-            return Result.Failure<RegisterComercioResponseDto>(moderationResult.Error);
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+            return Result.Failure<RegisterComercioResponseDto>(evaluation.RejectionError ?? Error.Validation("Comercio.ContentModerationRejected", "Contenido rechazado por moderación."));
+        }
+
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<RegisterComercioResponseDto>(auditResult.Error);
         }
 
         // Resolución de coordenadas (cliente opcional validado o geocodificación de respaldo)

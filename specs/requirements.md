@@ -147,12 +147,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-020-04` | 020 | NFR | Rendimiento de consulta | Paginación 20/100 sobre índices declarados | Implementado |
 | `FR-020-08` | 020 | FR | Notificar por push al usuario al aplicar y al revertir una sanción | Must | Implementado |
 | `NFR-020-05` | 020 | NFR | Seguridad de nivel fintech (Principio VIII) | Sin enumeración de cuentas; autorización en borde y caso de uso | Implementado |
-| `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Pendiente |
-| `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Pendiente |
-| `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Pendiente |
-| `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Pendiente |
-| `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Pendiente |
-| `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Pendiente |
+| `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Implementado |
+| `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Implementado |
+| `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Implementado |
+| `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Implementado |
+| `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Implementado |
+| `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Implementado |
 | `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Implementado |
 | `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Implementado |
 | `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Implementado |
@@ -163,12 +163,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Implementado |
 | `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Implementado |
 | `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Implementado |
-| `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Pendiente |
-| `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Pendiente |
-| `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Pendiente |
-| `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Pendiente |
-| `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Pendiente |
-| `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Pendiente |
+| `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Implementado |
+| `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Implementado |
+| `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Implementado |
+| `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Implementado |
+| `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Implementado |
+| `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Implementado |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Pendiente |
 | `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Pendiente |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Pendiente |

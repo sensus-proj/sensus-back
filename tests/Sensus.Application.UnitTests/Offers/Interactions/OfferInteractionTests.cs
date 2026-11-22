@@ -217,4 +217,45 @@ public sealed class OfferInteractionTests
         settings.AlarmThresholdPercent.Should().Be(70);
         settings.EmitDetailedCustomMetrics.Should().BeFalse();
     }
+
+    [Fact]
+    public void OfferInteractionCatalog_WireConversionsAndParsing_ShouldCoverAllCases()
+    {
+        OfferInteractionType.Impression.ToWireName().Should().Be("impression");
+        OfferInteractionType.Open.ToWireName().Should().Be("open");
+        OfferInteractionType.Claim.ToWireName().Should().Be("claim");
+        Action actInvalidType = () => ((OfferInteractionType)999).ToWireName();
+        actInvalidType.Should().Throw<ArgumentOutOfRangeException>();
+
+        FeedSlot.Ranked.ToWireName().Should().Be("ranked");
+        FeedSlot.Exploration.ToWireName().Should().Be("exploration");
+        FeedSlot.Fallback.ToWireName().Should().Be("fallback");
+        FeedSlot.Direct.ToWireName().Should().Be("direct");
+        Action actInvalidSlot = () => ((FeedSlot)999).ToWireName();
+        actInvalidSlot.Should().Throw<ArgumentOutOfRangeException>();
+
+        DistanceBucket.Range0To1Km.ToWireName().Should().Be("0-1");
+        DistanceBucket.Range1To3Km.ToWireName().Should().Be("1-3");
+        DistanceBucket.Range3To10Km.ToWireName().Should().Be("3-10");
+        DistanceBucket.Range10PlusKm.ToWireName().Should().Be("10+");
+        DistanceBucket.Unknown.ToWireName().Should().Be("unknown");
+        Action actInvalidBucket = () => ((DistanceBucket)999).ToWireName();
+        actInvalidBucket.Should().Throw<ArgumentOutOfRangeException>();
+
+        OfferInteractionCatalog.ParseType("impression").Should().Be(OfferInteractionType.Impression);
+        OfferInteractionCatalog.ParseType("open").Should().Be(OfferInteractionType.Open);
+        OfferInteractionCatalog.ParseType("claim").Should().Be(OfferInteractionType.Claim);
+        Action actParseInvalidType = () => OfferInteractionCatalog.ParseType("invalid");
+        actParseInvalidType.Should().Throw<ArgumentException>();
+
+        OfferInteractionCatalog.ParseSlot("ranked").Should().Be(FeedSlot.Ranked);
+        OfferInteractionCatalog.ParseSlot("exploration").Should().Be(FeedSlot.Exploration);
+        OfferInteractionCatalog.ParseSlot("fallback").Should().Be(FeedSlot.Fallback);
+        OfferInteractionCatalog.ParseSlot("direct").Should().Be(FeedSlot.Direct);
+        Action actParseInvalidSlot = () => OfferInteractionCatalog.ParseSlot("invalid");
+        actParseInvalidSlot.Should().Throw<ArgumentException>();
+
+        Action actParseInvalidBucket = () => OfferInteractionCatalog.ParseDistanceBucket("invalid");
+        actParseInvalidBucket.Should().Throw<ArgumentException>();
+    }
 }

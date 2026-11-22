@@ -11,11 +11,20 @@ public class UpdateProfileCommandHandlerTests
 {
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
     private readonly UpdateProfileCommandHandler _handler;
 
     public UpdateProfileCommandHandlerTests()
     {
-        _handler = new UpdateProfileCommandHandler(_userRepository, _currentUserService);
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
+        _handler = new UpdateProfileCommandHandler(
+            _userRepository,
+            _currentUserService,
+            _auditRecorder,
+            _cdnCacheInvalidator);
     }
 
     [Fact]

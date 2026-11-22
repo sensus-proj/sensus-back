@@ -157,6 +157,11 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferStatusHistoryDocument>(_settings.OfferStatusHistoryCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    /// <summary>Evidencia inmutable de moderación (Spec 021). Solo inserción.</summary>
+    public IMongoCollection<ModerationAuditDocument> ModerationAudit =>
+        _database?.GetCollection<ModerationAuditDocument>(_settings.ModerationAuditCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     public IMongoCollection<MongoDB.Bson.BsonDocument> FeedPostsRaw =>
         _database?.GetCollection<MongoDB.Bson.BsonDocument>(_settings.FeedPostsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
@@ -625,6 +630,36 @@ public sealed class MongoDbContext
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug(ex, "Nota: Los índices de comentarios, reportes o historial de ofertas ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Spec 021: consulta paginada por fecha descendente (FR-021-03, NFR-021-02).
+            var auditCreatedKeys = Builders<ModerationAuditDocument>.IndexKeys
+                .Descending(a => a.CreatedAtUtc);
+            ModerationAudit.Indexes.CreateOne(new CreateIndexModel<ModerationAuditDocument>(
+                auditCreatedKeys,
+                new CreateIndexOptions { Name = "ix_moderation_audit_created_at" }));
+
+            // Spec 021: filtros por objetivo y veredicto (FR-021-03).
+            var auditTargetKeys = Builders<ModerationAuditDocument>.IndexKeys
+                .Ascending(a => a.TargetType)
+                .Ascending(a => a.TargetId)
+                .Descending(a => a.CreatedAtUtc);
+            ModerationAudit.Indexes.CreateOne(new CreateIndexModel<ModerationAuditDocument>(
+                auditTargetKeys,
+                new CreateIndexOptions { Name = "ix_moderation_audit_target" }));
+
+            // Spec 021: retención conforme a la política de datos (FR-021-04); MongoDB purga al vencer.
+            var auditRetentionKeys = Builders<ModerationAuditDocument>.IndexKeys
+                .Ascending(a => a.RetainUntilUtc);
+            ModerationAudit.Indexes.CreateOne(new CreateIndexModel<ModerationAuditDocument>(
+                auditRetentionKeys,
+                new CreateIndexOptions { Name = "ttl_moderation_audit_retention", ExpireAfter = TimeSpan.Zero }));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de auditoría de moderación ya existen o el clúster aún no está disponible.");
         }
     }
 
