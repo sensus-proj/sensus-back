@@ -8,4 +8,5 @@ public sealed class JwtSettings
     public string Issuer { get; set; } = "SensusApi";
     public string Audience { get; set; } = "SensusApp";
     public int ExpiryMinutes { get; set; } = 1440; // 24 horas por defecto
+    public int GuestExpiryMinutes { get; set; } = 15; // 15 minutos máximo para invitados (Spec 052)
 }

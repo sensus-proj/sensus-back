@@ -196,6 +196,13 @@ public static class DependencyInjection
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
         services.AddScoped<IOfferLikeRepository, MongoOfferLikeRepository>();
         services.AddScoped<IStoreReviewRepository, MongoStoreReviewRepository>();
+        services.AddScoped<IFeedCommentRepository, MongoFeedCommentRepository>();
+        services.AddScoped<IFeedPostVisibilityLookup, MongoFeedPostVisibilityLookup>();
+        services.Configure<ContentReportSettings>(
+            configuration.GetSection(ContentReportSettings.SectionName));
+        services.AddScoped<IContentReportRepository, MongoContentReportRepository>();
+        services.AddScoped<IReportTargetService, MongoReportTargetService>();
+        services.AddScoped<IOfferStatusHistoryRepository, MongoOfferStatusHistoryRepository>();
 
         // Sanciones y baneo (Spec 020): configuración, persistencia y métricas
         services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(

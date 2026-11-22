@@ -205,7 +205,7 @@ builder.Services.AddHostedService<OfferCategoryMigrationHostedService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Documentación Swagger y OpenAPI con soporte para JWT Bearer
+// Documentación OpenAPI unificada (Spec 011): única fuente en /openapi/v1.json servida también por Swagger UI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -236,7 +236,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-builder.Services.AddOpenApi();
 
 // Health Checks
 builder.Services.AddHealthChecks()
@@ -278,13 +277,12 @@ app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
-    app.UseSwagger();
+    app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sensus API v1");
+        c.SwaggerEndpoint("/openapi/v1.json", "Sensus API v1");
         c.RoutePrefix = "swagger";
     });
-    app.MapOpenApi();
 
     // Sembrado del usuario Administrador (si se configuran variables de entorno)
     using var scope = app.Services.CreateScope();
@@ -324,6 +322,7 @@ app.MapFriendEndpoints();
 app.MapFeedEndpoints();
 app.MapStoreReviewEndpoints();
 app.MapCommunityEndpoints();
+app.MapReportEndpoints();
 
 await app.RunAsync();
 

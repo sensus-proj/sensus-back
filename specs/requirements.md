@@ -77,16 +77,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Pendiente |
 | `FR-009-04` | 009 | FR | Mantener un catálogo de códigos de error documentado | Should | Pendiente |
 | `NFR-009-01` | 009 | NFR | Estabilidad del formato | Sin cambios incompatibles dentro de v1 | Pendiente |
-| `FR-010-01` | 010 | FR | Exponer PagedResult con items, page, pageSize, total y totalPages | Must | Pendiente |
-| `FR-010-02` | 010 | FR | Aplicar 20 elementos por defecto y 100 como máximo | Must | Pendiente |
-| `FR-010-03` | 010 | FR | Rechazar pageSize fuera de rango con 400 | Must | Pendiente |
-| `FR-010-04` | 010 | FR | Aplicar el contrato a todo endpoint de colección | Must | Pendiente |
-| `NFR-010-01` | 010 | NFR | Sobrecarga de contar total | p95 < 100 ms adicionales | Pendiente |
-| `FR-011-01` | 011 | FR | Exponer el documento OpenAPI en desarrollo | Must | Pendiente |
-| `FR-011-02` | 011 | FR | Documentar todos los endpoints con esquemas y códigos de respuesta | Must | Pendiente |
-| `FR-011-03` | 011 | FR | Validar el documento en CI y fallar ante cambios incompatibles | Must | Pendiente |
-| `FR-011-04` | 011 | FR | Versionar el contrato junto con la API | Should | Pendiente |
-| `NFR-011-01` | 011 | NFR | Cobertura del contrato | 100 % de endpoints publicados | Pendiente |
+| `FR-010-01` | 010 | FR | Exponer PagedResult con items, page, pageSize, total y totalPages | Must | Implementado |
+| `FR-010-02` | 010 | FR | Aplicar 20 elementos por defecto y 100 como máximo | Must | Implementado |
+| `FR-010-03` | 010 | FR | Rechazar pageSize fuera de rango con 400 | Must | Implementado |
+| `FR-010-04` | 010 | FR | Aplicar el contrato a todo endpoint de colección | Must | Implementado |
+| `NFR-010-01` | 010 | NFR | Sobrecarga de contar total | p95 < 100 ms adicionales | Implementado |
+| `FR-011-01` | 011 | FR | Exponer el documento OpenAPI en desarrollo | Must | Implementado |
+| `FR-011-02` | 011 | FR | Documentar todos los endpoints con esquemas y códigos de respuesta | Must | Implementado |
+| `FR-011-03` | 011 | FR | Validar el documento en CI y fallar ante cambios incompatibles | Must | Implementado |
+| `FR-011-04` | 011 | FR | Versionar el contrato junto con la API | Should | Implementado |
+| `NFR-011-01` | 011 | NFR | Cobertura del contrato | 100 % de endpoints publicados | Implementado |
 | `FR-012-01` | 012 | FR | Definir orígenes permitidos por configuración y entorno | Must | Implementado |
 | `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Implementado |
 | `FR-012-03` | 012 | FR | Redirigir a HTTPS fuera de desarrollo | Must | Implementado |
@@ -178,14 +178,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-024-07` | 024 | FR | Excluir del feed las publicaciones eliminadas de inmediato | Must | Pendiente |
 | `NFR-024-01` | 024 | NFR | Latencia percibida | p95 < 1 s hasta aceptar la solicitud | Pendiente |
 | `NFR-024-02` | 024 | NFR | Consistencia | Sin publicaciones sin veredicto | Pendiente |
-| `FR-025-01` | 025 | FR | Crear comentario en una publicación existente y visible | Must | Pendiente |
-| `FR-025-02` | 025 | FR | Moderar el texto antes de publicarlo | Must | Pendiente |
-| `FR-025-03` | 025 | FR | Listar comentarios paginados por publicación | Must | Pendiente |
-| `FR-025-04` | 025 | FR | Rechazar comentarios en publicaciones no visibles con 404 | Must | Pendiente |
-| `FR-025-05` | 025 | FR | Limitar el comentario a 300 caracteres | Must | Pendiente |
-| `FR-025-06` | 025 | FR | Ordenar los comentarios por fecha ascendente | Should | Pendiente |
-| `NFR-025-01` | 025 | NFR | Latencia de listado | p95 < 400 ms | Pendiente |
-| `NFR-025-02` | 025 | NFR | Paginación | 20 por defecto, 100 máximo | Pendiente |
+| `FR-025-01` | 025 | FR | Crear comentario en una publicación existente y visible | Must | Implementado |
+| `FR-025-02` | 025 | FR | Moderar el texto antes de publicarlo | Must | Implementado |
+| `FR-025-03` | 025 | FR | Listar comentarios paginados por publicación | Must | Implementado |
+| `FR-025-04` | 025 | FR | Rechazar comentarios en publicaciones no visibles con 404 | Must | Implementado |
+| `FR-025-05` | 025 | FR | Limitar el comentario a 300 caracteres | Must | Implementado |
+| `FR-025-06` | 025 | FR | Ordenar los comentarios por fecha ascendente | Should | Implementado |
+| `NFR-025-01` | 025 | NFR | Latencia de listado | p95 < 400 ms | Implementado |
+| `NFR-025-02` | 025 | NFR | Paginación | 20 por defecto, 100 máximo | Implementado |
 | `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
 | `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
 | `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
@@ -293,14 +293,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-036-02` | 036 | FR | Rechazar transiciones no permitidas con 409 | Must | Implementado |
 | `FR-036-03` | 036 | FR | Ocultar de inmediato las ofertas pausadas o archivadas | Must | Implementado |
 | `FR-036-04` | 036 | FR | Impedir archivar una oferta con apartados activos | Must | Implementado |
-| `FR-036-05` | 036 | FR | Publicar solo ofertas con moderación aprobada y stock disponible | Must | Parcial |
-| `FR-036-06` | 036 | FR | Registrar estado anterior, nuevo estado, actor y fecha | Must | Parcial |
-| `NFR-036-01` | 036 | NFR | Efectividad del cambio | < 2 s en la consulta de cercanía | Pendiente |
-| `NFR-036-02` | 036 | NFR | Auditoría | 100 % de transiciones registradas | Pendiente |
+| `FR-036-05` | 036 | FR | Publicar solo ofertas con moderación aprobada y stock disponible | Must | Implementado |
+| `FR-036-06` | 036 | FR | Registrar estado anterior, nuevo estado, actor y fecha | Must | Implementado |
+| `NFR-036-01` | 036 | NFR | Efectividad del cambio | < 2 s en la consulta de cercanía | Implementado |
+| `NFR-036-02` | 036 | NFR | Auditoría | 100 % de transiciones registradas | Implementado |
 | `FR-036-07` | 036 | FR | Republicar oferta expirada o archivada con nuevas fechas y stock | Must | Implementado |
 | `FR-036-08` | 036 | FR | Ejecutar la expiración de ofertas vencidas y devolver el conteo | Must | Implementado |
 | `FR-036-09` | 036 | FR | Restringir `expire-check` a administrador, con límite de tasa | Must | Implementado |
-| `FR-036-10` | 036 | FR | Límite de tasa en `republish` | Should | Pendiente |
+| `FR-036-10` | 036 | FR | Límite de tasa en `republish` | Should | Implementado |
 | `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Implementado |
 | `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Implementado |
 | `FR-037-03` | 037 | FR | Incluir apartados activos, canjes y vistas por oferta | Must | Pendiente |
@@ -325,16 +325,16 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-039-06` | 039 | FR | Limitar la operación a 60 alternancias por usuario y hora | Should | Pendiente |
 | `NFR-039-01` | 039 | NFR | Latencia de la operación | p95 < 300 ms | Pendiente |
 | `NFR-039-02` | 039 | NFR | Consistencia del conteo | Cero conteos negativos | Pendiente |
-| `FR-040-01` | 040 | FR | Crear un reporte sobre una oferta, publicación o comentario existente | Must | Pendiente |
-| `FR-040-02` | 040 | FR | Aceptar solo motivos tipificados: spam, ofensivo, fraude u otro | Must | Pendiente |
-| `FR-040-03` | 040 | FR | Limitar los detalles a 500 caracteres | Must | Pendiente |
-| `FR-040-04` | 040 | FR | Permitir un solo reporte por usuario y objetivo cada 24 horas | Must | Pendiente |
-| `FR-040-05` | 040 | FR | Marcar el contenido para revisión al alcanzar 3 reportes en 24 horas | Must | Pendiente |
-| `FR-040-06` | 040 | FR | Rechazar y no persistir reportes de material de explotación infantil | Must | Pendiente |
-| `FR-040-07` | 040 | FR | Impedir que el autor reporte su propio contenido | Should | Pendiente |
-| `FR-040-08` | 040 | FR | No revelar al reportado la identidad del reportante | Must | Pendiente |
-| `NFR-040-01` | 040 | NFR | Latencia de creación | p95 < 400 ms | Pendiente |
-| `NFR-040-02` | 040 | NFR | Privacidad | Cero exposición de la identidad del reportante | Pendiente |
+| `FR-040-01` | 040 | FR | Crear un reporte sobre una oferta, publicación o comentario existente | Must | Implementado |
+| `FR-040-02` | 040 | FR | Aceptar solo motivos tipificados: spam, ofensivo, fraude u otro | Must | Implementado |
+| `FR-040-03` | 040 | FR | Limitar los detalles a 500 caracteres | Must | Implementado |
+| `FR-040-04` | 040 | FR | Permitir un solo reporte por usuario y objetivo cada 24 horas | Must | Implementado |
+| `FR-040-05` | 040 | FR | Marcar el contenido para revisión al alcanzar 3 reportes en 24 horas | Must | Implementado |
+| `FR-040-06` | 040 | FR | Rechazar y no persistir reportes de material de explotación infantil | Must | Implementado |
+| `FR-040-07` | 040 | FR | Impedir que el autor reporte su propio contenido | Should | Implementado |
+| `FR-040-08` | 040 | FR | No revelar al reportado la identidad del reportante | Must | Implementado |
+| `NFR-040-01` | 040 | NFR | Latencia de creación | p95 < 400 ms | Implementado |
+| `NFR-040-02` | 040 | NFR | Privacidad | Cero exposición de la identidad del reportante | Implementado |
 | `FR-041-01` | 041 | FR | Buscar ofertas visibles por texto libre de 2 a 80 caracteres | Must | Implementado |
 | `FR-041-02` | 041 | FR | Calcular un puntaje determinista con pesos de texto, distancia y popularidad | Must | Implementado |
 | `FR-041-03` | 041 | FR | Excluir ofertas vencidas, pausadas o sin stock | Must | Implementado |
@@ -517,7 +517,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-052-03` | 052 | FR | Limitar el radio del invitado a 2 km en el servidor | Must | Implementado |
 | `FR-052-04` | 052 | FR | Negar al invitado las operaciones de usuario registrado | Must | Implementado |
 | `FR-052-05` | 052 | FR | Límite de tasa auth-strict en /auth/guest | Must | Implementado |
-| `FR-052-06` | 052 | FR | Vigencia del token de invitado en configuración y ≤ 15 min con renovación | Must | Pendiente |
+| `FR-052-06` | 052 | FR | Vigencia del token de invitado en configuración y ≤ 15 min con renovación | Must | Implementado |
 | `NFR-052-01` | 052 | NFR | Privacidad | Sin registros persistentes ni PII | Implementado |
 | `NFR-052-02` | 052 | NFR | Abuso | Más de 10 solicitudes por minuto reciben 429 | Implementado |
 | `FR-053-01` | 053 | FR | Comercios activos dentro del radio, ordenados por cercanía | Must | Implementado |
@@ -559,7 +559,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-056-04` | 056 | FR | Responder en hilo a una reseña (1–500 chars) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` | Must | Implementado |
 | `FR-056-05` | 056 | FR | Moderar reseñas y respuestas con `ProfanityFilter` + `ITextModerationService` (*fail-closed*) | Must | Implementado |
 | `FR-056-06` | 056 | FR | Calcular `AverageRating` y `ReviewCount` reales en `ComercioDto` e invalidar caché tras reseña | Must | Implementado |
-| `FR-056-07` | 056 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Pendiente |
+| `FR-056-07` | 056 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Implementado |
 | `NFR-056-01` | 056 | NFR | Seguridad y límites de tasa (`read-heavy`/`sensitive-write`) | 100 % endpoints | Implementado |
 | `NFR-056-02` | 056 | NFR | Índice compuesto `(MerchantId asc, CreatedAtUtc desc)` en `store_reviews` | Sin full-scan por comercio | Implementado |
 | `NFR-056-03` | 056 | NFR | Privacidad en DTOs de reseña | 0 campos de correo/credenciales | Implementado |

@@ -2,21 +2,96 @@ openapi: 3.1.0
 info:
   title: "Sensus API — Spec 040 Reportes de contenido"
   version: 1.0.0
-  description: "Borrador del contrato del spec 040. Completar esquemas antes de implementar."
+  description: >
+    Creación de reportes sobre ofertas, publicaciones o comentarios con deduplicación 24h,
+    marcado para revisión tras 3 reportes y exclusión estricta sin persistencia de CSAM.
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/reports:
     post:
-      summary: "Borrador de POST /api/v1/reports"
+      summary: "Reportar una oferta, publicación o comentario existente"
+      operationId: createContentReport
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateContentReportRequest' }
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '201':
+          description: Reporte registrado (sin exponer identidad del reportante)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContentReportDto' }
+        '400':
+          description: Motivo inválido, detalle > 500 chars, auto-reporte o material de explotación infantil rechazado sin persistencia
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado para reportar
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: El recurso reportado no existe
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '409':
+          description: Ya existe un reporte previo del mismo usuario para este recurso en las últimas 24 horas
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de tasa excedido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    CreateContentReportRequest:
+      type: object
+      required: [targetType, targetId, reason]
+      properties:
+        targetType:
+          type: string
+          enum: [Offer, Post, Comment]
+        targetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          description: "spam | ofensivo | fraude | otro (o equivalentes SPAM | OFFENSIVE | FALSE_OFFER | PRICE_MISMATCH | OTHER)"
+        details:
+          type: string
+          maxLength: 500
+          nullable: true
+    ContentReportDto:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string }
+        targetId: { type: string, format: uuid }
+        reason: { type: string }
+        status: { type: string }
+        markedForReview: { type: boolean }
+        createdAtUtc: { type: string, format: date-time }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

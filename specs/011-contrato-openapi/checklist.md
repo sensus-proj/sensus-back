@@ -1,57 +1,54 @@
 # Checklist 011 — Contrato OpenAPI
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
-
-Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
+Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 011 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 009, 010
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] La spec 011 está aprobada y sin preguntas bloqueantes
+- [x] Los requisitos tienen identificador y criterio medible
+- [x] Las dependencias están resueltas: 009, 010
+- [x] El alcance y las exclusiones están declarados
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
-- [ ] Un solo documento OpenAPI
-- [ ] Todos los endpoints están documentados
-- [ ] Los endpoints protegidos declaran seguridad
+- [x] Un solo documento OpenAPI (`/openapi/v1.json`)
+- [x] Todos los endpoints activos están documentados en la fuente única
+- [x] Los endpoints protegidos declaran seguridad Bearer JWT
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Código en la capa correcta y test de arquitectura en verde
+- [x] Pruebas de integración añadidas y en verde (`OpenApiContractTests`)
+- [x] Cobertura ≥ 80 % en Domain y Application
+- [x] Swagger UI apunta a `/openapi/v1.json` evitando doble generación
+- [x] IaC sin cambios requeridos
+- [x] Logs con correlation-id y sin PII
+- [x] Revisión de seguridad: sin secretos, autorización declarada
+- [x] Constitution Check en PASS
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PARCIAL
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS
+- [x] **V. Verificación automatizada** — PASS
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS
 
 ## E. Evidencia
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/Contracts/OpenApiContractTests.cs` | ☑ |
+| Validación CI | `.github/scripts/check-specs.mjs` | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-21 | Beto (Sprint 5) | IMPLEMENTADO | Fuente única OpenAPI (`/openapi/v1.json`) servida por Swagger / Swagger UI con esquema Bearer JWT y validada en `OpenApiContractTests`. |

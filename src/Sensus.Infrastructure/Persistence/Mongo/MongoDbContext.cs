@@ -145,6 +145,30 @@ public sealed class MongoDbContext
         _database?.GetCollection<StoreReviewDocument>("store_reviews")
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<FeedCommentDocument> FeedComments =>
+        _database?.GetCollection<FeedCommentDocument>(_settings.FeedCommentsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<ContentReportDocument> ContentReports =>
+        _database?.GetCollection<ContentReportDocument>(_settings.ContentReportsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferStatusHistoryDocument> OfferStatusHistory =>
+        _database?.GetCollection<OfferStatusHistoryDocument>(_settings.OfferStatusHistoryCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<MongoDB.Bson.BsonDocument> FeedPostsRaw =>
+        _database?.GetCollection<MongoDB.Bson.BsonDocument>(_settings.FeedPostsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<MongoDB.Bson.BsonDocument> OffersRaw =>
+        _database?.GetCollection<MongoDB.Bson.BsonDocument>(_settings.OffersCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<MongoDB.Bson.BsonDocument> FeedCommentsRaw =>
+        _database?.GetCollection<MongoDB.Bson.BsonDocument>(_settings.FeedCommentsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     public IMongoDatabase Database =>
         _database
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
@@ -560,6 +584,47 @@ public sealed class MongoDbContext
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug(ex, "Nota: Los índices de offer_interactions ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Spec 025: comentarios de publicaciones paginados cronológicamente
+            var feedCommentKeys = Builders<FeedCommentDocument>.IndexKeys
+                .Ascending(c => c.PostId)
+                .Ascending(c => c.CreatedAtUtc);
+            FeedComments.Indexes.CreateOne(new CreateIndexModel<FeedCommentDocument>(
+                feedCommentKeys,
+                new CreateIndexOptions { Name = "ix_feed_comments_post_created_at" }));
+
+            // Spec 040: deduplicación única por ventana y conteo rápido por contenido
+            var reportDedupKeys = Builders<ContentReportDocument>.IndexKeys
+                .Ascending(r => r.ReporterUserId)
+                .Ascending(r => r.TargetType)
+                .Ascending(r => r.TargetId)
+                .Ascending(r => r.WindowBucket);
+            ContentReports.Indexes.CreateOne(new CreateIndexModel<ContentReportDocument>(
+                reportDedupKeys,
+                new CreateIndexOptions { Name = "ux_content_reports_dedup", Unique = true }));
+
+            var reportTargetKeys = Builders<ContentReportDocument>.IndexKeys
+                .Ascending(r => r.TargetType)
+                .Ascending(r => r.TargetId)
+                .Descending(r => r.CreatedAtUtc);
+            ContentReports.Indexes.CreateOne(new CreateIndexModel<ContentReportDocument>(
+                reportTargetKeys,
+                new CreateIndexOptions { Name = "ix_content_reports_target_window" }));
+
+            // Spec 036: historial auditable de transiciones de ofertas
+            var offerHistoryKeys = Builders<OfferStatusHistoryDocument>.IndexKeys
+                .Ascending(h => h.OfferId)
+                .Ascending(h => h.OccurredAtUtc);
+            OfferStatusHistory.Indexes.CreateOne(new CreateIndexModel<OfferStatusHistoryDocument>(
+                offerHistoryKeys,
+                new CreateIndexOptions { Name = "ix_offer_status_history_offer" }));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de comentarios, reportes o historial de ofertas ya existen o el clúster aún no está disponible.");
         }
     }
 
