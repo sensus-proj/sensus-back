@@ -1,6 +1,6 @@
 # Checklist 048 — Caché distribuido con Redis
 
-Alineado a `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0.
+Alineado a `constitution.md` v2.3.0 · `AGENTS.md` v2.3.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -49,3 +49,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-14 | Claude (sesión de verificación) | Parcial | Caché de `GET /offers/{id}` y `/offers/nearby` con TTL `Redis:TtlByEntityMinutes:Offers` e invalidación en crear, editar, estado, republicar, apartar y expirar; pruebas en `OfferCacheTests` y handlers. Pendiente: feed (FR-048-06/08, depende de 024–026), health check del caché (FR-048-12) y pruebas con Redis real (T048-17). `dotnet build -c Release` 0 errores y 0 advertencias; 613 pruebas en verde (4 arquitectura, 498 unitarias, 3 E2E, 108 integración); cobertura combinada Domain 90,2 % y Application 97,4 %. |
+| 2026-11-19 | Rodrigo Sánchez (con asistente) | Parcial | Caché en memoria de proceso (`MemoryCacheService`, FR-048-13) para el despliegue sin Redis: TTL acotado a 60 s, 1000 entradas, JSON inmutable; selección por configuración; `CacheHealthCheck` en `/health/ready` (FR-048-12). Sigue pendiente el feed (FR-048-06/08), las pruebas con Redis real (T048-17) y la medición de latencia (NFR-048-01/02). 1018 pruebas en verde. |

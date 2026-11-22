@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.2.0** |
+| Documento normativo | `constitution.md` **v2.4.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
-| Última actualización | 2026-11-15 |
+| Última actualización | 2026-11-19 |
 
 > Este archivo es **operativo**. En caso de conflicto con `constitution.md`, prevalece la constitución y
 > este archivo MUST corregirse en el mismo cambio.
@@ -173,7 +173,8 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Autenticación con JWT sin estado; valida firma, emisor, audiencia y expiración.
 - Toda operación se autoriza en el servidor. El cliente nunca es fuente de verdad de permisos.
 - El cierre de sesión debe invalidar el token de forma verificable (spec 004).
-- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados.
+- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados. Única excepción
+  vigente: EX-004 (HTTP hacia el servicio de correo `mailersensus.somee.com` hasta el 2026-12-20, spec 029).
 - Rate limiting obligatorio en endpoints sensibles; umbrales en configuración (spec 013).
 - Secretos solo en AWS Secrets Manager o SSM. **Nunca** en código, `.env` versionado, logs ni tests.
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).
@@ -185,6 +186,28 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - **Fail-closed**: si la moderación falla o expira, el contenido va a cuarentena. Nunca se publica.
 - Umbrales de moderación en configuración; nunca en código. Toda decisión se registra con veredicto,
   categorías, puntajes, umbral aplicado y acción.
+
+### 8.1 Nivel fintech (Principio VIII, `constitution.md` v2.3.0)
+
+Todo lo nuevo o modificado, en backend y móvil, cumple desde el primer commit:
+
+- **Estándares:** OWASP ASVS 5.0 nivel 2 (nivel 3 en autenticación, sesiones, autorización, sanciones,
+  canje y eliminación de cuenta), OWASP API Top 10, MASVS L2 + resiliencia, NIST 800-63B, SSDF y SLSA 2.
+- **Modelo de amenazas (STRIDE)** en `plan.md` de toda spec que toque identidad, datos, códigos
+  canjeables o acciones administrativas.
+- **Mínimo privilegio** en IAM y roles; acciones privilegiadas autorizadas en el servidor y registradas.
+- **Validación con lista de permitidos**, límites de tamaño y errores uniformes sin enumeración.
+- **Auditoría de solo adición** de eventos de seguridad, con actor, objetivo, resultado y
+  `correlation-id`, sin PII ni secretos.
+- **Secretos** en SSM *SecureString* o Secrets Manager, rotados cada 90 días como máximo; nunca como
+  variable de entorno en claro.
+- **Pipeline bloqueante** (severidad alta o crítica): SAST, SCA, secretos, escaneo de IaC, DAST y SBOM.
+- **Vulnerabilidades:** crítica ≤ 7 días, alta ≤ 30, media ≤ 90.
+- **Móvil:** *pinning* con pin de respaldo, Play Integrity, Keystore, `FLAG_SECURE`, biometría en
+  acciones sensibles y *release* sin logs ni depuración.
+- Si un control supera el nivel gratuito, se documenta un control compensatorio o se pide aprobación;
+  nunca se omite.
+- Las brechas conocidas viven en el Apéndice F de la constitución; una brecha vencida es bloqueante.
 
 ---
 
@@ -202,7 +225,8 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 ## 10. AWS y costo
 
 - Todo recurso se define en `infra/` con AWS CDK en C#. **Prohibido** crear recursos en consola o por CLI.
-- Solo servicios del nivel gratuito. Cómputo exclusivamente Lambda detrás de API Gateway.
+- Solo servicios del nivel gratuito, salvo las excepciones vigentes del Apéndice E (EX-001 a EX-003). Cómputo exclusivamente Lambda detrás de API Gateway.
+- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). Se despliega solo por CI. Los secretos de la API viven en SSM Parameter Store bajo `/sensus/<entorno>/` y la API los lee al arrancar; ningún despliegue los toca. El correo de alarmas llega por el **secreto** de repositorio `ALERTS_EMAIL` (nunca como variable: las variables se imprimen en claro en los logs de CI).
 - Multimedia en Cloudinary (Tier gratuito); observabilidad exclusivamente en CloudWatch.
 - Todo recurso etiquetado con `project`, `environment`, `owner`.
 - Toda decisión técnica declara su costo mensual estimado y su consumo frente al Free Tier.
@@ -264,7 +288,8 @@ Antes de dar una tarea por terminada:
 - [ ] Logs estructurados, con `correlation-id` y sin PII.
 - [ ] `checklist.md` de la spec actualizado, sin casillas pendientes y con evidencia registrada.
 - [ ] `tasks.md` refleja el estado real de cada tarea.
-- [ ] Constitution Check del `plan.md` en PASS o brecha registrada.
+- [ ] Constitution Check del `plan.md` en PASS o brecha registrada (ocho principios, incluido el VIII).
+- [ ] Modelo de amenazas, escaneos bloqueantes (SAST, SCA, secretos, IaC, DAST, SBOM) y controles fintech verificados.
 - [ ] `memory.md` actualizado al cerrar la sesión.
 
 Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo omitas.
@@ -290,9 +315,11 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 - **Commits**: Conventional Commits con requisito — `feat(FR-012-03): ...`, `fix(FR-030-01): ...`.
 - **Repositorio**: `origin` = `https://github.com/sensus-proj/sensus-back.git`. El remote `legacy`
   (`Elrorro334/sensus-back`) es archivo de solo lectura y no recibe push. La rama de integración es
-  `Sprint1` y `main` debe quedar siempre desplegable.
-- **Ramas**: una por requisito (`FR-NNN-nn` / `NFR-NNN-nn`) desde `Sprint1`, y PR a `Sprint1`. Prohibido
-  el push directo a `main` y el `push --force` sobre ramas compartidas.
+  `develop` y `main` debe quedar siempre desplegable: todo merge a `main` despliega a producción por CI.
+- **Ramas**: flujo `rama de trabajo → develop → main`. Las ramas de trabajo (por requisito, `FR-NNN-nn` /
+  `NFR-NNN-nn`, o personales como `Back_<nombre>`) salen de `develop` y vuelven por PR a `develop`; `main`
+  solo recibe PR desde `develop`. El CI (escáneres y pruebas) corre en todo push y PR a `develop` y `main`.
+  Prohibido el push directo a `main` o `develop` y el `push --force` sobre ramas compartidas.
 - **C#**: `nullable` habilitado, `async/await` sin `.Result` ni `.Wait()`, `record` para DTOs,
   `CancellationToken` en toda operación de E/S.
 - **Nombres**: código e identificadores en inglés; specs y documentación en español.
@@ -305,4 +332,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.2.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v2.4.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**

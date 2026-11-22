@@ -22,7 +22,7 @@ Permitir que el comerciante actualice los datos de su local y recalcule sus coor
 
 **Incluye**
 
-- Edición de nombre, categoría, dirección, teléfono, horario y coordenadas opcionales aportadas por el cliente
+- Edición de nombre, categoría, dirección, teléfono, horario, foto de fachada (`FotoFachadaUrl`), estado de apertura (`Activo`) y coordenadas opcionales aportadas por el cliente
 - Recálculo de GeoJSON y geohash (usando coordenadas válidas del cliente si se envían o geocodificación cuando cambie la dirección)
 - Validación de categoría y coordenadas
 - Auditoría del cambio

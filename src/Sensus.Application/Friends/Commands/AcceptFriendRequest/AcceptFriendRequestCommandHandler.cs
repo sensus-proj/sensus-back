@@ -16,6 +16,7 @@ public sealed class AcceptFriendRequestCommandHandler
     private readonly IUserRepository _userRepository;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPushDispatcher _pushDispatcher;
+    private readonly INotificationSettingsRepository _notificationSettings;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public AcceptFriendRequestCommandHandler(
@@ -24,13 +25,15 @@ public sealed class AcceptFriendRequestCommandHandler
         IUserRepository userRepository,
         IDeviceRepository deviceRepository,
         IPushDispatcher pushDispatcher,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        INotificationSettingsRepository notificationSettings)
     {
         _currentUser = currentUser;
         _friendRequestRepository = friendRequestRepository;
         _userRepository = userRepository;
         _deviceRepository = deviceRepository;
         _pushDispatcher = pushDispatcher;
+        _notificationSettings = notificationSettings;
         _dateTimeProvider = dateTimeProvider;
     }
 
@@ -75,6 +78,7 @@ public sealed class AcceptFriendRequestCommandHandler
         await FriendRequestMappingExtensions.NotifyUserDevicesAsync(
             _deviceRepository,
             _pushDispatcher,
+            _notificationSettings,
             friendRequest.SenderUserId,
             title: "Solicitud aceptada",
             body: $"{friendRequest.TargetName} aceptó tu solicitud de amistad.",

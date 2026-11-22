@@ -20,4 +20,6 @@ public sealed record NearbyOfferDto(
     DateTime EndsAt,
     double DistanceMeters,
     double? Latitude = null,
-    double? Longitude = null);
+    double? Longitude = null,
+    int LikesCount = 0,
+    bool IsLikedByMe = false);

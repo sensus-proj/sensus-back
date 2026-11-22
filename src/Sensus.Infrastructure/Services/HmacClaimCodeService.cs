@@ -21,7 +21,7 @@ public sealed class HmacClaimCodeService : IClaimCodeService
         if (string.IsNullOrWhiteSpace(secret))
         {
             throw new InvalidOperationException(
-                "ClaimCodeSettings:Secret no está configurado. Defínalo por variable de entorno o AWS Secrets Manager.");
+                "ClaimCodeSettings:Secret no está configurado. Defínalo en SSM Parameter Store (/sensus/<entorno>/ClaimCodeSettings/Secret).");
         }
 
         _key = Encoding.UTF8.GetBytes(secret);

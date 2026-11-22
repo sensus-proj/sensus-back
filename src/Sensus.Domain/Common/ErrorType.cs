@@ -8,5 +8,6 @@ public enum ErrorType
     Conflict = 3,
     Unauthorized = 4,
     Forbidden = 5,
-    Unprocessable = 6
+    Unprocessable = 6,
+    Unavailable = 7
 }

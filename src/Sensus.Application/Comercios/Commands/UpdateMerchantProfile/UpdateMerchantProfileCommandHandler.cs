@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers;
 using Sensus.Domain.Common;
 using Sensus.Domain.Enums;
@@ -16,19 +17,22 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
     private readonly IGeocodingService _geocodingService;
     private readonly ICacheService? _cacheService;
     private readonly IOfferRepository? _offerRepository;
+    private readonly ITextModerationService? _textModerationService;
 
     public UpdateMerchantProfileCommandHandler(
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IGeocodingService geocodingService,
         ICacheService? cacheService = null,
-        IOfferRepository? offerRepository = null)
+        IOfferRepository? offerRepository = null,
+        ITextModerationService? textModerationService = null)
     {
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _geocodingService = geocodingService;
         _cacheService = cacheService;
         _offerRepository = offerRepository;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<ComercioDto>> Handle(UpdateMerchantProfileCommand request, CancellationToken cancellationToken)
@@ -50,6 +54,19 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
         var nombreComercial = !string.IsNullOrWhiteSpace(request.NombreComercial)
             ? request.NombreComercial
             : comercio.NombreComercial;
+
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            $"Nombre del comercio: {nombreComercial}\nDirección: {request.Direccion}",
+            "Actualización de nombre y datos de comercio",
+            "Comercio.ContentModerationRejected",
+            "El nombre o datos del comercio contienen lenguaje antisonante u ofensivo.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<ComercioDto>(moderationResult.Error);
+        }
 
         var direccionCambio = !string.Equals(comercio.Direccion, request.Direccion, StringComparison.OrdinalIgnoreCase) ||
                               !string.Equals(comercio.CodigoPostal, request.CodigoPostal, StringComparison.OrdinalIgnoreCase);
@@ -76,11 +93,21 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
             request.CodigoPostal,
             latitud,
             longitud,
-            ParseCategoria(request.Categoria));
+            ParseCategoria(request.Categoria),
+            request.FotoFachadaUrl);
 
         if (updateResult.IsFailure)
         {
             return Result.Failure<ComercioDto>(updateResult.Error);
+        }
+
+        if (request.Activo == true)
+        {
+            comercio.Activate();
+        }
+        else if (request.Activo == false)
+        {
+            comercio.Deactivate();
         }
 
         // Actualizar horarios de atención si se proporcionaron

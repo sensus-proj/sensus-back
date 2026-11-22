@@ -12,4 +12,10 @@ public interface ITextModerationService
     Task<TextModerationResult> ModerateTextAsync(
         string text,
         CancellationToken cancellationToken = default);
+
+    Task<TextModerationResult> ModerateContentTextAsync(
+        string text,
+        string contentContext,
+        CancellationToken cancellationToken = default) =>
+        ModerateTextAsync(text, cancellationToken);
 }

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
+using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.ExpireOffers;
@@ -13,17 +15,20 @@ public sealed class ExpireOffersCommandHandler : IRequestHandler<ExpireOffersCom
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ExpireOffersCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly IOfferStatusHistoryRepository? _statusHistoryRepository;
 
     public ExpireOffersCommandHandler(
         IOfferRepository offerRepository,
         IDateTimeProvider dateTimeProvider,
         ILogger<ExpireOffersCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOfferStatusHistoryRepository? statusHistoryRepository = null)
     {
         _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _statusHistoryRepository = statusHistoryRepository;
     }
 
     public async Task<Result<ExpireOffersResultDto>> Handle(ExpireOffersCommand request, CancellationToken cancellationToken)
@@ -35,6 +40,19 @@ public sealed class ExpireOffersCommandHandler : IRequestHandler<ExpireOffersCom
         if (expiredCount > 0)
         {
             await _cacheService.InvalidateAsync(null, cancellationToken);
+
+            if (_statusHistoryRepository is not null)
+            {
+                await _statusHistoryRepository.AddAsync(
+                    new OfferStatusTransition(
+                        Guid.Empty,
+                        OfferStatus.Published,
+                        OfferStatus.Expired,
+                        null,
+                        $"AutomaticExpiration:{expiredCount}",
+                        now),
+                    cancellationToken);
+            }
         }
 
         _logger.LogInformation("Proceso de vigencia finalizado. Se marcaron {Count} ofertas como Expired.", expiredCount);

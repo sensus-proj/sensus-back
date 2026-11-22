@@ -1,10 +1,13 @@
 using FluentValidation;
+using Microsoft.Extensions.Options;
+using Sensus.Application.Common.Settings;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Application.Offers.Commands.UpdateOffer;
 
 public sealed class UpdateOfferCommandValidator : AbstractValidator<UpdateOfferCommand>
 {
-    public UpdateOfferCommandValidator()
+    public UpdateOfferCommandValidator(IOptions<OfferCategorySettings>? categorySettings = null)
     {
         RuleFor(x => x.OfferId)
             .NotEmpty().WithMessage("El identificador de la oferta es obligatorio.");
@@ -33,5 +36,13 @@ public sealed class UpdateOfferCommandValidator : AbstractValidator<UpdateOfferC
 
         RuleFor(x => x.ExpectedVersion)
             .GreaterThanOrEqualTo(1).WithMessage("La versión esperada debe ser mayor o igual a 1.");
+
+        When(_ => categorySettings?.Value.RequireStrictValidation == true, () =>
+        {
+            RuleFor(x => x.Category)
+                .Must(c => OfferCategoryCatalog.TryParse(c, out _))
+                .When(x => !string.IsNullOrWhiteSpace(x.Category))
+                .WithMessage($"La categoría debe pertenecer al catálogo OfferCategory: {string.Join(", ", OfferCategoryCatalog.Names)}.");
+        });
     }
 }

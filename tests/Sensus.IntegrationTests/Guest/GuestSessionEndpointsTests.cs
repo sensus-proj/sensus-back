@@ -26,16 +26,27 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
     }
 
     [Fact]
-    public async Task CreateGuestSession_ShouldReturnTokenWith2KmMaxRadius()
+    public async Task CreateGuestSession_ShouldReturnTokenWith2KmMaxRadius_AndMax15MinutesTtl()
     {
-        var response = await _client.PostAsync("/api/v1/auth/guest", null);
+        DateTime now = DateTime.UtcNow;
+        DateTime fixedNow = new(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, DateTimeKind.Utc);
+        _factory.FakeClock.Set(fixedNow);
+        try
+        {
+            var response = await _client.PostAsync("/api/v1/auth/guest", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var dto = await response.Content.ReadFromJsonAsync<GuestSessionResponseDto>();
-        dto.Should().NotBeNull();
-        dto!.Token.Should().NotBeNullOrWhiteSpace();
-        dto.Role.Should().Be(RoleType.Invitado);
-        dto.MaxRadiusMeters.Should().Be(2000);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var dto = await response.Content.ReadFromJsonAsync<GuestSessionResponseDto>();
+            dto.Should().NotBeNull();
+            dto!.Token.Should().NotBeNullOrWhiteSpace();
+            dto.Role.Should().Be(RoleType.Invitado);
+            dto.MaxRadiusMeters.Should().Be(2000);
+            dto.ExpiresAtUtc.Should().Be(fixedNow.AddMinutes(15));
+        }
+        finally
+        {
+            _factory.FakeClock.Set(DateTime.UtcNow);
+        }
     }
 
     [Fact]

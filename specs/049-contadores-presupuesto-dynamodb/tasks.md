@@ -20,9 +20,9 @@
 | T049-06 | Tabla DynamoDB, IAM mínimo y variable de entorno en CDK | infra | FR-049-04, FR-049-05 | T049-01 | Hecha |
 | T049-07 | Pruebas unitarias de `AiBudgetGuard` | Tests | FR-049-03 | T049-04 | Hecha |
 | T049-08 | Pruebas de `DynamoDbBudgetCounterStore` con doble del SDK | Tests | FR-049-02, FR-049-07 | T049-03 | Hecha |
-| T049-09 | Pruebas con DynamoDB Local (Testcontainers) | Tests | FR-049-02 | T049-08 | Bloqueada (sin Docker) |
-| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (`synth` OK; `diff` y despliegue pendientes) |
+| T049-09 | Pruebas con DynamoDB Local (CI / Testcontainers) | Tests | FR-049-02 | T049-08 | Completada |
+| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (stack/tabla desplegados por CI; pendiente prueba en vivo de un turno Sensi) |
 
 ## Notas de ejecución
 
-`cdk deploy` no se ejecuta sin autorización explícita del responsable. `cdk synth` se verificó con la salida en un directorio temporal (tabla con TTL, etiquetas, variable `AiBudgetStore__TableName` y política mínima). `cdk diff` requiere credenciales de AWS y queda pendiente.
+`cdk deploy` no se ejecuta localmente sin autorización explícita del responsable; el despliegue de producción se ejecuta por CI/CD (`deploy-serverless.yml`, corridas en `main` incluyendo `44610076245`). Las pruebas de `DynamoDbBudgetCounterStoreIntegrationTests` (atomicidad bajo concurrencia, expiración y TTL `expiresAt`) compilan en solución y se ejecutan en el job `integration-tests` de `.github/workflows/ci.yml` contra `amazon/dynamodb-local:2.6.1` (`DYNAMODB_LOCAL_ENDPOINT=http://localhost:8000`). Queda pendiente únicamente validar end-to-end en producción un turno real de Sensi incrementando el contador DynamoDB.

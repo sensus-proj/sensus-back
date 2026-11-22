@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 034, 035 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -48,6 +48,10 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 | FR-036-04 | Impedir archivar una oferta con apartados activos | Must |
 | FR-036-05 | Publicar solo ofertas con moderación aprobada y stock disponible | Must |
 | FR-036-06 | Registrar estado anterior, nuevo estado, actor y fecha | Must |
+| FR-036-07 | Republicar una oferta `Expired` o `Archived` (`POST /offers/{id}/republish`) con nuevas fechas y stock; solo el comercio dueño con comercio activo; invalida la caché | Must |
+| FR-036-08 | Ejecutar la expiración de ofertas vencidas (`POST /offers/expire-check`) y devolver el número de ofertas expiradas | Must |
+| FR-036-09 | Restringir `expire-check` a `Administrador`, con límite de tasa `sensitive-write` (era público hasta el 2026-11-19) | Must |
+| FR-036-10 | Aplicar el límite de tasa `sensitive-write` a `republish` | Should |
 
 ## 5. Requisitos no funcionales
 
@@ -82,11 +86,31 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 - **Cuando** se intenta
 - **Entonces** 409 y la oferta sigue archivada
 
+### CA-036-05
+
+- **Dado** una oferta `Expired` del comercio del usuario
+- **Cuando** la republica con fin futuro posterior al inicio y stock ≥ 1
+- **Entonces** recibe `200` con la oferta en `Published`
+
+### CA-036-06
+
+- **Dado** una oferta `Published`
+- **Cuando** se intenta republicar
+- **Entonces** recibe `409` `Offer.CannotRepublishActive`; con fechas inválidas o stock < 1 recibe `400`; si es de otro comercio, `403`; si no existe, `404`
+
+### CA-036-07
+
+- **Dado** una solicitud sin token o con token que no es de administrador
+- **Cuando** llama a `POST /api/v1/offers/expire-check`
+- **Entonces** recibe `401` o `403` y no se ejecuta la expiración
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
 | PUT | `/api/v1/offers/{id}/status` | JWT |
+| POST | `/api/v1/offers/{id}/republish` | JWT de comerciante (`MerchantOnly`) |
+| POST | `/api/v1/offers/expire-check` | JWT de `Administrador` (`AdminOnly`), límite `sensitive-write` |
 
 ## 8. Dependencias y supuestos
 
@@ -105,7 +129,7 @@ Permitir que el comerciante publique, pause o archive sus ofertas mediante trans
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-036-01`, `FR-036-02`, `FR-036-03`, `FR-036-04`, `FR-036-05`, `FR-036-06`
+- Requisitos de este spec: `FR-036-01`, `FR-036-02`, `FR-036-03`, `FR-036-04`, `FR-036-05`, `FR-036-06`, `FR-036-07`, `FR-036-08`, `FR-036-09`, `FR-036-10`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

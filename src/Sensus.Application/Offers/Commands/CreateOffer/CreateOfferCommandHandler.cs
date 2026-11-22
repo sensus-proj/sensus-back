@@ -1,7 +1,11 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -16,6 +20,9 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
+    private readonly IOptions<OfferCategorySettings>? _categorySettings;
+    private readonly ITextModerationService? _textModerationService;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -23,7 +30,10 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        INearbyOfferNotifier? nearbyOfferNotifier = null,
+        IOptions<OfferCategorySettings>? categorySettings = null,
+        ITextModerationService? textModerationService = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -31,6 +41,9 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _nearbyOfferNotifier = nearbyOfferNotifier;
+        _categorySettings = categorySettings;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -46,6 +59,20 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado para publicar ofertas."));
         }
 
+        bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
+            "Publicación de producto u oferta comercial",
+            "Offer.ContentModerationRejected",
+            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(moderationResult.Error);
+        }
+
         Result<Offer> offerResult = Offer.Create(
             comercio.Id,
             request.Title,
@@ -59,7 +86,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             comercio.Latitud,
             comercio.Longitud,
             _dateTimeProvider.UtcNow,
-            request.Category);
+            request.Category,
+            requireStrictCategory);
 
         if (offerResult.IsFailure)
         {
@@ -72,6 +100,12 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
 
         _logger.LogInformation("Oferta {OfferId} creada exitosamente para el comercio {ComercioId}. Vigencia hasta {EndsAtUtc}",
             offer.Id, comercio.Id, offer.EndsAt);
+
+        // FR-044-08: el aviso se intenta después de persistir y nunca revierte la creación.
+        if (_nearbyOfferNotifier is not null)
+        {
+            await _nearbyOfferNotifier.NotifyAsync(offer, userId, cancellationToken);
+        }
 
         return Result.Success(offer.ToDto());
     }

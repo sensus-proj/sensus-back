@@ -5,7 +5,7 @@
 | Estado | Aceptada |
 | Fecha | 2026-10-29 |
 | Principios afectados | I, VI, VII |
-| Specs relacionados | 041, 042, 043 |
+| Specs relacionados | 041, 042, 043, 054, 055 |
 
 ## Contexto
 
@@ -52,6 +52,14 @@ servir un modelo externo añadiría costo y una dependencia sin justificación p
 | Modelo entrenado propio | Prohibido para visión; además no hay corpus ni pipeline |
 | Servicio de búsqueda externo | Proveedor fuera de AWS y costo adicional |
 | Ordenar solo por fecha | Ignora cercanía y preferencias, contradice el objetivo del catálogo |
+
+## Actualización 2026-11-20
+
+La spec 042 pasa a ser el **feed de promociones por intereses** (`GET /api/v1/feed/offers`), con intereses
+explícitos (054), diversidad y exploración deterministas. La decisión de este ADR se mantiene: el ranking sigue
+siendo una función determinista. La spec 055 registra impresiones, aperturas y apartados seudonimizados para
+medir el feed y, en el futuro, evaluar un modelo aprendido (por ejemplo, Random Forest con ML.NET dentro de la
+Lambda). Esa dirección queda documentada en el [ADR 0015](0015-ranking-aprendido-mlnet.md), diferido hasta tener datos.
 
 ## Referencias
 

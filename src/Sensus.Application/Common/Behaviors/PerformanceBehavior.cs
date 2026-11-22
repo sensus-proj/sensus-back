@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Sensus.Application.Common.Interfaces;
 
 namespace Sensus.Application.Common.Behaviors;
 
@@ -40,7 +41,7 @@ public sealed class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior
                 "Alerta de rendimiento en solicitud de larga duración: {RequestName} tomó {ElapsedMilliseconds} ms. {@Request}",
                 requestName,
                 elapsedMilliseconds,
-                request);
+                request is ISensitiveRequest ? "[REDACTED]" : request);
         }
 
         return response;

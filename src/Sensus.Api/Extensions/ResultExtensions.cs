@@ -45,6 +45,7 @@ public static class ResultExtensions
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Unprocessable => StatusCodes.Status422UnprocessableEntity,
+            ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status400BadRequest
         };
 
@@ -54,6 +55,14 @@ public static class ResultExtensions
             Title = error.Code,
             Detail = error.Message
         };
+
+        if (error.Extensions is not null)
+        {
+            foreach (var (key, value) in error.Extensions)
+            {
+                problemDetails.Extensions[key] = value;
+            }
+        }
 
         return Results.Problem(problemDetails);
     }

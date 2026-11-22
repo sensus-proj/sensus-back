@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -19,6 +20,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
     private readonly IGeocodingService _geocodingService;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ITextModerationService? _textModerationService;
 
     public RegisterComercioCommandHandler(
         IUserRepository userRepository,
@@ -26,7 +28,8 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         ICurrentUserService currentUserService,
         IGeocodingService geocodingService,
         IJwtTokenGenerator jwtTokenGenerator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ITextModerationService? textModerationService = null)
     {
         _userRepository = userRepository;
         _comercioRepository = comercioRepository;
@@ -34,6 +37,7 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         _geocodingService = geocodingService;
         _jwtTokenGenerator = jwtTokenGenerator;
         _dateTimeProvider = dateTimeProvider;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<RegisterComercioResponseDto>> Handle(
@@ -58,6 +62,19 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
         {
             return Result.Failure<RegisterComercioResponseDto>(
                 Error.Conflict("Comercio.AlreadyExists", "El usuario ya posee un comercio activo registrado."));
+        }
+
+        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            _textModerationService,
+            $"Nombre del comercio: {request.NombreComercial}\nDirección: {request.Direccion}",
+            "Registro de nombre y datos de comercio",
+            "Comercio.ContentModerationRejected",
+            "El nombre o datos del comercio contienen lenguaje antisonante u ofensivo.",
+            cancellationToken);
+
+        if (moderationResult.IsFailure)
+        {
+            return Result.Failure<RegisterComercioResponseDto>(moderationResult.Error);
         }
 
         // Resolución de coordenadas (cliente opcional validado o geocodificación de respaldo)
@@ -95,7 +112,8 @@ public sealed class RegisterComercioCommandHandler : IRequestHandler<RegisterCom
             latitud,
             longitud,
             now,
-            categoria);
+            categoria,
+            request.FotoFachadaUrl);
 
         if (comercioResult.IsFailure)
         {

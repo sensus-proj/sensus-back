@@ -10,11 +10,15 @@ using Sensus.Application.Offers.Commands.ExpireOffers;
 using Sensus.Application.Offers.Commands.RedeemClaim;
 using Sensus.Application.Offers.Commands.RegisterOfferView;
 using Sensus.Application.Offers.Commands.RepublishOffer;
+using Sensus.Application.Offers.Commands.ToggleOfferLike;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
 using Sensus.Application.Offers.Queries.GetNearbyOffers;
+using Sensus.Application.Offers.Queries.GetOfferAlternatives;
+using Sensus.Application.Offers.Queries.GetOfferClaim;
 using Sensus.Application.Offers.Queries.GetOfferDetail;
+using Sensus.Application.Offers.Queries.SearchOffers;
 
 namespace Sensus.Api.Endpoints;
 
@@ -114,6 +118,7 @@ public static class OfferEndpoints
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("RepublishOffer")
         .WithSummary("SE-026: Marca y republica una oferta expirada o archivada con nuevas fechas de vigencia y stock")
         .Produces<OfferDto>(StatusCodes.Status200OK)
@@ -121,7 +126,8 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status409Conflict);
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // SE-022 a SE-025: Disparador de expiración automática (Sustituto de Trigger/Job SQL para AWS EventBridge o llamadas programadas)
         offersGroup.MapPost("/expire-check", async (
@@ -132,9 +138,16 @@ public static class OfferEndpoints
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
+        // FR-036-09: operación administrativa; antes era pública (OWASP API5). Los procesos programados
+        // ejecutan el comando directamente, sin pasar por HTTP.
+        .RequireAuthorization(SecurityExtensions.AdminOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("TriggerOfferExpiration")
-        .WithSummary("SE-022 a SE-025: Ejecuta la transición atómica en MongoDB de ofertas cuya vigencia expiró")
-        .Produces<ExpireOffersResultDto>(StatusCodes.Status200OK);
+        .WithSummary("SE-022 a SE-025: Ejecuta la transición atómica en MongoDB de ofertas cuya vigencia expiró (solo Administrador)")
+        .Produces<ExpireOffersResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 007: Ofertas publicadas dentro de un radio, ordenadas por distancia
         offersGroup.MapGet("/nearby", async (
@@ -167,6 +180,37 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 041: Búsqueda híbrida determinista por texto (stemming español y prefijo) y cercanía (FR-041-01 a FR-041-11)
+        offersGroup.MapGet("/search", async (
+            [FromQuery] string? q,
+            [FromQuery] double? lat,
+            [FromQuery] double? lng,
+            [FromQuery] double? radiusKm,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new SearchOffersQuery(
+                q,
+                lat ?? double.NaN,
+                lng ?? double.NaN,
+                radiusKm,
+                page ?? 1,
+                pageSize ?? 20);
+
+            var result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("SearchOffers")
+        .WithSummary("Spec 041: Búsqueda determinista de ofertas por texto (stemming español y prefijo) y cercanía")
+        .Produces<PagedResult<OfferSearchItemDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 033: Apartado de una unidad con código firmado de un solo uso
         offersGroup.MapPost("/{id:guid}/claim", async (
             Guid id,
@@ -188,6 +232,23 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 033: Canje del código por el comerciante propietario
+        offersGroup.MapGet("/claims/{claimId:guid}", async (
+            Guid claimId,
+            HttpContext context,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            var result = await sender.Send(new GetOfferClaimQuery(claimId), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .WithName("GetOfferClaim")
+        .Produces<OfferClaimDetailDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
         offersGroup.MapPost("/claims/{code}/redeem", async (
             string code,
             ISender sender,
@@ -218,9 +279,15 @@ public static class OfferEndpoints
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
+        // FR-033-12: operación administrativa; antes era pública (OWASP API5).
+        .RequireAuthorization(SecurityExtensions.AdminOnlyPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("TriggerClaimExpiration")
-        .WithSummary("Spec 033: Expira los apartados vencidos y devuelve el stock reservado")
-        .Produces<ExpireClaimsResultDto>(StatusCodes.Status200OK);
+        .WithSummary("Spec 033: Expira los apartados vencidos y devuelve el stock reservado (solo Administrador)")
+        .Produces<ExpireClaimsResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 032: Detalle completo de la oferta con datos públicos del comercio
         offersGroup.MapGet("/{id:guid}", async (
@@ -241,6 +308,30 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 043: Alternativas cercanas de la misma categoría y precio final comparable (FR-043-01 a FR-043-11)
+        offersGroup.MapGet("/{id:guid}/alternatives", async (
+            Guid id,
+            [FromQuery] int? limit,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new GetOfferAlternativesQuery(
+                id,
+                limit ?? Sensus.Domain.Models.OfferAlternativesPolicy.DefaultLimit);
+
+            var result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("GetOfferAlternatives")
+        .WithSummary("Spec 043: Alternativas cercanas de la misma categoría y precio final dentro del 120 %")
+        .Produces<IReadOnlyList<OfferAlternativeItemDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 032: Registro de vista deduplicado por usuario y día
         offersGroup.MapPost("/{id:guid}/view", async (
             Guid id,
@@ -256,6 +347,24 @@ public static class OfferEndpoints
         .WithName("RegisterOfferView")
         .WithSummary("Spec 032: Registra una vista por usuario, oferta y día; responde 204 sin datos internos")
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Social: Alternar Me gusta en una publicación de producto
+        offersGroup.MapPost("/{id:guid}/like", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ToggleOfferLikeCommand(id), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("ToggleOfferLike")
+        .WithSummary("Alterna 'Me gusta' del usuario sobre una publicación de producto y devuelve el total de likes")
+        .Produces<OfferLikeStatusDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);

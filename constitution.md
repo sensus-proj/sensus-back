@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **2.2.0** |
+| Versión | **2.4.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-15 (v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
+| Última enmienda | 2026-11-19 (v2.4.0: Redis activo con ElastiCache Serverless Valkey en VPC, NAT administrado y pausa nocturna de 22:30 a 07:00, excepción EX-003; v2.3.0: Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil; v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -36,7 +36,7 @@ RFC 2119.
 
 **Índice**
 
-1. Principios fundamentales (I–VII)
+1. Principios fundamentales (I–VIII)
 2. Restricciones técnicas y límites de plataforma
 3. Flujo de desarrollo SDD y puertas de calidad
 4. Gobernanza
@@ -46,7 +46,7 @@ RFC 2119.
 
 ## 1. Principios fundamentales
 
-Los siete principios siguientes son de cumplimiento obligatorio y verificable. Cada uno se compone de
+Los ocho principios siguientes son de cumplimiento obligatorio y verificable. Cada uno se compone de
 enunciado, reglas normativas, justificación, criterios de verificación y excepciones admitidas.
 
 ### Principio I — Especificación primero y trazabilidad
@@ -331,6 +331,94 @@ son requisitos funcionales del producto.
 
 ---
 
+### Principio VIII — DevSecOps de nivel fintech en backend y móvil
+
+**Enunciado.** Todo lo que se cree o modifique en el backend y en la aplicación móvil MUST diseñarse,
+construirse, verificarse y operarse conforme a las mejores prácticas de DevSecOps y a controles de
+seguridad de nivel fintech, aunque Sensus no procese pagos. Este principio **complementa** al Principio IV
+y al V; ante cualquier diferencia, MUST aplicarse el control más estricto.
+
+**Estándares de referencia (obligatorios)**
+
+| Ámbito | Estándar | Nivel exigido |
+|---|---|---|
+| API y backend | OWASP ASVS 5.0 | Nivel 2 como mínimo; **nivel 3** en autenticación, sesiones, autorización, sanciones, canje de códigos y eliminación de cuenta |
+| API | OWASP API Security Top 10 (2023) | Sin hallazgos abiertos de severidad alta o crítica |
+| Móvil | OWASP MASVS 2.x con perfil MASVS-RESILIENCE | Nivel L2 más resistencia a ingeniería inversa |
+| Identidad y credenciales | NIST SP 800-63B | Autenticadores y ciclo de vida de credenciales |
+| Cadena de suministro | NIST SSDF (SP 800-218) y SLSA | SLSA nivel 2 como mínimo en artefactos desplegados |
+| Nube | CIS AWS Foundations Benchmark | Controles aplicables al nivel gratuito |
+| Datos de pago | PCI DSS 4.0 | Solo como referencia de controles: los pagos y el almacenamiento de datos de tarjeta están **prohibidos** (§2.2) |
+
+**Reglas normativas**
+
+1. **Modelado de amenazas.** Toda spec que toque autenticación, autorización, datos personales, dinero
+   virtual, códigos canjeables o acciones administrativas MUST incluir en `plan.md` un modelo de
+   amenazas (STRIDE) con amenazas, mitigaciones y riesgo residual.
+2. **Defensa en profundidad y mínimo privilegio.** Cada rol, función Lambda y credencial MUST tener
+   solo los permisos necesarios (IAM con recursos acotados, sin comodines). Las acciones privilegiadas
+   MUST exigir autorización en el servidor y MUST registrarse.
+3. **Cero confianza en el cliente.** El servidor MUST validar con lista de permitidos cada entrada
+   (tipo, longitud, rango, formato) y MUST limitar el tamaño de las solicitudes. Los errores MUST ser
+   uniformes y no permitir la enumeración de usuarios ni de recursos.
+4. **Identidad y sesiones.** Los tokens de acceso MUST tener una vigencia de 15 minutos o menos en
+   nuevas implementaciones y MUST poder revocarse de inmediato. Las cuentas con rol `Administrador`
+   MUST exigir un segundo factor o autenticación reforzada antes de ejecutar acciones privilegiadas
+   (*step-up*). Los intentos fallidos MUST limitarse con retardo progresivo.
+5. **Secretos y criptografía.** Los secretos MUST residir en AWS Secrets Manager o SSM *SecureString*
+   y MUST rotarse como máximo cada 90 días. MUST NOT inyectarse secretos como variables de entorno en
+   claro. MUST usarse TLS 1.2 o superior (se prefiere 1.3), cifrado en reposo con claves gestionadas y
+   solo algoritmos vigentes. MUST NOT implementarse criptografía propia.
+6. **Auditoría a prueba de manipulación.** Todo evento de seguridad (inicio de sesión fallido, sanción,
+   reversión, acción administrativa, cambio de rol, eliminación de cuenta) MUST registrarse como
+   evento de solo adición con actor, objetivo, acción, resultado, marca temporal e identificador de
+   correlación, sin PII ni secretos. Los registros de auditoría MUST NOT poder editarse ni borrarse
+   por la API.
+7. **Clasificación y minimización de datos.** Cada dato MUST clasificarse (Público, Interno,
+   Confidencial, Restringido) en la spec, con retención declarada. Los datos Restringidos MUST cifrarse
+   en reposo y MUST NOT aparecer en logs, caché ni respuestas que no los requieran.
+8. **Verificación continua en el pipeline.** Además de lo exigido por el Principio V, el pipeline MUST
+   ejecutar de forma bloqueante para severidad alta o crítica: SAST, análisis de composición de
+   software (SCA), detección de secretos, escaneo de IaC, **DAST** contra un entorno desplegado de
+   pruebas y generación de **SBOM** (CycloneDX). Los artefactos desplegados MUST tener procedencia
+   verificable y las dependencias MUST fijarse por versión exacta.
+9. **Gestión de vulnerabilidades.** Los hallazgos MUST corregirse en: crítica ≤ 7 días, alta ≤ 30 días,
+   media ≤ 90 días. Toda excepción MUST seguir §4.4. El repositorio MUST publicar una política de
+   divulgación responsable (`SECURITY.md`).
+10. **Seguridad del móvil.** La aplicación MUST: fijar certificados (*pinning*) con pin de respaldo;
+    verificar integridad del dispositivo y de la aplicación (Play Integrity); almacenar secretos solo en
+    Android Keystore; cifrar la base local; bloquear capturas de pantalla en vistas sensibles; exigir
+    biometría o reautenticación en acciones sensibles; compilar *release* sin depuración, ofuscada,
+    sin logs sensibles y con respaldos deshabilitados; y no incluir secretos en el paquete.
+11. **Detección y respuesta.** Los eventos de seguridad MUST generar métricas y alarmas versionadas en
+    IaC, y MUST existir un procedimiento de respuesta a incidentes con responsables y plazos.
+12. **Fallo seguro.** Ante error, timeout o duda, el sistema MUST denegar (*fail-closed*), y MUST NOT
+    degradar un control de seguridad para preservar disponibilidad.
+13. **Restricción de costo.** Un control que exceda el nivel gratuito (por ejemplo AWS WAF) MUST seguir
+    el Principio VI: se sustituye por un control compensatorio documentado o se solicita aprobación
+    expresa. El costo MUST NOT ser motivo para omitir silenciosamente un control.
+
+**Justificación.** Sensus gestiona identidad, ubicación, canje de códigos y sanciones sobre personas
+reales. Un nivel de seguridad inferior al de una aplicación financiera expondría a los usuarios y al
+proyecto. Las prácticas fintech se adoptan por riesgo, no por tipo de producto.
+
+**Criterios de verificación**
+
+- Informe de cada herramienta del apartado 8 publicado por el pipeline, con umbral bloqueante.
+- Sección «Modelo de amenazas» presente en todo `plan.md` aplicable.
+- Pruebas automatizadas de autorización por rol y recurso, de no enumeración, de límites de tasa y de
+  revocación inmediata de sesión.
+- Prueba que verifica que los registros de auditoría solo admiten adición y no contienen PII.
+- Revisión por release del Apéndice F (registro de brechas) y de las tablas MASVS y ASVS.
+
+**Régimen de transición.** El código y la infraestructura existentes a la fecha de ratificación de la
+v2.3.0 MAY incumplir reglas de este principio **únicamente** si la brecha figura en el Apéndice F con
+responsable, tarea y fecha. Todo cambio nuevo o modificado MUST cumplirlo desde su primer commit.
+
+**Excepciones.** Ninguna admite desactivar un control de seguridad sin registro conforme a §4.4.
+
+---
+
 ## 2. Restricciones técnicas y límites de plataforma
 
 ### 2.1 Stack autorizado
@@ -343,7 +431,9 @@ son requisitos funcionales del producto.
 | Cómputo | AWS Lambda | — | Ejecución serverless |
 | API | AWS API Gateway | — | Exposición RESTful |
 | Multimedia y CDN | Cloudinary | — | Almacenamiento, transformación y distribución de contenido multimedia |
-| Caché distribuido | Redis | 7.x / 8.x | Caché de lecturas recurrentes con políticas TTL y LRU (fail-graceful, Spec 048). Opcional: la API MUST operar con Redis desactivado |
+| Caché distribuido | Amazon ElastiCache Serverless con motor Valkey (protocolo Redis) | Valkey 8 | Caché de lecturas recurrentes con TTL (fail-graceful, Spec 048 y ADR 0014). TLS obligatorio y acceso solo desde el grupo de seguridad de la API. La API MUST operar si la caché no responde (respaldo en memoria, FR-048-13) |
+| Red privada | Amazon VPC con NAT Gateway administrado | — | Subredes privadas para la Lambda y la caché; el NAT solo existe de día (Spec 051) y DynamoDB se alcanza por endpoint de puerta de enlace gratuito |
+| Programación | Amazon EventBridge Scheduler | — | Pausa nocturna de la infraestructura de 22:30 a 07:00, `America/Mexico_City` (Spec 051) |
 | Contadores de presupuesto y cuota | Amazon DynamoDB (`PAY_PER_REQUEST`, TTL nativo) | — | Contadores atómicos de gasto mensual y mensajes diarios de Sensi IA (EX-001), con *fail-closed* ante indisponibilidad. Sin VPC. Dentro del nivel gratuito permanente (Spec 049 y ADR 0013) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
 | Moderación de contenido publicado | OpenAI `gpt-4o-mini` en modo visión con la política de Sensus | — | Moderación multimodal de ofertas, publicaciones y comentarios (Spec 017); detecta armas, drogas y simbología de odio que `omni-moderation-latest` dejaba pasar |
@@ -479,6 +569,8 @@ Una tarea MUST considerarse terminada solo si cumple todo lo siguiente:
 - [ ] IaC actualizada y `cdk diff` revisado (Principio VI).
 - [ ] Logs, métricas y alarmas incorporados (Principio VII).
 - [ ] Revisión de seguridad: sin secretos, sin PII en logs, autorización verificada.
+- [ ] Modelo de amenazas (STRIDE) en `plan.md` cuando aplique, y controles ASVS/MASVS del Principio VIII verificados.
+- [ ] Escaneos bloqueantes del pipeline (SAST, SCA, secretos, IaC, DAST, SBOM) sin hallazgos altos o críticos.
 - [ ] Documentación y ADR actualizados cuando aplique.
 - [ ] `checklist.md` de la spec sin casillas pendientes y con la evidencia registrada.
 - [ ] Pipeline completo en verde.
@@ -496,6 +588,7 @@ Todo `plan.md` MUST incluir esta tabla, con decisión y evidencia:
 | V. Verificación automatizada | PASS / FAIL | |
 | VI. Costo cero e IaC | PASS / FAIL | |
 | VII. Rendimiento y observabilidad | PASS / FAIL | |
+| VIII. DevSecOps de nivel fintech | PASS / FAIL | |
 
 El resultado global MUST declararse como `PASS`, `PASS CON OBSERVACIONES` o `FAIL`.
 
@@ -591,9 +684,9 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 
 ### 4.5 Cumplimiento y auditoría
 
-- Cada release MUST verificar el cumplimiento de los siete principios.
+- Cada release MUST verificar el cumplimiento de los ocho principios.
 - Las violaciones detectadas MUST registrarse como deuda técnica con fecha de resolución.
-- Una violación de los principios II, IV o VI MUST tratarse como bloqueante.
+- Una violación de los principios II, IV, VI o VIII MUST tratarse como bloqueante.
 
 ### 4.6 Registro de cambios
 
@@ -607,6 +700,8 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 2.0.0 | 2026-11-15 | **MAJOR** (redefine la prohibición de herramientas de §2.2 de la v1.4.0). Evolución agéntica en 7 capas de Sensi IA: habilitación de MCP *in-process* y *Function Calling* exclusivamente de solo lectura bajo validación de permisos JWT en el servidor (§2.1, §2.2, §2.4); separación entre logs técnicos sanitizados en CloudWatch y trazabilidad redactada de PII en MongoDB con TTL/purga (P-IV); *Prompt Caching*, *Model Router* con afinidad de sesión, *guardrails* duales y puerta bloqueante CI/CD de *Evals* (§2.5). Deriva de ADR 0012 y Specs 046 y 047. |
 | 2.1.0 | 2026-11-15 | **MINOR**. Moderación de contenido publicado con `gpt-4o-mini` en modo visión y política de Sensus (armas, drogas, simbología de odio), porque `omni-moderation-latest` dejaba pasar imágenes con armas; `omni-moderation-latest` queda para el texto de Sensi IA (§2.1, §2.4). Nueva excepción `EX-002` por el costo de la moderación (Apéndice E). Deriva de la decisión D28 y de las Specs 017 y 046. |
 | 2.2.0 | 2026-11-15 | **MINOR**. Alta de Amazon DynamoDB en el stack autorizado (§2.1) exclusivamente para los contadores atómicos de presupuesto y cuota diaria de Sensi IA (EX-001), con TTL nativo, modo `PAY_PER_REQUEST`, sin VPC y dentro del nivel gratuito permanente; Redis pasa a ser opcional y de solo caché de lecturas. Motivo: con Redis desactivado en el despliegue, `AiBudgetGuard` fallaba en modo cerrado y toda respuesta de Sensi salía degradada. Alternativas descartadas: ElastiCache (exige VPC y NAT Gateway, ≈ 40 USD/mes) y Redis de un proveedor externo (multi-nube, §2.2). Spec 049 y ADR 0013. |
+| 2.4.0 | 2026-11-19 | **MINOR**. Alta de Amazon ElastiCache Serverless (Valkey), Amazon VPC con NAT Gateway administrado y Amazon EventBridge Scheduler en el stack autorizado (§2.1); Redis pasa de opcional a activo en producción. Nueva excepción EX-003 por el costo y brecha G-14 (caché sin autenticación de usuarios). Pausa nocturna de 22:30 a 07:00. Specs 048 y 051, ADR 0014. |
+| 2.3.0 | 2026-11-19 | **MINOR**. Nuevo Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil: estándares ASVS 5.0 (L2 y L3 en flujos críticos), OWASP API Top 10, MASVS L2 + resiliencia, NIST 800-63B, SSDF y SLSA 2; modelado de amenazas, auditoría de solo adición, *step-up* para administradores, DAST, SBOM, gestión de vulnerabilidades con plazos y seguridad reforzada del móvil. Añade el Apéndice F (registro de brechas de adopción) y el régimen de transición. Verificación por release ampliada a ocho principios (§3.3, §3.4, §4.5). |
 
 ---
 
@@ -688,6 +783,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | V. Verificación automatizada | | |
 | VI. Costo cero e IaC | | |
 | VII. Rendimiento y observabilidad | | |
+| VIII. DevSecOps de nivel fintech | | |
 
 Resultado global: PASS / PASS CON OBSERVACIONES / FAIL
 Excepciones registradas: [Apéndice E]
@@ -699,7 +795,33 @@ Excepciones registradas: [Apéndice E]
 |---|---|---|---|---|---|---|
 | EX-001 | VI | Costo variable del proveedor generativo de Sensi IA (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual (`5.00 USD/mes`, elevado desde `1.00 USD/mes` el 2026-11-15 por decisión del responsable del proyecto), *Prompt Caching* estático en dos bloques, *Model Router* con afinidad *sticky*, límite de tokens y mensajes diarios por persona, caché distribuida, puerta CI/CD de *Evals* y degradación determinista controlada (`NFR-046-02` y ADR 0012) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
 | EX-002 | VI | Costo variable de la moderación de contenido publicado con `gpt-4o-mini` (Spec 017) | `omni-moderation-latest` es gratuito pero dejaba pasar imágenes con armas y drogas, incompatibles con el giro de Sensus. Costo estimado ≈ 0.00013 USD por imagen (`detail: low`); techo de `1.00 USD/mes` (≈ 7,500 imágenes) con alarma al `80 %`. Al agotarse, el contenido va a cuarentena (fail-closed), nunca se publica sin veredicto. Se recomienda un proyecto y una clave de OpenAI independientes de Sensi IA para que el gasto de uno no bloquee al otro | Por asignar | Al cierre de la Spec 017 o al agotarse el techo de gasto mensual | Vigente |
+| EX-003 | VI | Costo de la red privada y la caché (NAT Gateway, IP elástica y ElastiCache Serverless Valkey, Spec 048 FR-048-14 y Spec 051) | El responsable del proyecto pidió activar Redis y aprobó el costo el 2026-11-19 (opción A), cubierto con créditos de AWS. Acotado por la pausa nocturna de 22:30 a 07:00 (≈ 29–32 USD/mes frente a ≈ 43 USD), límites de uso de la caché (1 GB y 5000 ECPU/s) y AWS Budgets a 40 USD/mes con alerta al 80 %. Alternativas sin costo descartadas en ADR 0014 | Rodrigo Sánchez | Al agotarse los créditos de AWS o al cierre del semestre, lo que ocurra primero | Vigente |
+| EX-004 | IV y VIII (TLS 1.2 o superior) | Solo la llamada saliente de `HttpMailerEmailSender` al servicio de correo `mailersensus.somee.com` por HTTP sin TLS, para los correos de recuperación de contraseña (Spec 029, FR-029-10 a FR-029-12). El resto de la comunicación sigue obligada a TLS 1.2 o superior | El servicio de correo vive en el plan gratuito de Somee, que no ofrece HTTPS; desde el 2026-11-20 todo envío fallaba con error de TLS y nadie podía recuperar su contraseña. El responsable del proyecto aceptó el riesgo (el token de recuperación y la clave `X-Api-Key` viajan en claro entre AWS y Somee) el 2026-11-20. Controles compensatorios: HTTP permitido solo para ese host y hasta la fecha de expiración, validado en código (fuera de eso el envío se rechaza); token de un solo uso con vigencia de 15 minutos que invalida los anteriores; límite de tasa `recover`; revocación de sesiones tras el cambio; rotación de la clave del servicio de correo cada 30 días mientras la excepción esté vigente | Rodrigo Sánchez | 2026-12-20 (migrar a un proveedor con TLS, T029-17) | Vigente |
+
+### Apéndice F — Registro de brechas de adopción del Principio VIII
+
+Brechas conocidas al 2026-11-19, detectadas en la auditoría del repositorio. Las fechas son **propuestas**
+pendientes de aprobación del responsable. Una brecha cerrada MUST marcarse con evidencia; una brecha
+vencida es una violación bloqueante (§4.5).
+
+| ID | Brecha | Regla | Ámbito | Remediación | Fecha objetivo | Estado |
+|---|---|---|---|---|---|---|
+| G-01 | Secretos (JWT, Mongo, Cloudinary, OpenAI, correo) inyectados como variables de entorno de Lambda | 5 | Backend | Migrar a SSM *SecureString* (gratuito) y leerlos en tiempo de arranque | 2026-12-18 | Cerrada en código el 2026-11-19 (Spec 045, FR-045-11); queda cargar los parámetros en `/sensus/prod/` |
+| G-02 | Sin DAST | 8 | Backend | ZAP *baseline* contra el entorno de pruebas desplegado | 2027-01-15 | Abierta |
+| G-03 | Sin escaneo de IaC | 8 | Backend | `cdk-nag` o Checkov bloqueante en CI | 2026-12-11 | Abierta |
+| G-04 | Sin SBOM ni procedencia de artefactos | 8 | Backend y móvil | CycloneDX y atestación en CI | 2026-12-18 | Abierta |
+| G-05 | Sin segundo factor para `Administrador` ni auditoría de solo adición generalizada | 4, 6 | Backend | *Step-up* en acciones privilegiadas; colección de auditoría de solo adición (Spec 021) | 2027-01-29 | Abierta |
+| G-06 | Vigencia de tokens de acceso y rotación de *refresh tokens* sin verificar contra la regla 4 | 4 | Backend | Revisar `JwtSettings`, acortar a ≤ 15 min y añadir *refresh* rotatorio | 2026-12-18 | Abierta |
+| G-07 | Sin fijación de certificados (*pinning*) | 10 | Móvil | `CertificatePinner` con pin de respaldo | 2026-12-18 | Abierta |
+| G-08 | Sin verificación de integridad (Play Integrity) ni detección de dispositivo comprometido | 10 | Móvil | Integrar Play Integrity y política de degradación | 2027-01-15 | Abierta |
+| G-09 | Sin `FLAG_SECURE` ni biometría en acciones sensibles | 10 | Móvil | Pantallas de código QR, canje y cuenta | 2027-01-15 | Abierta |
+| G-10 | Sin AWS WAF (supera el nivel gratuito) | 13 | Backend | Control compensatorio: *throttling* de API Gateway y límites de tasa; solicitar aprobación de costo para WAF | 2026-12-11 | Abierta |
+| G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Abierta |
+| G-12 | Clave de API de Figma en `mcp_config.json` local del móvil (ignorado por Git) | 5 | Móvil | Rotar la clave y moverla a variable de entorno del usuario | 2026-11-23 | Abierta |
+| G-14 | La caché Valkey Serverless no usa autenticación de usuarios (RBAC o IAM); el aislamiento depende del grupo de seguridad y de TLS | 2, 5 | Backend | Habilitar autenticación IAM de ElastiCache y generar el token en `RedisCacheService` | 2027-01-29 | Abierta |
+| G-15 | Swagger UI y el documento OpenAPI están públicos en producción (`Program.cs`), lo que expone la superficie completa de la API | 3 | Backend | Restringir a Development o protegerlos con `AdminOnly` | 2026-12-11 | Abierta |
+| G-13 | Pruebas de carga ausentes para los `NFR` de latencia | V, VII | Backend | k6 o similar contra entorno de pruebas | 2027-01-15 | Abierta |
 
 ---
 
-**Versión 2.2.0 — Ratificada el 2026-10-28, enmendada el 2026-11-15.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 2.4.0 — Ratificada el 2026-10-28, enmendada el 2026-11-19.** Toda modificación requiere el procedimiento de §4.3.

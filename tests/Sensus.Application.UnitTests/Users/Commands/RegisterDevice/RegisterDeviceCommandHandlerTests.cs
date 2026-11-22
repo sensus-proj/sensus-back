@@ -49,7 +49,7 @@ public sealed class RegisterDeviceCommandHandlerTests
     {
         // Arrange
         _currentUser.UserId.Returns(_userId.ToString());
-        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(PushResult.InvalidToken);
         var command = new RegisterDeviceCommand("device-1", "Android", "invalid-token");
 
         // Act
@@ -61,11 +61,26 @@ public sealed class RegisterDeviceCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenProviderUnavailable_ShouldPreserveDeviceState()
+    {
+        _currentUser.UserId.Returns(_userId.ToString());
+        var command = new RegisterDeviceCommand("device-1", "Android", "test-device-token-123456789");
+        _pushDispatcher.ValidateTokenAsync(command.Token, Arg.Any<CancellationToken>()).Returns(PushResult.Unavailable);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Unavailable);
+        await _deviceRepository.DidNotReceive().AddAsync(Arg.Any<Device>(), Arg.Any<CancellationToken>());
+        await _deviceRepository.DidNotReceive().UpdateAsync(Arg.Any<Device>(), Arg.Any<CancellationToken>());
+        await _deviceRepository.DidNotReceive().DeactivateByTokenAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Handle_WhenDeviceAlreadyExists_ShouldUpdateToken()
     {
         // Arrange
         _currentUser.UserId.Returns(_userId.ToString());
-        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(PushResult.Accepted);
         var existingDevice = Device.Create(_userId, "device-1", "Android", "old-token-12345678901234567890", DateTime.UtcNow);
         _deviceRepository.GetByUserAndDeviceIdAsync(_userId, "device-1", Arg.Any<CancellationToken>())
             .Returns(existingDevice);
@@ -86,7 +101,7 @@ public sealed class RegisterDeviceCommandHandlerTests
     {
         // Arrange
         _currentUser.UserId.Returns(_userId.ToString());
-        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(PushResult.Accepted);
         _deviceRepository.GetByUserAndDeviceIdAsync(_userId, "device-1", Arg.Any<CancellationToken>())
             .Returns((Device?)null);
         _deviceRepository.GetByTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -111,12 +126,14 @@ public sealed class RegisterDeviceCommandHandlerTests
         // Arrange
         var otherUserId = Guid.NewGuid();
         _currentUser.UserId.Returns(_userId.ToString());
-        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _pushDispatcher.ValidateTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(PushResult.Accepted);
         _deviceRepository.GetByUserAndDeviceIdAsync(_userId, "device-1", Arg.Any<CancellationToken>())
             .Returns((Device?)null);
         var otherUserDevice = Device.Create(otherUserId, "device-2", "iOS", "token-12345678901234567890", DateTime.UtcNow);
         _deviceRepository.GetByTokenAsync("token-12345678901234567890", Arg.Any<CancellationToken>())
             .Returns(otherUserDevice);
+        _deviceRepository.TryRemoveTokenBindingAsync(otherUserDevice.Id, otherUserId, otherUserDevice.Token, Arg.Any<CancellationToken>())
+            .Returns(true);
         var command = new RegisterDeviceCommand("device-1", "Android", "token-12345678901234567890");
 
         // Act
@@ -124,9 +141,8 @@ public sealed class RegisterDeviceCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        // Verificar que se desactivó el dispositivo del otro usuario comprobando el estado
-        otherUserDevice.IsActive.Should().BeFalse();
-        await _deviceRepository.Received(1).UpdateAsync(otherUserDevice, Arg.Any<CancellationToken>());
+        await _deviceRepository.Received(1).TryRemoveTokenBindingAsync(
+            otherUserDevice.Id, otherUserId, otherUserDevice.Token, Arg.Any<CancellationToken>());
         await _deviceRepository.Received(1).AddAsync(Arg.Any<Device>(), Arg.Any<CancellationToken>());
     }
 }

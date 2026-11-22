@@ -1,13 +1,17 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.GeneratePhotoSignature;
+using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
+using Sensus.Application.Users.Commands.ReplaceMyInterests;
 using Sensus.Application.Users.Commands.UpdateNotificationSettings;
 using Sensus.Application.Users.Commands.UpdateProfile;
 using Sensus.Application.Users.DTOs;
+using Sensus.Application.Users.Queries.GetMyInterests;
 using Sensus.Application.Users.Queries.GetNotificationSettings;
 using Sensus.Application.Users.Queries.GetProfile;
 using Sensus.Domain.Common;
@@ -93,7 +97,9 @@ public static class UserEndpoints
         .Produces<DeviceTokenResponseDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         if (isV1) registerDevice.WithName("RegisterDevice");
 
@@ -133,6 +139,26 @@ public static class UserEndpoints
 
         if (isV1) updateSettings.WithName("UpdateNotificationSettings");
 
+        group.MapPut("/notification-location", async (
+            ShareNotificationLocationCommand command, ISender sender, CancellationToken ct) =>
+            (await sender.Send(command, ct)).ToHttpResult())
+            .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+            .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+            .WithName("ShareNotificationLocation")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        group.MapDelete("/notification-location", async (ISender sender, CancellationToken ct) =>
+            (await sender.Send(new DeleteNotificationLocationCommand(), ct)).ToHttpResult())
+            .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+            .WithName("DeleteNotificationLocation")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         // SE-009: Eliminación definitiva de cuenta y datos asociados
         RouteHandlerBuilder deleteAccount = group.MapDelete("/account", async (
             [FromBody] DeleteAccountCommand command,
@@ -151,5 +177,111 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound);
 
         if (isV1) deleteAccount.WithName("DeleteAccount");
+
+        // Spec 054: Consultar intereses del usuario autenticado (no invitado)
+        RouteHandlerBuilder getInterests = group.MapGet("/me/interests", async (
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            Result<UserInterestsDto> result = await sender.Send(new GetMyInterestsQuery(), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithSummary("Spec 054: Consulta las categorías de interés del usuario autenticado")
+        .Produces<UserInterestsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) getInterests.WithName("GetMyInterests");
+
+        // Spec 054: Reemplazar intereses del usuario autenticado (cuerpo <= 1 KB)
+        RouteHandlerBuilder replaceInterests = group.MapPut("/me/interests", async (
+            HttpContext httpContext,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            const int maxInterestsBodyBytes = 1024;
+            if (httpContext.Request.ContentLength is > maxInterestsBodyBytes)
+            {
+                return Results.Problem(new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "UserInterests.PayloadTooLarge",
+                    Detail = "El cuerpo de la solicitud excede el límite de 1 KB."
+                });
+            }
+
+            using var buffer = new MemoryStream();
+            byte[] chunk = new byte[maxInterestsBodyBytes + 1];
+            int totalRead = 0;
+            while (true)
+            {
+                int read = await httpContext.Request.Body.ReadAsync(
+                    chunk.AsMemory(0, Math.Min(chunk.Length, maxInterestsBodyBytes + 1 - totalRead)),
+                    ct);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                totalRead += read;
+                if (totalRead > maxInterestsBodyBytes)
+                {
+                    return Results.Problem(new ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "UserInterests.PayloadTooLarge",
+                        Detail = "El cuerpo de la solicitud excede el límite de 1 KB."
+                    });
+                }
+
+                await buffer.WriteAsync(chunk.AsMemory(0, read), ct);
+            }
+
+            ReplaceMyInterestsCommand? command;
+            try
+            {
+                command = JsonSerializer.Deserialize<ReplaceMyInterestsCommand>(
+                    buffer.GetBuffer().AsSpan(0, (int)buffer.Length),
+                    InterestsJsonOptions);
+            }
+            catch (JsonException)
+            {
+                return Results.Problem(new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "UserInterests.InvalidJson",
+                    Detail = "El cuerpo JSON de la solicitud no es válido."
+                });
+            }
+
+            if (command is null)
+            {
+                return Results.Problem(new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "UserInterests.InvalidBody",
+                    Detail = "El cuerpo de la solicitud es obligatorio."
+                });
+            }
+
+            Result<UserInterestsDto> result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .Accepts<ReplaceMyInterestsCommand>("application/json")
+        .WithSummary("Spec 054: Reemplaza las categorías de interés del usuario autenticado")
+        .Produces<UserInterestsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) replaceInterests.WithName("ReplaceMyInterests");
     }
+
+    private static readonly JsonSerializerOptions InterestsJsonOptions = new(JsonSerializerDefaults.Web);
 }

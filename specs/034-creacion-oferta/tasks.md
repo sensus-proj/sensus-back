@@ -24,6 +24,9 @@
 | T034-10 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-034-01` | T034-09 | Pendiente |
 | T034-11 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-034-01` | T034-10 | Completada |
 | T034-12 | Registrar evidencias del Constitution Check | Docs | `FR-034-01` | T034-11 | Completada |
+| T034-13 | Enum `OfferCategory`, `OfferCategoryCatalog` y validación obligatoria al publicar, con pruebas de `400` y `201` (detrás de `OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) | Domain y Application | `FR-034-08` | T034-12 | Completada |
+| T034-14 | Migración única de categorías existentes con evidencia de documentos convertidos y nulos | Infrastructure | `FR-034-09` | T034-13 | Completada |
+| T034-15 | Ejecutar la migración de categorías una sola vez al arrancar la API con un servicio en segundo plano tolerante a fallos, y marcador insert-once que conserve la evidencia de la primera ejecución ante arranques concurrentes | Api e Infrastructure | `FR-034-09` | T034-14 | Completada |
 
 ## Notas de ejecución
 

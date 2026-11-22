@@ -8,7 +8,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [ ] La spec 038 está aprobada y sin preguntas bloqueantes
 - [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 032, 042
+- [ ] Las dependencias están resueltas: 032
 - [ ] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 

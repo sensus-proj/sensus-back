@@ -21,19 +21,22 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
     private readonly IOfferClaimRepository _offerClaimRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly ICacheService? _cacheService;
+    private readonly IOfferLikeRepository? _offerLikeRepository;
 
     public GetOfferDetailQueryHandler(
         IOfferRepository offerRepository,
         IComercioRepository comercioRepository,
         IOfferClaimRepository offerClaimRepository,
         ICurrentUserService currentUserService,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOfferLikeRepository? offerLikeRepository = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _offerClaimRepository = offerClaimRepository;
         _currentUserService = currentUserService;
         _cacheService = cacheService;
+        _offerLikeRepository = offerLikeRepository;
     }
 
     public async Task<Result<OfferDetailDto>> Handle(
@@ -91,8 +94,33 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
         }
 
         bool hasActiveClaim = await HasActiveClaimAsync(request.OfferId, cancellationToken);
+        (int likesCount, bool isLikedByMe) = await GetLikeStateAsync(request.OfferId, cancellationToken);
 
-        return Result.Success(detail with { HasActiveClaim = hasActiveClaim });
+        return Result.Success(detail with
+        {
+            HasActiveClaim = hasActiveClaim,
+            LikesCount = likesCount,
+            IsLikedByMe = isLikedByMe,
+        });
+    }
+
+    private async Task<(int LikesCount, bool IsLikedByMe)> GetLikeStateAsync(Guid offerId, CancellationToken cancellationToken)
+    {
+        if (_offerLikeRepository is null)
+        {
+            return (0, false);
+        }
+
+        // FR-057-02: Likes públicos y estado propio del detalle de oferta.
+        int likesCount = await _offerLikeRepository.CountByOfferIdAsync(offerId, cancellationToken);
+        bool isLikedByMe = false;
+        if (!_currentUserService.IsGuest && Guid.TryParse(_currentUserService.UserId, out Guid userId))
+        {
+            HashSet<Guid> likedIds = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, [offerId], cancellationToken) ?? [];
+            isLikedByMe = likedIds.Contains(offerId);
+        }
+
+        return (likesCount, isLikedByMe);
     }
 
     private async Task<bool> HasActiveClaimAsync(Guid offerId, CancellationToken cancellationToken)

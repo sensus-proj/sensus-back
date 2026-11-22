@@ -21,6 +21,7 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
     public bool Activo { get; private set; }
     public DateTime FechaRegistro { get; private set; }
     public MerchantCategory Categoria { get; private set; } = MerchantCategoryCatalog.Default;
+    public string? FotoFachadaUrl { get; private set; }
 
     public IReadOnlyCollection<HorarioDia> Horarios => _horarios.AsReadOnly();
 
@@ -38,7 +39,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         double latitud,
         double longitud,
         DateTime fechaRegistro,
-        MerchantCategory categoria) : base(id)
+        MerchantCategory categoria,
+        string? fotoFachadaUrl = null) : base(id)
     {
         UsuarioId = usuarioId;
         NombreComercial = nombreComercial;
@@ -49,6 +51,7 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         Activo = true;
         FechaRegistro = fechaRegistro;
         Categoria = categoria;
+        FotoFachadaUrl = fotoFachadaUrl;
         CreatedAtUtc = fechaRegistro;
     }
 
@@ -67,7 +70,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         bool activo,
         DateTime fechaRegistro,
         MerchantCategory categoria,
-        IEnumerable<HorarioDia>? horarios = null)
+        IEnumerable<HorarioDia>? horarios = null,
+        string? fotoFachadaUrl = null)
     {
         var comercio = new Comercio(
             id,
@@ -78,7 +82,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
             latitud,
             longitud,
             fechaRegistro,
-            categoria);
+            categoria,
+            fotoFachadaUrl);
 
         if (!activo)
         {
@@ -104,7 +109,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         double latitud,
         double longitud,
         DateTime? fechaRegistro = null,
-        MerchantCategory categoria = MerchantCategory.Otros)
+        MerchantCategory categoria = MerchantCategory.Otros,
+        string? fotoFachadaUrl = null)
     {
         if (usuarioId == Guid.Empty)
         {
@@ -144,6 +150,7 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
 
         var (normalizedLat, normalizedLng) = coordsResult.Value;
         var registrationDate = fechaRegistro ?? DateTime.UtcNow;
+        var normalizedPhotoUrl = string.IsNullOrWhiteSpace(fotoFachadaUrl) ? null : fotoFachadaUrl.Trim();
 
         var comercio = new Comercio(
             Guid.NewGuid(),
@@ -154,7 +161,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
             normalizedLat,
             normalizedLng,
             registrationDate,
-            categoria);
+            categoria,
+            normalizedPhotoUrl);
 
         comercio.AddDomainEvent(new ComercioRegisteredDomainEvent(comercio.Id, comercio.UsuarioId, comercio.NombreComercial));
 
@@ -185,7 +193,8 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         string codigoPostal,
         double latitud,
         double longitud,
-        MerchantCategory? categoria = null)
+        MerchantCategory? categoria = null,
+        string? fotoFachadaUrl = null)
     {
         if (string.IsNullOrWhiteSpace(nombreComercial))
         {
@@ -228,6 +237,11 @@ public class Comercio : BaseAuditableEntity, IAggregateRoot
         if (categoria.HasValue)
         {
             Categoria = categoria.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fotoFachadaUrl))
+        {
+            FotoFachadaUrl = fotoFachadaUrl.Trim();
         }
 
         return Result.Success();

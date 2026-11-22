@@ -46,6 +46,15 @@ public sealed class UserDocument
     [BsonElement("roles")]
     public List<string> Roles { get; set; } = [];
 
+    /// <summary>Sanción que mantiene suspendido al usuario (Spec 020).</summary>
+    [BsonElement("suspensionSanctionId")]
+    [BsonRepresentation(BsonType.String)]
+    public Guid? SuspensionSanctionId { get; set; }
+
+    /// <summary>Fin de la suspensión; nulo con <see cref="SuspensionSanctionId"/> presente indica baneo permanente.</summary>
+    [BsonElement("suspensionEndsAtUtc")]
+    public DateTime? SuspensionEndsAtUtc { get; set; }
+
     public static UserDocument FromDomain(User user)
     {
         return new UserDocument
@@ -61,7 +70,9 @@ public sealed class UserDocument
             Estatus = user.Estatus,
             FechaRegistro = user.FechaRegistro,
             UltimoAcceso = user.UltimoAcceso,
-            Roles = user.Roles.ToList()
+            Roles = user.Roles.ToList(),
+            SuspensionSanctionId = user.Suspension?.SanctionId,
+            SuspensionEndsAtUtc = user.Suspension?.EndsAtUtc
         };
     }
 
@@ -100,6 +111,13 @@ public sealed class UserDocument
             {
                 user.AddRole(role);
             }
+        }
+
+        if (SuspensionSanctionId is { } sanctionId)
+        {
+            user.RestoreSuspension(
+                sanctionId,
+                SuspensionEndsAtUtc is { } end ? DateTime.SpecifyKind(end, DateTimeKind.Utc) : null);
         }
 
         user.ClearDomainEvents();

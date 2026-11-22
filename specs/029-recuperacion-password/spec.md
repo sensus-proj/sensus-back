@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 001, 004, 013 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 
@@ -51,6 +51,11 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 | FR-029-05 | Exponer POST /api/v1/auth/recover/confirm para fijar la nueva contraseña | Must |
 | FR-029-06 | Rechazar tokens expirados, ya usados o inexistentes con 400 | Must |
 | FR-029-07 | Revocar todas las sesiones activas tras el cambio de contraseña | Must |
+| FR-029-08 | Aceptar `POST /auth/reset-password` como alias de compatibilidad de `/auth/recover/confirm`: mismo comando, misma política de tasa `recover` y mismas respuestas | Must |
+| FR-029-09 | Retirar el alias `/auth/reset-password` cuando la app móvil use la ruta canónica | Should |
+| FR-029-10 | Permitir HTTP sin TLS hacia el servicio de correo solo si el host coincide con `MailerSettings:InsecureHttpAllowedHost` y la fecha actual es anterior a `MailerSettings:InsecureHttpAllowedUntil` (excepción EX-004); en cualquier otro caso, rechazar el envío sin contactar al servicio | Must |
+| FR-029-11 | Rotar la clave del servicio de correo (`MailerSettings:ApiKey` en SSM) cada 30 días como máximo mientras EX-004 esté vigente | Must |
+| FR-029-12 | Migrar el envío de correo a un canal con TLS 1.2 o superior antes del 2026-12-20 y retirar EX-004 | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -92,12 +97,32 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 - **Cuando** se confirma
 - **Entonces** 400 sin cambiar la contraseña
 
+### CA-029-06
+
+- **Dado** un token de recuperación válido
+- **Cuando** se envía a `POST /api/v1/auth/reset-password` con la nueva contraseña
+- **Entonces** el resultado es idéntico a `/auth/recover/confirm`: `204`, o `400` con token inválido o vencido, o `429`
+
+### CA-029-07
+
+- **Dado** `MailerSettings:BaseUrl` con `http://mailersensus.somee.com`, ese mismo host en `InsecureHttpAllowedHost` y una fecha
+  anterior a `InsecureHttpAllowedUntil`
+- **Cuando** se envía un correo de recuperación
+- **Entonces** la solicitud sale por HTTP al servicio de correo
+
+### CA-029-08
+
+- **Dado** `MailerSettings:BaseUrl` con HTTP y un host distinto del permitido, una fecha vencida o sin fecha configurada
+- **Cuando** se intenta enviar un correo
+- **Entonces** no se realiza ninguna solicitud HTTP, se registra un error sin el destinatario y el envío falla
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
 |---|---|---|
 | POST | `/api/v1/auth/recover` | Pública |
 | POST | `/api/v1/auth/recover/confirm` | Pública |
+| POST | `/api/v1/auth/reset-password` | Pública (alias obsoleto de `/recover/confirm`) |
 
 ## 8. Dependencias y supuestos
 
@@ -109,6 +134,8 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 - Un fallo de SES deja al usuario sin enlace
 - El correo es un canal fuera del control del sistema
+- Mientras EX-004 esté vigente, el enlace con el token y la clave `X-Api-Key` viajan en claro entre AWS y Somee: quien
+  intercepte ese tramo puede tomar la cuenta en los 15 minutos de vigencia o enviar correos con la clave
 
 ## 10. Preguntas abiertas
 
@@ -116,7 +143,7 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-029-01`, `FR-029-02`, `FR-029-03`, `FR-029-04`, `FR-029-05`, `FR-029-06`, `FR-029-07`
+- Requisitos de este spec: `FR-029-01`, `FR-029-02`, `FR-029-03`, `FR-029-04`, `FR-029-05`, `FR-029-06`, `FR-029-07`, `FR-029-08`, `FR-029-09`, `FR-029-10`, `FR-029-11`, `FR-029-12`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

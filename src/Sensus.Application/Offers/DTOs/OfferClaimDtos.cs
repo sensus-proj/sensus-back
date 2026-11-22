@@ -1,5 +1,12 @@
 namespace Sensus.Application.Offers.DTOs;
 
+public sealed record OfferClaimDetailDto(
+    Guid ClaimId,
+    Guid OfferId,
+    string Status,
+    DateTime ExpiresAtUtc,
+    string? QrPayload);
+
 /// <summary>
 /// Resultado de crear un apartado (FR-033-04).
 /// </summary>

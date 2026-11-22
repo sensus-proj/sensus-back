@@ -85,7 +85,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         double? latitude = null,
         double? longitude = null,
         DateTime? nowUtc = null,
-        string? category = null)
+        string? category = null,
+        bool requireValidCategory = false)
     {
         DateTime now = nowUtc ?? DateTime.UtcNow;
 
@@ -129,6 +130,12 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             return Result.Failure<Offer>(Error.Validation("Offer.ExpiredEndDate", "La fecha de vencimiento debe estar en el futuro."));
         }
 
+        Result<string?> categoryResult = ResolveCategoryForCreate(category, requireValidCategory);
+        if (categoryResult.IsFailure)
+        {
+            return Result.Failure<Offer>(categoryResult.Error);
+        }
+
         decimal discountedPrice = Math.Round(originalPrice * (1 - (discountPercentage / 100m)), 2);
 
         Offer offer = new(
@@ -147,7 +154,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             latitude,
             longitude,
             now,
-            string.IsNullOrWhiteSpace(category) ? null : category.Trim());
+            categoryResult.Value);
 
         return Result.Success(offer);
     }
@@ -218,7 +225,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         int activeClaimCount,
         int expectedVersion,
         DateTime nowUtc,
-        string? category = null)
+        string? category = null,
+        bool requireValidCategory = false)
     {
         if (expectedVersion != Version)
         {
@@ -265,6 +273,12 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             return Result.Failure<bool>(Error.Validation("Offer.ExpiredEndDate", "La fecha de vencimiento debe estar en el futuro."));
         }
 
+        Result<string?> categoryResult = ResolveCategoryForUpdate(category, Status, Category, requireValidCategory);
+        if (categoryResult.IsFailure)
+        {
+            return Result.Failure<bool>(categoryResult.Error);
+        }
+
         string trimmedTitle = title.Trim();
         string trimmedDescription = description.Trim();
         string? trimmedImageUrl = imageUrl?.Trim();
@@ -282,14 +296,90 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         StartsAt = startsAt.ToUniversalTime();
         EndsAt = endsAt.ToUniversalTime();
         ImageUrl = trimmedImageUrl;
-        if (!string.IsNullOrWhiteSpace(category))
-        {
-            Category = category.Trim();
-        }
+        Category = categoryResult.Value;
         Version++;
         LastModifiedAtUtc = nowUtc;
 
         return Result.Success(contentChanged);
+    }
+
+    private static Result<string?> ResolveCategoryForCreate(string? category, bool requireValidCategory)
+    {
+        if (requireValidCategory)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+            {
+                return Result.Failure<string?>(new Error(
+                    "Offer.CategoryRequired",
+                    "La categoría de la oferta es obligatoria.",
+                    ErrorType.Validation,
+                    new Dictionary<string, object?> { ["field"] = "category" }));
+            }
+
+            if (!OfferCategoryCatalog.TryParse(category, out OfferCategory parsed))
+            {
+                return Result.Failure<string?>(new Error(
+                    "Offer.InvalidCategory",
+                    $"La categoría debe pertenecer al catálogo OfferCategory: {string.Join(", ", OfferCategoryCatalog.Names)}.",
+                    ErrorType.Validation,
+                    new Dictionary<string, object?> { ["field"] = "category" }));
+            }
+
+            return Result.Success<string?>(parsed.ToString());
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return Result.Success<string?>(null);
+        }
+
+        return Result.Success<string?>(OfferCategoryCatalog.TryParse(category, out OfferCategory canonical)
+            ? canonical.ToString()
+            : category.Trim());
+    }
+
+    private static Result<string?> ResolveCategoryForUpdate(
+        string? category,
+        OfferStatus status,
+        string? currentCategory,
+        bool requireValidCategory)
+    {
+        if (requireValidCategory)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+            {
+                if (status == OfferStatus.Published || !string.IsNullOrWhiteSpace(currentCategory))
+                {
+                    return Result.Failure<string?>(new Error(
+                        "Offer.CategoryRequired",
+                        "Una oferta publicada debe conservar una categoría válida de OfferCategory.",
+                        ErrorType.Validation,
+                        new Dictionary<string, object?> { ["field"] = "category" }));
+                }
+
+                return Result.Success<string?>(currentCategory);
+            }
+
+            if (!OfferCategoryCatalog.TryParse(category, out OfferCategory parsed))
+            {
+                return Result.Failure<string?>(new Error(
+                    "Offer.InvalidCategory",
+                    $"La categoría debe pertenecer al catálogo OfferCategory: {string.Join(", ", OfferCategoryCatalog.Names)}.",
+                    ErrorType.Validation,
+                    new Dictionary<string, object?> { ["field"] = "category" }));
+            }
+
+            return Result.Success<string?>(parsed.ToString());
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return Result.Success<string?>(currentCategory);
+        }
+
+        return Result.Success<string?>(OfferCategoryCatalog.TryParse(category, out OfferCategory canonical)
+            ? canonical.ToString()
+            : category.Trim());
     }
 
     /// <summary>

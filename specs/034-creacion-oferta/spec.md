@@ -51,6 +51,8 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 | FR-034-05 | Limitar a 20 ofertas activas por comercio | Should |
 | FR-034-06 | Calcular y persistir el precio final a partir del descuento | Must |
 | FR-034-07 | Devolver 202 cuando la moderación quede pendiente | Should |
+| FR-034-08 | Exigir para publicar una categoría del catálogo de producto `OfferCategory` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets` y `Pharmacy`); un valor ausente o fuera del catálogo responde `400`. Un borrador (`FR-034-04`) puede guardarse sin categoría | Must |
+| FR-034-09 | Normalizar una sola vez las ofertas existentes: los nombres en español que enviaba el móvil se convierten al código (Abarrotes → `Grocery`, Limpieza y Hogar → `CleaningHome`, Perecederos → `Perishables`, Lácteos → `Dairy`, Comida → `Food`, Panadería → `Bakery`, Bebidas → `Beverages`, Mascotas → `Pets`, Farmacia → `Pharmacy`); los valores no reconocibles quedan nulos y se cuentan en la evidencia de la migración | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -91,6 +93,18 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 - **Cuando** se intenta crear otra
 - **Entonces** 409
 
+### CA-034-06 — Categoría obligatoria
+
+- **Dado** una oferta para publicar sin categoría o con `"Moda"`
+- **Cuando** `POST /api/v1/offers`
+- **Entonces** `400` con `ProblemDetails` que indica el campo `category`
+
+### CA-034-07 — Categoría válida
+
+- **Dado** una oferta con `category = "Bakery"`
+- **Cuando** `POST /api/v1/offers`
+- **Entonces** `201` y la oferta guarda el código `Bakery`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -100,6 +114,7 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 ## 8. Dependencias y supuestos
 
 - Depende de: 005, 017, 022
+- `OfferCategory` describe el producto y es distinto de `MerchantCategory`, que clasifica al comercio (005). Lo consumen el feed de promociones (042) y los intereses del usuario (054). Decisión del responsable del 2026-11-20.
 - El comportamiento descrito aplica a la versión v1 de la API.
 - Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
 
@@ -114,7 +129,7 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-034-01`, `FR-034-02`, `FR-034-03`, `FR-034-04`, `FR-034-05`, `FR-034-06`, `FR-034-07`
+- Requisitos de este spec: `FR-034-01`, `FR-034-02`, `FR-034-03`, `FR-034-04`, `FR-034-05`, `FR-034-06`, `FR-034-07`, `FR-034-08`, `FR-034-09`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
