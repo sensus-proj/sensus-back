@@ -21,6 +21,7 @@ public class CreateOfferCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly CreateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -34,6 +35,9 @@ public class CreateOfferCommandHandlerTests
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _logger = Substitute.For<ILogger<CreateOfferCommandHandler>>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
 
@@ -43,6 +47,7 @@ public class CreateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService);
     }
 
@@ -140,7 +145,7 @@ public class CreateOfferCommandHandlerTests
             .Returns(Task.FromResult<Comercio?>(comercio));
         var notifier = Substitute.For<INearbyOfferNotifier>();
         var handler = new CreateOfferCommandHandler(
-            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _cacheService, notifier);
+            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _auditRecorder, _cacheService, notifier);
         var command = new CreateOfferCommand(
             "Detergente", "Detergente líquido de 3 litros", 100m, 20, 10, _now, _now.AddDays(5), null);
 
@@ -167,6 +172,7 @@ public class CreateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService,
             categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
 

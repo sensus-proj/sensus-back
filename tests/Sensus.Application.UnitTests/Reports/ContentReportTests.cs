@@ -43,12 +43,14 @@ public sealed class ContentReportTests
         currentUser.UserId.Returns(Guid.NewGuid().ToString());
         correlation.CorrelationId.Returns("corr-legal-001");
 
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
         var handler = new CreateContentReportCommandHandler(
             repo,
             targetService,
             currentUser,
             clock,
             Options.Create(new ContentReportSettings()),
+            cdnInvalidator,
             logger,
             correlation);
 
@@ -77,12 +79,14 @@ public sealed class ContentReportTests
         targetService.GetTargetInfoAsync(ReportTargetType.Post, postId, Arg.Any<CancellationToken>())
             .Returns(new ReportTargetInfo(Exists: true, AuthorUserId: authorId));
 
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
         var handler = new CreateContentReportCommandHandler(
             repo,
             targetService,
             currentUser,
             clock,
             Options.Create(new ContentReportSettings()),
+            cdnInvalidator,
             logger);
 
         Result<ContentReportDto> result = await handler.Handle(
@@ -111,12 +115,14 @@ public sealed class ContentReportTests
         repo.ExistsRecentAsync(reporterId, ReportTargetType.Offer, offerId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
         var handler = new CreateContentReportCommandHandler(
             repo,
             targetService,
             currentUser,
             clock,
             Options.Create(new ContentReportSettings()),
+            cdnInvalidator,
             logger);
 
         Result<ContentReportDto> result = await handler.Handle(
@@ -148,12 +154,14 @@ public sealed class ContentReportTests
         targetService.MarkUnderReviewAsync(ReportTargetType.Comment, commentId, Now, Arg.Any<CancellationToken>())
             .Returns(true);
 
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
         var handler = new CreateContentReportCommandHandler(
             repo,
             targetService,
             currentUser,
             clock,
             Options.Create(new ContentReportSettings { AutoReviewThreshold = 3, DeduplicationWindowHours = 24 }),
+            cdnInvalidator,
             logger);
 
         Result<ContentReportDto> result = await handler.Handle(

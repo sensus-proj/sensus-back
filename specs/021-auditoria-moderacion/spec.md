@@ -4,13 +4,13 @@
 |---|---|
 | ID | 021 |
 | Slug | `auditoria-moderacion` |
-| Estado | Pendiente |
+| Estado | Implementada |
 | Ola | 4 |
 | Tipo | Nuevo |
-| Dueño | Por asignar |
+| Dueño | Rodrigo |
 | Dependencias | 017, 020 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 2.0.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` |
 
 ---
 
@@ -91,6 +91,7 @@ Conservar evidencia inmutable de cada decisión de moderación para revisión y 
 ## 10. Preguntas abiertas
 
 - ¿Cuánto tiempo debe conservarse la evidencia?
+  - **[RESUELTO 2026-11-22]**: Retención explícita de **2555 días** (~7 años) en cumplimiento de la política de datos y auditoría de solo adición (FR-021-04), configurada mediante índice TTL en MongoDB (`ttl_moderation_audit_retention`).
 
 ## 11. Trazabilidad
 

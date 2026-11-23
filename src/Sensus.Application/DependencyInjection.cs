@@ -25,6 +25,9 @@ public static class DependencyInjection
         // Sanciones y baneo (Spec 020)
         services.AddScoped<Sensus.Application.Common.Interfaces.ISanctionNotifier, Sensus.Application.Sanctions.Services.SanctionNotifier>();
 
+        // Auditoría de moderación (Spec 021)
+        services.AddScoped<Sensus.Application.Common.Interfaces.IModerationAuditRecorder, Sensus.Application.Moderation.Audit.ModerationAuditRecorder>();
+
         // Sensi IA (Spec 046)
         services.AddSingleton<Sensus.Application.Ai.Services.ITwoBlockPromptBuilder, Sensus.Application.Ai.Services.TwoBlockPromptBuilder>();
         services.AddScoped<Sensus.Application.Common.Interfaces.IDeterministicAiFallbackService, Sensus.Application.Ai.Services.DeterministicAiFallbackService>();

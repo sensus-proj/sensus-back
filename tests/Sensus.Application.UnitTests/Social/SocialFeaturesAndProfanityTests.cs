@@ -141,6 +141,9 @@ public sealed class SocialFeaturesAndProfanityTests
         var clock = Substitute.For<IDateTimeProvider>();
         clock.UtcNow.Returns(FixedNow);
         var moderation = ApprovingModeration();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
 
         // Calificación 5 y calificación 4 => promedio 4.5
         var createAsBuyerA = new CreateStoreReviewCommandHandler(
@@ -149,6 +152,7 @@ public sealed class SocialFeaturesAndProfanityTests
             reviewRepo,
             MockCurrentUser(buyerA.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var firstSummary = await createAsBuyerA.Handle(
@@ -170,6 +174,7 @@ public sealed class SocialFeaturesAndProfanityTests
             reviewRepo,
             MockCurrentUser(buyerB.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var secondSummary = await createAsBuyerB.Handle(
@@ -193,6 +198,7 @@ public sealed class SocialFeaturesAndProfanityTests
             userRepo,
             MockCurrentUser(buyerA.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var badReply = await replyHandler.Handle(

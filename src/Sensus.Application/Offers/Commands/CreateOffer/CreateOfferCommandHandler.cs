@@ -8,6 +8,7 @@ using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.CreateOffer;
@@ -23,6 +24,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
     private readonly IOptions<OfferCategorySettings>? _categorySettings;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -30,6 +32,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateOfferCommandHandler> logger,
+        IModerationAuditRecorder auditRecorder,
         ICacheService? cacheService = null,
         INearbyOfferNotifier? nearbyOfferNotifier = null,
         IOptions<OfferCategorySettings>? categorySettings = null,
@@ -40,6 +43,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
         _nearbyOfferNotifier = nearbyOfferNotifier;
         _categorySettings = categorySettings;
@@ -60,18 +64,6 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
-        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
-            _textModerationService,
-            $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
-            "Publicación de producto u oferta comercial",
-            "Offer.ContentModerationRejected",
-            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
-            cancellationToken);
-
-        if (moderationResult.IsFailure)
-        {
-            return Result.Failure<OfferDto>(moderationResult.Error);
-        }
 
         Result<Offer> offerResult = Offer.Create(
             comercio.Id,
@@ -95,6 +87,41 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         Offer offer = offerResult.Value;
+
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
+            _textModerationService,
+            $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
+            "Publicación de producto u oferta comercial",
+            "Offer.ContentModerationRejected",
+            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+            cancellationToken);
+
+        // Spec 021 (FR-021-01): la decisión sobre la publicación queda auditada antes de persistirla.
+        ModerationAuditEntry auditEntry = new(
+            offer.Id,
+            ModerationTargetType.Offer,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "offer_create",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores);
+
+        if (!evaluation.IsApproved)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+            return Result.Failure<OfferDto>(
+                evaluation.RejectionError
+                ?? Error.Validation("Offer.ContentModerationRejected", "El título o descripción de la publicación contiene lenguaje antisonante o prohibido."));
+        }
+
+        // Spec 021 (FR-021-01): sin evidencia persistida la oferta no se publica (fail-closed).
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(auditResult.Error);
+        }
+
         await _offerRepository.AddAsync(offer, cancellationToken);
         await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 

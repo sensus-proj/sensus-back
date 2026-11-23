@@ -173,6 +173,7 @@ public sealed class UserInterestsTests
         hasher.VerifyPassword("Pass123!", "hash").Returns(true);
         comercioRepo.GetByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns((Comercio?)null);
 
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
         var handler = new DeleteAccountCommandHandler(
             userRepo,
             comercioRepo,
@@ -182,6 +183,7 @@ public sealed class UserInterestsTests
             storage,
             offerRepo,
             clock,
+            cdnInvalidator,
             cache,
             userInterestsRepository: interestsRepo);
 
