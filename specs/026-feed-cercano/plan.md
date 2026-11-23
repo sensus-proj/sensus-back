@@ -22,7 +22,8 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 
 ## 3. Modelo de datos e índices
 
-- posts con location 2dsphere heredada del comercio o enviada por el autor; índice status + createdAt
+- Índice compuesto de estado, ubicación `2dsphere` y fecha según `NFR-026-02`. Los nombres de la colección y de los campos se toman del contrato persistido de la Spec 024.
+- El filtro exige el estado publicado de forma explícita y una ubicación válida. Se ordena por fecha descendente y se usa el identificador como desempate estable.
 
 ## 4. Seguridad
 
@@ -53,6 +54,7 @@ Caché en memoria del proceso; sin costo adicional.
 
 - Integración de paginación y filtrado
 - Prueba de caché y de radio inválido
+- Prueba de exclusión del resultado y del total tras eliminar una publicación que ya aparecía en caché (`CA-026-06`)
 
 ## 8. Constitution Check
 

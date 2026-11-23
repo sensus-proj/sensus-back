@@ -12,7 +12,7 @@
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T026-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-026-01` | — | Pendiente |
+| T026-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-026-01` | Contrato de lectura de la Spec 024 | En curso. Parámetros documentados; falta el esquema de publicación para la respuesta 200. |
 | T026-02 | Implementar: GetNearbyFeedQuery con proyección | Application | `FR-026-01` | T026-01 | Pendiente |
 | T026-03 | Implementar: Índice geoespacial y caché de corta duración | Infrastructure | `FR-026-01` | T026-02 | Pendiente |
 | T026-04 | Implementar: Endpoint GET /api/v1/feed/nearby | Api | `FR-026-01` | T026-03 | Pendiente |

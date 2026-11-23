@@ -2,24 +2,56 @@ openapi: 3.1.0
 info:
   title: "Sensus API — Spec 026 Feed geolocalizado"
   version: 1.0.0
-  description: "Borrador del contrato del spec 026. Completar esquemas antes de implementar."
+  description: "Contrato en revisión. La proyección de publicaciones está pendiente del contrato de lectura de la Spec 024."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/feed/nearby:
     get:
-      summary: "Borrador de GET /api/v1/feed/nearby"
+      summary: Listar publicaciones cercanas en orden cronológico inverso
       security: [{ bearerAuth: [] }]
       parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitud del centro de búsqueda.
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+        - name: lng
+          in: query
+          required: true
+          description: Longitud del centro de búsqueda.
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
         - name: radiusKm
           in: query
           description: Radio en kilómetros, con un máximo de 5 km inclusive.
           schema:
             type: number
+            exclusiveMinimum: 0
             maximum: 5
+        - name: page
+          in: query
+          description: Número de página, empezando en 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Número de publicaciones por página.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200': { description: Página de publicaciones visibles con ubicación dentro del radio. }
+        '400': { description: Coordenadas, radio o paginación inválidos. }
         '401': { description: No autenticado }
 components:
   securitySchemes:

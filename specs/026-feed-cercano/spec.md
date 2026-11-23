@@ -87,6 +87,18 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 - **Cuando** solicita el feed con `radiusKm=5.01`
 - **Entonces** recibe `400 Bad Request` porque el radio máximo es de 5 km
 
+### CA-026-06
+
+- **Dado** que una página en caché contiene una publicación visible
+- **Cuando** la eliminación de esa publicación se confirma y se repite la consulta original
+- **Entonces** la publicación queda fuera de `items` y del total paginado
+
+### CA-026-07
+
+- **Dado** que existen publicaciones visibles a distintas distancias dentro del radio
+- **Cuando** se consulta el feed
+- **Entonces** se ordenan por fecha de más reciente a más antigua y el identificador resuelve los empates de forma estable entre páginas
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
