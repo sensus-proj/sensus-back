@@ -8,13 +8,44 @@ servers:
 paths:
   /api/v1/feed/posts/{id}/like:
     post:
-      summary: "Borrador de POST /api/v1/feed/posts/{id}/like"
+      summary: Establecer el estado del me gusta sobre una publicación visible
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [liked]
+              properties:
+                liked:
+                  type: boolean
+                  description: Estado deseado del me gusta del usuario autenticado.
       responses:
-        '200': { description: OK }
+        '200':
+          description: Estado resultante y conteo actualizado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [liked, likeCount]
+                properties:
+                  liked:
+                    type: boolean
+                  likeCount:
+                    type: integer
+                    minimum: 0
         '400': { description: Solicitud inválida }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '404': { description: Publicación inexistente o no visible }
+        '429': { description: Límite de solicitudes superado }
 components:
   securitySchemes:
     bearerAuth:

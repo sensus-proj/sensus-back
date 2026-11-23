@@ -287,3 +287,85 @@ Implementados, pendientes de verificar: GET de apartado autenticado con QR solo 
 ### 2026-11-19 — Bloqueo normativo de moderación para alertas cercanas
 
 Se contrastó la cuarentena exigida por el Principio IV y la spec 019 con Cloudinary como almacenamiento multimedia exclusivo (Principio VI). La ruta actual retiene en Cloudinary y escribe antes del veredicto. Se dejó en el plan 034 una propuesta §4.3 para retención temporal privada en MongoDB con TTL antes de Cloudinary. Pendientes aprobación, implementación de moderación y alertas, y verificación del punto 3. La consulta de SDK sigue mostrando 9.0.317 y 11.0.100, sin SDK compatible con global.json. No se cambiaron endpoints ni se activó Firebase.
+
+### Sincronización del 2026-11-21
+
+Se actualizaron las referencias de origin. Back_Rocio ya coincidía con origin/Back_Rocio. La sincronización quedó completa y el próximo trabajo continúa en Back_Rocio.
+
+
+### Revisión de la Spec 039
+
+La implementación en Back_Rocio queda pendiente. La Spec 024 no está implementada. origin/Fin_Beto contiene una consulta de visibilidad para comentarios, sin el flujo de publicación de la Spec 024. El siguiente paso es confirmar si se incluye la Spec 024 y aclarar el comportamiento concurrente de CA-039-04.
+
+
+Verificación ampliada: tras actualizar todos los remotos, se revisaron las dos ramas locales y las ocho ramas vigentes de origin. La Spec 024 figura pendiente en todas, sin rutas de creación o eliminación de publicaciones. Fin_Beto aporta las rutas de comentarios y la consulta de visibilidad.
+
+
+### 2026-11-22 — Revisión de la Spec 026
+
+Se revisaron los cuatro artefactos de la Spec 026 y el contrato OpenAPI, aún en borrador. En Back_Rocio falta la Spec 024, que provee las publicaciones moderadas y su eliminación. La consulta puede reutilizar PagedResult<T> y tomar como referencia la consulta geoespacial de la Spec 007. Queda pendiente confirmar el alcance de la dependencia 024 y el origen de la ubicación de publicaciones de consumidores. Después se actualiza el plan a constitution.md v2.4.0 y se valida cómo aplicar FR-024-07 con la caché de FR-026-06. Sin cambios de código ni despliegue.
+
+El responsable fijó el radio máximo de la Spec 026 en 5 km inclusive. Se actualizó FR-026-04 en la spec y el registro, además del criterio de aceptación, el plan, el checklist y el borrador OpenAPI. La dependencia de la Spec 024 y el origen de la ubicación siguen pendientes para implementar.
+
+Se confirmó la Spec 024 como prerrequisito de la 026. Para consumidores se eligió la ubicación compartida al crear la publicación y se excluye del feed cercano cuando se omite. Bloqueo normativo: CA-024-01 exige publicar texto sin imagen, pero constitution.md v2.4.0 §2.4 prescribe imagen y texto en la misma solicitud. Además, el flujo actual de carga multimedia almacena antes de moderar y no puede reutilizarse así para este requisito. Siguiente paso: resolver la discrepancia mediante el procedimiento de §4.3 y actualizar los artefactos de 024 y 026. No se inició la implementación.
+
+### 2026-11-22 — Enmienda de moderación para el feed
+
+Aprobada y aplicada constitution.md v3.0.0 (ADR 0015). Solo texto cuando la publicación no incluye imagen; análisis conjunto cuando sí incluye imagen; cuarentena ante fallos con EX-002 vigente. Se incorporó FR-017-08 / T017-12 y se actualizaron los artefactos de 024 y 026. Pendiente para implementar: cerrar la decisión de borrado de la 024, actualizar los Constitution Check al Principio VIII, implementar el adaptador y la publicación moderada antes de construir el feed.
+
+El responsable limitó este trabajo a la Spec 026. La Spec 024 se mantiene como dependencia externa a cargo de su responsable. La siguiente revisión de 026 debe verificar el contrato persistido de las publicaciones y el cambio de visibilidad al eliminar, antes de cerrar la preparación de la implementación.
+
+Se volvió a comprobar Back_Rocio y las referencias remotas disponibles localmente. No se encontró implementación de publicación para integrar la 026. Se documentó STRIDE en el plan 026 y quedó pendiente validar el contrato de persistencia y visibilidad de la 024 para continuar con T026-01.
+
+### 2026-11-22 — Consulta de estado de especificaciones
+
+El índice y la evidencia de tareas o checklist dejan las specs 017, 033, 034 y 049 en Parcial. El flujo base de apartado y canje está cerrado; su validación con FCM y la medición de latencia siguen abiertas. Las specs 053 y 058 no figuran en el catálogo local. Para verificarlas, queda pendiente identificar la referencia donde aparecen esos IDs. La consulta no generó tareas de implementación.
+
+### 2026-11-22 — Estado de publicación del trabajo en Back_Rocio
+
+Los cambios de la sesión anterior siguen en el árbol de trabajo sin commit ni push. `HEAD` y la referencia local `origin/Back_Rocio` apuntan a `078cdc0`. La consulta directa a GitHub falló por resolución DNS. La Spec 053 quedó implementada y probada localmente; falta CI. La 058 se localizó en `origin/main` y el responsable autorizó incorporar sus dependencias 056, 057 y 059 a `Back_Rocio`. Ese traslado sigue pendiente.
+
+Se reconfirmó el estado de cierre: 017, 033, 034, 049 y 053 siguen en Parcial en el índice local. La 058 sigue sin integrar en `Back_Rocio` y su paginación está pendiente en la referencia local de `origin/main`.
+
+### 2026-11-22 — Trabajo local de las specs 033, 017, 049 y 034
+
+Se excluyeron 053 y 058 de esta ronda. En 033 se alinearon los criterios de aceptación al 200 aprobado y se verificó el adaptador FCM HTTP v1 desde el endpoint con un doble HTTP y preferencias de destinatarios. En 017 se cerró T017-14 con validación fail-closed de respuestas malformadas en el adaptador de compatibilidad. En 049 se verificaron registros de gasto, topes, cuota y contadores corruptos de extremo a extremo entre el guardián y DynamoDB Local. En 034 se implementó `saveAsDraft` con inventario privado, protección de transiciones y ausencia de avisos.
+
+También se comprobó en MongoDB real que la última unidad y el apartado activo son únicos bajo concurrencia. Build en .NET 10.0.401 con cero advertencias, formato verificado, 1102 pruebas en verde y cobertura de 89,89 % en Domain y 96,63 % en Application. Pendientes: entrega FCM y p95 del apartado (033), integración con la Spec 024 y auditoría completa (017), turno real, p95 desde Lambda y revisión del diff en AWS (049), y un diseño de cuarentena compatible que habilite la moderación antes de publicar, el 202 y el límite activo (034). Se mantienen pendientes los escaneos del pipeline para el cierre formal. Sin commits ni push.
+
+La síntesis local de CDK de la 049 produjo una plantilla con clave `pk`, TTL `expiresAt`, facturación `PAY_PER_REQUEST` y permisos `GetItem` y `UpdateItem` limitados a la tabla. La comprobación no requirió desplegar recursos AWS.
+
+### 2026-11-22 — Estado vigente de las seis specs en Back_Rocio
+
+El responsable confirmó que las verificaciones de Android y en un entorno real no cuentan como trabajo de implementación del backend. Este registro y el estado de backend del índice actualizan las clasificaciones históricas de esta memoria. El cierre formal sigue las verificaciones de la constitución.
+
+| Spec | Estado de backend | Pendiente |
+|---|---|---|
+| 033 | Backend completado | Presentación en Android, entrega real con FCM, p95 del apartado y CI. |
+| 049 | Backend completado | `cdk diff` contra AWS, turno real de Sensi, p95 desde Lambda y CI. |
+| 053 | Backend completado | Escaneos de CI. |
+| 017 | Parcial | Integración con el flujo de publicación y cuarentena de la Spec 024 y auditoría completa. |
+| 034 | Parcial | Diseño de cuarentena conforme a la constitución vigente, moderación previa, límite de ofertas activas y respuesta 202. |
+| 058 | Pendiente en Back_Rocio | Incorporar la actividad de amigos y las dependencias 056, 057 y 059. Completar la paginación. |
+
+El registro se guardó en la copia local de `Back_Rocio`, sin commit ni push. Para una consulta futura sobre trabajo de código, las únicas specs abiertas de este grupo son 017, 034 y 058.
+
+### 2026-11-22 — Consulta actualizada de las seis specs
+
+El índice y los checklists de `Back_Rocio` registran backend completado para 033, 058, 049 y 053, con verificaciones de cierre pendientes. La 058 ya está integrada en el árbol de trabajo local, incluida la paginación, con pruebas HTTP y MongoDB registradas. Sus archivos y los de 053 siguen sin seguimiento en Git. El trabajo de implementación pendiente corresponde a 017 (publicación y cuarentena de 024 y auditoría) y 034 (diseño de cuarentena, moderación previa, límite activo y respuestas HTTP 202/409). La consulta revisó evidencia existente. Los próximos pasos de cierre siguen en los checklists de cada spec.
+
+### 2026-11-22 — Revisión de cambios para Specs 026 y 039
+
+Back_Rocio en 77944e2 incorpora precedentes de geolocalización, moderación de texto y reacciones. La referencia local origin/Fin_Beto en d6a5a38 aporta rutas de comentarios y un lookup BSON sobre feed_posts; el lookup permite estados ausentes y no excluye cuarentena explícitamente. No se encontraron las rutas de 026 o 039 en Back_Rocio ni un contrato de publicación y eliminación de 024 en las referencias revisadas. Próximo paso: acordar el contrato de lectura con el responsable de 024, implementar primero 026 y aclarar la concurrencia e idempotencia de 039. Revisión documental sin cambios de código.
+
+### 2026-11-22 — Preparación de implementación de la Spec 026
+
+Se revisaron los parámetros OpenAPI del árbol de trabajo y se mantuvo T026-01 en curso por falta del esquema de la respuesta 200. Se añadieron criterios verificables de orden estable y exclusión de una publicación eliminada del resultado en caché y de su total. El contrato de lectura de 024 sigue sin encontrarse en Back_Rocio; la consulta de referencias actuales de origin por Git falló por DNS. Siguiente paso: confirmar con el responsable de 024 el contrato de persistencia y visibilidad o acordar una propuesta de contrato de lectura antes de aprobar el plan. No se inició código del endpoint.
+
+### 2026-11-22 — Preparación de la Spec 039
+
+Se documentaron el identificador y el resultado de alternancia en el borrador OpenAPI. Queda por acordar el resultado de CA-039-04 para dos solicitudes concurrentes y el contrato de visibilidad de 024. Back_Rocio dispone de políticas de límite y un precedente de reacciones en ofertas, sin implementación de publicación social. Siguiente paso: cerrar clarify y actualizar plan, tareas y checklist antes de implementar.
+
+Para la Spec 039 se confirmó CA-039-04: dos dispositivos del mismo usuario que marcan en paralelo desde liked=false consolidan una reacción y aumentan el conteo una vez. Se conserva el caso secuencial de quitar una reacción confirmada. Quedan pendientes el mecanismo contractual para distinguir ambos casos y el contrato de visibilidad de 024.
+
+Spec 039 únicamente: se definió el booleano liked como estado deseado en el POST para consolidar dos pulsaciones concurrentes, se alinearon los cuatro artefactos a v3.0.0 y se documentó STRIDE. En Back_Rocio sigue faltando el contrato de visibilidad de la Spec 024 para cerrar el plan y comenzar la implementación. La Spec 026 quedó fuera de esta ronda.
