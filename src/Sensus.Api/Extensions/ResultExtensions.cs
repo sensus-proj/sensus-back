@@ -39,11 +39,11 @@ public static class ResultExtensions
     public static ProblemDetails ToProblemDetails(this Error error, HttpContext? httpContext = null)
     {
         int statusCode = ResolveStatusCode(error.Type);
-        var correlationId = httpContext?.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+        string correlationId = httpContext?.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
             ?? httpContext?.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
             ?? Guid.NewGuid().ToString("D");
 
-        var problemDetails = new ProblemDetails
+        ProblemDetails problemDetails = new()
         {
             Type = ResultProblemDetailsHttpResult.GetRfcType(statusCode),
             Title = string.IsNullOrWhiteSpace(error.Code) ? ResultProblemDetailsHttpResult.GetDefaultTitle(statusCode) : error.Code,
@@ -56,7 +56,7 @@ public static class ResultExtensions
 
         if (error.Extensions is not null)
         {
-            foreach (var (key, value) in error.Extensions)
+            foreach ((string key, object? value) in error.Extensions)
             {
                 problemDetails.Extensions[key] = value;
             }
@@ -107,31 +107,14 @@ public static class ResultExtensions
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
-            var correlationId = httpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
-                ?? httpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
-                ?? Guid.NewGuid().ToString("D");
-
-            var problemDetails = new ProblemDetails
-            {
-                Type = GetRfcType(_statusCode),
-                Title = string.IsNullOrWhiteSpace(_error.Code) ? GetDefaultTitle(_statusCode) : _error.Code,
-                Status = _statusCode,
-                Detail = _error.Message,
-                Instance = httpContext.Request.Path.Value
-            };
-
-            problemDetails.Extensions["correlationId"] = correlationId;
-
-            if (_error.Extensions is not null)
-            {
-                foreach (var (key, value) in _error.Extensions)
-                {
-                    problemDetails.Extensions[key] = value;
-                }
-            }
+            ProblemDetails problemDetails = _error.ToProblemDetails(httpContext);
 
             httpContext.Response.StatusCode = _statusCode;
-            await httpContext.Response.WriteAsJsonAsync(problemDetails, options: null, contentType: "application/problem+json");
+            await httpContext.Response.WriteAsJsonAsync(
+                problemDetails,
+                options: null,
+                contentType: "application/problem+json",
+                cancellationToken: httpContext.RequestAborted);
         }
 
         internal static string GetRfcType(int statusCode) => statusCode switch
@@ -143,7 +126,6 @@ public static class ResultExtensions
             StatusCodes.Status409Conflict => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
             StatusCodes.Status413PayloadTooLarge => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.11",
             StatusCodes.Status422UnprocessableEntity => "https://datatracker.ietf.org/doc/html/rfc4918#section-11.2",
-            StatusCodes.Status429TooManyRequests => "https://datatracker.ietf.org/doc/html/rfc6585#section-4",
             StatusCodes.Status503ServiceUnavailable => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.4",
             _ => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1"
         };
@@ -157,7 +139,6 @@ public static class ResultExtensions
             StatusCodes.Status409Conflict => "Conflict",
             StatusCodes.Status413PayloadTooLarge => "Payload Too Large",
             StatusCodes.Status422UnprocessableEntity => "Unprocessable Entity",
-            StatusCodes.Status429TooManyRequests => "Too Many Requests",
             StatusCodes.Status503ServiceUnavailable => "Service Unavailable",
             _ => "An error occurred"
         };

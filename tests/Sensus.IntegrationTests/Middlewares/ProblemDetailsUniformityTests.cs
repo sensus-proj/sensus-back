@@ -4,12 +4,17 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Sensus.Api.Extensions;
+using Sensus.Api.Middlewares;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.Commands.RequestPasswordReset;
+using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.IntegrationTests.Infrastructure;
 using Xunit;
@@ -175,6 +180,68 @@ public sealed class ProblemDetailsUniformityTests : IClassFixture<CustomWebAppli
         var response = await _client.SendAsync(request);
 
         await AssertProblemDetailsShape(response, HttpStatusCode.InternalServerError, correlationId);
+    }
+
+    [Fact]
+    public async Task ResultExtensions_AllErrorTypesAndOverloads_ProduceExpectedProblemDetails()
+    {
+        Error[] errors =
+        [
+            new(string.Empty, "Bad request msg", ErrorType.Validation),
+            new(string.Empty, "Unauthorized msg", ErrorType.Unauthorized),
+            new(string.Empty, "Forbidden msg", ErrorType.Forbidden),
+            new(string.Empty, "Not found msg", ErrorType.NotFound),
+            new(string.Empty, "Conflict msg", ErrorType.Conflict),
+            Error.PayloadTooLarge(string.Empty, "Payload too large msg"),
+            new(string.Empty, "Unprocessable msg", ErrorType.Unprocessable),
+            Error.Unavailable(string.Empty, "Unavailable msg"),
+            Error.Failure(string.Empty, "Generic failure msg"),
+            new(string.Empty, "Unknown enum msg", (ErrorType)999),
+            Error.Forbidden("Custom.Code", "Forbidden with extensions", new Dictionary<string, object?> { ["reason"] = "ban" })
+        ];
+
+        int[] expectedStatuses = [400, 401, 403, 404, 409, 413, 422, 503, 400, 400, 403];
+
+        for (int i = 0; i < errors.Length; i++)
+        {
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Path = "/api/v1/test";
+            httpContext.Items[CorrelationIdMiddleware.ItemKey] = $"corr-{i}";
+            httpContext.Response.Body = new MemoryStream();
+
+            ProblemDetails pd = errors[i].ToProblemDetails(httpContext);
+            pd.Status.Should().Be(expectedStatuses[i]);
+            pd.Type.Should().NotBeNullOrWhiteSpace();
+            pd.Title.Should().NotBeNullOrWhiteSpace();
+            pd.Detail.Should().Be(errors[i].Message);
+            pd.Extensions["correlationId"].Should().Be($"corr-{i}");
+
+            IResult httpResult = Result.Failure(errors[i]).ToHttpResult();
+            await httpResult.ExecuteAsync(httpContext);
+            httpContext.Response.StatusCode.Should().Be(expectedStatuses[i]);
+            httpContext.Response.ContentType.Should().StartWith("application/problem+json");
+        }
+
+        // ToProblemDetails sin HttpContext y sobrecargas Result / Result<T>
+        Error noContextError = Error.PayloadTooLarge("Media.TooLarge", "Archivo excede el límite");
+        ProblemDetails noContextPd = noContextError.ToProblemDetails();
+        noContextPd.Status.Should().Be(413);
+        noContextPd.Title.Should().Be("Media.TooLarge");
+        noContextPd.Extensions.ContainsKey("correlationId").Should().BeTrue();
+
+        Result.Success().ToHttpResult().Should().NotBeNull();
+        Result.Success("ok").ToHttpResult().Should().NotBeNull();
+        Result.Failure<string>(noContextError).ToHttpResult().Should().NotBeNull();
+        Result.Failure(noContextError).ToProblemDetails().Status.Should().Be(413);
+        Result.Failure<string>(noContextError).ToProblemDetails().Status.Should().Be(413);
+        Result.Failure<string>(noContextError).ToCreatedAtResult("/api/v1/items/1").Should().NotBeNull();
+        Result.Success("ok").ToCreatedAtResult("/api/v1/items/1").Should().NotBeNull();
+
+        Action actSuccessResult = () => Result.Success().ToProblemDetails();
+        actSuccessResult.Should().Throw<InvalidOperationException>();
+
+        Action actSuccessGeneric = () => Result.Success("ok").ToProblemDetails();
+        actSuccessGeneric.Should().Throw<InvalidOperationException>();
     }
 
     private static async Task AssertProblemDetailsShape(
