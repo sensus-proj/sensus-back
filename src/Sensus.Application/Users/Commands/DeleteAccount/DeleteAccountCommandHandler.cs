@@ -18,6 +18,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IProfileImageStorage _imageStorage;
     private readonly IOfferRepository _offerRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
     private readonly ICacheService? _cacheService;
     private readonly IAiConversationRepository? _conversationRepository;
     private readonly IAiMessageRepository? _messageRepository;
@@ -35,6 +36,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         IProfileImageStorage imageStorage,
         IOfferRepository offerRepository,
         IDateTimeProvider dateTimeProvider,
+        ICdnCacheInvalidator cdnCacheInvalidator,
         ICacheService? cacheService = null,
         IAiConversationRepository? conversationRepository = null,
         IAiMessageRepository? messageRepository = null,
@@ -51,6 +53,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _imageStorage = imageStorage;
         _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
         _cacheService = cacheService;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -81,10 +84,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             return Result.Failure(Error.Unauthorized("Auth.InvalidCredentials", "La contraseña provista para confirmar la eliminación es incorrecta."));
         }
 
-        // Limpieza de foto de perfil en almacenamiento remoto si existe
+        // Limpieza de foto de perfil en almacenamiento remoto si existe e invalidación en CDN (CA-023-03)
         if (!string.IsNullOrWhiteSpace(user.FotoPerfilUrl))
         {
             await _imageStorage.DeleteImageAsync(user.FotoPerfilUrl, cancellationToken);
+            await _cdnCacheInvalidator.InvalidateAsync(user.FotoPerfilUrl, cancellationToken);
         }
 
         // FR-030-06: las ofertas se archivan antes de borrar el comercio para que dejen de ser visibles

@@ -16,6 +16,7 @@ public class RegisterComercioCommandHandlerTests
     private readonly IGeocodingService _geocodingService;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IModerationAuditRecorder _auditRecorder;
     private readonly RegisterComercioCommandHandler _handler;
 
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -28,6 +29,9 @@ public class RegisterComercioCommandHandlerTests
         _geocodingService = Substitute.For<IGeocodingService>();
         _jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+        _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
 
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc));
 
@@ -40,7 +44,8 @@ public class RegisterComercioCommandHandlerTests
             _currentUserService,
             _geocodingService,
             _jwtTokenGenerator,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _auditRecorder);
     }
 
     [Fact]

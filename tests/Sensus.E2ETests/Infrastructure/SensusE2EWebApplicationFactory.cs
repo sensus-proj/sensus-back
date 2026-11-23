@@ -35,6 +35,7 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryContentReportRepository ContentReportRepository { get; } = new();
     public InMemoryReportTargetService ReportTargetService { get; } = new();
     public InMemoryOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = new();
+    public InMemoryModerationAuditRepository ModerationAuditRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -119,6 +120,9 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton<ITextModerationService>(new FakeApprovingTextModerationService());
+
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton<IModerationAuditRepository>(ModerationAuditRepository);
         });
     }
 

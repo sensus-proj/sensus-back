@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 3.5.0 · **Actualizado:** 2026-11-19 · **Alineado a:** `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0
+**Version:** 3.6.0 · **Actualizado:** 2026-11-22 · **Alineado a:** `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,14 +11,14 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-19 |
-| **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas para **Spec 047 v1.2.0** (CI-CD y DevSecOps al 100 %, cerradas `T047-14` a `T047-16`), **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas, tareas `T046-01` a `T046-22` cerradas y parciales según alcance), resolución integral de los 14 ítems de revisión de código y prerrequisitos de infraestructura y datos (Items 0 a 8) |
-| **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Spec 046, Spec 047 y prerrequisitos) |
+| **Última actualización** | 2026-11-22 |
+| **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas y auditadas para **Spec 021 v2.0.0** (Auditoría de Moderación append-only, fail-closed, retención 2555 días, RBAC Admin) y **Spec 023 v2.0.0** (Entrega CDN Cloudinary, URLs firmadas HMAC-SHA256, proxy streaming con TTL acotado, invalidación total, fail-closed), además de las specs previas (046, 047, 049, 025, 040). |
+| **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Specs 021, 023 y previas) |
 | **Agente** | Antigravity |
 | **Constitución vigente** | v2.4.0 (2026-11-19) |
 | **AGENTS.md vigente** | v2.4.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests) |
-| **Última tarea completada** | **Cierre y endurecimiento DevSecOps/fintech de Sensi IA (Specs 046, 047, 049)** (2026-11-19): 1) `CreateOrResumeConversationCommandHandler` (`FR-046-01`): `forceNew = true` archiva la conversación activa previa respaldado por índice único parcial `ux_ai_conversations_owner_active` en `MongoDbContext`; 2) Métricas CloudWatch EMF (`T046-17`, `FR-046-14`, `NFR-046-06`): `IAiMetricsPublisher`/`EmbeddedAiMetricsPublisher` en `Sensus/Api` con 4 métricas sin dimensiones (`AiTurnLatency`, `AiCachedTokens`, `AiEstimatedCostMicroUsd`, `AiFallbackOrBlocked`), total **9/10** en Free Tier y sin PII (`AiMetricsTests`); 3) Caché distribuida FAQ (`T046-13`, `FR-046-13`): `AiCacheKeys` (Unicode + SHA-256 sin regex, aislada por `markdownVersion:role:screenContext`), `Redis:TtlByEntityMinutes:AiFaq = 60` en `appsettings.json`, exclusión de prompts/respuestas con PII y aplicación obligatoria de cuota diaria/fail-closed en `AiBudgetGuard` durante *cache hits* (`AiCacheKeysTests`, `SendAiMessageCommandHandlerTests`); 4) Evals reales con modelo y verificación `--trx` (`T046-19`, `FR-046-17`, `NFR-046-08`): `evals-manifest.json` v2.0.0 (`MDL-001`..`MDL-003`), `.github/scripts/run-ai-evals.mjs` sin simulación `0.96` (**falla cerrado `exit 1` en `--mode model`/`all` si falta `OPENAI_API_KEY` en GitHub Secrets — impacto directo en `deploy-serverless.yml` y `ai-evals.yml`**), allowlist SSRF en `OPENAI_BASE_URL` (`https://api.openai.com` salvo loopback explícito en tests), parser XML `--trx` y 7 pruebas `node:test` (`run-ai-evals.test.mjs`); 5) Persistencia real (`T046-21`, `T049-09`): `MongoAiRepositoriesTests` y `DynamoDbBudgetCounterStoreIntegrationTests` cableadas en `ci.yml` con acciones fijadas por SHA de commit, imágenes Docker fijadas por digest SHA-256 (`mongo:7.0`, `amazon/dynamodb-local:2.6.1`) y secretos `SONAR_TOKEN`/`SNYK_TOKEN` acotados por job; 6) STRIDE + Principio VIII añadidos en `specs/046-asistente-sensi-ia/plan.md`. Verificado: `-warnaserror` limpio, `dotnet format` limpio, **1110** pruebas .NET locales (`746` unitarias, `4` arquitectura, `3` E2E, `357` integración excluyendo `6` de `NotificationMongoRepositoryTests` por Docker detenido), `7/7` Node `run-ai-evals.test.mjs`, Evals deterministas `--trx` **5/5 (100.0 %)**, cobertura `Sensus.Domain` **91.23 %** / `Sensus.Application` **93.94 %** y `check-specs.mjs` en verde. Antes: **CI SonarCloud en `push` a `develop`** (Spec 047); **`expire-check` protegidos** (FR-036-09, FR-033-12); **Specs de 7 endpoints** (052, 053, ampliación 002, 003, 029, 036); **Flujo `develop`→`main`** (D30); **Secretos en SSM** (`FR-045-11/12`); **Redis IaC + pausa nocturna** (Specs 048/051); **Spec 020** (sanciones). |
+| **Última tarea completada** | **Auditoría y corrección exhaustiva de Spec 021 y Spec 023** (2026-11-22): 1) Resoluciones de auditoría: B1/B2 (fail-closed estricto en `/delivery` y `/delivery-url`, entrega exclusiva de `Approved` con 404 uniforme en activos pendientes/en cuarentena/retirados, proxy de streaming con `Cache-Control` acotado al TTL remanente de firma HMAC, invalidación de CDN en todos los caminos de retiro/rechazo); B3 (integración fail-closed de `IModerationAuditRecorder` en `CreateStoreReview`, `ReplyStoreReview`, `RegisterComercio`, `UpdateMerchantProfile`, `RegisterUser`, `UpdateProfile`); B4 (auditoría en `ReleaseQuarantinedMedia` antes de persistir la liberación); B5 (pruebas reales de persistencia con Testcontainers para `MongoModerationAuditRepository`); M1 (dependencias obligatorias en constructores sin `= null`); M2 (timeout 15s y límite 50MB en proxy); M3 (control compensatorio en BD documentado); M4 (documentación de parámetros SSM `/sensus/<env>/MediaDelivery/SigningKey` y `PublicBaseUrl`); M5 (coherencia documental en specs y checklists). 2) Verificación total: 1,627 pruebas pasando en verde (1,083 unitarias, 537 integración Testcontainers, 4 arquitectura, 3 E2E). Cobertura de líneas: Domain 92.45 %, Application 95.03 %; Cobertura de ramas: Domain 91.94 %, Application 90.54 % (todas ≥ 90.0 %). Formato y compilación con `-warnaserror` al 100 %. |
 | **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). «No subas cambios de nada» confirmado |
 
 ---
@@ -31,7 +31,7 @@
 | II. Clean Architecture | Parcial | Capas existen; falta verificar dependencias con NetArchTest de forma continua |
 | III. CQRS y contratos | Parcial | Hay comandos/handlers y DTOs; faltan OpenAPI unificado y ProblemDetails uniforme (specs 009, 011) |
 | IV. Seguridad y privacidad | Parcial, con brechas | Secreto JWT versionado, CORS abierto, `RequireHttpsMetadata=false`, sin logout (specs 004, 012) |
-| V. Verificación automatizada | Implementado | 747 pruebas automatizadas en verde (549 unitarias, 191 integración con Testcontainers/MongoDB real y dobles HTTP OpenAI, 4 arquitectura, 3 E2E). Cobertura > 80 % en Domain y Application. Compilación con `-warnaserror` y formato verificado |
+| V. Verificación automatizada | Implementado | 1,604 pruebas automatizadas en verde (1,076 unitarias, 524 integración, 4 arquitectura). Cobertura > 90 % en Domain (91.67 %) y Application (90.26 %). Compilación con `-warnaserror` (0 advertencias, 0 errores) y formato verificado |
 | VI. Costo cero e IaC | Implementado | Proyecto AWS CDK en C# en `infra/` (`SensusInfraStack`, Spec 045): Lambda `.NET 10` (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (7 días retención + alarmas), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
 | VII. Rendimiento y observabilidad | Implementado | Paginación estándar, `CorrelationIdMiddleware` con propagación `X-Correlation-Id` en logs y `ProblemDetails`, rate limiting configurable por IP/usuario, métricas EMF CloudWatch y caché distribuida Redis con operaciones atómicas |
 
@@ -72,6 +72,8 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D28 | Asistente conversacional Sensi por vía generativa con enmienda (resuelve D-6 del móvil): ADR 0011, `constitution.md` v1.4.0 (cuarta excepción de proveedor externo, §2.1/§2.2/§2.4/§2.5) y Spec 046 | 2026-11-13 | Recuperación de candidatos y cálculo del paquete deterministas en backend; el proveedor (OpenAI, ya autorizado para moderación y usado con `gpt-4o-mini` en la versión 2.10.0) solo redacta y selecciona dentro de un conjunto cerrado; moderación de entrada y salida fail-closed; degradación determinista; excepción `EX-001` a P-VI con techo 1.00 USD/mes. ADR 0009 sigue vigente para 041–043. |
 | D29 | Evolución de Sensi IA a arquitectura agéntica de 7 capas (enmienda `constitution.md` v2.0.0, reclasificada de MINOR a MAJOR, [ADR 0012](docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md), Spec 046 v2.0.0 y Spec 047 v1.1.0) | 2026-11-15 | Sustituye ADR 0011 por 7 capas: (1) identidad Sensus extraída de Drive + *Hard Rules*; (2) RAG estático en Markdown versionado dentro de `<contexto>`; (3) MCP *in-process* y *Function Calling* de solo lectura (5 *tools*) dentro de la Lambda actual (`0 USD` AWS) con validación/recálculo determinista en backend; (4) herencia estricta de *scopes* desde JWT (`Consumidor`/`Comerciante` activos, `Invitado` `403`) y CRUD completo incluyendo `DELETE /api/v1/ai/conversations/{id}`; (5) *guardrails* duales (`omni-moderation-latest` + anti-*Prompt Injection*/*Jailbreak* + redacción PII/credenciales); (6) *Prompt Caching* en 2 bloques (`≥ 1,024` tokens estáticos) + *Model Router* de 2 modelos con afinidad *sticky* bajo `EX-001` (`5.00 USD/mes` desde el 2026-11-15); (7) CloudWatch solo metadatos/hashes sin PII, MongoDB `ai_trace_logs` redactado con TTL/purga y gate bloqueante de *Evals* en CI/CD (Spec 047). |
 | D30 | Rama de integración `develop`: flujo `rama de trabajo → develop → main`; `main` solo recibe PR desde `develop`; `Sprint1` deja de usarse (ya no existe en `origin`) | 2026-11-19 | El CI corre en push y PR a `develop` y `main`; cada merge a `main` despliega a producción por CI; `AGENTS.md` §15 y la spec 047 alineados |
+| D31 | Retención explícita de auditoría de moderación fijada en 2555 días (~7 años, FR-021-04) | 2026-11-22 | Configurada mediante índice TTL en MongoDB (`ttl_moderation_audit_retention`) y almacén estrictamente append-only sin mutación ni borrado |
+| D32 | Entrega fail-closed exclusiva para multimedia aprobada (`Approved`) vía Proxy Streaming con TTL acotado (Spec 023) | 2026-11-22 | `/delivery` y `/delivery-url` solo aceptan `Approved` (404 uniforme en cuarentena, pendiente o retirado). Proxy streaming con `Cache-Control` dinámico acotado a expiración de firma HMAC (evita 302 permanente) e invalidación total de CDN |
 
 ---
 
@@ -346,3 +348,37 @@ El despliegue de `main` (`37e512c`) falló porque, al configurar `ALERTS_EMAIL`,
   - `011`: Generación OpenAPI unificada en `/openapi/v1.json` con esquema `Bearer` JWT y Swagger UI apuntando a esa fuente única (`OpenApiContractTests`).
   - `050` / `046`: Añadidas `FriendEndpointsIntegrationTests` y round-trips/Mongo en `MongoSocialRepositoriesTests`; el despliegue AWS y pruebas contra clúster vivo/OpenAI en vivo se mantienen como pendientes externos de operación.
 - **Verificación local:** `check-specs.mjs specs` (59/59 OK), `dotnet format --verify-no-changes` (0 errores), `dotnet build -warnaserror` (0 advertencias/0 errores), `Sensus.Application.UnitTests` (`893/893` PASS) y `check-coverage.mjs` (`Sensus.Domain` 86.18 %, `Sensus.Application` 87.67 %). En este equipo Windows, Smart App Control (`0x800711C7`) bloqueó la carga local de `Sensus.Infrastructure.dll` al ejecutar `IntegrationTests`, `E2ETests` y el caso #3 de `ArchitectureTests`. Rama `Fin_Beto` sobre `origin/develop`.
+
+### 2026-11-22 — Implementación y Auditoría Exhaustiva de Spec 021 (Auditoría de Moderación) y Spec 023 (Entrega CDN y Cloudinary)
+
+- **Auditoría y Correcciones Bloqueantes (B1 a B5) y Menores (M1 a M5):**
+  - **Decisiones Resueltas:**
+    - [D31] Retención explícita de auditoría de 2555 días (~7 años) en Spec 021 §10, plan y TTL index.
+    - [D32] Contenido en cuarentena (`Quarantined`, `Pending`, `Rejected`) jamás se entrega por `/delivery` ni `/delivery-url` a nadie (retorna 404 uniforme fail-closed). La revisión de cuarentena usa su flujo administrativo propio en Spec 019.
+  - **B1 / B2:** Fail-closed estricto en entrega multimedia. `CreateMediaDeliveryUrlCommandHandler` y `GetMediaDeliveryQueryHandler` solo aceptan `MediaAssetStatus.Approved`. Activos retirados o inexistentes responden 404 uniforme (CA-023-03). `/delivery` sirve el contenido mediante proxy de streaming con cabecera dinámica `Cache-Control: public, max-age={remainingSeconds}, s-maxage={remainingSeconds}` acotada estrictamente a la expiración de la firma HMAC (eliminando cualquier redirección 302 que filtre URLs de almacenamiento permanente de Cloudinary). `ICdnCacheInvalidator` integrado en todos los flujos donde un activo deja de estar aprobado o es eliminado (`PurgeQuarantinedMediaCommandHandler`, `DeleteAccountCommandHandler`, etc.).
+  - **B3:** Auditoría de "cada decisión" (FR-021-01) integrada con `IModerationAuditRecorder` en `CreateStoreReview`, `ReplyStoreReview`, `RegisterComercio`, `UpdateMerchantProfile`, `RegisterUser` y `UpdateProfile`. Regla fail-closed: si la moderación aprueba pero la persistencia de auditoría falla, la operación se cancela y no se persiste la mutación en base de datos.
+  - **B4:** En `ReleaseQuarantinedMediaCommandHandler`, la auditoría se registra con `RecordAsync` (fail-closed) ANTES de mutar y persistir el activo en MongoDB.
+  - **B5:** Pruebas reales de persistencia con Testcontainers (`MongoModerationAuditRepositoryTests`) ejecutadas contra contenedor Docker de MongoDB real, validando inserción append-only, paginación, filtros por tipo/fecha, y presencia de índices `ix_moderation_audit_created_at`, `ix_moderation_audit_target` y `ttl_moderation_audit_retention`.
+  - **M1:** Constructores actualizados para requerir dependencias obligatorias sin `= null` (`IModerationAuditRecorder`, `ICdnCacheInvalidator`).
+  - **M2:** `CloudinaryMediaContentProxy` configurado con timeout explícito (15 s) y límite de tamaño de respuesta (50 MB) para prevenir agotamiento de memoria y DoS.
+  - **M3:** Documentado en `plan.md` el control compensatorio de inmutabilidad en BD (identidad de la API sin permisos de `update`/`delete` sobre la colección `moderation_audit` en Atlas).
+  - **M4:** Documentados parámetros de SSM Parameter Store para despliegue: `/sensus/<env>/MediaDelivery/SigningKey` (SecureString, ≥ 32 bytes, rotación ≤ 90 días) y `/sensus/<env>/MediaDelivery/PublicBaseUrl` (String, URL pública base). En producción, la aplicación falla cerrado en el arranque si estos parámetros faltan o son inseguros.
+  - **M5:** Coherencia documental completada en `spec.md`, `plan.md`, `tasks.md`, `checklist.md` y OpenAPI de ambas specs, desmarcando casillas sin evidencia y fijando la alineación a `constitution.md` v2.4.0.
+
+- **Verificación Total de la Solución (Docker activo, sin exclusiones):**
+  - `dotnet build sensus-back.sln -warnaserror`: **0 advertencias, 0 errores** (PASS).
+  - `dotnet format sensus-back.sln --verify-no-changes`: **0 cambios pendientes** (PASS).
+  - `dotnet test tests/Sensus.ArchitectureTests`: **4/4 passed** (PASS).
+  - `dotnet test sensus-back.sln --collect:"XPlat Code Coverage"` (1,627 pruebas totales en verde, 0 fallidas, 0 omitidas):
+    - `Sensus.Application.UnitTests`: **1,083/1,083 passed** (0 fallidas, 0 omitidas).
+    - `Sensus.IntegrationTests` (Testcontainers MongoDB real): **537/537 passed** (0 fallidas, 0 omitidas).
+    - `Sensus.ArchitectureTests`: **4/4 passed** (0 fallidas, 0 omitidas).
+    - `Sensus.E2ETests`: **3/3 passed** (0 fallidas, 0 omitidas).
+  - **Cobertura de Líneas y Ramas (Domain y Application ≥ 90 %):**
+    - `Sensus.Domain`:
+      - **Líneas:** **92.45 %** (3,146 / 3,403 líneas) — PASS (umbral 90 %).
+      - **Ramas:** **91.94 %** (114 / 124 ramas) — PASS (umbral 90 %).
+    - `Sensus.Application`:
+      - **Líneas:** **95.03 %** (9,045 / 9,518 líneas) — PASS (umbral 90 %).
+      - **Ramas:** **90.54 %** (134 / 148 ramas) — PASS (umbral 90 %).
+  - Sin commits ni pushes realizados (cumplimiento estricto de restricción de Git).

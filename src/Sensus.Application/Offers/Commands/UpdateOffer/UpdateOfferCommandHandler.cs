@@ -7,6 +7,7 @@ using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.UpdateOffer;
@@ -22,6 +23,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
     private readonly ICacheService? _cacheService;
     private readonly IOptions<OfferCategorySettings>? _categorySettings;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public UpdateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -30,6 +32,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<UpdateOfferCommandHandler> logger,
+        IModerationAuditRecorder auditRecorder,
         ICacheService? cacheService = null,
         IOptions<OfferCategorySettings>? categorySettings = null,
         ITextModerationService? textModerationService = null)
@@ -40,6 +43,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
         _categorySettings = categorySettings;
         _textModerationService = textModerationService;
@@ -100,7 +104,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
                 "Contenido visible de la oferta {OfferId} modificado por el comercio {ComercioId}. Ejecutando re-moderación.",
                 offer.Id, comercio.Id);
 
-            var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+            ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
                 _textModerationService,
                 $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
                 "Edición de publicación de producto u oferta comercial",
@@ -108,9 +112,30 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
                 "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
                 cancellationToken);
 
-            if (moderationResult.IsFailure)
+            // Spec 021 (FR-021-01): la re-moderación de una edición también queda auditada.
+            ModerationAuditEntry auditEntry = new(
+                offer.Id,
+                ModerationTargetType.Offer,
+                evaluation.Verdict,
+                evaluation.Decision,
+                "offer_update",
+                evaluation.FlaggedCategories,
+                evaluation.CategoryScores);
+
+            if (!evaluation.IsApproved)
             {
-                return Result.Failure<OfferDto>(moderationResult.Error);
+                await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+                return Result.Failure<OfferDto>(
+                    evaluation.RejectionError
+                    ?? Error.Validation("Offer.ContentModerationRejected", "El título o descripción de la publicación contiene lenguaje antisonante o prohibido."));
+            }
+
+            // Spec 021 (FR-021-01): sin evidencia persistida la edición no se publica (fail-closed).
+            Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+            if (auditResult.IsFailure)
+            {
+                return Result.Failure<OfferDto>(auditResult.Error);
             }
         }
 

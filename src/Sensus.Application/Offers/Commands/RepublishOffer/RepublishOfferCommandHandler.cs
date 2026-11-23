@@ -20,6 +20,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
     private readonly ICacheService? _cacheService;
     private readonly ITextModerationService? _textModerationService;
     private readonly IOfferStatusHistoryRepository? _statusHistoryRepository;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public RepublishOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -27,6 +28,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<RepublishOfferCommandHandler> logger,
+        IModerationAuditRecorder auditRecorder,
         ICacheService? cacheService = null,
         ITextModerationService? textModerationService = null,
         IOfferStatusHistoryRepository? statusHistoryRepository = null)
@@ -36,6 +38,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
         _textModerationService = textModerationService;
         _statusHistoryRepository = statusHistoryRepository;
@@ -73,7 +76,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
             return Result.Failure<OfferDto>(republishResult.Error);
         }
 
-        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
             $"Título: {offer.Title}\nDescripción: {offer.Description}\nCategoría: {offer.Category ?? string.Empty}",
             "Republicación de producto u oferta comercial",
@@ -81,9 +84,30 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
             "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
             cancellationToken);
 
-        if (moderationResult.IsFailure)
+        // Spec 021 (FR-021-01): la republicación también deja evidencia de la decisión.
+        ModerationAuditEntry auditEntry = new(
+            offer.Id,
+            ModerationTargetType.Offer,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "offer_republish",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores);
+
+        if (!evaluation.IsApproved)
         {
-            return Result.Failure<OfferDto>(moderationResult.Error);
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+            return Result.Failure<OfferDto>(
+                evaluation.RejectionError
+                ?? Error.Validation("Offer.ContentModerationRejected", "El título o descripción de la publicación contiene lenguaje antisonante o prohibido."));
+        }
+
+        // Spec 021 (FR-021-01): sin evidencia persistida la oferta no se republica (fail-closed).
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(auditResult.Error);
         }
 
         await _offerRepository.UpdateAsync(offer, cancellationToken);

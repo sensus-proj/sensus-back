@@ -21,12 +21,17 @@ public sealed class UploadMediaCommandHandlerTests
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
     private readonly ISender _sender = Substitute.For<ISender>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly UploadMediaCommandHandler _handler;
 
     public UploadMediaCommandHandlerTests()
     {
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _handler = new UploadMediaCommandHandler(
             _mediaStorage,
             _moderationService,
@@ -34,7 +39,9 @@ public sealed class UploadMediaCommandHandlerTests
             _currentUser,
             _dateTimeProvider,
             _sender,
-            NullLogger<UploadMediaCommandHandler>.Instance);
+            NullLogger<UploadMediaCommandHandler>.Instance,
+            _auditRecorder,
+            _cdnCacheInvalidator);
     }
 
     [Fact]

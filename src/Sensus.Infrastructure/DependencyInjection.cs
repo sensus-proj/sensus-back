@@ -190,6 +190,18 @@ public static class DependencyInjection
         services.AddSingleton<IMediaStorage, CloudinaryMediaStorage>();
         services.AddScoped<IMediaAssetRepository, MongoMediaAssetRepository>();
 
+        // Auditoría de moderación append-only (Spec 021)
+        services.Configure<ModerationAuditSettings>(
+            configuration.GetSection(ModerationAuditSettings.SectionName));
+        services.AddScoped<IModerationAuditRepository, MongoModerationAuditRepository>();
+
+        // Entrega de contenido por CDN con URLs firmadas (Spec 023)
+        services.Configure<MediaDeliverySettings>(
+            configuration.GetSection(MediaDeliverySettings.SectionName));
+        services.AddSingleton<IMediaDeliveryUrlGenerator, HmacMediaDeliveryUrlGenerator>();
+        services.AddSingleton<ICdnCacheInvalidator, CloudinaryCdnCacheInvalidator>();
+        services.AddHttpClient<IMediaContentProxy, CloudinaryMediaContentProxy>();
+
         // Registro de dispositivos para push (Spec 027)
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();

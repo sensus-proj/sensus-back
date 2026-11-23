@@ -46,6 +46,21 @@ if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelo
     });
 }
 
+// Spec 023 (FR-023-02): la clave HMAC de entrega nunca se versiona. Solo en Development y Testing se deriva una
+// clave determinista para pruebas locales. En producción, si falta, la emisión de URLs falla cerrada (503) sin
+// tumbar el arranque.
+var configuredMediaDeliveryKey = builder.Configuration["MediaDelivery:SigningKey"];
+if (string.IsNullOrWhiteSpace(configuredMediaDeliveryKey)
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
+{
+    var mediaKeySeed = Encoding.UTF8.GetBytes($"Sensus.MediaDelivery.Deterministic.{builder.Environment.EnvironmentName}");
+    configuredMediaDeliveryKey = Convert.ToBase64String(SHA256.HashData(mediaKeySeed));
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["MediaDelivery:SigningKey"] = configuredMediaDeliveryKey
+    });
+}
+
 // 1. Capa de Aplicación
 builder.Services.AddApplication();
 
@@ -316,6 +331,8 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapMediaDeliveryEndpoints();
+app.MapModerationAuditEndpoints();
 app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();

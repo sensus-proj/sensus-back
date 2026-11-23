@@ -47,6 +47,7 @@ public sealed class CreateContentReportCommandHandler : IRequestHandler<CreateCo
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ContentReportSettings _settings;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
     private readonly ILogger<CreateContentReportCommandHandler> _logger;
     private readonly ICorrelationIdAccessor? _correlationIdAccessor;
 
@@ -56,6 +57,7 @@ public sealed class CreateContentReportCommandHandler : IRequestHandler<CreateCo
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         IOptions<ContentReportSettings> settings,
+        ICdnCacheInvalidator cdnCacheInvalidator,
         ILogger<CreateContentReportCommandHandler> logger,
         ICorrelationIdAccessor? correlationIdAccessor = null)
     {
@@ -64,6 +66,7 @@ public sealed class CreateContentReportCommandHandler : IRequestHandler<CreateCo
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _settings = settings.Value;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
         _logger = logger;
         _correlationIdAccessor = correlationIdAccessor;
     }
@@ -180,6 +183,11 @@ public sealed class CreateContentReportCommandHandler : IRequestHandler<CreateCo
                 request.TargetId,
                 nowUtc,
                 cancellationToken);
+
+            if (markedForReview)
+            {
+                await _cdnCacheInvalidator.InvalidateAsync(request.TargetId.ToString(), cancellationToken);
+            }
         }
 
         _logger.LogInformation(

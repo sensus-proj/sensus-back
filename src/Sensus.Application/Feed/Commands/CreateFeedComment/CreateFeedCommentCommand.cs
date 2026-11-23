@@ -6,6 +6,7 @@ using Sensus.Application.Common.Moderation;
 using Sensus.Application.Feed.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Feed.Commands.CreateFeedComment;
@@ -36,6 +37,7 @@ public sealed class CreateFeedCommentCommandHandler : IRequestHandler<CreateFeed
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateFeedCommentCommandHandler> _logger;
+    private readonly IModerationAuditRecorder _auditRecorder;
     private readonly ITextModerationService? _textModerationService;
 
     public CreateFeedCommentCommandHandler(
@@ -45,6 +47,7 @@ public sealed class CreateFeedCommentCommandHandler : IRequestHandler<CreateFeed
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateFeedCommentCommandHandler> logger,
+        IModerationAuditRecorder auditRecorder,
         ITextModerationService? textModerationService = null)
     {
         _commentRepository = commentRepository;
@@ -53,6 +56,7 @@ public sealed class CreateFeedCommentCommandHandler : IRequestHandler<CreateFeed
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _textModerationService = textModerationService;
     }
 
@@ -74,18 +78,6 @@ public sealed class CreateFeedCommentCommandHandler : IRequestHandler<CreateFeed
         }
 
         string trimmedText = (request.Text ?? string.Empty).Trim();
-        Result moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
-            _textModerationService,
-            trimmedText,
-            "feed_comment",
-            "FeedComment.ModerationRejected",
-            "El comentario infringe las normas comunitarias y no pudo publicarse.",
-            cancellationToken);
-
-        if (moderationResult.IsFailure)
-        {
-            return Result.Failure<FeedCommentDto>(moderationResult.Error);
-        }
 
         User? author = await _userRepository.GetByIdAsync(userId, cancellationToken);
         string authorDisplayName = !string.IsNullOrWhiteSpace(author?.NombreCompleto)
@@ -106,6 +98,41 @@ public sealed class CreateFeedCommentCommandHandler : IRequestHandler<CreateFeed
         }
 
         FeedComment comment = entityResult.Value;
+
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
+            _textModerationService,
+            trimmedText,
+            "feed_comment",
+            "FeedComment.ModerationRejected",
+            "El comentario infringe las normas comunitarias y no pudo publicarse.",
+            cancellationToken);
+
+        // Spec 021 (FR-021-01): toda decisión de moderación sobre contenido publicado queda auditada.
+        ModerationAuditEntry auditEntry = new(
+            comment.Id,
+            ModerationTargetType.FeedComment,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "feed_comment",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores);
+
+        if (!evaluation.IsApproved)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+            return Result.Failure<FeedCommentDto>(
+                evaluation.RejectionError
+                ?? Error.Validation("FeedComment.ModerationRejected", "El comentario infringe las normas comunitarias y no pudo publicarse."));
+        }
+
+        // Spec 021 (FR-021-01): sin evidencia persistida el comentario no se publica (fail-closed).
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<FeedCommentDto>(auditResult.Error);
+        }
+
         await _commentRepository.AddAsync(comment, cancellationToken);
 
         _logger.LogInformation(

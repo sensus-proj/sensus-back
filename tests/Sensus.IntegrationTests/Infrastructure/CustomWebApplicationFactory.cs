@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
+using Sensus.Domain.Common;
+using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Services;
@@ -49,6 +53,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
     public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
     public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
+    public IModerationAuditRepository ModerationAuditRepository { get; } = Substitute.For<IModerationAuditRepository>();
+    public IMediaContentProxy MediaContentProxy { get; } = Substitute.For<IMediaContentProxy>();
+    public ICdnCacheInvalidator CdnCacheInvalidator { get; } = Substitute.For<ICdnCacheInvalidator>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -213,6 +220,41 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IOfferStatusHistoryRepository>();
             services.AddSingleton(OfferStatusHistoryRepository);
+
+            // Auditoría de moderación (Spec 021): sin MongoDB real en los tests de endpoints.
+            ModerationAuditRepository
+                .ListAsync(
+                    Arg.Any<Guid?>(),
+                    Arg.Any<ModerationTargetType?>(),
+                    Arg.Any<ModerationVerdict?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<(IReadOnlyList<ModerationAuditRecord> Items, long TotalCount)>(([], 0L)));
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton(ModerationAuditRepository);
+
+            // Entrega de contenido (Spec 023): clave HMAC determinista por fábrica y sin red externa.
+            services.Configure<MediaDeliverySettings>(settings =>
+            {
+                settings.SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                settings.PublicBaseUrl = "https://localhost";
+                settings.PublicTtlMinutes = 60;
+                settings.PrivateTtlMinutes = 5;
+                settings.PublicCacheSeconds = 86400;
+            });
+
+            MediaContentProxy.OpenReadAsync(Arg.Any<MediaAsset>(), Arg.Any<CancellationToken>())
+                .Returns(Result.Failure<MediaContentPayload>(
+                    Error.Unavailable("MediaDelivery.ContentUnavailable", "El contenido multimedia no está disponible.")));
+            services.RemoveAll<IMediaContentProxy>();
+            services.AddSingleton(MediaContentProxy);
+
+            CdnCacheInvalidator.InvalidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+            services.RemoveAll<ICdnCacheInvalidator>();
+            services.AddSingleton(CdnCacheInvalidator);
         });
     }
 }

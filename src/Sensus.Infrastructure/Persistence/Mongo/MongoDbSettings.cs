@@ -27,4 +27,5 @@ public sealed class MongoDbSettings
     public string FeedCommentsCollectionName { get; set; } = "feed_comments";
     public string ContentReportsCollectionName { get; set; } = "content_reports";
     public string OfferStatusHistoryCollectionName { get; set; } = "offer_status_history";
+    public string ModerationAuditCollectionName { get; set; } = "moderation_audit";
 }
