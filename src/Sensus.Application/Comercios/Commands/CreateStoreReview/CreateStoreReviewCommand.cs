@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Common.Moderation;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -128,10 +129,23 @@ public sealed class CreateStoreReviewCommandHandler
             await _cacheService.RemoveAsync($"sensus:merchants:user:{comercio.UsuarioId}", cancellationToken);
         }
 
-        IReadOnlyList<StoreReview> reviews = await _storeReviewRepository.GetByMerchantIdAsync(
+        StoreReviewRatingStats ratingStats = await _storeReviewRepository.GetRatingSummaryAsync(
             comercio.Id,
             cancellationToken);
 
-        return Result.Success(StoreReviewMappingExtensions.BuildSummary(comercio, reviews, user.Id));
+        (IReadOnlyList<StoreReview> pagedReviews, long totalCount) = await _storeReviewRepository.GetPagedByMerchantIdAsync(
+            comercio.Id,
+            PaginationPolicy.DefaultPageNumber,
+            PaginationPolicy.DefaultPageSize,
+            cancellationToken);
+
+        return Result.Success(StoreReviewMappingExtensions.BuildSummary(
+            comercio,
+            ratingStats,
+            pagedReviews,
+            totalCount,
+            user.Id,
+            PaginationPolicy.DefaultPageNumber,
+            PaginationPolicy.DefaultPageSize));
     }
 }

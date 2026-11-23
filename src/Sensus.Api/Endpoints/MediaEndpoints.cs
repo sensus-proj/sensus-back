@@ -56,35 +56,26 @@ public static class MediaEndpoints
         {
             if (file is null || file.Length == 0)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Archivo requerido",
-                    Detail = "No se proporcionó ningún archivo de imagen."
-                });
+                return Result.Failure(Error.Validation(
+                    "Archivo requerido",
+                    "No se proporcionó ningún archivo de imagen.")).ToHttpResult();
             }
 
             const long MaxFileSizeBytes = 4_500_000; // 4,5 MB (FR-022-03)
             if (file.Length > MaxFileSizeBytes)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status413RequestEntityTooLarge,
-                    Title = "Archivo demasiado grande",
-                    Detail = $"El archivo excede el tamaño máximo de 4,5 MB ({file.Length / 1024 / 1024:F2} MB)."
-                });
+                return Result.Failure(Error.PayloadTooLarge(
+                    "Archivo demasiado grande",
+                    $"El archivo excede el tamaño máximo de 4,5 MB ({file.Length / 1024 / 1024:F2} MB).")).ToHttpResult();
             }
 
             string contentType = file.ContentType;
             // Validar que el content type sea uno permitido
             if (!_allowedMediaTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Tipo de contenido no permitido",
-                    Detail = "Solo se permiten imágenes JPEG, PNG y WebP."
-                });
+                return Result.Failure(Error.Validation(
+                    "Tipo de contenido no permitido",
+                    "Solo se permiten imágenes JPEG, PNG y WebP.")).ToHttpResult();
             }
 
             using MemoryStream ms = new();
@@ -96,20 +87,7 @@ public static class MediaEndpoints
 
             if (result.IsFailure)
             {
-                int statusCode = result.Error.Type switch
-                {
-                    Domain.Common.ErrorType.Validation => StatusCodes.Status400BadRequest,
-                    Domain.Common.ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
-                    Domain.Common.ErrorType.Forbidden => StatusCodes.Status403Forbidden,
-                    _ => StatusCodes.Status400BadRequest
-                };
-
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = statusCode,
-                    Title = result.Error.Code,
-                    Detail = result.Error.Message
-                });
+                return result.ToHttpResult();
             }
 
             UploadMediaResponseDto dto = result.Value;
@@ -117,7 +95,7 @@ public static class MediaEndpoints
                 ? StatusCodes.Status201Created
                 : StatusCodes.Status202Accepted;
 
-            return Results.Created($"/api/v1/media/{dto.MediaId}", dto);
+            return Results.Json(dto, statusCode: statusCodeSuccess);
         })
         .DisableAntiforgery()
         .WithSummary("Spec 022: Sube una imagen, valida tipo y tamaño, almacena en Cloudinary y modera antes de exponerla")
