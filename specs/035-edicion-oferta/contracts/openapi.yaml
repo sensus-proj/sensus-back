@@ -25,14 +25,19 @@ paths:
         '200':
           description: Oferta actualizada
         '400':
-          description: Solicitud inválida (incluye quitar categoría en oferta publicada o valor fuera de OfferCategory cuando OfferCategory:RequireStrictValidation=true)
+          description: Solicitud inválida, stock inferior a apartados activos o contenido rechazado por moderación
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401': { description: No autenticado }
-        '403': { description: No es dueño de la oferta }
-        '404': { description: No encontrado }
-        '409': { description: Conflicto de versión o stock inferior a apartados activos }
+        '403': { description: No es dueño de la oferta o no tiene comercio activo }
+        '404': { description: Oferta no encontrada }
+        '409': { description: Conflicto de concurrencia optimista (versión obsoleta) }
+        '422':
+          description: Contenido no procesable por infracción de reglas semánticas de moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:

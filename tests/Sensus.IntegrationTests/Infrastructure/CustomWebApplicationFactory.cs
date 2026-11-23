@@ -189,6 +189,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             StoreReviewRepository.GetByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns([]);
+            StoreReviewRepository.GetRatingSummaryAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new StoreReviewRatingStats(0.0, 0, new Dictionary<int, int>()));
+            StoreReviewRepository.GetPagedByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns((new List<StoreReview>(), 0L));
             StoreReviewRepository.GetRatingSummariesByMerchantIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(new Dictionary<Guid, (double AverageRating, int ReviewCount)>());
             StoreReviewRepository.GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())

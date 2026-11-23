@@ -370,6 +370,29 @@ public sealed class SocialFeaturesAndProfanityTests
         public Task<IReadOnlyList<StoreReview>> GetByMerchantIdAsync(Guid merchantId, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<StoreReview>>(_reviews.Where(r => r.MerchantId == merchantId).OrderByDescending(r => r.CreatedAtUtc).ToList());
 
+        public Task<(IReadOnlyList<StoreReview> Items, long TotalCount)> GetPagedByMerchantIdAsync(
+            Guid merchantId,
+            int pageNumber,
+            int pageSize,
+            CancellationToken ct = default)
+        {
+            var matching = _reviews.Where(r => r.MerchantId == merchantId).OrderByDescending(r => r.CreatedAtUtc).ToList();
+            int skip = (Math.Max(1, pageNumber) - 1) * Math.Max(1, pageSize);
+            IReadOnlyList<StoreReview> paged = matching.Skip(skip).Take(Math.Max(1, pageSize)).ToList();
+            return Task.FromResult((paged, (long)matching.Count));
+        }
+
+        public Task<StoreReviewRatingStats> GetRatingSummaryAsync(
+            Guid merchantId,
+            CancellationToken ct = default)
+        {
+            var matching = _reviews.Where(r => r.MerchantId == merchantId).ToList();
+            int total = matching.Count;
+            double avg = total == 0 ? 0.0 : Math.Round(matching.Average(r => r.Rating), 1);
+            var counts = matching.GroupBy(r => r.Rating).ToDictionary(g => g.Key, g => g.Count());
+            return Task.FromResult(new StoreReviewRatingStats(avg, total, counts));
+        }
+
         public Task<Dictionary<Guid, (double AverageRating, int ReviewCount)>> GetRatingSummariesByMerchantIdsAsync(
             IEnumerable<Guid> merchantIds,
             CancellationToken ct = default) =>

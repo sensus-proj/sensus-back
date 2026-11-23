@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 3.6.0 · **Actualizado:** 2026-11-22 · **Alineado a:** `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0
+**Version:** 3.7.0 · **Actualizado:** 2026-11-23 · **Alineado a:** `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,15 +11,15 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-22 |
-| **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044 (029 y 048 en `Parcial`). En trabajo local: `specify → plan → tasks → checklist → implement` completadas y auditadas para **Spec 021 v2.0.0** (Auditoría de Moderación append-only, fail-closed, retención 2555 días, RBAC Admin) y **Spec 023 v2.0.0** (Entrega CDN Cloudinary, URLs firmadas HMAC-SHA256, proxy streaming con TTL acotado, invalidación total, fail-closed), además de las specs previas (046, 047, 049, 025, 040). |
-| **Rama de trabajo** | `Back_Rodrigo` (cambios locales sin confirmar: Specs 021, 023 y previas) |
+| **Última actualización** | 2026-11-23 |
+| **Fase SDD** | `implement` cerrado al 100 % para specs **009**, **012**, **035** y **056**, y **027** al máximo posible desde backend con runbook operacional documentado. |
+| **Rama de trabajo** | `main` / `Back_Rodrigo` (cambios locales sin confirmar: Specs 009, 012, 027, 035, 056) |
 | **Agente** | Antigravity |
 | **Constitución vigente** | v2.4.0 (2026-11-19) |
 | **AGENTS.md vigente** | v2.4.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests) |
-| **Última tarea completada** | **Auditoría y corrección exhaustiva de Spec 021 y Spec 023** (2026-11-22): 1) Resoluciones de auditoría: B1/B2 (fail-closed estricto en `/delivery` y `/delivery-url`, entrega exclusiva de `Approved` con 404 uniforme en activos pendientes/en cuarentena/retirados, proxy de streaming con `Cache-Control` acotado al TTL remanente de firma HMAC, invalidación de CDN en todos los caminos de retiro/rechazo); B3 (integración fail-closed de `IModerationAuditRecorder` en `CreateStoreReview`, `ReplyStoreReview`, `RegisterComercio`, `UpdateMerchantProfile`, `RegisterUser`, `UpdateProfile`); B4 (auditoría en `ReleaseQuarantinedMedia` antes de persistir la liberación); B5 (pruebas reales de persistencia con Testcontainers para `MongoModerationAuditRepository`); M1 (dependencias obligatorias en constructores sin `= null`); M2 (timeout 15s y límite 50MB en proxy); M3 (control compensatorio en BD documentado); M4 (documentación de parámetros SSM `/sensus/<env>/MediaDelivery/SigningKey` y `PublicBaseUrl`); M5 (coherencia documental en specs y checklists). 2) Verificación total: 1,627 pruebas pasando en verde (1,083 unitarias, 537 integración Testcontainers, 4 arquitectura, 3 E2E). Cobertura de líneas: Domain 92.45 %, Application 95.03 %; Cobertura de ramas: Domain 91.94 %, Application 90.54 % (todas ≥ 90.0 %). Formato y compilación con `-warnaserror` al 100 %. |
-| **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). «No subas cambios de nada» confirmado |
+| **Última tarea completada** | **Cierre al 100 % de Specs 009, 012, 035, 056 y avance máximo de 027** (2026-11-23):<br>1) **Spec 056 (Reseñas de comercios — 100 %)**: paginación en base de datos con Skip/Limit y `CountDocumentsAsync`, agregación MongoDB (`$match + $group`) para promedio, total y desglose 1..5 estrellas sin carga en memoria. Testcontainers reales y pruebas unitarias de equivalencia matemática en verde.<br>2) **Spec 012 (CORS y HTTPS por entorno — 100 %)**: T012-05 cerrada con 5 pruebas de integración en `CorsAndHttpsSecurityTests.cs` (orígenes permitidos/no permitidos, redirección HTTPS en producción, HSTS en producción y ausencia en desarrollo).<br>3) **Spec 009 (ProblemDetails uniforme — 100 %)**: eliminadas las 10 instanciaciones directas `new ProblemDetails` en endpoints (reemplazadas por `Result.ToHttpResult()`), respuesta 429 con `application/problem+json` y correlationId, 7 pruebas de integración en `ProblemDetailsUniformityTests.cs` (400, 401, 403, 404, 409, 429, 500) y regla de arquitectura en `ArchitectureTests.cs`. Catálogo de códigos documentado en `spec.md`.<br>4) **Spec 035 (Edición de oferta — 100 %)**: re-moderación fail-closed (`EvaluateAsync` + `RecordAsync`) verificada, contrato OpenAPI actualizado con 200/400/401/403/404/409/422, y 9 pruebas de integración en `OfferEditEndpointsTests.cs` (200 con versión incrementada, 401, 403, 404, 409 versión obsoleta, 409 stock menor a apartados, 400 stock inválido, moderación fail-closed y auditoría fail-closed).<br>5) **Spec 027 (Registro de dispositivo para push — Máximo backend alcanzado)**: T027-08 cerrada con regresión de reasignación y desvinculación probada contra MongoDB real con Testcontainers en `MongoDeviceRepositoryTests.cs`. T027-07, T027-12 y T027-13 documentadas paso a paso en runbook operacional en `plan.md` §11 y marcadas como bloqueadas por acciones externas / móviles.<br>6) **Verificación integral**: 1,663 pruebas pasando al 100 % en verde (1,090 unitarias, 565 integración, 5 arquitectura, 3 E2E). Cobertura: Domain 92.99 %, Application 95.04 % (ambas > 80 %). `dotnet format` y compilación `-warnaserror` (0 advertencias, 0 errores). |
+| **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). Cero operaciones de Git y cero llamadas a AWS ejecutadas. |
 
 ---
 

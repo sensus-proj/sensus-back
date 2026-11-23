@@ -72,11 +72,11 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-008-05` | 008 | FR | No dejar referencias a rutas en español en el código | Must | Implementado |
 | `NFR-008-01` | 008 | NFR | Rutas duplicadas | Cero en el contrato OpenAPI | Implementado |
 | `NFR-008-02` | 008 | NFR | Cobertura del contrato | 100 % de rutas bajo /api/v1 en inglés | Implementado |
-| `FR-009-01` | 009 | FR | Toda respuesta de error usa ProblemDetails | Must | Pendiente |
-| `FR-009-02` | 009 | FR | Incluir traceId o correlationId en cada error | Must | Pendiente |
-| `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Pendiente |
-| `FR-009-04` | 009 | FR | Mantener un catálogo de códigos de error documentado | Should | Pendiente |
-| `NFR-009-01` | 009 | NFR | Estabilidad del formato | Sin cambios incompatibles dentro de v1 | Pendiente |
+| `FR-009-01` | 009 | FR | Toda respuesta de error usa ProblemDetails | Must | Implementado |
+| `FR-009-02` | 009 | FR | Incluir traceId o correlationId en cada error | Must | Implementado |
+| `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Implementado |
+| `FR-009-04` | 009 | FR | Mantener un catálogo de códigos de error documentado | Should | Implementado |
+| `NFR-009-01` | 009 | NFR | Estabilidad del formato | Sin cambios incompatibles dentro de v1 | Implementado |
 | `FR-010-01` | 010 | FR | Exponer PagedResult con items, page, pageSize, total y totalPages | Must | Implementado |
 | `FR-010-02` | 010 | FR | Aplicar 20 elementos por defecto y 100 como máximo | Must | Implementado |
 | `FR-010-03` | 010 | FR | Rechazar pageSize fuera de rango con 400 | Must | Implementado |
@@ -91,7 +91,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Implementado |
 | `FR-012-03` | 012 | FR | Redirigir a HTTPS fuera de desarrollo | Must | Implementado |
 | `FR-012-04` | 012 | FR | Habilitar HSTS en producción | Should | Implementado |
-| `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Pendiente |
+| `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Implementado |
 | `FR-013-01` | 013 | FR | Limitar peticiones por IP | Must | Implementado |
 | `FR-013-02` | 013 | FR | Limitar peticiones por usuario autenticado | Must | Implementado |
 | `FR-013-03` | 013 | FR | Responder 429 con Retry-After | Must | Implementado |
@@ -197,8 +197,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
 | `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
 | `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Parcial |
-| `FR-027-04` | 027 | FR | Configurar FCM HTTP v1 como proveedor de producción para Android | Must | Pendiente |
-| `FR-027-05` | 027 | FR | Desactivar tokens rechazados definitivamente por el proveedor | Must | Pendiente |
+| `FR-027-04` | 027 | FR | Configurar FCM HTTP v1 como proveedor de producción para Android | Must | Bloqueada (acción externa SSM) |
+| `FR-027-05` | 027 | FR | Desactivar tokens rechazados definitivamente por el proveedor | Must | Implementado |
 | `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Implementado |
 | `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Implementado |
 | `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Implementado |
@@ -281,14 +281,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Pendiente |
 | `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Implementado |
 | `FR-035-02` | 035 | FR | Rechazar la edición de ofertas de otro comercio con 403 | Must | Implementado |
-| `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Pendiente |
+| `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Implementado |
 | `FR-035-04` | 035 | FR | Impedir reducir el stock por debajo de los apartados activos | Must | Implementado |
 | `FR-035-05` | 035 | FR | Rechazar ediciones concurrentes con 409 usando version | Must | Implementado |
 | `FR-035-06` | 035 | FR | No cambiar el identificador ni los apartados existentes | Must | Implementado |
-| `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Pendiente |
+| `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Implementado |
 | `FR-035-08` | 035 | FR | Rechazar con `400` una edición que quite la categoría de una oferta publicada o use un valor fuera de `OfferCategory` (spec 034) | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
-| `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Pendiente |
-| `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Pendiente |
+| `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Implementado |
+| `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Implementado |
 | `FR-036-01` | 036 | FR | Cambiar el estado de una oferta propia entre Published, Paused y Archived | Must | Implementado |
 | `FR-036-02` | 036 | FR | Rechazar transiciones no permitidas con 409 | Must | Implementado |
 | `FR-036-03` | 036 | FR | Ocultar de inmediato las ofertas pausadas o archivadas | Must | Implementado |

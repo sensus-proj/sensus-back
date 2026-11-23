@@ -56,6 +56,7 @@ public static class SecurityExtensions
 
                 var problem = new ProblemDetails
                 {
+                    Type = "https://datatracker.ietf.org/doc/html/rfc6585#section-4",
                     Status = StatusCodes.Status429TooManyRequests,
                     Title = "Too Many Requests",
                     Detail = "Se ha excedido el límite de peticiones permitido. Por favor intente más tarde.",
@@ -67,6 +68,7 @@ public static class SecurityExtensions
                     problem.Extensions["correlationId"] = correlationId;
                 }
 
+                context.HttpContext.Response.ContentType = "application/problem+json";
                 await context.HttpContext.Response.WriteAsJsonAsync(problem, cancellationToken: token);
             };
 

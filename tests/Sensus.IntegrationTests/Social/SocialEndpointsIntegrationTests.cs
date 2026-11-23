@@ -10,6 +10,7 @@ using Sensus.Application.Friends.DTOs;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Repositories;
 using Sensus.IntegrationTests.Infrastructure;
 
 namespace Sensus.IntegrationTests.Social;
@@ -143,6 +144,12 @@ public sealed class SocialEndpointsIntegrationTests : IClassFixture<CustomWebApp
         _factory.StoreReviewRepository
             .GetByMerchantIdAsync(merchantId, Arg.Any<CancellationToken>())
             .Returns([createdReview]);
+        _factory.StoreReviewRepository
+            .GetRatingSummaryAsync(merchantId, Arg.Any<CancellationToken>())
+            .Returns(new StoreReviewRatingStats(5.0, 1, new Dictionary<int, int> { [5] = 1 }));
+        _factory.StoreReviewRepository
+            .GetPagedByMerchantIdAsync(merchantId, Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(([createdReview], 1L));
 
         HttpResponseMessage okResponse = await _client.PostAsJsonAsync(
             $"/api/v1/merchants/{merchantId}/reviews",

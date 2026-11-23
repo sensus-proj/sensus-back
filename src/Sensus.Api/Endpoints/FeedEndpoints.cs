@@ -7,6 +7,7 @@ using Sensus.Application.Feed.DTOs;
 using Sensus.Application.Feed.Queries.GetPostComments;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetOfferFeed;
+using Sensus.Domain.Common;
 
 namespace Sensus.Api.Endpoints;
 
@@ -32,12 +33,9 @@ public static class FeedEndpoints
         {
             if (!lat.HasValue || !lng.HasValue)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "OfferFeed.CoordinatesRequired",
-                    Detail = "Las coordenadas lat y lng son obligatorias."
-                });
+                return Result.Failure(Error.Validation(
+                    "OfferFeed.CoordinatesRequired",
+                    "Las coordenadas lat y lng son obligatorias.")).ToHttpResult();
             }
 
             Guid? parsedSnapshotId = null;
@@ -45,12 +43,9 @@ public static class FeedEndpoints
             {
                 if (!Guid.TryParse(snapshotId.Trim(), out Guid parsed) || parsed == Guid.Empty)
                 {
-                    return Results.Problem(new ProblemDetails
-                    {
-                        Status = StatusCodes.Status400BadRequest,
-                        Title = "OfferFeed.InvalidSnapshotId",
-                        Detail = "El parámetro snapshotId debe tener formato GUID válido."
-                    });
+                    return Result.Failure(Error.Validation(
+                        "OfferFeed.InvalidSnapshotId",
+                        "El parámetro snapshotId debe tener formato GUID válido.")).ToHttpResult();
                 }
 
                 parsedSnapshotId = parsed;

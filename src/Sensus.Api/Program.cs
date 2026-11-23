@@ -203,6 +203,49 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Fail("La sesión ha sido revocada o la contraseña fue restablecida.");
             }
+        },
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                Title = "Unauthorized",
+                Status = StatusCodes.Status401Unauthorized,
+                Detail = "No se proporcionó un token de autenticación válido o ha expirado.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
+                Title = "Forbidden",
+                Status = StatusCodes.Status403Forbidden,
+                Detail = "No tiene permisos suficientes para acceder a este recurso.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
         }
     };
 });
