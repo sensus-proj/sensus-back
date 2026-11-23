@@ -13,10 +13,10 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 006 | [Consulta de mi comercio](006-consulta-mi-comercio/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 005 |
 | 007 | [Ofertas cercanas](007-ofertas-cercanas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 005, 010, 034 |
 | 008 | [Retiro de endpoints legacy](008-retiro-endpoints-legacy/spec.md) | Plataforma | Nuevo | 6 | Implementado | 001, 005, 006 |
-| 009 | [Errores uniformes con ProblemDetails](009-errores-problemdetails/spec.md) | Plataforma | Nuevo | 0 | Parcial | Ninguna |
+| 009 | [Errores uniformes con ProblemDetails](009-errores-problemdetails/spec.md) | Plataforma | Nuevo | 0 | Completo | Ninguna |
 | 010 | [Paginación estándar](010-paginacion-estandar/spec.md) | Plataforma | Nuevo | 0 | Implementado | 009 |
 | 011 | [Contrato OpenAPI](011-contrato-openapi/spec.md) | Plataforma | Nuevo | 0 | Implementado | 009, 010 |
-| 012 | [CORS y HTTPS por entorno](012-cors-y-https/spec.md) | Seguridad | Nuevo | 6 | Parcial | Ninguna |
+| 012 | [CORS y HTTPS por entorno](012-cors-y-https/spec.md) | Seguridad | Nuevo | 6 | Completo | Ninguna |
 | 013 | [Control de tasa de peticiones](013-rate-limiting/spec.md) | Seguridad | Nuevo | 6 | Implementado | 012 |
 | 014 | [Logs estructurados y correlación](014-logs-estructurados-correlacion/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 009 |
 | 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
@@ -39,7 +39,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007 |
 | 033 | [Apartado de oferta con código QR](033-apartado-con-qr/spec.md) | Ofertas | Nuevo | 2 | Parcial | 007, 027, 032, 037 |
 | 034 | [Creación de oferta](034-creacion-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 005, 017, 022 |
-| 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 033 |
+| 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Completo | 034, 033 |
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 035 |
 | 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 033, 010 |
 | 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032 |
@@ -60,7 +60,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 054 | [Intereses del usuario](054-intereses-usuario/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 002, 003, 013, 030, 052 |
 | 055 | [Registro de interacciones con ofertas](055-interacciones-ofertas/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 014, 030, 032, 033, 042 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
-| 056 | [Reseñas y calificaciones de comercios (`StoreReview`)](056-resenas-comercios/spec.md) | Social | Retro-spec | 3 | Parcial (retro-spec) | 001, 005, 006, 017, 052, 059 |
+| 056 | [Reseñas y calificaciones de comercios (`StoreReview`)](056-resenas-comercios/spec.md) | Social | Retro-spec | 3 | Completo | 001, 005, 006, 017, 052, 059 |
 | 057 | [Me gusta en ofertas (`OfferLike`)](057-me-gusta-ofertas/spec.md) | Ofertas | Retro-spec | 3 | Implementado (retro-spec) | 001, 007, 032, 034, 052 |
 | 058 | [Actividad de amigos en comunidad (`CommunityEndpoints`)](058-actividad-amigos-comunidad/spec.md) | Social | Retro-spec | 5 | Parcial (retro-spec) | 050, 056, 057 |
 | 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Implementado (retro-spec) | 017, 018, 046, 056 |

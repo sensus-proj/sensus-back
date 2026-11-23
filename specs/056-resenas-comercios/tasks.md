@@ -6,4 +6,4 @@
 | `T056-02` | `FR-056-01..04` | Contrato OpenAPI 3.1 en `contracts/openapi.yaml` | `[x]` Completado |
 | `T056-03` | `FR-056-06` | Referencias `FR-056-*` en código y verificación de `AverageRating`/`ReviewCount` reales en `ComercioDto` | `[x]` Completado |
 | `T056-04` | `NFR-056-01..03` | Pruebas de integración en `SocialEndpointsIntegrationTests` y persistencia en `MongoSocialRepositoriesTests` (verificación final en runner Linux de CI) | `[x]` Completado (compilado; CI pendiente) |
-| `T056-05` | `FR-056-07` | Agregar paginación `PagedResult` a `GetStoreReviewsQuery` (deuda retro-spec) | `[ ]` Pendiente |
+| `T056-05` | `FR-056-07` | Agregar paginación `PagedResult` a `GetStoreReviewsQuery` y agregación `$match+$group` en MongoDB (`MongoStoreReviewRepository`) | `[x]` Completada |

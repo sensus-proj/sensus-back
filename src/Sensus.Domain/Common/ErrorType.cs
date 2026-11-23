@@ -9,5 +9,6 @@ public enum ErrorType
     Unauthorized = 4,
     Forbidden = 5,
     Unprocessable = 6,
-    Unavailable = 7
+    Unavailable = 7,
+    PayloadTooLarge = 8
 }

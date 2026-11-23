@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Retro-spec alineada a implementación |
-| Versión | 1.0.0 |
-| Constitution Check | FAIL (retro-spec con brecha registrada `FR-056-07`) |
+| Estado del plan | Completo |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
 | Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
@@ -62,7 +62,7 @@ Se introduce el agregado `StoreReview` (con entidad hija `StoreReviewReply`) en 
 | IV. Seguridad y moderación | PASS | `RegisteredUserPolicy`, `SensitiveWritePolicy`, moderación fail-closed |
 | V. Cobertura y pruebas reales | PASS | Unitarias + integración endpoints + MongoDB real (`MONGO_CONNECTION_STRING`) |
 | VI. Costo AWS | PASS | 0 USD adicionales |
-| VII. Paginación e índices | FAIL | Brecha `FR-056-07`: listado de reseñas aún sin `PagedResult`; índice `(MerchantId, CreatedAtUtc)` presente |
+| VII. Paginación e índices | PASS | `FR-056-07` implementado: paginación en BD (`Skip`/`Limit`/`CountDocumentsAsync`), agregación de estrellas (`$match+$group`) e índice compuesto `(MerchantId, CreatedAtUtc)` |
 | VIII. DevSecOps / STRIDE | PASS | Matriz STRIDE evaluada y validaciones de longitud/rango |
 
 ## 9. Riesgos de implementación
@@ -75,4 +75,4 @@ Se introduce el agregado `StoreReview` (con entidad hija `StoreReviewReply`) en 
 2. `T056-02` Publicar `contracts/openapi.yaml`
 3. `T056-03` Trazabilidad `FR-056-*` en handlers/entidades y validar `AverageRating` real
 4. `T056-04` Pruebas de integración de endpoints y MongoDB real para `store_reviews`
-5. `T056-05` Deuda futura: paginación `PagedResult` en `GET /api/v1/merchants/{merchantId}/reviews` (`FR-056-07`)
+5. `T056-05` Paginación en BD `PagedResult` en `GET /api/v1/merchants/{merchantId}/reviews` (`FR-056-07`) y agregación MongoDB `$match+$group`

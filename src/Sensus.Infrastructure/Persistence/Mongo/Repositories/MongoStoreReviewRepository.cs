@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
@@ -33,6 +34,62 @@ public sealed class MongoStoreReviewRepository : IStoreReviewRepository
             .ToListAsync(cancellationToken);
 
         return docs.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task<(IReadOnlyList<StoreReview> Items, long TotalCount)> GetPagedByMerchantIdAsync(
+        Guid merchantId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        int safePage = Math.Max(1, pageNumber);
+        int safePageSize = Math.Clamp(pageSize, 1, 100);
+        int skip = (safePage - 1) * safePageSize;
+
+        var filter = Builders<StoreReviewDocument>.Filter.Eq(x => x.MerchantId, merchantId);
+
+        long totalCount = await _context.StoreReviews.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+
+        List<StoreReviewDocument> docs = await _context.StoreReviews
+            .Find(filter)
+            .SortByDescending(x => x.CreatedAtUtc)
+            .Skip(skip)
+            .Limit(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        return (docs.Select(d => d.ToDomain()).ToList(), totalCount);
+    }
+
+    public async Task<StoreReviewRatingStats> GetRatingSummaryAsync(
+        Guid merchantId,
+        CancellationToken cancellationToken = default)
+    {
+        var matchFilter = Builders<StoreReviewDocument>.Filter.Eq(x => x.MerchantId, merchantId);
+
+        var pipeline = _context.StoreReviews.Aggregate()
+            .Match(matchFilter)
+            .Group(new BsonDocument
+            {
+                { "_id", "$rating" },
+                { "count", new BsonDocument("$sum", 1) }
+            });
+
+        List<BsonDocument> results = await pipeline.ToListAsync(cancellationToken);
+
+        var countsByStar = new Dictionary<int, int>();
+        foreach (BsonDocument doc in results)
+        {
+            if (doc.TryGetValue("_id", out BsonValue? idVal) && !idVal.IsBsonNull &&
+                doc.TryGetValue("count", out BsonValue? countVal) && !countVal.IsBsonNull)
+            {
+                countsByStar[idVal.ToInt32()] = countVal.ToInt32();
+            }
+        }
+
+        int total = countsByStar.Values.Sum();
+        double avg = total == 0 ? 0.0 : Math.Round(countsByStar.Sum(kvp => (long)kvp.Key * kvp.Value) / (double)total, 1);
+
+        return new StoreReviewRatingStats(avg, total, countsByStar);
     }
 
     public async Task<Dictionary<Guid, (double AverageRating, int ReviewCount)>> GetRatingSummariesByMerchantIdsAsync(

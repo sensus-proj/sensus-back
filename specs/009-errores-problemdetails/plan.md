@@ -4,21 +4,21 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 1.0.0 |
-| Constitution Check | PASS CON OBSERVACIONES |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 
-Garantizar que toda respuesta de error use ProblemDetails con un identificador de correlación y sin filtrar detalles internos.
+Garantizar que toda respuesta de error use ProblemDetails RFC 7807 (`type`, `title`, `status`, `detail`, `instance`, `extensions.correlationId`) con un identificador de correlación y sin filtrar detalles internos (stack traces, nombres de colecciones o tipos de base de datos).
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Api | GlobalExceptionHandler y middleware de correlación |
-| Application | Excepciones de dominio mapeadas a códigos |
-| Domain | Sin dependencias de presentación |
+| Api | GlobalExceptionHandler, CorrelationIdMiddleware, ResultExtensions.ToHttpResult/ToProblemDetails, y SecurityExtensions para 429 |
+| Application | Common/Exceptions mapeados centralizadamente; Result/Error sin acoplamiento a HTTP |
+| Domain | Common/Error y ErrorType sin dependencias externas |
 
 ## 3. Modelo de datos e índices
 
@@ -26,11 +26,13 @@ Garantizar que toda respuesta de error use ProblemDetails con un identificador d
 
 ## 4. Seguridad
 
-- No filtrar rutas internas, versiones ni detalles de infraestructura
+- No filtrar rutas internas, versiones, nombres de colecciones de MongoDB ni detalles de infraestructura (OWASP ASVS / Principio IV y VIII).
+- Encabezado `X-Correlation-Id` propagado uniformemente en encabezados HTTP y cuerpo de error.
 
 ## 5. Observabilidad y rendimiento
 
-- Cada error registra correlationId y código interno
+- Cada error registra correlationId y código interno (Principio VII).
+- Sin overhead de serialización manual ni duplicación de payloads.
 
 ## 6. Costo AWS
 
@@ -38,22 +40,24 @@ Sin costo incremental: Lambda y API Gateway dentro del Free Tier.
 
 ## 7. Estrategia de pruebas
 
-- Unitarias del mapeo de excepciones
-- Integración de 400, 401, 404, 409 y 500
+- Unitarias del mapeo de excepciones y de `ResultExtensions`.
+- Integración de 400, 401, 403, 404, 409, 429 y 500 en `ProblemDetailsUniformityTests.cs`.
+- Arquitectura en `ArchitectureTests.cs` verificando que ningún endpoint instancie `new ProblemDetails` manualmente.
 
 ## 8. Constitution Check
 
-Evaluación previa a la implementación.
+Evaluación integral tras la implementación.
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | PASS | `FR-009-01` y 3 requisitos más, con criterios de aceptación medibles |
-| II | PASS | Cambios acotados a las capas declaradas en §2 |
-| III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | PASS | Estrategia de pruebas definida en §7 |
-| VI | PASS | Costo estimado declarado en §6 |
-| VII | PARCIAL | falta correlation-id en todas las respuestas |
+| I | PASS | `FR-009-01` a `FR-009-04` cubiertos con criterios de aceptación medibles y catálogo de errores |
+| II | PASS | Cambios acotados a las capas declaradas en §2; Domain y Application limpios |
+| III | PASS | Result/Error utilizados de forma canónica; sin entidades de dominio en respuestas |
+| IV | PASS | Reglas de seguridad aplicadas: cero fugas de stack trace, colecciones o PII |
+| V | PASS | 7 pruebas de integración en `ProblemDetailsUniformityTests` y 1 de arquitectura en verde |
+| VI | PASS | Costo cero verificado en §6 |
+| VII | PASS | `correlationId` en todas las respuestas de error (header y cuerpo) y sin recorridos costosos |
+| VIII | PASS | OWASP ASVS L2/L3: respuestas de error estandarizadas sin enumeración ni fuga de metadatos |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 
