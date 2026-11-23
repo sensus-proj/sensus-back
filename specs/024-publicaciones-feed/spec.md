@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 017, 022 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -43,7 +43,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 | ID | Requisito | Prioridad |
 |---|---|---|
 | FR-024-01 | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must |
-| FR-024-02 | No publicar hasta obtener veredicto favorable | Must |
+| FR-024-02 | Moderar el texto solo si la publicación carece de imagen, o moderar juntos imagen y texto si la incluye. Publicar únicamente tras un veredicto favorable y enviar a cuarentena ante fallo, timeout, cuota agotada o respuesta inválida. | Must |
 | FR-024-03 | Registrar autor, fechas y estado | Must |
 | FR-024-04 | Devolver 202 mientras la moderación está pendiente | Should |
 | FR-024-05 | Permitir al autor eliminar su propia publicación | Must |
@@ -88,6 +88,12 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 - **Dado** otro usuario intenta eliminar
 - **Cuando** DELETE /api/v1/feed/posts/{id}
 - **Entonces** 403
+
+### CA-024-06
+
+- **Dado** que el proveedor falla, expira, agota su cuota o devuelve una respuesta inválida
+- **Cuando** se intenta crear una publicación, con o sin imagen
+- **Entonces** queda en cuarentena, no aparece en el feed y no se realiza ninguna subida a Cloudinary
 
 ## 7. Contratos expuestos
 

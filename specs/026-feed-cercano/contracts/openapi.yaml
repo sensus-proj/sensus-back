@@ -10,6 +10,13 @@ paths:
     get:
       summary: "Borrador de GET /api/v1/feed/nearby"
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: radiusKm
+          in: query
+          description: Radio en kilómetros, con un máximo de 5 km inclusive.
+          schema:
+            type: number
+            maximum: 5
       responses:
         '200': { description: OK }
         '400': { description: Solicitud inválida }

@@ -85,7 +85,8 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         double? latitude = null,
         double? longitude = null,
         DateTime? nowUtc = null,
-        string? category = null)
+        string? category = null,
+        bool saveAsDraft = false)
     {
         DateTime now = nowUtc ?? DateTime.UtcNow;
 
@@ -142,7 +143,7 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
             stock,
             startsAt.ToUniversalTime(),
             endsAt.ToUniversalTime(),
-            OfferStatus.Published,
+            saveAsDraft ? OfferStatus.Draft : OfferStatus.Published,
             imageUrl?.Trim(),
             latitude,
             longitude,
@@ -297,6 +298,11 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// </summary>
     public Result Expire(DateTime nowUtc)
     {
+        if (Status == OfferStatus.Draft)
+        {
+            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "Un borrador debe moderarse antes de salir de ese estado."));
+        }
+
         if (Status == OfferStatus.Expired)
         {
             return Result.Success();
@@ -388,6 +394,11 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// </summary>
     public Result Archive(DateTime nowUtc)
     {
+        if (Status == OfferStatus.Draft)
+        {
+            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "Un borrador debe moderarse antes de salir de ese estado."));
+        }
+
         Status = OfferStatus.Archived;
         LastModifiedAtUtc = nowUtc;
         return Result.Success();

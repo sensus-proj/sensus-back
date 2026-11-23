@@ -23,8 +23,8 @@ public class GetNearbyComerciosQueryHandlerTests
     {
         // Arrange
         _currentUserService.IsGuest.Returns(true);
-        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio>());
+        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((Array.Empty<Comercio>(), 0));
 
         var query = new GetNearbyComerciosQuery(19.4326, -99.1332, RadioMetros: 5000);
 
@@ -33,7 +33,7 @@ public class GetNearbyComerciosQueryHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>());
+        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class GetNearbyComerciosQueryHandlerTests
     {
         // Arrange
         _currentUserService.IsGuest.Returns(false);
-        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 5000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio>());
+        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 5000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((Array.Empty<Comercio>(), 0));
 
         var query = new GetNearbyComerciosQuery(19.4326, -99.1332, RadioMetros: 5000);
 
@@ -51,6 +51,6 @@ public class GetNearbyComerciosQueryHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 5000, Arg.Any<CancellationToken>());
+        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 5000, 1, 20, Arg.Any<CancellationToken>());
     }
 }

@@ -115,7 +115,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
-| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
+| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
+| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Parcial |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
@@ -165,7 +166,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Pendiente |
 | `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Pendiente |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Pendiente |
-| `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Pendiente |
+| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Pendiente |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Pendiente |
 | `FR-024-04` | 024 | FR | Devolver 202 mientras la moderación está pendiente | Should | Pendiente |
 | `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Pendiente |
@@ -184,7 +185,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
 | `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
 | `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-026-04` | 026 | FR | Limitar el radio a 50 km y rechazar valores fuera de rango | Must | Pendiente |
+| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Pendiente |
 | `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Pendiente |
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
@@ -259,7 +260,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
-| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Pendiente |
+| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
@@ -468,5 +469,46 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-051-02` | 051 | NFR | Mínimo privilegio | Solo recursos etiquetados y ARN propios | Implementado |
 | `NFR-051-03` | 051 | NFR | Tiempo de reanudación | ≤ 5 min | Implementado |
 | `NFR-051-04` | 051 | NFR | Idempotencia | Repetir una acción no duplica ni falla | Implementado |
+| `FR-053-01` | 053 | FR | Devolver comercios activos ordenados por cercanía | Must | Implementado |
+| `FR-053-02` | 053 | FR | Radio predeterminado de 2 km y máximo según el rol | Must | Implementado |
+| `FR-053-03` | 053 | FR | Autorizar a usuarios registrados e invitados | Must | Implementado |
+| `FR-053-04` | 053 | FR | Validar coordenadas y devolver 400 ante valores fuera de rango | Must | Implementado |
+| `FR-053-05` | 053 | FR | Paginar a 20 por defecto y máximo 100 con metadatos | Must | Implementado |
+| `FR-053-06` | 053 | FR | Aplicar el límite de tasa read-heavy | Must | Implementado |
+| `FR-053-07` | 053 | FR | Aceptar radiusKm y conservar radioMetros como alias | Should | Implementado |
+| `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre el índice 2dsphere, sin recorrido completo | Implementado |
+| `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio | Implementado |
+| `FR-056-01` | 056 | FR | Consultar resumen estilo Play Store y reseñas de comercio vía `GET /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-02` | 056 | FR | Publicar calificación (1..5 estrellas) y comentario (1–600 chars) vía `POST /api/v1/merchants/{merchantId}/reviews` | Must | Implementado |
+| `FR-056-03` | 056 | FR | Alternar «Me gusta» en reseña vía `POST /api/v1/merchants/reviews/{reviewId}/like` | Must | Implementado |
+| `FR-056-04` | 056 | FR | Responder en hilo a una reseña (1–500 chars) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` | Must | Implementado |
+| `FR-056-05` | 056 | FR | Moderar reseñas y respuestas con `ProfanityFilter` + `IPublicationTextModerationService` (*fail-closed*) | Must | Implementado |
+| `FR-056-06` | 056 | FR | Calcular `AverageRating` y `ReviewCount` reales en `ComercioDto` e invalidar caché tras reseña | Must | Parcial |
+| `FR-056-07` | 056 | FR | Aplicar `PagedResult` al listado completo de reseñas | Should | Implementado |
+| `NFR-056-01` | 056 | NFR | Seguridad y límites de tasa (`read-heavy`/`sensitive-write`) | 100 % endpoints | Implementado |
+| `NFR-056-02` | 056 | NFR | Índice compuesto `(MerchantId asc, CreatedAtUtc desc)` en `store_reviews` | Sin full-scan por comercio | Implementado |
+| `NFR-056-03` | 056 | NFR | Privacidad en DTOs de reseña | 0 campos de correo/credenciales | Implementado |
+| `FR-057-01` | 057 | FR | Alternar «Me gusta» de producto vía `POST /api/v1/offers/{id}/like` devolviendo `OfferLikeStatusDto` | Must | Implementado |
+| `FR-057-02` | 057 | FR | Exponer `LikesCount` e `IsLikedByMe` reales en `OfferDetailDto`, `NearbyOfferDto` y `OfferDto` | Must | Parcial |
+| `FR-057-03` | 057 | FR | Garantizar unicidad `(UserId, OfferId)` y devolver `404` ante ofertas inexistentes o archivadas | Must | Parcial |
+| `FR-057-04` | 057 | FR | Invalidar caché de detalle (`OfferCacheKeys.Detail`) al alternar like sin alterar `OfferCategory` | Must | Parcial |
+| `NFR-057-01` | 057 | NFR | Seguridad (`RegisteredUserPolicy` + `SensitiveWritePolicy`) | 403 para invitados | Implementado |
+| `NFR-057-02` | 057 | NFR | Índices único `(UserId, OfferId)` y `(OfferId, CreatedAtUtc desc)` en `offer_likes` | Sin full-scan | Parcial |
+| `NFR-057-03` | 057 | NFR | Privacidad en conteo de likes de productos | 0 PII expuesta | Parcial |
+| `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
+| `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
+| `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Implementado |
+| `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
+| `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
+| `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |
+| `FR-059-01` | 059 | FR | Filtrar groserías, frases y *leetspeak* de forma determinística en `ProfanityFilter` | Must | Implementado |
+| `FR-059-02` | 059 | FR | Aplicar `ContentModerationHelper` a textos de usuario, comercio, ofertas, reseñas y respuestas | Must | Parcial |
+| `FR-059-03` | 059 | FR | Mantener `OpenAiTextModerationService` 100 % *fail-closed* en errores, timeouts y ausencia de clave | Must | Parcial |
+| `FR-059-04` | 059 | FR | Leer todos los umbrales exclusivamente desde `IOptions<OpenAiSettings>` / configuración, nunca fijos en código | Must | Parcial |
+| `FR-059-05` | 059 | FR | Declarar `Model`, `DefaultLowThreshold`, `DefaultHighThreshold` y `CategoryThresholds` explícitos en `appsettings.json` | Must | Parcial |
+| `NFR-059-01` | 059 | NFR | Timeout explícito anti-ReDoS en expresiones regulares de `ProfanityFilter` | 0 vulnerabilidades S6444 | Implementado |
+| `NFR-059-02` | 059 | NFR | Cero rutas *fail-open* ante fallos de moderación externa | 100 % fail-closed | Parcial |
+| `NFR-059-03` | 059 | NFR | Pruebas unitarias y de integración sobre filtro, umbrales configurados y *fail-closed* | Cobertura >= 80 % | Parcial |
 
-Total: **464 requisitos** en 51 specs.
+Total: **506 requisitos** en 56 specs.

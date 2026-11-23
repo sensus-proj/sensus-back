@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Common;
@@ -18,6 +19,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
+    private readonly IMediaAssetRepository? _mediaAssets;
 
     public CreateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -26,7 +28,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateOfferCommandHandler> logger,
         ICacheService? cacheService = null,
-        INearbyOfferNotifier? nearbyOfferNotifier = null)
+        INearbyOfferNotifier? nearbyOfferNotifier = null,
+        IMediaAssetRepository? mediaAssets = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -35,6 +38,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _logger = logger;
         _cacheService = cacheService;
         _nearbyOfferNotifier = nearbyOfferNotifier;
+        _mediaAssets = mediaAssets;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -63,7 +67,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             comercio.Latitud,
             comercio.Longitud,
             _dateTimeProvider.UtcNow,
-            request.Category);
+            request.Category,
+            request.SaveAsDraft);
 
         if (offerResult.IsFailure)
         {
@@ -71,6 +76,14 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         Offer offer = offerResult.Value;
+        if (!request.SaveAsDraft && !string.IsNullOrWhiteSpace(offer.ImageUrl)
+            && (_mediaAssets is null || !await _mediaAssets.HasApprovedImageAsync(
+                userId, offer.ImageUrl, ModeratedTextFingerprint.Create($"{offer.Title}\n{offer.Description}"), cancellationToken)))
+        {
+            return Result.Failure<OfferDto>(Error.Validation(
+                "Offer.ImageNotApproved", "La imagen debe estar aprobada para el título y la descripción de esta oferta."));
+        }
+
         await _offerRepository.AddAsync(offer, cancellationToken);
         await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
 
@@ -78,7 +91,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             offer.Id, comercio.Id, offer.EndsAt);
 
         // FR-044-08: el aviso se intenta después de persistir y nunca revierte la creación.
-        if (_nearbyOfferNotifier is not null)
+        if (!request.SaveAsDraft && _nearbyOfferNotifier is not null)
         {
             await _nearbyOfferNotifier.NotifyAsync(offer, userId, cancellationToken);
         }

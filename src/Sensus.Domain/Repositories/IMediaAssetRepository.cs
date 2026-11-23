@@ -12,6 +12,9 @@ public interface IMediaAssetRepository
     /// </summary>
     Task<MediaAsset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<bool> HasApprovedImageAsync(
+        Guid ownerId, string secureUrl, string moderatedTextFingerprint, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Activos en cuarentena creados antes del instante indicado, ordenados del más antiguo al más reciente (FR-019-03).
     /// </summary>

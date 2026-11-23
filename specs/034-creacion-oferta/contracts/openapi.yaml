@@ -2,21 +2,94 @@ openapi: 3.1.0
 info:
   title: "Sensus API — Spec 034 Creación de oferta"
   version: 1.0.0
-  description: "Borrador del contrato del spec 034. Completar esquemas antes de implementar."
+  description: "Contrato observable de creación de oferta. La aceptación 202 por moderación pendiente y el límite de ofertas activas siguen abiertos en la Spec 034."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers:
     post:
-      summary: "Borrador de POST /api/v1/offers"
+      summary: Crear una oferta del comercio autenticado
+      operationId: createOffer
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOffer'
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '201':
+          description: Oferta creada
+          headers:
+            Location:
+              schema: { type: string, format: uri-reference }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401': { description: Autenticación requerida }
+        '403': { description: Se requiere un comerciante con comercio activo }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    CreateOffer:
+      type: object
+      required: [title, description, originalPrice, discountPercentage, stock, startsAt, endsAt]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, minLength: 5, maxLength: 500 }
+        originalPrice: { type: number, exclusiveMinimum: 0 }
+        discountPercentage: { type: integer, minimum: 1, maximum: 90 }
+        stock: { type: integer, minimum: 1 }
+        startsAt: { type: string, format: date-time }
+        endsAt:
+          type: string
+          format: date-time
+          description: Posterior a startsAt.
+        imageUrl:
+          type: [string, 'null']
+          description: Para publicar, debe ser la URL aprobada de un activo del comerciante. En la carga se envía textContext con el título recortado, un salto de línea y la descripción recortada.
+        category: { type: [string, 'null'] }
+        saveAsDraft:
+          type: boolean
+          default: false
+          description: Guarda un borrador privado visible solo en el inventario del comercio y sin envío de avisos.
+    Offer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        originalPrice: { type: number }
+        discountPercentage: { type: integer }
+        discountedPrice: { type: number }
+        stock: { type: integer }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { type: string }
+        imageUrl: { type: [string, 'null'] }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        createdAtUtc: { type: string, format: date-time }
+        lastModifiedAtUtc: { type: [string, 'null'], format: date-time }
+        version: { type: integer }
+        category: { type: [string, 'null'] }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }

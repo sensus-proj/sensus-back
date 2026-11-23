@@ -1,6 +1,6 @@
 # Checklist 024 — Publicaciones del feed
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -15,6 +15,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## B. Específicos de este spec
 
 - [ ] Ninguna publicación se expone sin veredicto
+- [ ] Solo texto y texto con imagen se moderan con la entrada correspondiente. Ambos caminos quedan en cuarentena ante fallos (`CA-024-01`, `CA-024-06`).
 - [ ] El autor proviene del token
 - [ ] El borrado invalida el acceso a la imagen
 - [ ] El estado es consultable

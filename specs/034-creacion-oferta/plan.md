@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
-| Constitution Check | PASS |
+| Constitution Check | Abierto. Falta resolver la cuarentena previa a publicación. |
 | Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
 
 ## 1. Resumen técnico
@@ -83,7 +83,13 @@ Evaluación previa a la implementación.
 11. `T034-11` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 12. `T034-12` Registrar evidencias del Constitution Check
 
+`T034-13` implementa el borrador independiente de `FR-034-04`. El parámetro opcional `saveAsDraft` conserva el contrato existente al omitirse. El borrador es visible en el inventario del propietario, se filtra en el detalle y otros consumidores públicos, y permanece fuera de los cambios de estado que podrían habilitar su publicación sin veredicto. No genera avisos, no invoca al proveedor y no usa almacenamiento multimedia adicional. El costo incremental es cero.
+
+STRIDE del borrador. El token y el comercio activo protegen contra suplantación y elevación. El servidor fija el estado y excluye el borrador de lecturas públicas y notificaciones para impedir manipulación y divulgación. Se mantienen los límites de entrada y las políticas de autorización. El identificador de correlación enlaza el resultado con la solicitud.
+
 ### Diseño pendiente de implementación para FR-034-03
+
+La verificación de la imagen en la creación puede entregarse antes de resolver la cuarentena. Para `T034-14`, la carga conserva una huella del `textContext` efectivamente evaluado cuando el proveedor otorga una aprobación automática. Al publicar, el backend exige que `imageUrl` coincida con un activo aprobado del dueño del comercio y que la huella coincida con el título y descripción recortados, separados por un salto de línea. El índice `ownerId + secureUrl` acota la búsqueda. Las aprobaciones históricas o manuales sin esa huella requieren una nueva evaluación automatizada. El borrador conserva su flujo privado. Este control no cambia el almacenamiento de cuarentena ni añade servicios.
 
 Usar el flujo de carga de medios como origen de una decisión conjunta. Moderar los bytes y el contexto de título y descripción antes de enviar a Cloudinary. Persistir el veredicto, categorías, puntajes, umbral, acción y fecha, vinculados internamente al propietario, al activo y a una huella del contexto que recibió el proveedor. Las decisiones automáticas históricas sin huella y las liberaciones manuales sin evidencia conjunta quedan excluidas de las alertas. La creación y edición deben validar que el activo aprobado pertenece al comerciante y que la huella coincide con el contenido de la versión a publicar. Un cambio de texto o imagen exige otra decisión. La versión de oferta debe conservar la referencia a la evidencia para que el despacho pueda reevaluarla.
 
@@ -91,7 +97,7 @@ La cuarentena por fallo del proveedor debe resolverse antes de activar este dise
 
 ### Propuesta de enmienda conforme a §4.3 — Cuarentena previa a Cloudinary
 
-- Estado propuesto, pendiente de aprobación. Principios afectados IV y VI, y §2.4 de constitution.md v2.2.0.
+- Enmienda no aprobada por el responsable el 2026-11-22. Continúa vigente la regla de almacenamiento de la constitución v3.0.0. `FR-034-03` queda abierto hasta disponer de un diseño de cuarentena compatible con los principios IV y VI y §2.4.
 - Motivación. Ante timeout o fallo se debe conservar el contenido en cuarentena. El plan 019 vigente usa Cloudinary para retenerlo y el Principio IV impide escribir allí antes de moderar. El Principio VI reserva el almacenamiento multimedia a Cloudinary.
 - Redacción propuesta. Permitir retención temporal de imágenes de ofertas pendientes de veredicto en una colección privada de MongoDB, sin URL ni acceso de clientes, con expiración por TTL y máximo efectivo conforme a la spec 019. Mantener Cloudinary como destino de las imágenes aprobadas. Excluir expresamente el contenido prohibido de persistir según §2.3. Mantener cerrado el acceso a contenido inconcluso, rechazado o expirado.
 - Impacto. Actualizar 017, 019, 034 y 044 antes de implementar. El flujo de ofertas puede recibir la imagen en la propia solicitud de publicación y las ediciones de contenido quedan sujetas a una nueva evidencia. Las rutas ajenas al flujo de ofertas quedan fuera de este cambio. Verificar capacidad de MongoDB Free Tier, tamaño máximo por documento, acceso interno, TTL, costo y eliminación antes de aprobar el plan de implementación.

@@ -53,21 +53,26 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## F. Registro
 
-- [ ] Un apartado persistido genera avisos sin QR y respeta preferencias (`FR-033-09`, `FR-033-10`).
-- [ ] Los reintentos no duplican el despacho y las fallas no revierten el apartado.
+- [x] En pruebas locales, un apartado persistido genera avisos sin QR y respeta preferencias (`FR-033-09`, `FR-033-10`).
+- [x] En pruebas locales, los reintentos no duplican el despacho y las fallas no revierten el apartado.
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-13 | Equipo Sensus | PASS | `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, 337 unitarias y 78 de integración en verde. Firma HMAC con `FixedTimeEquals`; secreto por configuración. |
 | 2026-11-18 | Codex | Parcial | Contrato HTTP sin cambios. Unitarias cubren destinatarios y vencimiento. MongoDB real verifica unicidad concurrente del recibo y el índice TTL. Falta entrega FCM física y medición de latencia del apartado. |
 | 2026-11-19 | Claude | Parcial | FR-033-11 cubierto en integración: firma reemplazada sin QR, apartado inexistente y comercio inactivo con 404, además de los casos previos. Unitaria del notificador: una excepción del adaptador no se propaga y un token rechazado se desactiva. 4 unitarias y 13 de integración en verde. Entrega FCM física y latencia siguen pendientes. |
+| 2026-11-22 | Codex | Parcial | La suite completa en .NET 10.0.401 volvió a comprobar apartado, preferencias, deduplicación con MongoDB y lectura protegida del QR. Quedan pendientes la entrega real por FCM y la medición de latencia. |
+| 2026-11-22 | Codex | T033-15 verificada | El POST devuelve 200, código y QR. La prueba ejercita el adaptador FCM HTTP v1 con doble HTTP y verifica el vencimiento del comprador, el aviso al comercio y la preferencia desactivada. |
+| 2026-11-22 | Codex | T033-16 verificada | MongoDB real admite solo una reserva concurrente de la última unidad, deja stock cero y rechaza el segundo apartado activo del mismo usuario y oferta. |
 
 ### Validación de entrega al habilitar FCM real
 
-- [ ] Registrar una instalación de comprador y una de comercio. Crear un apartado y conservar el resultado REST para el QR.
+El backend está completado. El registro y la apertura de los avisos en Android, la entrega real de FCM y la medición del p95 quedan como verificaciones pendientes de integración. Los escaneos de CI forman parte del cierre formal.
+
+- [ ] En el entorno de pruebas con FCM habilitado, registrar un dispositivo de comprador y otro de comerciante. Con el JWT de comprador llamar a `POST /api/v1/offers/{id}/claim` sobre una oferta activa con stock. Comprobar HTTP 200 y la presencia del QR y su vencimiento en la respuesta.
 - [ ] Comprobar en ambos extremos que el evento y los identificadores coinciden con el apartado. Abrir los avisos en primer plano, en segundo plano y con la app cerrada durante la integración Android.
 - [ ] Repetir con push deshabilitado para un destinatario y comprobar cero avisos para esa cuenta.
 - [x] Forzar indisponibilidad del adaptador en pruebas y comprobar que el apartado permanece persistido. Verificar que la reserva evita segundos intentos sobre el mismo dispositivo.
-- [ ] Medir p95 del POST con FCM real y registrar por separado el resultado de entrega. El objetivo del POST es < 700 ms (NFR-033-01).
+- [ ] Ejecutar una carga controlada con ofertas y compradores de prueba que produzcan apartados válidos. Registrar el tamaño de la muestra y el p95 de las respuestas HTTP 200, con objetivo < 700 ms (NFR-033-01). Registrar la entrega de FCM por separado. La evidencia omite tokens de dispositivos y códigos QR.
 
 - [x] FR-033-11 — Comprador vigente recibe QR; comercio, comprador vencido o firma reemplazada reciben metadatos; tercero recibe 404, invitado 403 y anónimo 401. Verificar no-store.

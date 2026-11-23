@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
 using Sensus.Application.Sanctions.Commands.ApplySanction;
@@ -20,6 +21,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISender _sender;
     private readonly ILogger<UploadMediaCommandHandler> _logger;
+    private readonly IModerationEvidenceStore? _evidence;
 
     public UploadMediaCommandHandler(
         IMediaStorage mediaStorage,
@@ -28,7 +30,8 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         ICurrentUserService currentUser,
         IDateTimeProvider dateTimeProvider,
         ISender sender,
-        ILogger<UploadMediaCommandHandler> logger)
+        ILogger<UploadMediaCommandHandler> logger,
+        IModerationEvidenceStore? evidence = null)
     {
         _mediaStorage = mediaStorage;
         _moderationService = moderationService;
@@ -37,6 +40,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         _dateTimeProvider = dateTimeProvider;
         _sender = sender;
         _logger = logger;
+        _evidence = evidence;
     }
 
     public async Task<Result<UploadMediaResponseDto>> Handle(
@@ -78,7 +82,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             request.TextContext,
             cancellationToken);
 
-        MediaAssetStatus status = moderationResult.IsApproved
+        MediaAssetStatus status = moderationResult is { IsApproved: true, Decision: "Approved" }
             ? MediaAssetStatus.Approved
             : moderationResult.Decision == "Quarantine"
                 ? MediaAssetStatus.Quarantined
@@ -97,7 +101,18 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             status == MediaAssetStatus.Rejected ? null : uploadResult.Value.SecureUrl,
             request.ContentType,
             status,
-            _dateTimeProvider.UtcNow);
+            _dateTimeProvider.UtcNow,
+            status == MediaAssetStatus.Approved && !string.IsNullOrWhiteSpace(request.TextContext)
+                ? ModeratedTextFingerprint.Create(request.TextContext)
+                : null);
+
+        if (_evidence is not null)
+        {
+            await _evidence.AppendAsync(new ModerationEvidence(
+                mediaAsset.Id, "MediaAsset", moderationResult.Decision, moderationResult.FlaggedCategories,
+                moderationResult.CategoryScores, moderationResult.AppliedThresholdSummary,
+                status == MediaAssetStatus.Approved ? "Allow" : "Block", mediaAsset.CreatedAtUtc), cancellationToken);
+        }
 
         await _mediaAssetRepository.AddAsync(mediaAsset, cancellationToken);
 

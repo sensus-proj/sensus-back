@@ -1,0 +1,231 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 056 Reseñas y calificaciones de comercios"
+  version: 1.0.0
+  description: >
+    Calificaciones de 1 a 5 estrellas, comentarios moderados, likes sobre reseñas y respuestas en hilo
+    para comercios activos.
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/merchants/{merchantId}/reviews:
+    get:
+      summary: Resumen estilo Play Store y listado de reseñas de un comercio
+      operationId: getStoreReviews
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Resumen con promedio, total, desglose 5..1 estrellas y reseñas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreReviewsSummaryDto' }
+        '401':
+          description: Sin token o token inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Comercio no encontrado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+    post:
+      summary: Publicar calificación (1..5 estrellas) y comentario moderado para un comercio
+      operationId: createStoreReview
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateStoreReviewBody' }
+      responses:
+        '200':
+          description: Resumen actualizado tras guardar la reseña
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreReviewsSummaryDto' }
+        '400':
+          description: Calificación fuera de rango o texto rechazado por moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado para calificar
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Comercio no encontrado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+  /api/v1/merchants/reviews/{reviewId}/like:
+    post:
+      summary: Alternar Me gusta sobre una reseña de comercio
+      operationId: toggleStoreReviewLike
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Estado actualizado de Me gusta en la reseña
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewLikeStatusDto' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Reseña no encontrada
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+  /api/v1/merchants/reviews/{reviewId}/replies:
+    post:
+      summary: Responder con texto moderado a una reseña de comercio
+      operationId: replyStoreReview
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplyStoreReviewBody' }
+      responses:
+        '200':
+          description: Reseña actualizada con la nueva respuesta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreReviewDto' }
+        '400':
+          description: Respuesta inválida o rechazada por moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Reseña no encontrada
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreateStoreReviewBody:
+      type: object
+      required: [rating, comment]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, minLength: 1, maxLength: 600 }
+    ReplyStoreReviewBody:
+      type: object
+      required: [comment]
+      properties:
+        comment: { type: string, minLength: 1, maxLength: 500 }
+    StoreReviewReplyDto:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        authorUserId: { type: string, format: uuid }
+        authorName: { type: string }
+        authorPhotoUrl: { type: string, nullable: true }
+        comment: { type: string }
+        createdAtUtc: { type: string, format: date-time }
+    StoreReviewDto:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        merchantId: { type: string, format: uuid }
+        authorUserId: { type: string, format: uuid }
+        authorName: { type: string }
+        authorPhotoUrl: { type: string, nullable: true }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        createdAtUtc: { type: string, format: date-time }
+        likesCount: { type: integer, minimum: 0 }
+        isLikedByMe: { type: boolean }
+        replies:
+          type: array
+          items: { $ref: '#/components/schemas/StoreReviewReplyDto' }
+    RatingBreakdownItemDto:
+      type: object
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        count: { type: integer, minimum: 0 }
+    StoreReviewsSummaryDto:
+      type: object
+      properties:
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+        averageRating: { type: number, format: double }
+        totalReviews: { type: integer, minimum: 0 }
+        pageNumber: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        totalPages: { type: integer, minimum: 0 }
+        breakdown:
+          type: array
+          items: { $ref: '#/components/schemas/RatingBreakdownItemDto' }
+        reviews:
+          type: array
+          items: { $ref: '#/components/schemas/StoreReviewDto' }
+    ReviewLikeStatusDto:
+      type: object
+      properties:
+        reviewId: { type: string, format: uuid }
+        likesCount: { type: integer, minimum: 0 }
+        isLikedByMe: { type: boolean }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

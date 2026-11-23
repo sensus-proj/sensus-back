@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Services;
@@ -42,6 +43,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IModerationEvidenceStore>();
+            services.AddSingleton(Substitute.For<IModerationEvidenceStore>());
             // Las pruebas nunca se conectan a un MongoDB real: se ignora cualquier cadena de conexión
             // que llegue por user-secrets o variables de entorno del equipo (AGENTS.md §11, FR-016-02).
             services.PostConfigure<MongoDbSettings>(settings => settings.ConnectionString = string.Empty);

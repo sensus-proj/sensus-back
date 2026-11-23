@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
@@ -117,6 +118,18 @@ public sealed class MongoDbContext
     public IMongoCollection<SanctionDocument> Sanctions =>
         _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<OfferLikeDocument> OfferLikes =>
+        _database?.GetCollection<OfferLikeDocument>("offer_likes")
+        ?? throw new InvalidOperationException("MongoDB ConnectionString is not configured.");
+
+    public IMongoCollection<StoreReviewDocument> StoreReviews =>
+        _database?.GetCollection<StoreReviewDocument>("store_reviews")
+        ?? throw new InvalidOperationException("MongoDB ConnectionString is not configured.");
+
+    public IMongoCollection<BsonDocument> ModerationDecisions =>
+        _database?.GetCollection<BsonDocument>("moderation_decisions")
+        ?? throw new InvalidOperationException("MongoDB ConnectionString is not configured.");
 
     /// <summary>
     /// Verifica la disponibilidad de MongoDB para el endpoint de readiness (FR-016-02).
@@ -433,6 +446,31 @@ public sealed class MongoDbContext
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug(ex, "Nota: Los índices de amigos ya existen o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            var likes = Builders<OfferLikeDocument>.IndexKeys;
+            OfferLikes.Indexes.CreateMany([
+                new CreateIndexModel<OfferLikeDocument>(likes.Ascending(l => l.UserId).Ascending(l => l.OfferId),
+                    new CreateIndexOptions { Unique = true }),
+                new CreateIndexModel<OfferLikeDocument>(likes.Ascending(l => l.OfferId))
+            ]);
+            var reviews = Builders<StoreReviewDocument>.IndexKeys;
+            StoreReviews.Indexes.CreateMany([
+                new CreateIndexModel<StoreReviewDocument>(reviews.Ascending(r => r.MerchantId).Descending(r => r.CreatedAtUtc)),
+                new CreateIndexModel<StoreReviewDocument>(reviews.Ascending(r => r.AuthorUserId)),
+                new CreateIndexModel<StoreReviewDocument>(new BsonDocument("replies.authorUserId", 1))
+            ]);
+
+            var approvedImageKeys = Builders<MediaAssetDocument>.IndexKeys
+                .Ascending(asset => asset.OwnerId).Ascending(asset => asset.SecureUrl);
+            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(approvedImageKeys));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError("No se pudieron verificar los índices de actividad e imágenes ({ErrorType}).", ex.GetType().Name);
+            throw;
         }
     }
 }

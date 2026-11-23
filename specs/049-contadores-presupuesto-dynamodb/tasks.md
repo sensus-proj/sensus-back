@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Parcial |
+| Estado | Backend completado |
 | Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ## Tareas
@@ -20,9 +20,10 @@
 | T049-06 | Tabla DynamoDB, IAM mínimo y variable de entorno en CDK | infra | FR-049-04, FR-049-05 | T049-01 | Hecha |
 | T049-07 | Pruebas unitarias de `AiBudgetGuard` | Tests | FR-049-03 | T049-04 | Hecha |
 | T049-08 | Pruebas de `DynamoDbBudgetCounterStore` con doble del SDK | Tests | FR-049-02, FR-049-07 | T049-03 | Hecha |
-| T049-09 | Pruebas con DynamoDB Local (Testcontainers) | Tests | FR-049-02 | T049-08 | Bloqueada (sin Docker) |
-| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (`synth` OK; `diff` y despliegue pendientes) |
+| T049-09 | Pruebas con DynamoDB Local (Testcontainers) | Tests | FR-049-02, FR-049-07 | T049-08 | Verificada localmente |
+| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Síntesis local verificada. Pendientes `cdk diff`, un turno real de Sensi y el p95 desde Lambda. |
+| T049-11 | Verificar el guardián de cuota contra DynamoDB Local y bloquear contadores inválidos | Infrastructure / Pruebas | FR-049-03, FR-049-07 | T049-09 | Verificada en DynamoDB Local |
 
 ## Notas de ejecución
 
-`cdk deploy` no se ejecuta sin autorización explícita del responsable. `cdk synth` se verificó con la salida en un directorio temporal (tabla con TTL, etiquetas, variable `AiBudgetStore__TableName` y política mínima). `cdk diff` requiere credenciales de AWS y queda pendiente.
+`cdk synth` se verificó con la salida en un directorio temporal (tabla con TTL, etiquetas, variable `AiBudgetStore__TableName` y política mínima). La referencia local `origin/main` registra el despliegue desde CI en la corrida `44610076245`. En esta sesión se verificaron la concurrencia y el vencimiento contra DynamoDB Local. No se repitió `cdk diff` contra AWS.

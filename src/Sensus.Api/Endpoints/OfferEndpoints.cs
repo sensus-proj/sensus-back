@@ -10,6 +10,7 @@ using Sensus.Application.Offers.Commands.ExpireOffers;
 using Sensus.Application.Offers.Commands.RedeemClaim;
 using Sensus.Application.Offers.Commands.RegisterOfferView;
 using Sensus.Application.Offers.Commands.RepublishOffer;
+using Sensus.Application.Offers.Commands.ToggleOfferLike;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetMerchantOffers;
@@ -169,6 +170,17 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 033: Apartado de una unidad con código firmado de un solo uso
+        offersGroup.MapPost("/{id:guid}/like", async (Guid id, ISender sender, CancellationToken ct) =>
+            (await sender.Send(new ToggleOfferLikeCommand(id), ct)).ToHttpResult())
+            .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+            .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+            .WithName("ToggleOfferLike")
+            .Produces<OfferLikeStatusDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         offersGroup.MapPost("/{id:guid}/claim", async (
             Guid id,
             ISender sender,

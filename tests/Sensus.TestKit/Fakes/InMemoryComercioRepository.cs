@@ -26,14 +26,18 @@ public class InMemoryComercioRepository : IComercioRepository
         return Task.FromResult(exists);
     }
 
-    public Task<IReadOnlyList<Comercio>> GetNearbyAsync(double latitud, double longitud, int radioMetros, CancellationToken cancellationToken = default)
+    public Task<(IReadOnlyList<Comercio> Items, int TotalCount)> GetNearbyAsync(
+        double latitud, double longitud, int radioMetros, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var list = _comercios.Values
-            .Where(c => CalculateDistanceMeters(latitud, longitud, c.Latitud, c.Longitud) <= radioMetros)
+            .Where(c => c.Activo && CalculateDistanceMeters(latitud, longitud, c.Latitud, c.Longitud) <= radioMetros)
             .OrderBy(c => CalculateDistanceMeters(latitud, longitud, c.Latitud, c.Longitud))
+            .ThenBy(c => c.Id)
             .ToList();
 
-        return Task.FromResult<IReadOnlyList<Comercio>>(list);
+        var offset = (page - 1L) * pageSize;
+        IReadOnlyList<Comercio> items = list.Skip((int)Math.Min(offset, list.Count)).Take(pageSize).ToList();
+        return Task.FromResult((items, list.Count));
     }
 
     public Task AddAsync(Comercio comercio, CancellationToken cancellationToken = default)

@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Aprobado |
+| Estado del plan | Pendiente de validar la integración con la Spec 024 |
 | Versión | 1.0.0 |
-| Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Constitution Check | Pendiente de verificación |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -28,7 +28,18 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 
 - Solo contenido publicado
 - Sin datos privados del autor
-- Radio acotado
+- Radio máximo de 5 km inclusive, validado en el borde de la API (`FR-026-04`)
+
+### Modelo de amenazas (STRIDE)
+
+| Amenaza | Control previsto | Verificación |
+|---|---|---|
+| Suplantación | Exigir JWT y aplicar la política de autenticación existente antes de consultar | Sin JWT o con JWT inválido, responder 401. Verificar permisos para el rol de invitado conforme a la política vigente. |
+| Manipulación | Validar coordenadas, radio y paginación antes de construir la consulta MongoDB | Cubrir coordenadas fuera de rango, valores no finitos y radio superior a 5 km. |
+| Repudio | Propagar el identificador de correlación a los registros operativos | Verificar correlación sin registrar coordenadas ni contenido. |
+| Divulgación | Proyectar campos públicos y excluir estados no publicados, incluso al consultar la caché | Probar una publicación eliminada después de llenar la caché y comprobar que desaparece en la siguiente lectura. |
+| Denegación de servicio | Acotar radio y tamaño de página, propagar cancelación y verificar el uso del índice | Probar los límites y revisar el plan de ejecución de MongoDB. |
+| Elevación de privilegios | Aplicar la visibilidad del servidor antes de devolver cualquier publicación | Probar que una publicación rechazada o en cuarentena queda fuera con cualquier consulta válida. |
 
 ## 5. Observabilidad y rendimiento
 
@@ -49,13 +60,14 @@ Evaluación previa a la implementación.
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | PASS | `FR-026-01` y 5 requisitos más, con criterios de aceptación medibles |
+| I | Pendiente | Falta verificar el contrato persistido de la dependencia 024 antes de cerrar OpenAPI y la proyección. |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
+| VIII | Pendiente | STRIDE documentado en §4. Faltan pruebas del flujo autenticado, visibilidad con caché y evidencia de los controles de CI. |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 

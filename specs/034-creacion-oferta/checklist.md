@@ -17,6 +17,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [ ] Ninguna oferta se expone sin veredicto
 - [x] El comercio proviene del token
 - [x] El precio final se calcula en el servidor
+- [x] El borrador se lista en el inventario privado, se oculta en el detalle público y no genera avisos (`FR-034-04`)
+- [x] Al crear una oferta publicada con imagen se exige el activo aprobado del titular y la coincidencia con el contexto moderado (`T034-14`)
 - [ ] El límite por comercio está probado
 
 ## C. Antes de entregar (Definition of Done)
@@ -35,8 +37,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — BRECHA: el texto de la oferta no se modera y `ImageUrl` no se valida contra un MediaAsset aprobado
-- [ ] **V. Verificación automatizada** — BRECHA: sin pruebas de integración del endpoint
+- [ ] **IV. Seguridad y privacidad** — Falta moderar el flujo de ofertas sin imagen y resolver la cuarentena previa a Cloudinary. Las ofertas con imagen verifican aprobación, titular y huella del contexto.
+- [ ] **V. Verificación automatizada** — El contrato actual tiene pruebas HTTP. Faltan los casos de moderación pendiente, límite activo y publicación segura.
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
 
@@ -58,3 +60,6 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `POST /api/v1/offers` con invariantes en `Offer.Create`. Faltan Draft, límite de 20 activas y respuesta 202. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-22 | Codex | Parcial | OpenAPI documenta el contrato actual. `CreateOfferEndpointsTests` comprobó 201, precio calculado, asociación al comercio, 400, 401 y 403. El responsable mantuvo la regla de cuarentena vigente. |
+| 2026-11-22 | Codex | T034-13 verificada | `OfferTests` y `CreateOfferEndpointsTests` verifican el borrador privado, inventario, falta de aviso y transiciones bloqueadas. |
+| 2026-11-22 | Codex | T034-14 verificada | Se rechazó el cambio de descripción tras moderar y se comprobó con MongoDB real la coincidencia de titular, URL, estado aprobado y huella de contexto. Una liberación manual no recupera la prueba de aprobación automática. |

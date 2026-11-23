@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 024, 007, 010 |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -44,7 +44,7 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 | FR-026-01 | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must |
 | FR-026-02 | Excluir contenido en cuarentena, rechazado o eliminado | Must |
 | FR-026-03 | Aplicar paginación estándar | Must |
-| FR-026-04 | Limitar el radio a 50 km y rechazar valores fuera de rango | Must |
+| FR-026-04 | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must |
 | FR-026-05 | Excluir publicaciones sin ubicación del feed cercano | Must |
 | FR-026-06 | Usar caché de corta duración para páginas recurrentes | Should |
 
@@ -81,6 +81,12 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 - **Cuando** se repite la petición
 - **Entonces** respuesta desde caché
 
+### CA-026-05
+
+- **Dado** un usuario autenticado y coordenadas válidas
+- **Cuando** solicita el feed con `radiusKm=5.01`
+- **Entonces** recibe `400 Bad Request` porque el radio máximo es de 5 km
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -98,9 +104,23 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 - El caché en memoria no se comparte entre instancias de Lambda
 - La ubicación heredada puede quedar desactualizada si el comercio se muda
 
-## 10. Preguntas abiertas
+## 10. Decisiones y dependencias pendientes
 
-- ¿Las publicaciones de consumidores deben heredar la última ubicación conocida?
+**Decisión de ubicación (2026-11-22).** Para publicaciones de consumidores se usa la ubicación
+que el consumidor comparte explícitamente al crear la publicación. Si la omite, la publicación
+queda fuera del feed cercano conforme a `FR-026-05`. Las coordenadas sirven para filtrar y no
+se devuelven en el DTO del feed.
+
+**Bloqueo de implementación (2026-11-22).** La Spec 024 está pendiente en `Back_Rocio`. La
+consulta depende de su modelo de publicación, su estado moderado y su flujo de eliminación.
+La Spec 024 es un prerrequisito a cargo de su responsable. El alcance de este trabajo es la
+lectura geolocalizada de la Spec 026. Para integrarla, se requiere el contrato persistido de
+publicación con identificador, fecha de publicación, estado de visibilidad, ubicación opcional
+y campos públicos para la proyección del feed. También se requiere conocer cómo el flujo de
+eliminación comunica el cambio de visibilidad a las lecturas con caché.
+El diseño de caché debe preservar la exclusión inmediata de publicaciones eliminadas
+(`FR-026-02` y requisito de exclusión inmediata en la Spec 024). La Spec 010 figura parcial, pero el backend ya dispone de
+`PagedResult<T>` y la Spec 007 aporta un precedente de consulta geoespacial paginada.
 
 ## 11. Trazabilidad
 

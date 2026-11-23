@@ -6,7 +6,7 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Pendiente |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 
@@ -18,7 +18,7 @@
 | T024-04 | Implementar: Persistencia y referencia al archivo | Infrastructure | `FR-024-01` | T024-03 | Pendiente |
 | T024-05 | Implementar: Endpoints de creación y eliminación | Api | `FR-024-01` | T024-04 | Pendiente |
 | T024-06 | Modelar estados de publicación | Domain | `FR-024-03` | T024-05 | Pendiente |
-| T024-07 | Encadenar moderación y publicación | Application | `FR-024-02` | T024-06 | Pendiente |
+| T024-07 | Integrar moderación de texto y moderación conjunta antes de publicar o almacenar multimedia | Application | `FR-024-02` | T024-06, T017-12 | Pendiente |
 | T024-08 | Autorizar el borrado por autoría o rol | Application | `FR-024-05` | T024-07 | Pendiente |
 | T024-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-024-01` | T024-08 | Pendiente |
 | T024-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-024-01` | T024-09 | Pendiente |

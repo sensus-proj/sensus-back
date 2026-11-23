@@ -6,7 +6,7 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Pendiente |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 

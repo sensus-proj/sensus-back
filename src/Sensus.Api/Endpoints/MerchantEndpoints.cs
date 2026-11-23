@@ -6,6 +6,7 @@ using Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Comercios.Queries.GetMyComercio;
 using Sensus.Application.Comercios.Queries.GetNearbyComercios;
+using Sensus.Application.Common.Models;
 
 namespace Sensus.Api.Endpoints;
 
@@ -83,17 +84,24 @@ public static class MerchantEndpoints
             [FromQuery] double lat,
             [FromQuery] double lng,
             [FromQuery] int? radioMetros,
+            [FromQuery] double? radiusKm,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new GetNearbyComerciosQuery(lat, lng, radioMetros), ct);
+            var result = await sender.Send(new GetNearbyComerciosQuery(
+                lat, lng, radioMetros, radiusKm, page ?? 1, pageSize ?? GetNearbyComerciosQueryValidator.DefaultPageSize), ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
         .WithName("GetNearbyMerchants")
         .WithSummary("SE-008: Consulta comercios por proximidad espacial (restringido a 2 km para invitados)")
-        .Produces<IReadOnlyList<ComercioDto>>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status401Unauthorized);
+        .Produces<PagedResult<ComercioDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         return app;
     }

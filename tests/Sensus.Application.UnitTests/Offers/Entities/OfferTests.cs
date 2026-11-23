@@ -10,6 +10,20 @@ public class OfferTests
     private readonly DateTime _now = new(2026, 11, 12, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void Draft_CannotBecomePublishedThroughExistingLifecycle()
+    {
+        var draft = Offer.Create(_merchantId, "Oferta privada", "Borrador del comercio",
+            100m, 25, 2, _now, _now.AddDays(1), nowUtc: _now, saveAsDraft: true).Value;
+
+        draft.IsActive(_now).Should().BeFalse();
+        draft.Archive(_now).IsFailure.Should().BeTrue();
+        draft.Expire(_now.AddDays(2)).IsFailure.Should().BeTrue();
+        draft.Resume(_now).IsFailure.Should().BeTrue();
+        draft.Republish(_now, _now.AddDays(1), 2, _now).IsFailure.Should().BeTrue();
+        draft.Status.Should().Be(OfferStatus.Draft);
+    }
+
+    [Fact]
     public void Create_ShouldSucceed_WhenDataIsValid()
     {
         var startsAt = _now.AddHours(1);

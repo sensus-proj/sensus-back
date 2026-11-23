@@ -15,7 +15,8 @@ public sealed class MediaAsset : BaseEntity
         string? secureUrl,
         string contentType,
         MediaAssetStatus status,
-        DateTime createdAtUtc)
+        DateTime createdAtUtc,
+        string? moderatedTextFingerprint)
     {
         Id = id;
         OwnerId = ownerId;
@@ -24,6 +25,7 @@ public sealed class MediaAsset : BaseEntity
         ContentType = contentType;
         Status = status;
         CreatedAtUtc = createdAtUtc;
+        ModeratedTextFingerprint = moderatedTextFingerprint;
     }
 
     public Guid OwnerId { get; private set; }
@@ -32,6 +34,7 @@ public sealed class MediaAsset : BaseEntity
     public string ContentType { get; private set; } = string.Empty;
     public MediaAssetStatus Status { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
+    public string? ModeratedTextFingerprint { get; private set; }
 
     public static MediaAsset Create(
         Guid ownerId,
@@ -39,7 +42,8 @@ public sealed class MediaAsset : BaseEntity
         string? secureUrl,
         string contentType,
         MediaAssetStatus status,
-        DateTime createdAtUtc)
+        DateTime createdAtUtc,
+        string? moderatedTextFingerprint = null)
     {
         if (string.IsNullOrWhiteSpace(publicId))
         {
@@ -58,11 +62,13 @@ public sealed class MediaAsset : BaseEntity
             secureUrl,
             contentType.Trim(),
             status,
-            createdAtUtc);
+            createdAtUtc,
+            moderatedTextFingerprint);
     }
 
     public void Approve(string? secureUrl = null)
     {
+        ModeratedTextFingerprint = null;
         Status = MediaAssetStatus.Approved;
         if (secureUrl is not null)
         {
@@ -72,11 +78,13 @@ public sealed class MediaAsset : BaseEntity
 
     public void Quarantine()
     {
+        ModeratedTextFingerprint = null;
         Status = MediaAssetStatus.Quarantined;
     }
 
     public void Reject()
     {
+        ModeratedTextFingerprint = null;
         Status = MediaAssetStatus.Rejected;
     }
 
@@ -91,7 +99,7 @@ public sealed class MediaAsset : BaseEntity
             return false;
         }
 
-        Status = MediaAssetStatus.Approved;
+        Approve();
         return true;
     }
 
@@ -108,7 +116,7 @@ public sealed class MediaAsset : BaseEntity
     /// </summary>
     public void Purge()
     {
-        Status = MediaAssetStatus.Rejected;
+        Reject();
         SecureUrl = null;
     }
 }
