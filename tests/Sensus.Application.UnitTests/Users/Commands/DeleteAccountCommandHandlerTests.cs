@@ -1,9 +1,11 @@
 using FluentAssertions;
+using MediatR;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Users.Commands.CloseAccountContent;
 using Sensus.Application.Users.Commands.DeleteAccount;
+using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
-using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.UnitTests.Users.Commands;
@@ -16,13 +18,15 @@ public class DeleteAccountCommandHandlerTests
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
     private readonly IProfileImageStorage _imageStorage = Substitute.For<IProfileImageStorage>();
-    private readonly IOfferRepository _offerRepository = Substitute.For<IOfferRepository>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly ISender _sender = Substitute.For<ISender>();
     private readonly DeleteAccountCommandHandler _handler;
 
     public DeleteAccountCommandHandlerTests()
     {
         _dateTimeProvider.UtcNow.Returns(DateTime.UtcNow);
+        _sender.Send(Arg.Any<CloseAccountContentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new CloseAccountContentResult(0, 0, 0, 0, 0)));
         _handler = new DeleteAccountCommandHandler(
             _userRepository,
             _comercioRepository,
@@ -30,8 +34,8 @@ public class DeleteAccountCommandHandlerTests
             _currentUserService,
             _passwordHasher,
             _imageStorage,
-            _offerRepository,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _sender);
     }
 
     private User ArrangeAuthenticatedUser(string password)
@@ -45,54 +49,40 @@ public class DeleteAccountCommandHandlerTests
         return user;
     }
 
-    private static Offer BuildOffer(Guid merchantId) =>
-        Offer.Create(merchantId, "Combo despensa", "Arroz y frijol en oferta", 100m, 20, 5,
-            DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddDays(1), null, 20.05, -99.34, DateTime.UtcNow).Value;
-
+    // Spec 061: el cierre de contenido se delega antes de la baja lógica de la spec 060.
     [Fact]
-    public async Task Handle_ShouldArchiveNonArchivedOffers_WhenUserOwnsMerchant()
+    public async Task Handle_ShouldInvokeContentClosure_WhenPasswordIsCorrect()
     {
-        // Arrange
         var user = ArrangeAuthenticatedUser("CorrectPassword123#");
-        var comercio = Comercio.Create(user.Id, "Abarrotes Prueba", "Calle 1", "42800", 20.05, -99.34).Value;
-        _comercioRepository.GetByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(comercio);
 
-        Offer published = BuildOffer(comercio.Id);
-        Offer archived = BuildOffer(comercio.Id);
-        archived.Archive(DateTime.UtcNow);
-        _offerRepository.GetByMerchantIdAsync(comercio.Id, Arg.Any<CancellationToken>())
-            .Returns(new List<Offer> { published, archived });
-
-        // Act
         var result = await _handler.Handle(new DeleteAccountCommand("CorrectPassword123#"), CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
-        published.Status.Should().Be(OfferStatus.Archived);
-        await _offerRepository.Received(1).UpdateAsync(published, Arg.Any<CancellationToken>());
-        await _offerRepository.DidNotReceive().UpdateAsync(archived, Arg.Any<CancellationToken>());
+        await _sender.Received(1).Send(
+            Arg.Is<CloseAccountContentCommand>(c => c.UserId == user.Id),
+            Arg.Any<CancellationToken>());
         await _comercioRepository.Received(1).DeleteByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_ShouldNotQueryOffers_WhenUserHasNoMerchant()
+    public async Task Handle_ShouldNotMarkAsDeleted_WhenContentClosureFails()
     {
-        // Arrange
         ArrangeAuthenticatedUser("CorrectPassword123#");
+        _sender.Send(Arg.Any<CloseAccountContentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<CloseAccountContentResult>(
+                Error.Conflict("AccountClosure.Failed", "No se pudo cerrar el contenido.")));
 
-        // Act
         var result = await _handler.Handle(new DeleteAccountCommand("CorrectPassword123#"), CancellationToken.None);
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        await _offerRepository.DidNotReceiveWithAnyArgs().GetByMerchantIdAsync(default, default);
-        await _offerRepository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("AccountClosure.Failed");
+        await _userRepository.DidNotReceiveWithAnyArgs().MarkAsDeletedAsync(default, default, default!, default);
+        await _comercioRepository.DidNotReceiveWithAnyArgs().DeleteByUsuarioIdAsync(default, default);
     }
 
     [Fact]
-    public async Task Handle_ShouldDeleteUserComercioAndTokens_WhenPasswordIsCorrect()
+    public async Task Handle_ShouldMarkUserAsDeleted_WhenPasswordIsCorrect()
     {
-        // Arrange
         var userId = Guid.NewGuid();
         _currentUserService.UserId.Returns(userId.ToString());
 
@@ -104,28 +94,28 @@ public class DeleteAccountCommandHandlerTests
             DateTime.UtcNow).Value;
         typeof(User).GetProperty("Id")?.SetValue(user, userId);
 
-        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(user);
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword("CorrectPassword123#", "hashed-secret").Returns(true);
 
-        _passwordHasher.VerifyPassword("CorrectPassword123#", "hashed-secret")
-            .Returns(true);
+        var result = await _handler.Handle(
+            new DeleteAccountCommand("CorrectPassword123#"),
+            CancellationToken.None);
 
-        var command = new DeleteAccountCommand("CorrectPassword123#");
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.IsSuccess.Should().BeTrue();
         await _comercioRepository.Received(1).DeleteByUsuarioIdAsync(userId, Arg.Any<CancellationToken>());
         await _tokenRepository.Received(1).InvalidateExistingTokensForUserAsync(userId, Arg.Any<CancellationToken>());
-        await _userRepository.Received(1).DeleteAsync(userId, Arg.Any<CancellationToken>());
+        await _userRepository.Received(1).MarkAsDeletedAsync(
+            userId,
+            Arg.Is<DateTime>(d => d.Kind == DateTimeKind.Utc),
+            Arg.Is<string>(s => !string.IsNullOrWhiteSpace(s)),
+            Arg.Any<CancellationToken>());
+        user.IsDeleted.Should().BeTrue();
+        user.Estatus.Should().BeFalse();
     }
 
     [Fact]
     public async Task Handle_ShouldReturnUnauthorized_WhenPasswordIsIncorrect()
     {
-        // Arrange
         var userId = Guid.NewGuid();
         _currentUserService.UserId.Returns(userId.ToString());
 
@@ -137,21 +127,15 @@ public class DeleteAccountCommandHandlerTests
             DateTime.UtcNow).Value;
         typeof(User).GetProperty("Id")?.SetValue(user, userId);
 
-        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(user);
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword("WrongPassword", "hashed-secret").Returns(false);
 
-        _passwordHasher.VerifyPassword("WrongPassword", "hashed-secret")
-            .Returns(false);
+        var result = await _handler.Handle(new DeleteAccountCommand("WrongPassword"), CancellationToken.None);
 
-        var command = new DeleteAccountCommand("WrongPassword");
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Auth.InvalidCredentials");
-        await _userRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default, default);
+        await _userRepository.DidNotReceiveWithAnyArgs().MarkAsDeletedAsync(default, default, default!, default);
+        await _sender.DidNotReceiveWithAnyArgs().Send(Arg.Any<CloseAccountContentCommand>(), default);
     }
 
     // Regresión FR-030-08 / CA-030-06: purga de intereses (054), interacciones (055) y caché de afinidad.
@@ -178,8 +162,8 @@ public class DeleteAccountCommandHandlerTests
             _currentUserService,
             _passwordHasher,
             _imageStorage,
-            _offerRepository,
             _dateTimeProvider,
+            _sender,
             cacheService: cache,
             userInterestsRepository: interestsRepo,
             offerInteractionRecorder: interactionRecorder);
@@ -189,6 +173,8 @@ public class DeleteAccountCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         await interestsRepo.Received(1).DeleteByUserIdAsync(userId, Arg.Any<CancellationToken>());
         await interactionRecorder.Received(1).PurgeByUserAsync(userId, Arg.Any<CancellationToken>());
-        await cache.Received(1).RemoveAsync(Sensus.Application.Offers.FeedCacheKeys.Affinity(userId), Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveAsync(
+            Sensus.Application.Offers.FeedCacheKeys.Affinity(userId),
+            Arg.Any<CancellationToken>());
     }
 }

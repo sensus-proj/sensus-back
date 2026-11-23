@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.4.0** |
+| Documento normativo | `constitution.md` **v2.4.1** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
-| Última actualización | 2026-11-19 |
+| Última actualización | 2026-11-23 |
 
 > Este archivo es **operativo**. En caso de conflicto con `constitution.md`, prevalece la constitución y
 > este archivo MUST corregirse en el mismo cambio.
@@ -38,7 +38,7 @@ pago, bases de datos relacionales y cualquier nube distinta de AWS.
 | `specs/NNN-slug/tasks.md` | Tareas atómicas trazables | Para ejecutar el trabajo |
 | `specs/NNN-slug/checklist.md` | Definition of Ready/Done y evidencia | Al abrir y cerrar cada tarea |
 | `specs/requirements.md` | Registro consolidado de requisitos | Para localizar un `FR`/`NFR` |
-| `specs/README.md` | Índice de las specs (48 activas y 1 en backlog) | Para ubicar una capacidad |
+| `specs/README.md` | Índice de las specs (58 activas y 1 en backlog) | Para ubicar una capacidad |
 | `docs/adr/` | Decisiones de arquitectura | Antes de proponer un cambio estructural |
 | `memory.md` | Estado vivo del proyecto y próximos pasos | Al inicio y al cierre de cada sesión |
 | `AGENTS.md` | Reglas operativas (este archivo) | En cada sesión de trabajo |
@@ -173,8 +173,9 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Autenticación con JWT sin estado; valida firma, emisor, audiencia y expiración.
 - Toda operación se autoriza en el servidor. El cliente nunca es fuente de verdad de permisos.
 - El cierre de sesión debe invalidar el token de forma verificable (spec 004).
-- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados. Única excepción
-  vigente: EX-004 (HTTP hacia el servicio de correo `mailersensus.somee.com` hasta el 2026-12-20, spec 029).
+- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados. EX-004 (HTTP hacia
+  el servicio de correo `mailersensus.somee.com`) fue cerrada el 2026-11-23 por la migración a Amazon SES en la
+  Spec 029; no queda excepción TLS vigente.
 - Rate limiting obligatorio en endpoints sensibles; umbrales en configuración (spec 013).
 - Secretos solo en AWS Secrets Manager o SSM. **Nunca** en código, `.env` versionado, logs ni tests.
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).
@@ -332,4 +333,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.4.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v2.4.1 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**

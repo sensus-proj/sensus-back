@@ -50,7 +50,7 @@ public sealed class RequestPasswordResetCommandHandler : IRequestHandler<Request
         var rawToken = Convert.ToHexString(tokenBytes).ToLowerInvariant();
 
         var nowUtc = _dateTimeProvider.UtcNow;
-        var tokenResult = PasswordResetToken.Create(user.Id, user.Correo, rawToken, nowUtc, expiryMinutes: 15);
+        var tokenResult = PasswordResetToken.Create(user.Id, user.Correo, rawToken, nowUtc);
         if (tokenResult.IsFailure)
         {
             return Result.Failure(tokenResult.Error);
@@ -72,7 +72,7 @@ public sealed class RequestPasswordResetCommandHandler : IRequestHandler<Request
     <p style='text-align: center; margin: 10px 0;'>
         <a href='{appSchemeLink}' style='color: #4A148C; font-size: 13px; text-decoration: underline;'>¿No abre automáticamente? Toca aquí (sensus://)</a>
     </p>
-    <p style='color: #716B7C; font-size: 14px;'>Este enlace es de un solo uso y vencerá en <strong>15 minutos</strong>.</p>
+    <p style='color: #716B7C; font-size: 14px;'>Este enlace es de un solo uso y vencerá en <strong>{PasswordResetToken.DefaultExpiryMinutes} minutos</strong>.</p>
     <p style='color: #9A94A8; font-size: 12px;'>Si no solicitaste este cambio, puedes ignorar este mensaje de forma segura.</p>
 </div>";
 
@@ -80,7 +80,7 @@ public sealed class RequestPasswordResetCommandHandler : IRequestHandler<Request
             user.Correo,
             "Restablece tu contraseña - Sensus",
             htmlBody,
-            $"Restablece tu contraseña en la App Sensus: {resetLink} o {appSchemeLink} (vigencia de 15 minutos).",
+            $"Restablece tu contraseña en la App Sensus: {resetLink} o {appSchemeLink} (vigencia de {PasswordResetToken.DefaultExpiryMinutes} minutos).",
             cancellationToken);
 
         return Result.Success();

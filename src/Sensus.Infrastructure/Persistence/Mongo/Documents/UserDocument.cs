@@ -43,6 +43,10 @@ public sealed class UserDocument
     [BsonElement("ultimoAcceso")]
     public DateTime? UltimoAcceso { get; set; }
 
+    /// <summary>Marca de baja lógica (Spec 060). Nula para cuentas activas.</summary>
+    [BsonElement("deletedAtUtc")]
+    public DateTime? DeletedAtUtc { get; set; }
+
     [BsonElement("roles")]
     public List<string> Roles { get; set; } = [];
 
@@ -70,6 +74,7 @@ public sealed class UserDocument
             Estatus = user.Estatus,
             FechaRegistro = user.FechaRegistro,
             UltimoAcceso = user.UltimoAcceso,
+            DeletedAtUtc = user.DeletedAtUtc,
             Roles = user.Roles.ToList(),
             SuspensionSanctionId = user.Suspension?.SanctionId,
             SuspensionEndsAtUtc = user.Suspension?.EndsAtUtc
@@ -94,7 +99,11 @@ public sealed class UserDocument
             user.UpdateProfile(NombreCompleto, FotoPerfilUrl);
         }
 
-        if (!Estatus)
+        if (DeletedAtUtc is { } deletedAt)
+        {
+            user.RestoreDeletion(deletedAt);
+        }
+        else if (!Estatus)
         {
             user.Deactivate();
         }

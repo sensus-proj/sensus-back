@@ -1,19 +1,19 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 030 Eliminación de cuenta y datos"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 030. Completar esquemas antes de implementar."
+  version: 2.0.0
+  description: "Contrato vigente de la baja de cuenta. La Spec 030 está cerrada como Escindida; la baja lógica y la purga se documentan en la Spec 060 y el cierre de contenido en la Spec 061."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/users/account:
     delete:
-      summary: "Borrador de DELETE /api/v1/users/account"
+      summary: "Da de baja la cuenta del usuario autenticado, con confirmación mediante contraseña"
       security: [{ bearerAuth: [] }]
       responses:
-        '202': { description: Aceptado }
+        '204': { description: "Baja registrada; acceso revocado de inmediato y purga diferida" }
         '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '401': { description: No autenticado o credenciales inválidas }
 components:
   securitySchemes:
     bearerAuth:

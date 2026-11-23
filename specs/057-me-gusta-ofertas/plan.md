@@ -17,7 +17,7 @@ Se agrega la entidad `OfferLike` y su puerto `IOfferLikeRepository` en `Sensus.D
 | Capa | Cambio |
 |---|---|
 | Domain | Entidad `OfferLike`, interfaz `IOfferLikeRepository` |
-| Application | `ToggleOfferLikeCommand`, `OfferLikeStatusDto`, campos `LikesCount`/`IsLikedByMe` en `OfferDto`, `OfferDetailDto`, `NearbyOfferDto` y consultas de lectura con consulta batch |
+| Application | `ToggleOfferLikeCommand`, `OfferLikeStatusDto`, campos `LikesCount`/`IsLikedByMe` en `OfferDto` (y su derivado `MerchantOfferDto`), `OfferDetailDto`, `NearbyOfferDto` y consultas de lectura con consulta batch |
 | Infrastructure | `OfferLikeDocument`, `MongoOfferLikeRepository`, índices en `MongoDbContext`, registro DI |
 | Api | `POST /api/v1/offers/{id:guid}/like` en `OfferEndpoints.cs` |
 | Tests | `SocialHandlersTests`, `SocialEndpointsIntegrationTests`, `MongoSocialRepositoriesTests`, `CustomWebApplicationFactory` |

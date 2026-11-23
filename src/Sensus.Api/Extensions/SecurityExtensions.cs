@@ -1,5 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -11,8 +14,13 @@ public static class SecurityExtensions
 {
     public const string AuthStrictPolicy = "auth-strict";
     public const string RecoverPolicy = "recover";
+    public const string RecoverByEmailPolicy = "recover-by-email";
+
+    /// <summary>Clave de <see cref="HttpContext.Items"/> con el hash SHA-256 del correo normalizado.</summary>
+    public const string RecoverEmailPartitionKeyItem = "sensus:recover-email-partition-key";
     public const string ReadHeavyPolicy = "read-heavy";
     public const string SensitiveWritePolicy = "sensitive-write";
+    public const string FavoritesPolicy = "favorites";
     public const string AiChatPolicy = "ai-chat";
 
     public const string RegisteredUserPolicy = "RegisteredUser";
@@ -92,6 +100,19 @@ public static class SecurityExtensions
                         QueueLimit = 0
                     }));
 
+            // NFR-029-03: 3 solicitudes por correo y hora. La clave de partición es el hash SHA-256 del
+            // correo normalizado, nunca el correo en claro, y se reutiliza entre IP y entre instancias.
+            options.AddPolicy(RecoverByEmailPolicy, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetRecoverPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = settings.Recover.PermitLimit,
+                        Window = TimeSpan.FromSeconds(settings.Recover.WindowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
             options.AddPolicy(ReadHeavyPolicy, httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: GetPartitionKey(httpContext),
@@ -114,6 +135,18 @@ public static class SecurityExtensions
                         QueueLimit = 0
                     }));
 
+            // FR-038-06: 120 alternancias por usuario y hora (ventana de una hora).
+            options.AddPolicy(FavoritesPolicy, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = settings.Favorites.PermitLimit,
+                        Window = TimeSpan.FromSeconds(settings.Favorites.WindowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
             options.AddPolicy(AiChatPolicy, httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: GetPartitionKey(httpContext),
@@ -127,6 +160,91 @@ public static class SecurityExtensions
         });
 
         return services;
+    }
+
+    private static string GetRecoverPartitionKey(HttpContext httpContext) =>
+        httpContext.Items.TryGetValue(RecoverEmailPartitionKeyItem, out var partitionKey) &&
+        partitionKey is string key
+            ? key
+            : $"recover:{GetPartitionKey(httpContext)}";
+
+    /// <summary>
+    /// NFR-029-03: lee el correo de forma asíncrona antes del rate limiter y guarda solo su hash SHA-256
+    /// en <see cref="HttpContext.Items"/>. ASP.NET Core prohíbe las lecturas síncronas del cuerpo, por lo
+    /// que el particionador del limitador no puede hacerlo. El cuerpo se rebobina para el model binding.
+    /// </summary>
+    public static IApplicationBuilder UseRecoverEmailPartitionKey(this IApplicationBuilder app) =>
+        app.Use(async (context, next) =>
+        {
+            if (HttpMethods.IsPost(context.Request.Method) &&
+                context.Request.Path.Equals("/api/v1/auth/recover", StringComparison.OrdinalIgnoreCase))
+            {
+                await SetRecoverEmailPartitionKeyAsync(context);
+            }
+
+            await next();
+        });
+
+    private static async Task SetRecoverEmailPartitionKeyAsync(HttpContext context)
+    {
+        var request = context.Request;
+
+        // Límite de tamaño para no convertir el particionador en un vector de DoS.
+        if (request.ContentLength is null or <= 0 || request.ContentLength > 4096)
+        {
+            return;
+        }
+
+        try
+        {
+            request.EnableBuffering();
+            request.Body.Position = 0;
+
+            using var document = await JsonDocument.ParseAsync(
+                request.Body,
+                cancellationToken: context.RequestAborted);
+
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, "correo", StringComparison.OrdinalIgnoreCase) ||
+                    property.Value.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var email = property.Value.GetString();
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    continue;
+                }
+
+                var normalized = email.Trim().ToLowerInvariant();
+                var hash = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+                context.Items[RecoverEmailPartitionKeyItem] = $"recover:email:{hash}";
+                return;
+            }
+        }
+        catch (JsonException)
+        {
+            // Cuerpo inválido: se limita por IP y el validador del endpoint devolverá 400.
+        }
+        catch (IOException)
+        {
+            // Cuerpo no legible: se limita por IP sin filtrar el error al cliente.
+        }
+        finally
+        {
+            if (request.Body.CanSeek)
+            {
+                request.Body.Position = 0;
+            }
+        }
     }
 
     private static string GetPartitionKey(HttpContext httpContext)

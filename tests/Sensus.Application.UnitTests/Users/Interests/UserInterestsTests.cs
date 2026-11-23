@@ -1,8 +1,10 @@
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers;
+using Sensus.Application.Users.Commands.CloseAccountContent;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.ReplaceMyInterests;
 using Sensus.Application.Users.DTOs;
@@ -162,10 +164,12 @@ public sealed class UserInterestsTests
         var currentUser = Substitute.For<ICurrentUserService>();
         var hasher = Substitute.For<IPasswordHasher>();
         var storage = Substitute.For<IProfileImageStorage>();
-        var offerRepo = Substitute.For<IOfferRepository>();
         var clock = Substitute.For<IDateTimeProvider>();
         var cache = Substitute.For<ICacheService>();
         var interestsRepo = Substitute.For<IUserInterestsRepository>();
+        var sender = Substitute.For<ISender>();
+        sender.Send(Arg.Any<CloseAccountContentCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new CloseAccountContentResult(0, 0, 0, 0, 0)));
 
         User user = User.Create("Ana", "ana@sensus.com", "hash", true, Now).Value;
         currentUser.UserId.Returns(user.Id.ToString());
@@ -180,8 +184,8 @@ public sealed class UserInterestsTests
             currentUser,
             hasher,
             storage,
-            offerRepo,
             clock,
+            sender,
             cache,
             userInterestsRepository: interestsRepo);
 

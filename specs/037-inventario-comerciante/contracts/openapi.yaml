@@ -1,22 +1,224 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 037 Inventario de ofertas del comerciante"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 037. Completar esquemas antes de implementar."
+  version: 2.0.0
+  description: >-
+    Contrato final del spec 037. El listado del comerciante es paginado, filtrable por estado y
+    devuelve métricas en tiempo real de apartados activos, canjes y vistas. El comercio se resuelve
+    desde el token; el cliente no puede consultar ofertas de otro comercio.
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/merchants/my-offers:
     get:
-      summary: "Borrador de GET /api/v1/merchants/my-offers"
-      security: [{ bearerAuth: [] }]
+      summary: "Listar el inventario paginado del comercio autenticado"
+      operationId: getMyOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtro opcional por estado de la oferta
+          schema:
+            type: string
+            enum: [Draft, Published, Paused, Expired, Archived]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Inventario paginado con métricas por oferta
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedMerchantOfferResult"
+        '400':
+          description: Parámetros inválidos (page, pageSize o status)
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '401':
+          description: No autenticado
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '403':
+          description: Autenticado sin rol Comerciante o sin comercio activo
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  headers:
+    X-Correlation-Id:
+      description: Identificador de correlación propagado en la petición
+      schema:
+        type: string
+  schemas:
+    PagedMerchantOfferResult:
+      type: object
+      required: [items, totalCount, pageNumber, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MerchantOfferDto"
+        totalCount:
+          type: integer
+          description: Total de ofertas del comercio que coinciden con el filtro
+        pageNumber:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalPages:
+          type: integer
+        hasPreviousPage:
+          type: boolean
+        hasNextPage:
+          type: boolean
+    MerchantOfferDto:
+      type: object
+      description: >-
+        DTO plano del inventario. Las métricas son totales agregados: no exponen usuarios, códigos
+        de canje ni hashes.
+      required:
+        - id
+        - merchantId
+        - title
+        - description
+        - originalPrice
+        - discountPercentage
+        - discountedPrice
+        - stock
+        - startsAt
+        - endsAt
+        - status
+        - createdAtUtc
+        - version
+        - activeClaimsCount
+        - redemptionsCount
+        - viewsCount
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchantId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        originalPrice:
+          type: number
+          format: decimal
+        discountPercentage:
+          type: integer
+        discountedPrice:
+          type: number
+          format: decimal
+        stock:
+          type: integer
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Draft, Published, Paused, Expired, Archived]
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        createdAtUtc:
+          type: string
+          format: date-time
+        lastModifiedAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+        category:
+          type: string
+          nullable: true
+        likesCount:
+          type: integer
+        isLikedByMe:
+          type: boolean
+        activeClaimsCount:
+          type: integer
+          minimum: 0
+          description: Apartados activos de la oferta (FR-037-03)
+        redemptionsCount:
+          type: integer
+          minimum: 0
+          description: Apartados canjeados de la oferta (FR-037-03)
+        viewsCount:
+          type: integer
+          minimum: 0
+          description: Vistas registradas de la oferta (FR-037-03)
+    ProblemDetails:
+      type: object
+      required: [status, title]
+      properties:
+        status:
+          type: integer
+        title:
+          type: string
+        detail:
+          type: string
+        type:
+          type: string
+          format: uri
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string

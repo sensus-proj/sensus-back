@@ -31,6 +31,10 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryOfferLikeRepository OfferLikeRepository { get; } = new();
     public InMemoryStoreReviewRepository StoreReviewRepository { get; } = new();
     public InMemoryFeedCommentRepository FeedCommentRepository { get; } = new();
+    public InMemoryFeedPostRepository FeedPostRepository { get; } = new();
+    public InMemoryOfferClaimRepository OfferClaimRepository { get; } = new();
+    public InMemorySanctionRepository SanctionRepository { get; } = new();
+    public InMemoryModerationAuditRepository ModerationAuditRepository { get; } = new();
     public InMemoryFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = new();
     public InMemoryContentReportRepository ContentReportRepository { get; } = new();
     public InMemoryReportTargetService ReportTargetService { get; } = new();
@@ -104,6 +108,20 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IFeedCommentRepository>();
             services.AddSingleton<IFeedCommentRepository>(FeedCommentRepository);
+
+            // Cierre de contenido al dar de baja la cuenta (Spec 061): sin estos sustitutos el handler
+            // resolvería repositorios MongoDB y la baja E2E terminaría en 500 sin conexión configurada.
+            services.RemoveAll<IFeedPostRepository>();
+            services.AddSingleton<IFeedPostRepository>(FeedPostRepository);
+
+            services.RemoveAll<IOfferClaimRepository>();
+            services.AddSingleton<IOfferClaimRepository>(OfferClaimRepository);
+
+            services.RemoveAll<ISanctionRepository>();
+            services.AddSingleton<ISanctionRepository>(SanctionRepository);
+
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton<IModerationAuditRepository>(ModerationAuditRepository);
 
             services.RemoveAll<IFeedPostVisibilityLookup>();
             services.AddSingleton<IFeedPostVisibilityLookup>(FeedPostVisibilityLookup);

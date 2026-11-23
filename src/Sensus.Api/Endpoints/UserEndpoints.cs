@@ -3,6 +3,8 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Offers.Commands.ToggleOfferFavorite;
+using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.GeneratePhotoSignature;
 using Sensus.Application.Users.Commands.NotificationLocation;
@@ -82,6 +84,26 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden);
 
         if (isV1) photoSignature.WithName("GeneratePhotoSignature");
+
+        // Spec 038: Alternar favorito de una oferta visible (señal de afinidad para la spec 042)
+        RouteHandlerBuilder toggleFavorite = group.MapPost("/favorites/{id:guid}", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            Result<FavoriteToggleResultDto> result = await sender.Send(new ToggleOfferFavoriteCommand(id), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.FavoritesPolicy)
+        .WithSummary("Spec 038: Alterna el favorito del usuario autenticado sobre una oferta visible")
+        .Produces<FavoriteToggleResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) toggleFavorite.WithName("ToggleOfferFavorite");
 
         // Spec 027: Registro de token de dispositivo para notificaciones push
         RouteHandlerBuilder registerDevice = group.MapPut("/device-token", async (

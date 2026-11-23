@@ -29,8 +29,8 @@ public static class OfferCacheKeys
     }
 
     /// <summary>
-    /// Invalida el detalle de una oferta (si se indica) y todas las consultas de ofertas cercanas.
-    /// No hace nada si el caché no está disponible.
+    /// Invalida el detalle de una oferta (si se indica), todas las consultas de ofertas cercanas y
+    /// todas las instantáneas del feed de ofertas (FR-048-07/08). No hace nada si el caché no está disponible.
     /// </summary>
     public static async Task InvalidateAsync(
         this ICacheService? cacheService,
@@ -48,5 +48,6 @@ public static class OfferCacheKeys
         }
 
         await cacheService.RemoveByPrefixAsync(NearbyPrefix, cancellationToken);
+        await cacheService.RemoveByPrefixAsync(FeedCacheKeys.SnapshotPrefix, cancellationToken);
     }
 }

@@ -9,6 +9,7 @@ using Sensus.Application.Users.Commands.RegisterUser;
 using Sensus.Application.Users.Commands.RequestPasswordReset;
 using Sensus.Application.Users.Commands.ResetPassword;
 using Sensus.Application.Users.DTOs;
+using Sensus.Domain.Entities;
 
 namespace Sensus.Api.Endpoints;
 
@@ -113,35 +114,18 @@ public static class AuthEndpoints
 
             return Results.Accepted(value: new
             {
-                message = "Si el correo electrónico está registrado, se enviará un enlace de recuperación con vigencia de 15 minutos."
+                message = $"Si el correo electrónico está registrado, se enviará un enlace de recuperación con vigencia de {PasswordResetToken.DefaultExpiryMinutes} minutos."
             });
         })
-        .RequireRateLimiting(SecurityExtensions.RecoverPolicy)
-        .WithSummary("SE-005: Solicita el restablecimiento de contraseña enviando un enlace temporal de 15 minutos")
+        .RequireRateLimiting(SecurityExtensions.RecoverByEmailPolicy)
+        .WithSummary($"SE-005: Solicita el restablecimiento de contraseña enviando un enlace temporal de {PasswordResetToken.DefaultExpiryMinutes} minutos")
         .Produces(StatusCodes.Status202Accepted)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         if (isV1) recover.WithName("RequestPasswordReset");
 
-        // SE-005: Restablecimiento de contraseña
-        var reset = group.MapPost("/reset-password", async (
-            [FromBody] ResetPasswordCommand command,
-            ISender sender,
-            CancellationToken ct) =>
-        {
-            var result = await sender.Send(command, ct);
-            return result.ToHttpResult();
-        })
-        .RequireRateLimiting(SecurityExtensions.RecoverPolicy)
-        .WithSummary("SE-005: Restablece la contraseña utilizando el token temporal de un solo uso")
-        .Produces(StatusCodes.Status204NoContent)
-        .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status429TooManyRequests);
-
-        if (isV1) reset.WithName("ResetPassword");
-
-        // FR-029-05: ruta canónica de confirmación; /reset-password se mantiene como alias para la app móvil vigente.
+        // FR-029-05: ruta canónica de confirmación. El alias /reset-password fue retirado en FR-029-09.
         var confirm = group.MapPost("/recover/confirm", async (
             [FromBody] ResetPasswordCommand command,
             ISender sender,

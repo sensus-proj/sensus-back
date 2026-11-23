@@ -84,4 +84,56 @@ public sealed class MongoUserRepository : IUserRepository
         var filter = Builders<UserDocument>.Filter.Eq(u => u.Id, id);
         await _context.Users.DeleteOneAsync(filter, cancellationToken);
     }
+
+    public async Task<bool> MarkAsDeletedAsync(
+        Guid id,
+        DateTime deletedAtUtc,
+        string securityStamp,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.And(
+            Builders<UserDocument>.Filter.Eq(u => u.Id, id),
+            Builders<UserDocument>.Filter.Eq(u => u.DeletedAtUtc, null));
+
+        UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update
+            .Set(u => u.DeletedAtUtc, DateTime.SpecifyKind(deletedAtUtc, DateTimeKind.Utc))
+            .Set(u => u.Estatus, false)
+            .Set(u => u.SecurityStamp, securityStamp);
+
+        var result = await _context.Users.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount > 0;
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetIdsDeletedBeforeAsync(
+        DateTime cutoffUtc,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Lte(
+            u => u.DeletedAtUtc,
+            DateTime.SpecifyKind(cutoffUtc, DateTimeKind.Utc));
+
+        return await _context.Users
+            .Find(filter)
+            .Project(u => u.Id)
+            .Limit(Math.Clamp(limit, 1, MaxPurgeBatchSize))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> PurgeDeletedAsync(
+        Guid id,
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.And(
+            Builders<UserDocument>.Filter.Eq(u => u.Id, id),
+            Builders<UserDocument>.Filter.Lte(
+                u => u.DeletedAtUtc,
+                DateTime.SpecifyKind(cutoffUtc, DateTimeKind.Utc)));
+
+        var result = await _context.Users.DeleteOneAsync(filter, cancellationToken);
+        return result.DeletedCount > 0;
+    }
+
+    private const int MaxPurgeBatchSize = 100;
 }

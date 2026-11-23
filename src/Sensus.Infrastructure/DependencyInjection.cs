@@ -1,5 +1,6 @@
 using Amazon;
 using Amazon.DynamoDBv2;
+using Amazon.SimpleEmail;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,10 +66,35 @@ public static class DependencyInjection
         // Geocodificación (SE-003)
         services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 
-        // Servicio de correo transaccional (SE-005 / Api.Mailer.Invitation)
-        services.Configure<MailerSettings>(
-            configuration.GetSection(MailerSettings.SectionName));
-        services.AddHttpClient<IEmailSender, HttpMailerEmailSender>();
+        // Servicio de correo transaccional (Spec 029): Amazon SES sobre TLS 1.2+.
+        services.AddSingleton<IValidateOptions<SesEmailSettings>, SesEmailSettingsValidator>();
+        services.AddOptions<SesEmailSettings>()
+            .Bind(configuration.GetSection(SesEmailSettings.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IAmazonSimpleEmailService>(provider =>
+        {
+            var settings = provider.GetRequiredService<IOptions<SesEmailSettings>>().Value;
+            var clientConfig = new AmazonSimpleEmailServiceConfig();
+            var region = settings.GetRegionEndpoint();
+            if (region is not null)
+            {
+                clientConfig.RegionEndpoint = region;
+            }
+
+            return new AmazonSimpleEmailServiceClient(clientConfig);
+        });
+
+        services.AddSingleton<IEmailSender>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<SesEmailSettings>>();
+            var logger = provider.GetRequiredService<ILogger<SesEmailSender>>();
+            var client = options.Value.Simulate
+                ? null
+                : provider.GetRequiredService<IAmazonSimpleEmailService>();
+
+            return new SesEmailSender(options, client, logger);
+        });
 
         // Almacenamiento y firma de fotos Cloudinary (SE-006)
         services.Configure<CloudinarySettings>(
@@ -195,7 +221,9 @@ public static class DependencyInjection
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
         services.AddScoped<IOfferLikeRepository, MongoOfferLikeRepository>();
+        services.AddScoped<IOfferFavoriteRepository, MongoOfferFavoriteRepository>();
         services.AddScoped<IStoreReviewRepository, MongoStoreReviewRepository>();
+        services.AddScoped<IFeedPostRepository, MongoFeedPostRepository>();
         services.AddScoped<IFeedCommentRepository, MongoFeedCommentRepository>();
         services.AddScoped<IFeedPostVisibilityLookup, MongoFeedPostVisibilityLookup>();
         services.Configure<ContentReportSettings>(
@@ -208,6 +236,11 @@ public static class DependencyInjection
         services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(
             configuration.GetSection(Sensus.Application.Common.Settings.SanctionSettings.SectionName));
         services.AddScoped<Sensus.Domain.Repositories.ISanctionRepository, MongoSanctionRepository>();
+        services.AddScoped<Sensus.Domain.Repositories.IModerationAuditRepository, MongoModerationAuditRepository>();
+
+        // Baja de cuenta, purga diferida y auditoría anonimizada (Specs 060 y 061)
+        services.Configure<Sensus.Application.Common.Settings.AccountDeletionSettings>(
+            configuration.GetSection(Sensus.Application.Common.Settings.AccountDeletionSettings.SectionName));
         services.AddSingleton<ISanctionMetrics>(sp =>
         {
             IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();

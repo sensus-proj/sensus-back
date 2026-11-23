@@ -16,4 +16,12 @@ public interface IFeedCommentRepository
         CancellationToken cancellationToken = default);
 
     Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Anonimiza en lote los comentarios de un autor al dar de baja la cuenta (Spec 061, FR-061-02).
+    /// Devuelve el número de documentos modificados; los ya anonimizados se ignoran.
+    /// </summary>
+    Task<int> AnonymizeByAuthorAsync(
+        Guid authorUserId,
+        CancellationToken cancellationToken = default);
 }

@@ -125,6 +125,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<ModerationAuditDocument> ModerationAudit =>
+        _database?.GetCollection<ModerationAuditDocument>(_settings.ModerationAuditCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     public IMongoCollection<SchemaMigrationDocument> SchemaMigrations =>
         _database?.GetCollection<SchemaMigrationDocument>("schema_migrations")
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
@@ -141,6 +145,10 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferLikeDocument>("offer_likes")
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    public IMongoCollection<OfferFavoriteDocument> OfferFavorites =>
+        _database?.GetCollection<OfferFavoriteDocument>(_settings.OfferFavoritesCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     public IMongoCollection<StoreReviewDocument> StoreReviews =>
         _database?.GetCollection<StoreReviewDocument>("store_reviews")
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
@@ -155,6 +163,10 @@ public sealed class MongoDbContext
 
     public IMongoCollection<OfferStatusHistoryDocument> OfferStatusHistory =>
         _database?.GetCollection<OfferStatusHistoryDocument>(_settings.OfferStatusHistoryCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<FeedPostDocument> FeedPosts =>
+        _database?.GetCollection<FeedPostDocument>(_settings.FeedPostsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
     public IMongoCollection<MongoDB.Bson.BsonDocument> FeedPostsRaw =>
@@ -229,6 +241,20 @@ public sealed class MongoDbContext
             _logger.LogDebug(ex, "Nota: Los índices de sanciones ya existen o el clúster aún no está disponible.");
         }
 
+        try
+        {
+            // Spec 061 (FR-061-05, NFR-061-03): auditoría anonimizada con TTL y búsqueda por seudónimo.
+            ModerationAudit.Indexes.CreateOne(new CreateIndexModel<ModerationAuditDocument>(
+                Builders<ModerationAuditDocument>.IndexKeys.Ascending(a => a.SubjectKey),
+                new CreateIndexOptions { Name = "ix_moderation_audit_subject" }));
+            ModerationAudit.Indexes.CreateOne(new CreateIndexModel<ModerationAuditDocument>(
+                Builders<ModerationAuditDocument>.IndexKeys.Ascending(a => a.ExpiresAtUtc),
+                new CreateIndexOptions { Name = "ttl_moderation_audit", ExpireAfter = TimeSpan.Zero }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: Los índices de moderation_audit ya existen o el clúster aún no está disponible.");
+        }
 
         try
         {
@@ -241,6 +267,18 @@ public sealed class MongoDbContext
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Nota: El índice único de correos ya existe o el clúster aún no está disponible.");
+        }
+
+        try
+        {
+            // Spec 060 (FR-060-04): la purga consulta por deletedAtUtc; sin este índice recorrería la colección.
+            Users.Indexes.CreateOne(new CreateIndexModel<UserDocument>(
+                Builders<UserDocument>.IndexKeys.Ascending(u => u.DeletedAtUtc),
+                new CreateIndexOptions { Name = "ix_users_deleted_at" }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nota: El índice de baja lógica de usuarios ya existe o el clúster aún no está disponible.");
         }
 
         try
@@ -293,6 +331,23 @@ public sealed class MongoDbContext
                 .Ascending(o => o.Status);
             offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(merchantStatusKeys));
 
+            // Spec 037, FR-037-05: orden por fecha de creación descendente dentro del comercio.
+            var merchantCreatedKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.MerchantId)
+                .Descending(o => o.CreatedAtUtc);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                merchantCreatedKeys,
+                new CreateIndexOptions { Name = "ix_offers_merchant_created" }));
+
+            // Spec 037, FR-037-02 y FR-037-05: filtro por estado y orden por creación descendente.
+            var merchantStatusCreatedKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.MerchantId)
+                .Ascending(o => o.Status)
+                .Descending(o => o.CreatedAtUtc);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                merchantStatusCreatedKeys,
+                new CreateIndexOptions { Name = "ix_offers_merchant_status_created" }));
+
             // Índice compuesto (Status, EndsAt) para control de vigencia y expiración eficiente (SE-022 a SE-025, NFR-007-02)
             var statusEndsAtKeys = Builders<OfferDocument>.IndexKeys
                 .Ascending(o => o.Status)
@@ -336,6 +391,22 @@ public sealed class MongoDbContext
                 .Ascending(c => c.UserId)
                 .Descending(c => c.CreatedAtUtc);
             claimsCollection.Indexes.CreateOne(new CreateIndexModel<OfferClaimDocument>(userClaimsKeys));
+
+            // Spec 037, FR-037-03 y NFR-037-02: conteo batch por oferta y estado sin recorrido completo.
+            var offerClaimStatusKeys = Builders<OfferClaimDocument>.IndexKeys
+                .Ascending(c => c.OfferId)
+                .Ascending(c => c.Status);
+            claimsCollection.Indexes.CreateOne(new CreateIndexModel<OfferClaimDocument>(
+                offerClaimStatusKeys,
+                new CreateIndexOptions { Name = "ix_offer_claims_offer_status" }));
+
+            // Spec 061, FR-061-03: expiración de apartados activos por comercio al cerrar la cuenta.
+            var merchantClaimStatusKeys = Builders<OfferClaimDocument>.IndexKeys
+                .Ascending(c => c.MerchantId)
+                .Ascending(c => c.Status);
+            claimsCollection.Indexes.CreateOne(new CreateIndexModel<OfferClaimDocument>(
+                merchantClaimStatusKeys,
+                new CreateIndexOptions { Name = "ix_offer_claims_merchant_status" }));
 
             // Un solo apartado activo por usuario y oferta (FR-033-03).
             var activeClaimKeys = Builders<OfferClaimDocument>.IndexKeys
@@ -544,6 +615,28 @@ public sealed class MongoDbContext
                 .Descending(l => l.CreatedAtUtc);
             OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(offerLikeOfferKeys));
 
+            // Spec 038: Favoritos únicos por usuario y oferta + conteo por oferta
+            var favoriteUniqueKeys = Builders<OfferFavoriteDocument>.IndexKeys
+                .Ascending(f => f.UserId)
+                .Ascending(f => f.OfferId);
+            OfferFavorites.Indexes.CreateOne(new CreateIndexModel<OfferFavoriteDocument>(
+                favoriteUniqueKeys,
+                new CreateIndexOptions { Name = "ux_offer_favorites_user_offer", Unique = true }));
+
+            var favoriteOfferKeys = Builders<OfferFavoriteDocument>.IndexKeys
+                .Ascending(f => f.OfferId)
+                .Descending(f => f.CreatedAtUtc);
+            OfferFavorites.Indexes.CreateOne(new CreateIndexModel<OfferFavoriteDocument>(
+                favoriteOfferKeys,
+                new CreateIndexOptions { Name = "ix_offer_favorites_offer" }));
+
+            var favoriteUserKeys = Builders<OfferFavoriteDocument>.IndexKeys
+                .Ascending(f => f.UserId)
+                .Descending(f => f.CreatedAtUtc);
+            OfferFavorites.Indexes.CreateOne(new CreateIndexModel<OfferFavoriteDocument>(
+                favoriteUserKeys,
+                new CreateIndexOptions { Name = "ix_offer_favorites_user" }));
+
             var reviewMerchantKeys = Builders<StoreReviewDocument>.IndexKeys
                 .Ascending(r => r.MerchantId)
                 .Descending(r => r.CreatedAtUtc);
@@ -588,6 +681,22 @@ public sealed class MongoDbContext
 
         try
         {
+            // Spec 024: publicaciones del feed por autor y por estado
+            var postAuthorKeys = Builders<FeedPostDocument>.IndexKeys
+                .Ascending(p => p.AuthorUserId)
+                .Descending(p => p.CreatedAtUtc);
+            FeedPosts.Indexes.CreateOne(new CreateIndexModel<FeedPostDocument>(
+                postAuthorKeys,
+                new CreateIndexOptions { Name = "ix_feed_posts_author_created_at" }));
+
+            var postStatusKeys = Builders<FeedPostDocument>.IndexKeys
+                .Ascending(p => p.Status)
+                .Ascending(p => p.IsDeleted)
+                .Descending(p => p.CreatedAtUtc);
+            FeedPosts.Indexes.CreateOne(new CreateIndexModel<FeedPostDocument>(
+                postStatusKeys,
+                new CreateIndexOptions { Name = "ix_feed_posts_status_created_at" }));
+
             // Spec 025: comentarios de publicaciones paginados cronológicamente
             var feedCommentKeys = Builders<FeedCommentDocument>.IndexKeys
                 .Ascending(c => c.PostId)
@@ -595,6 +704,11 @@ public sealed class MongoDbContext
             FeedComments.Indexes.CreateOne(new CreateIndexModel<FeedCommentDocument>(
                 feedCommentKeys,
                 new CreateIndexOptions { Name = "ix_feed_comments_post_created_at" }));
+
+            // Spec 061, FR-061-02: anonimización en lote por autor.
+            FeedComments.Indexes.CreateOne(new CreateIndexModel<FeedCommentDocument>(
+                Builders<FeedCommentDocument>.IndexKeys.Ascending(c => c.AuthorUserId),
+                new CreateIndexOptions { Name = "ix_feed_comments_author" }));
 
             // Spec 040: deduplicación única por ventana y conteo rápido por contenido
             var reportDedupKeys = Builders<ContentReportDocument>.IndexKeys

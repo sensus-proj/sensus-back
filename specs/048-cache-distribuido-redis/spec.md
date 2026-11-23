@@ -4,13 +4,13 @@
 |---|---|
 | ID | 048 |
 | Slug | `cache-distribuido-redis` |
-| Estado | Parcial |
+| Estado | Cerrado |
 | Ola | 7 |
 | Tipo | Nuevo |
-| Dueño | Por asignar |
+| Dueño | Equipo Sensus |
 | Dependencias | 010, 024, 026, 032 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v2.3.0 · `AGENTS.md` v2.3.0 |
+| Versión | 2.0.0 |
+| Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ---
 
@@ -22,14 +22,16 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 
 **Incluye**
 
-- Integración con Redis como caché distribuido para lecturas recurrentes (feed, detalle de oferta, recomendaciones, configuración de moderación, tokens revocados)
+- Integración con Redis como caché distribuido para lecturas recurrentes: detalle y búsqueda de ofertas, instantáneas del feed de promociones, afinidad del feed y perfiles de usuario y comerciante. Recomendaciones, configuración de moderación y tokens revocados quedan fuera de esta versión porque ya usan otros mecanismos (Specs 043, 021 y 004 respectivamente)
 - Interfaz `ICacheService` en `Sensus.Application.Common.Interfaces` con implementación en `Sensus.Infrastructure`
 - TTL explícito configurable por entidad/clave, nunca hardcodeado
-- Invalidación documentada y evicción ante cambios (creación, actualización, eliminación de ofertas, publicaciones, comentarios)
-- Uso de caché en endpoints de lectura: `GET /offers/{id}`, `GET /offers/nearby`, `GET /feed/nearby`, `GET /merchants/me`, `GET /users/profile`
-- Límites de tamaño y política de evicción (LRU)
-- Salud del caché (health check) integrado con spec 016
+- Invalidación documentada y evicción ante cambios (creación, actualización, eliminación de ofertas, publicaciones y perfil de comerciante). Toda mutación de oferta invalida en lote las instantáneas del feed mediante el prefijo `feed:offers:`
+- Uso de caché en endpoints de lectura: `GET /api/v1/offers/{id}`, `GET /api/v1/offers/nearby`, `GET /api/v1/feed/offers` (ruta canónica del feed de promociones, antes descrita como `/feed/nearby`), `GET /api/v1/merchants/me`, `GET /api/v1/users/profile`
+- Límites de tamaño y política de evicción del proveedor en memoria de proceso (`Cache:Memory:MaxEntries`, TTL acotado a 60 s)
+- Salud del caché (health check) integrado con spec 016: `CacheHealthCheck` reporta `Degraded`, nunca `Unhealthy`
 - Fallo graceful: si Redis no está disponible, la API consulta MongoDB directamente (no falla la operación)
+- Redis real en pruebas de integración con Testcontainers (sin dobles que simulen el motor), con override opcional `REDIS_CONNECTION_STRING`
+- Caché Valkey Serverless en VPC con TLS y NAT administrado definido en `infra/` (EX-003); sin `cdk deploy` ejecutado en esta sesión
 
 **No incluye**
 
@@ -53,9 +55,9 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 | FR-048-03 | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must |
 | FR-048-04 | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must |
 | FR-048-05 | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must |
-| FR-048-06 | Cachear respuestas de `GET /feed/nearby` con TTL configurable | Must |
+| FR-048-06 | Cachear instantáneas de `GET /api/v1/feed/offers` con TTL configurable (`FeedRanking:SnapshotTtlMinutes`) | Must |
 | FR-048-07 | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must |
-| FR-048-08 | Invalidar caché de feed al crear, actualizar o eliminar una publicación | Must |
+| FR-048-08 | Invalidar todas las instantáneas del feed de ofertas ante mutaciones de ofertas y publicaciones (prefijo `feed:offers:`) | Must |
 | FR-048-09 | Invalidar caché de comercio al actualizar el perfil del comerciante | Must |
 | FR-048-10 | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must |
 | FR-048-11 | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must |
@@ -67,8 +69,8 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 
 | ID | Requisito | Métrica objetivo |
 |---|---|---|
-| NFR-048-01 | Latencia de lectura con caché | p95 < 300 ms |
-| NFR-048-02 | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms |
+| NFR-048-01 | Latencia de lectura con caché (instantánea del feed) | p95 < 300 ms, medido con 20 solicitudes HTTP en `OfferFeedEndpointsTests.GetFeedOffers_ShouldMeetLatencyTargets_ForCachedAndFallbackPaths` |
+| NFR-048-02 | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms, medido con 20 solicitudes HTTP en la misma prueba simulando `IFeedSnapshotStore` no disponible |
 | NFR-048-03 | TTL mínimo | Configurable, por entidad |
 | NFR-048-04 | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) |
 | NFR-048-05 | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) |
@@ -111,9 +113,14 @@ El backend Sensus necesita un sistema de caché distribuido para lecturas recurr
 - **Cuando**: se consulta el estado del sistema
 - **Entonces**: incluye el estado del caché Redis
 
+### CA-048-08: Latencia con y sin caché (NFR-048-01/02)
+- **Dado**: el endpoint `GET /api/v1/feed/offers` autenticado
+- **Cuando**: se miden 20 solicitudes con `snapshotId` válido y 20 solicitudes con el almacén de instantáneas no disponible
+- **Entonces**: el p95 es menor de 300 ms en el primer caso y menor de 500 ms en el segundo
+
 ## 7. Contratos
 
-No expone nuevos endpoints públicos; mejora el rendimiento de endpoints existentes.
+No expone nuevos endpoints públicos; mejora el rendimiento de endpoints existentes. La ruta canónica del feed de promociones es `GET /api/v1/feed/offers` (Spec 042); no existe `/api/v1/feed/nearby`. El parámetro opcional `snapshotId` devuelve una página estable dentro del TTL.
 
 ## 8. Exclusiones
 
@@ -121,5 +128,12 @@ No expone nuevos endpoints públicos; mejora el rendimiento de endpoints existen
 - No incluye caché de escritura.
 - No incluye Redis como base de datos primaria.
 - No incluye pub/sub de Redis para invalidación en tiempo real entre instancias.
+
+## 9. Estado de cierre y brechas
+
+- **EX-003 (constitución v2.4.1)**: ElastiCache Serverless Valkey en VPC con NAT administrado queda fuera del Free Tier; la justificación y el techo de costo están registrados en el Apéndice E y en `plan.md` §6. La infraestructura existe en `infra/`; `cdk synth`/`cdk deploy` no se ejecutaron en esta sesión (sin autorización).
+- **G-14**: la caché Valkey no usa autenticación IAM/RBAC; el acceso se restringe por Security Group y TLS. La brecha sigue abierta y se mantiene documentada en el Apéndice F de la constitución.
+- **Brecha externa de entorno**: 11 pruebas Testcontainers (9 previas de MongoDB y 2 nuevas de Redis) no pueden ejecutarse porque el daemon Docker no está disponible en este entorno (`npipe://./pipe/docker_engine`). No se omitieron ni se bajaron umbrales; el código y la configuración de las pruebas quedan listos para ejecutarse en CI con Docker.
+- **Sin secretos nuevos**: la cadena de conexión de Redis se publica como configuración de Lambda desde CDK, sin llaves de acceso en el repositorio.
 
 ---

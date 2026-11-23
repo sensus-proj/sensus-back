@@ -1,31 +1,195 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 024 Publicaciones del feed"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 024. Completar esquemas antes de implementar."
+  version: 2.1.0
+  description: "Contrato OpenAPI para la creación y eliminación de publicaciones en el feed social (Spec 024). La moderación es síncrona y fail-closed: 201 solo tras veredicto favorable."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/feed/posts:
     post:
-      summary: "Borrador de POST /api/v1/feed/posts"
-      security: [{ bearerAuth: [] }]
+      summary: "Crea una publicación tras moderar síncronamente texto e imagen"
+      operationId: "CreateFeedPost"
+      tags:
+        - "Feed Social (Spec 024)"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeedPostRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: "Texto de la publicación (alias: text)"
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: "Alias de content"
+                image:
+                  type: string
+                  format: binary
+                  maxSize: 4500000
+                  description: "Imagen a moderar junto con el texto y a almacenar tras aprobación. Solo JPEG, PNG o WebP; cualquier otro tipo devuelve 400 FeedPost.UnsupportedImageType"
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '201':
+          description: "Publicación moderada, aprobada y visible de inmediato"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedPostResponse"
+        '400':
+          description: "Solicitud inválida, contenido rechazado o moderador no disponible (fail-closed)"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '401':
+          description: "No autenticado"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '403':
+          description: "Usuario invitado o con sanción activa"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '413':
+          description: "La imagen supera el límite de 4,5 MB"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '429':
+          description: "Límite de tasa excedido"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
   /api/v1/feed/posts/{id}:
     delete:
-      summary: "Borrador de DELETE /api/v1/feed/posts/{id}"
-      security: [{ bearerAuth: [] }]
+      summary: "Elimina una publicación del feed (solo autor original o administrador) y purga su imagen"
+      operationId: "DeleteFeedPost"
+      tags:
+        - "Feed Social (Spec 024)"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Identificador GUID de la publicación"
+          schema:
+            type: string
+            format: uuid
       responses:
-        '204': { description: Sin contenido }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '204':
+          description: "Publicación eliminada correctamente; imagen purgada cuando tiene publicId"
+        '401':
+          description: "No autenticado"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '403':
+          description: "No autorizado para eliminar esta publicación (no es autor ni administrador)"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '404':
+          description: "Publicación no encontrada"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    CreateFeedPostRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: "Texto de la publicación (entre 1 y 500 caracteres)"
+          example: "¡Gran fin de semana compartiendo ofertas en la cafetería local!"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: "Alias de content"
+        imageUrl:
+          type: string
+          nullable: true
+          format: uri
+          description: "URL o referencia opcional a una imagen ya moderada (flujo JSON)"
+          example: "https://res.cloudinary.com/sensus/image/upload/v1/posts/photo.jpg"
+
+    FeedPostResponse:
+      type: object
+      required:
+        - id
+        - authorUserId
+        - content
+        - status
+        - createdAtUtc
+      properties:
+        id:
+          type: string
+          format: uuid
+        authorUserId:
+          type: string
+          format: uuid
+        authorDisplayName:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PendingModeration, Published, Quarantined, Deleted]
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

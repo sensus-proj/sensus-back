@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
@@ -39,6 +42,43 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
             Builders<OfferClaimDocument>.Filter.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
 
         return (int)await _context.OfferClaims.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, OfferClaimCounts>> CountByOfferIdsAsync(
+        IEnumerable<Guid> offerIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> ids = offerIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, OfferClaimCounts>();
+        }
+
+        // FR-037-03 y NFR-037-02: una sola consulta con IN sobre el lote de la página; nunca una
+        // consulta por oferta. La proyección evita traer hashes de código ni datos de usuario.
+        var filter = Builders<OfferClaimDocument>.Filter.In(c => c.OfferId, ids);
+        var projection = Builders<OfferClaimDocument>.Projection
+            .Include(c => c.OfferId)
+            .Include(c => c.Status);
+
+        List<OfferClaimCountProjection> claims = await _context.OfferClaims
+            .Find(filter)
+            .Project<OfferClaimCountProjection>(projection)
+            .ToListAsync(cancellationToken);
+
+        return claims
+            .GroupBy(c => c.OfferId)
+            .ToDictionary(
+                group => group.Key,
+                group => new OfferClaimCounts(
+                    group.Count(c => string.Equals(
+                        c.Status,
+                        OfferClaimStatus.Active.ToString(),
+                        StringComparison.OrdinalIgnoreCase)),
+                    group.Count(c => string.Equals(
+                        c.Status,
+                        OfferClaimStatus.Redeemed.ToString(),
+                        StringComparison.OrdinalIgnoreCase))));
     }
 
     public async Task<OfferClaim?> GetActiveByUserAndOfferAsync(
@@ -180,5 +220,33 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
             .ToListAsync(cancellationToken);
 
         return documents.Select(d => d.ToDomain()).ToList();
+    }
+
+    public async Task<int> ExpireActiveByMerchantAsync(
+        Guid merchantId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<OfferClaimDocument> filter = Builders<OfferClaimDocument>.Filter.And(
+            Builders<OfferClaimDocument>.Filter.Eq(c => c.MerchantId, merchantId),
+            Builders<OfferClaimDocument>.Filter.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+
+        UpdateDefinition<OfferClaimDocument> update = Builders<OfferClaimDocument>.Update
+            .Set(c => c.Status, OfferClaimStatus.Expired.ToString())
+            .Set(c => c.ExpiresAtUtc, DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc));
+
+        var result = await _context.OfferClaims.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+        return (int)Math.Min(result.ModifiedCount, int.MaxValue);
+    }
+
+    /// <summary>Proyección mínima para el conteo batch; excluye hash, usuario y fechas.</summary>
+    private sealed class OfferClaimCountProjection
+    {
+        [BsonElement("offerId")]
+        [BsonRepresentation(BsonType.String)]
+        public Guid OfferId { get; set; }
+
+        [BsonElement("status")]
+        public string Status { get; set; } = string.Empty;
     }
 }

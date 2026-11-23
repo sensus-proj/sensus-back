@@ -46,7 +46,7 @@ public class OfferCacheTests
     }
 
     [Fact]
-    public async Task InvalidateAsync_ShouldRemoveDetailAndNearbyEntries_WhenOfferIdIsGiven()
+    public async Task InvalidateAsync_ShouldRemoveDetailNearbyAndFeedSnapshots_WhenOfferIdIsGiven()
     {
         Guid offerId = Guid.NewGuid();
 
@@ -54,15 +54,17 @@ public class OfferCacheTests
 
         await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offerId), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(FeedCacheKeys.SnapshotPrefix, Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task InvalidateAsync_ShouldOnlyRemoveNearbyEntries_WhenOfferIdIsMissing()
+    public async Task InvalidateAsync_ShouldRemoveNearbyAndFeedSnapshots_WhenOfferIdIsMissing()
     {
         await _cacheService.InvalidateAsync(null, CancellationToken.None);
 
         await _cacheService.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+        await _cacheService.Received(1).RemoveByPrefixAsync(FeedCacheKeys.SnapshotPrefix, Arg.Any<CancellationToken>());
     }
 
     [Fact]
