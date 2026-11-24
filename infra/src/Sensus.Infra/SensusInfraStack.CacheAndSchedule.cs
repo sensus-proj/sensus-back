@@ -98,6 +98,7 @@ public sealed partial class SensusInfraStack
         CacheNetwork network,
         Function apiFunction,
         IEnumerable<Alarm> alarms,
+        IAlarmAction failureAlarmAction,
         string timeZone,
         string stopAt,
         string startAt)
@@ -131,17 +132,47 @@ public sealed partial class SensusInfraStack
             Resources = ["*"]
         }));
 
-        // Creación solo con la etiqueta de la pausa nocturna en la propia solicitud (la condición aplica a toda la
-        // solicitud, incluidas la subred y la IP elástica que usa el NAT).
+        // CreateNatGateway se autoriza por separado sobre cada recurso de la solicitud (NAT, subred e IP elástica), y
+        // aws:RequestTag solo existe para el recurso que se crea. Por eso cada recurso lleva su propia condición
+        // (la v1 usaba una sola condición de RequestTag y AWS negaba el uso de la IP elástica).
         role.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
-            Sid = "CreateOnlyTaggedNatAndAddress",
-            Actions = ["ec2:AllocateAddress", "ec2:CreateNatGateway"],
+            Sid = "AllocateOnlyTaggedAddress",
+            Actions = ["ec2:AllocateAddress"],
             Resources = ["*"],
             Conditions = new Dictionary<string, object>
             {
                 ["StringEquals"] = new Dictionary<string, string> { [$"aws:RequestTag/{NightSwitchTagKey}"] = envName }
             }
+        }));
+
+        role.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "CreateOnlyTaggedNatGateway",
+            Actions = ["ec2:CreateNatGateway"],
+            Resources = [$"arn:aws:ec2:{Region}:{Account}:natgateway/*"],
+            Conditions = new Dictionary<string, object>
+            {
+                ["StringEquals"] = new Dictionary<string, string> { [$"aws:RequestTag/{NightSwitchTagKey}"] = envName }
+            }
+        }));
+
+        role.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "NatUsesOnlyTaggedAddress",
+            Actions = ["ec2:CreateNatGateway"],
+            Resources = [$"arn:aws:ec2:{Region}:{Account}:elastic-ip/*"],
+            Conditions = new Dictionary<string, object>
+            {
+                ["StringEquals"] = new Dictionary<string, string> { [$"ec2:ResourceTag/{NightSwitchTagKey}"] = envName }
+            }
+        }));
+
+        role.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "NatUsesOnlyThePublicSubnet",
+            Actions = ["ec2:CreateNatGateway"],
+            Resources = [$"arn:aws:ec2:{Region}:{Account}:subnet/{network.Vpc.PublicSubnets[0].SubnetId}"]
         }));
 
         role.AddToPolicy(new PolicyStatement(new PolicyStatementProps
@@ -250,6 +281,24 @@ public sealed partial class SensusInfraStack
             InvocationType = InvocationType.REQUEST_RESPONSE,
             Timeout = Duration.Minutes(14)
         });
+
+        // FR-051-08 (T051-10): si la pausa o la reanudación fallan, avisar de inmediato. Esta alarma NO está en
+        // ALARM_NAMES ni en los permisos del rol de la función, así que la pausa nunca puede silenciarla.
+        var nightSwitchErrorsAlarm = new Alarm(this, "SensusNightSwitchErrorsAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-night-switch-errors-{envName}",
+            AlarmDescription = "Falló la pausa o la reanudación nocturna de Sensus; la API puede seguir sin tráfico (Spec 051, FR-051-08)",
+            Metric = nightSwitch.MetricErrors(new MetricOptions
+            {
+                Period = Duration.Minutes(5),
+                Statistic = "Sum"
+            }),
+            Threshold = 1,
+            EvaluationPeriods = 1,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+        nightSwitchErrorsAlarm.AddAlarmAction(failureAlarmAction);
 
         _ = new CfnOutput(this, "NightSwitchFunctionName", new CfnOutputProps
         {

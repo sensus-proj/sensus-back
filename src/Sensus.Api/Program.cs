@@ -30,11 +30,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 builder.Configuration.AddEnvironmentVariables();
 
-// El secreto JWT nunca se versiona (AGENTS.md §8). En Development se genera uno efímero cuando
-// no está configurado; fuera de Development su ausencia es un error de configuración explícito.
+// Secretos de producción desde SSM Parameter Store (Principio VIII, regla 5). Va al final: tiene la mayor prioridad.
+builder.Configuration.AddSensusSecretStore(Environment.GetEnvironmentVariable(SecretsConfigurationExtensions.PrefixVariable));
+
+// El secreto JWT nunca se versiona (AGENTS.md §8). Solo en Development y Testing se genera uno local cuando
+// no está configurado. En Lambda su ausencia detiene el arranque (fail-closed): un secreto derivable del código
+// permitiría a cualquiera fabricar tokens válidos.
 var configuredSecret = builder.Configuration["JwtSettings:Secret"];
 var isLambdaRuntime = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
-if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") || isLambdaRuntime))
+if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
 {
     var seedBytes = Encoding.UTF8.GetBytes($"Sensus.JwtKey.Deterministic.{builder.Environment.EnvironmentName}");
     configuredSecret = Convert.ToBase64String(SHA384.HashData(seedBytes));
@@ -42,6 +46,21 @@ if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelo
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {
         ["JwtSettings:Secret"] = configuredSecret
+    });
+}
+
+// Spec 023 (FR-023-02): la clave HMAC de entrega nunca se versiona. Solo en Development y Testing se deriva una
+// clave determinista para pruebas locales. En producción, si falta, la emisión de URLs falla cerrada (503) sin
+// tumbar el arranque.
+var configuredMediaDeliveryKey = builder.Configuration["MediaDelivery:SigningKey"];
+if (string.IsNullOrWhiteSpace(configuredMediaDeliveryKey)
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
+{
+    var mediaKeySeed = Encoding.UTF8.GetBytes($"Sensus.MediaDelivery.Deterministic.{builder.Environment.EnvironmentName}");
+    configuredMediaDeliveryKey = Convert.ToBase64String(SHA256.HashData(mediaKeySeed));
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["MediaDelivery:SigningKey"] = configuredMediaDeliveryKey
     });
 }
 
@@ -77,6 +96,24 @@ builder.Services.AddScoped<INotificationLocationRepository, MongoNotificationLoc
 builder.Services.AddOptions<NotificationLocationSettings>()
     .BindConfiguration("NotificationLocation")
     .Validate(settings => settings.LifetimeHours is > 0 and <= 24, "Location lifetime must be between 1 and 24 hours.")
+    .ValidateOnStart();
+builder.Services.AddOptions<Sensus.Application.Common.Settings.OfferSearchSettings>()
+    .BindConfiguration(Sensus.Application.Common.Settings.OfferSearchSettings.SectionName)
+    .Validate(s => s.DefaultRadiusKm is >= 1d and <= 50d, "OfferSearch:DefaultRadiusKm must be between 1 and 50.")
+    .Validate(s => s.MaxRadiusKm is >= 1d and <= 50d, "OfferSearch:MaxRadiusKm must be between 1 and 50.")
+    .Validate(s => s.GuestMaxRadiusKm is >= 1d and <= 2d, "OfferSearch:GuestMaxRadiusKm must be between 1 and 2.")
+    .Validate(s => s.MaxCandidates is >= 10 and <= 500, "OfferSearch:MaxCandidates must be between 10 and 500.")
+    .Validate(s => s.Weights.Text >= 0 && s.Weights.CategoryMatch >= 0 && s.Weights.Proximity >= 0 && s.Weights.Popularity >= 0 &&
+                   (s.Weights.Text + s.Weights.CategoryMatch + s.Weights.Proximity + s.Weights.Popularity) > 0d,
+        "OfferSearch:Weights must be non-negative and sum above 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<Sensus.Application.Common.Settings.OfferAlternativesSettings>()
+    .BindConfiguration(Sensus.Application.Common.Settings.OfferAlternativesSettings.SectionName)
+    .Validate(s => s.DefaultLimit is >= 1 and <= 10, "OfferAlternatives:DefaultLimit must be between 1 and 10.")
+    .Validate(s => s.MaxLimit is >= 1 and <= 10, "OfferAlternatives:MaxLimit must be between 1 and 10.")
+    .Validate(s => s.RegisteredMaxDistanceMeters is >= 100 and <= 50000, "OfferAlternatives:RegisteredMaxDistanceMeters must be between 100 and 50000.")
+    .Validate(s => s.GuestMaxDistanceMeters is >= 100 and <= 2000, "OfferAlternatives:GuestMaxDistanceMeters must be between 100 and 2000.")
+    .Validate(s => s.ComparablePriceRatio is > 0m and <= 5.0m, "OfferAlternatives:ComparablePriceRatio must be between 0 and 5.0.")
     .ValidateOnStart();
 bool allowSimulatedPush = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 if (allowSimulatedPush && builder.Configuration.GetValue("Push:Simulate", true))
@@ -181,6 +218,49 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Fail("La sesión ha sido revocada o la contraseña fue restablecida.");
             }
+        },
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                Title = "Unauthorized",
+                Status = StatusCodes.Status401Unauthorized,
+                Detail = "No se proporcionó un token de autenticación válido o ha expirado.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
+                Title = "Forbidden",
+                Status = StatusCodes.Status403Forbidden,
+                Detail = "No tiene permisos suficientes para acceder a este recurso.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
         }
     };
 });
@@ -191,12 +271,14 @@ builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
+builder.Services.AddHostedService<InteractionStatsBackgroundService>();
+builder.Services.AddHostedService<OfferCategoryMigrationHostedService>();
 
 // Manejo global de excepciones con ProblemDetails (RFC 7807)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Documentación Swagger y OpenAPI con soporte para JWT Bearer
+// Documentación OpenAPI unificada (Spec 011): única fuente en /openapi/v1.json servida también por Swagger UI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -227,7 +309,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-builder.Services.AddOpenApi();
 
 // Health Checks
 builder.Services.AddHealthChecks()
@@ -269,13 +350,12 @@ app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
-    app.UseSwagger();
+    app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sensus API v1");
+        c.SwaggerEndpoint("/openapi/v1.json", "Sensus API v1");
         c.RoutePrefix = "swagger";
     });
-    app.MapOpenApi();
 
     // Sembrado del usuario Administrador (si se configuran variables de entorno)
     using var scope = app.Services.CreateScope();
@@ -309,11 +389,15 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapMediaDeliveryEndpoints();
+app.MapModerationAuditEndpoints();
 app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();
-app.MapCommunityEndpoints();
+app.MapFeedEndpoints();
 app.MapStoreReviewEndpoints();
+app.MapCommunityEndpoints();
+app.MapReportEndpoints();
 
 await app.RunAsync();
 

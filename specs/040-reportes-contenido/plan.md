@@ -4,36 +4,47 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 
-Permitir que un usuario reporte ofertas, publicaciones o comentarios, activando la revisión del contenido sin persistir material de explotación infantil.
+Implementar el flujo seguro de reportes (`POST /api/v1/reports`) sobre ofertas, publicaciones y comentarios mediante la entidad `ContentReport`, validando motivos tipificados con lista de permitidos, límite de 500 caracteres en detalles, bloqueo inmediato **sin persistencia** de material de explotación infantil (`FR-040-06`), deduplicación de 24 horas por usuario/recurso (`409 Conflict`) y marcado automático para revisión al alcanzar el umbral configurable (`FlagThresholdForReview = 3` en `ContentReportSettings`).
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Domain | Entidad Report con motivos y reglas de deduplicación |
-| Application | CreateReportCommand y umbral de revisión |
-| Infrastructure | Persistencia e índice único reporterId + targetId + día |
-| Api | Endpoint POST /api/v1/reports |
+| Domain | `ContentReport`, `ReportTargetType`, `ReportReason`, `LegalExclusionPolicy`, `IContentReportRepository` |
+| Application | `CreateContentReportCommand` (+ validador), `IReportTargetService`, `ContentReportSettings`, `ContentReportDto` |
+| Infrastructure | `ContentReportDocument`, `MongoContentReportRepository` (índice único `(ReporterUserId, TargetType, TargetId, DayKey)` e índice `(TargetType, TargetId, CreatedAtUtc desc)`), `MongoReportTargetService` |
+| Api | `ReportEndpoints.cs` mapeado en `Program.cs` |
+| Tests | `ContentReportHandlersTests`, `ReportsEndpointsTests`, `MongoFeedAndReportRepositoriesTests` |
 
 ## 3. Modelo de datos e índices
 
-- reports con índice único reporterId + targetId + dayKey; contenido marcado para revisión
+- Colección `content_reports` (`ContentReportDocument`): `Id`, `TargetType`, `TargetId`, `ReporterUserId`, `TargetAuthorUserId`, `Reason`, `Details`, `DayKey`, `Status`, `CreatedAtUtc`.
+- Índices en `MongoDbContext`:
+  1. Único compuesto `(ReporterUserId, TargetType, TargetId, DayKey)` para deduplicación atómica.
+  2. Compuesto `(TargetType, TargetId, CreatedAtUtc desc)` para conteo en ventana de 24 h.
 
 ## 4. Seguridad
 
-- Identidad del reportante protegida
-- Sin persistir material ilegal
-- Límite de tasa por usuario
+### Modelo de amenazas (STRIDE, Principio VIII)
+
+| Amenaza | Categoría | Mitigación | Riesgo residual |
+|---|---|---|---|
+| Persistencia accidental de material de explotación infantil (CSAM) | Cumplimiento legal / Seguridad | `LegalExclusionPolicy` rechaza antes de crear/guardar (`400 Bad Request`) con log legal mínimo sin detalle ni PII (`FR-040-06`) | Bajo |
+| Spam de múltiples reportes del mismo usuario para ocultar contenido legítimo | Manipulación / DoS | Límite 1 reporte / 24 h (`409 Conflict`, índice único) + `SensitiveWritePolicy` | Bajo |
+| Exposición de identidad del reportante al usuario reportado | Divulgación de información | `ContentReportDto` omite `ReporterUserId` (`FR-040-08`); logs sanitizados | Bajo |
+| Auto-reporte para manipular estado del recurso | Manipulación | Verificación `targetAuthorUserId == reporterUserId` -> `400` (`FR-040-07`) | Bajo |
+| Acceso de invitado o enumeración de contenido | Elevación de privilegios | `RegisteredUserPolicy` (`403` para invitados) y validación estricta de `targetType`/`reason` por whitelist | Bajo |
 
 ## 5. Observabilidad y rendimiento
 
-- Métricas de reportes por motivo y de contenido marcado
+- Conteo reciente en ventana de 24 h respaldado por índice `(TargetType, TargetId, CreatedAtUtc desc)`.
+- Umbrales (`FlagThresholdForReview = 3`, `DeduplicationWindowHours = 24`) externalizados en `ContentReportSettings` (`appsettings.json`).
 
 ## 6. Costo AWS
 
@@ -41,40 +52,18 @@ Sin costo incremental: Lambda y API Gateway dentro del Free Tier.
 
 ## 7. Estrategia de pruebas
 
-- Unitarias de deduplicación y umbral
-- Integración de 201, 409 y rechazo legal
+- Unitarias (`Sensus.Application.UnitTests`): motivos permitidos, rechazo CSAM sin llamar al repositorio, auto-reporte `400`, duplicado `409`, marcado para revisión al 3.º reporte y cero PII en respuesta.
+- Integración (`Sensus.IntegrationTests`): `POST /api/v1/reports` (201, 400 CSAM/inválido/auto-reporte, 401, 403 invitado, 404, 409) y persistencia/índices en MongoDB.
 
 ## 8. Constitution Check
 
-Evaluación previa a la implementación.
-
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | PASS | `FR-040-01` y 7 requisitos más, con criterios de aceptación medibles |
-| II | PASS | Cambios acotados a las capas declaradas en §2 |
-| III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | PASS | Estrategia de pruebas definida en §7 |
-| VI | PASS | Costo estimado declarado en §6 |
-| VII | PASS | Paginación, índices y observabilidad en §5 |
-
-> Sin excepciones registradas (Apéndice E de la constitución).
-
-## 9. Riesgos de implementación
-
-- Reportes coordinados pueden ocultar contenido legítimo
-- Un reporte legal mal clasificado podría persistirse por error
-
-## 10. Orden de implementación
-
-1. `T040-01` Actualizar y validar el contrato OpenAPI del spec
-2. `T040-02` Implementar: Entidad Report con motivos y reglas de deduplicación
-3. `T040-03` Implementar: CreateReportCommand y umbral de revisión
-4. `T040-04` Implementar: Persistencia e índice único reporterId + targetId + día
-5. `T040-05` Implementar: Endpoint POST /api/v1/reports
-6. `T040-06` Modelar motivos y deduplicación
-7. `T040-07` Implementar el umbral de revisión
-8. `T040-08` Bloquear el persistido de material de explotación infantil
-9. `T040-09` Implementar las pruebas de integración del flujo completo
-10. `T040-10` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
-11. `T040-11` Registrar evidencias del Constitution Check
+| I. Especificación y trazabilidad | PASS | `FR-040-01`..`08` y `NFR-040-01`..`02` |
+| II. Clean Architecture | PASS | Capas Domain, Application, Infrastructure y Api desacopladas |
+| III. CQRS y contratos | PASS | `CreateContentReportCommand` + `ContentReportDto` |
+| IV. Seguridad y moderación | PASS | Exclusión legal CSAM, whitelist de motivos, `SensitiveWritePolicy`, cero PII |
+| V. Verificación automatizada | PASS | Cobertura ≥ 80 % + integración HTTP y MongoDB |
+| VI. Costo AWS | PASS | 0.00 USD incrementales |
+| VII. Paginación e índices | PASS | Índice único de deduplicación + índice de ventana 24 h |
+| VIII. DevSecOps / STRIDE | PASS | STRIDE completo y parámetros en configuración |

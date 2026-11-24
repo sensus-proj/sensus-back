@@ -111,10 +111,30 @@ public sealed class AiConversationHandlersTests
         result.Value.Status.Should().Be("Active");
         result.Value.LastScreenContext.Should().Be("merchant_inventory");
         result.Value.MarkdownVersion.Should().Be("1.0.0");
-        await _conversationRepository.DidNotReceiveWithAnyArgs().GetActiveByUserIdAsync(default, default);
+        await _conversationRepository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
         await _conversationRepository.Received(1).AddAsync(
             Arg.Is<AiConversation>(c => c.OwnerRole == RoleType.Comerciante),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Create_ShouldArchivePreviousActiveConversation_WhenForceNewIsRequested()
+    {
+        var previous = Conversation(_user.Id, "map");
+        _conversationRepository.GetActiveByUserIdAsync(_user.Id, Arg.Any<CancellationToken>()).Returns(previous);
+
+        var result = await CreateHandler().Handle(new CreateOrResumeConversationCommand(true, "home"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        previous.Status.Should().Be(AiConversationStatus.Archived);
+        await _conversationRepository.Received(1).UpdateAsync(previous, Arg.Any<CancellationToken>());
+        await _conversationRepository.Received(1).AddAsync(
+            Arg.Is<AiConversation>(c =>
+                c.Id != previous.Id &&
+                c.Status == AiConversationStatus.Active &&
+                c.LastScreenContext == "home"),
+            Arg.Any<CancellationToken>());
+        result.Value.ConversationId.Should().NotBe(previous.Id.ToString());
     }
 
     [Fact]

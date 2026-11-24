@@ -18,11 +18,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IProfileImageStorage _imageStorage;
     private readonly IOfferRepository _offerRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
     private readonly ICacheService? _cacheService;
     private readonly IAiConversationRepository? _conversationRepository;
     private readonly IAiMessageRepository? _messageRepository;
     private readonly IAiTraceLogRepository? _traceLogRepository;
     private readonly INotificationLocationRepository? _notificationLocations;
+    private readonly IUserInterestsRepository? _userInterestsRepository;
+    private readonly IOfferInteractionRecorder? _offerInteractionRecorder;
 
     public DeleteAccountCommandHandler(
         IUserRepository userRepository,
@@ -33,11 +36,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         IProfileImageStorage imageStorage,
         IOfferRepository offerRepository,
         IDateTimeProvider dateTimeProvider,
+        ICdnCacheInvalidator cdnCacheInvalidator,
         ICacheService? cacheService = null,
         IAiConversationRepository? conversationRepository = null,
         IAiMessageRepository? messageRepository = null,
         IAiTraceLogRepository? traceLogRepository = null,
-        INotificationLocationRepository? notificationLocations = null)
+        INotificationLocationRepository? notificationLocations = null,
+        IUserInterestsRepository? userInterestsRepository = null,
+        IOfferInteractionRecorder? offerInteractionRecorder = null)
     {
         _userRepository = userRepository;
         _comercioRepository = comercioRepository;
@@ -47,11 +53,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _imageStorage = imageStorage;
         _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
         _cacheService = cacheService;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _traceLogRepository = traceLogRepository;
         _notificationLocations = notificationLocations;
+        _userInterestsRepository = userInterestsRepository;
+        _offerInteractionRecorder = offerInteractionRecorder;
     }
 
     public async Task<Result> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
@@ -75,10 +84,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             return Result.Failure(Error.Unauthorized("Auth.InvalidCredentials", "La contraseña provista para confirmar la eliminación es incorrecta."));
         }
 
-        // Limpieza de foto de perfil en almacenamiento remoto si existe
+        // Limpieza de foto de perfil en almacenamiento remoto si existe e invalidación en CDN (CA-023-03)
         if (!string.IsNullOrWhiteSpace(user.FotoPerfilUrl))
         {
             await _imageStorage.DeleteImageAsync(user.FotoPerfilUrl, cancellationToken);
+            await _cdnCacheInvalidator.InvalidateAsync(user.FotoPerfilUrl, cancellationToken);
         }
 
         // FR-030-06: las ofertas se archivan antes de borrar el comercio para que dejen de ser visibles
@@ -109,6 +119,23 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         if (_notificationLocations is not null)
         {
             await _notificationLocations.DeleteAsync(userId, cancellationToken);
+        }
+
+        // FR-054-06 / FR-030-08: Purga inmediata de intereses del usuario e invalidación de caché de afinidad
+        if (_userInterestsRepository is not null)
+        {
+            await _userInterestsRepository.DeleteByUserIdAsync(userId, cancellationToken);
+        }
+
+        // FR-055-07 / FR-030-08: Purga inmediata de interacciones seudonimizadas con todas las versiones de clave HMAC
+        if (_offerInteractionRecorder is not null)
+        {
+            await _offerInteractionRecorder.PurgeByUserAsync(userId, cancellationToken);
+        }
+
+        if (_cacheService is not null)
+        {
+            await _cacheService.RemoveAsync(FeedCacheKeys.Affinity(userId), cancellationToken);
         }
 
         return Result.Success();

@@ -5,7 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
+using Sensus.Application.Friends.DTOs;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
+using Sensus.Domain.Common;
+using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Services;
@@ -36,6 +43,24 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
     public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
+    public IUserInterestsRepository UserInterestsRepository { get; } = Substitute.For<IUserInterestsRepository>();
+    public IOfferInteractionRecorder OfferInteractionRecorder { get; } = Substitute.For<IOfferInteractionRecorder>();
+    public IUserAffinityReader UserAffinityReader { get; } = Substitute.For<IUserAffinityReader>();
+    public IFeedSnapshotStore FeedSnapshotStore { get; } = Substitute.For<IFeedSnapshotStore>();
+    public IFeedMetricsPublisher FeedMetricsPublisher { get; } = Substitute.For<IFeedMetricsPublisher>();
+    public IOfferLikeRepository OfferLikeRepository { get; } = Substitute.For<IOfferLikeRepository>();
+    public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
+    public IFriendRequestRepository FriendRequestRepository { get; } = Substitute.For<IFriendRequestRepository>();
+    public ISharedOfferRepository SharedOfferRepository { get; } = Substitute.For<ISharedOfferRepository>();
+    public IFeedCommentRepository FeedCommentRepository { get; } = Substitute.For<IFeedCommentRepository>();
+    public IFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = Substitute.For<IFeedPostVisibilityLookup>();
+    public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
+    public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
+    public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
+    public IModerationAuditRepository ModerationAuditRepository { get; } = Substitute.For<IModerationAuditRepository>();
+    public IMediaContentProxy MediaContentProxy { get; } = Substitute.For<IMediaContentProxy>();
+    public ICdnCacheInvalidator CdnCacheInvalidator { get; } = Substitute.For<ICdnCacheInvalidator>();
+    public ICommunityActivityReader CommunityActivityReader { get; } = Substitute.For<ICommunityActivityReader>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -121,6 +146,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             TextModerationService.ModerateTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new TextModerationResult(true, Decision: "Approved"));
+            TextModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new TextModerationResult(true, Decision: "Approved"));
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton(TextModerationService);
 
@@ -136,6 +163,122 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             BudgetCounterStore.IncrementAsync(Arg.Any<string>(), Arg.Any<double>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns((double?)1d);
             services.RemoveAll<IBudgetCounterStore>();
             services.AddSingleton(BudgetCounterStore);
+
+            // Intereses del usuario (Spec 054)
+            services.RemoveAll<IUserInterestsRepository>();
+            services.AddSingleton(UserInterestsRepository);
+
+            // Registro de interacciones (Spec 055)
+            services.RemoveAll<IOfferInteractionRecorder>();
+            services.AddSingleton(OfferInteractionRecorder);
+
+            // Feed de promociones (Spec 042)
+            UserAffinityReader.GetCategoryAffinitiesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<string, double>());
+            services.RemoveAll<IUserAffinityReader>();
+            services.AddSingleton(UserAffinityReader);
+
+            FeedSnapshotStore.SaveAsync(Arg.Any<Guid>(), Arg.Any<FeedSnapshot>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+                .Returns(true);
+            services.RemoveAll<IFeedSnapshotStore>();
+            services.AddSingleton(FeedSnapshotStore);
+
+            services.RemoveAll<IFeedMetricsPublisher>();
+            services.AddSingleton(FeedMetricsPublisher);
+            OfferLikeRepository.CountByOfferIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, int>());
+            OfferLikeRepository.GetLikedOfferIdsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            OfferLikeRepository.GetByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IOfferLikeRepository>();
+            services.AddSingleton(OfferLikeRepository);
+
+            StoreReviewRepository.GetByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            StoreReviewRepository.GetRatingSummaryAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new StoreReviewRatingStats(0.0, 0, new Dictionary<int, int>()));
+            StoreReviewRepository.GetPagedByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns((new List<StoreReview>(), 0L));
+            StoreReviewRepository.GetRatingSummariesByMerchantIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, (double AverageRating, int ReviewCount)>());
+            StoreReviewRepository.GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IStoreReviewRepository>();
+            services.AddSingleton(StoreReviewRepository);
+
+            FriendRequestRepository.GetForUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IFriendRequestRepository>();
+            services.AddSingleton(FriendRequestRepository);
+
+            CommunityActivityReader.ReadAsync(
+                    Arg.Any<IReadOnlyCollection<Guid>>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(call => new PagedResult<CommunityActivityItemDto>(
+                    [],
+                    0,
+                    call.ArgAt<int>(1),
+                    call.ArgAt<int>(2)));
+            services.RemoveAll<ICommunityActivityReader>();
+            services.AddSingleton(CommunityActivityReader);
+
+            services.RemoveAll<ISharedOfferRepository>();
+            services.AddSingleton(SharedOfferRepository);
+
+            FeedCommentRepository.GetByPostIdPagedAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns([]);
+            services.RemoveAll<IFeedCommentRepository>();
+            services.AddSingleton(FeedCommentRepository);
+
+            services.RemoveAll<IFeedPostVisibilityLookup>();
+            services.AddSingleton(FeedPostVisibilityLookup);
+
+            services.RemoveAll<IContentReportRepository>();
+            services.AddSingleton(ContentReportRepository);
+
+            services.RemoveAll<IReportTargetService>();
+            services.AddSingleton(ReportTargetService);
+
+            services.RemoveAll<IOfferStatusHistoryRepository>();
+            services.AddSingleton(OfferStatusHistoryRepository);
+
+            // Auditoría de moderación (Spec 021): sin MongoDB real en los tests de endpoints.
+            ModerationAuditRepository
+                .ListAsync(
+                    Arg.Any<Guid?>(),
+                    Arg.Any<ModerationTargetType?>(),
+                    Arg.Any<ModerationVerdict?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<(IReadOnlyList<ModerationAuditRecord> Items, long TotalCount)>(([], 0L)));
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton(ModerationAuditRepository);
+
+            // Entrega de contenido (Spec 023): clave HMAC determinista por fábrica y sin red externa.
+            services.Configure<MediaDeliverySettings>(settings =>
+            {
+                settings.SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                settings.PublicBaseUrl = "https://localhost";
+                settings.PublicTtlMinutes = 60;
+                settings.PrivateTtlMinutes = 5;
+                settings.PublicCacheSeconds = 86400;
+            });
+
+            MediaContentProxy.OpenReadAsync(Arg.Any<MediaAsset>(), Arg.Any<CancellationToken>())
+                .Returns(Result.Failure<MediaContentPayload>(
+                    Error.Unavailable("MediaDelivery.ContentUnavailable", "El contenido multimedia no está disponible.")));
+            services.RemoveAll<IMediaContentProxy>();
+            services.AddSingleton(MediaContentProxy);
+
+            CdnCacheInvalidator.InvalidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+            services.RemoveAll<ICdnCacheInvalidator>();
+            services.AddSingleton(CdnCacheInvalidator);
         });
     }
 }

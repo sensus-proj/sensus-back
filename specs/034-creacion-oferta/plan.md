@@ -24,6 +24,10 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 ## 3. Modelo de datos e índices
 
 - offers con índice por merchantId + status y por status + endsAt
+- `category` con valores del enum de Domain `OfferCategory` y su `OfferCategoryCatalog` (lista de permitidos), guardado como código en inglés
+- Bandera de transición `OfferCategory:RequireStrictValidation` (`false` por defecto en `appsettings.json`): solo debe activarse en producción cuando la versión de la app móvil con `T15.15` (`StoreCategory.apiCode`) esté publicada y adoptada; mientras sea `false`, conserva compatibilidad con clientes previos
+- Migración única idempotente (`OfferCategoryMigrationService`, marcador `offer_category_v1` en `schema_migrations`) que convierte los nombres en español al código y registra cuántos documentos quedaron nulos (FR-034-09)
+- Ejecución (T034-15): `OfferCategoryMigrationHostedService` la invoca una vez por arranque de la Lambda; con el marcador presente solo hace una lectura. Un fallo se registra en logs sin PII y no impide que la API arranque (se reintenta en el siguiente arranque). El marcador se escribe con `InsertOne`: si dos instancias arrancan a la vez, la clave duplicada se trata como "ya ejecutada" y se conserva la evidencia de la primera ejecución (antes un *upsert* podía sobrescribirla con conteos en cero)
 
 ## 4. Seguridad
 

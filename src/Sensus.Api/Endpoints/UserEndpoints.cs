@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
@@ -6,9 +7,11 @@ using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.GeneratePhotoSignature;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
+using Sensus.Application.Users.Commands.ReplaceMyInterests;
 using Sensus.Application.Users.Commands.UpdateNotificationSettings;
 using Sensus.Application.Users.Commands.UpdateProfile;
 using Sensus.Application.Users.DTOs;
+using Sensus.Application.Users.Queries.GetMyInterests;
 using Sensus.Application.Users.Queries.GetNotificationSettings;
 using Sensus.Application.Users.Queries.GetProfile;
 using Sensus.Domain.Common;
@@ -174,5 +177,99 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound);
 
         if (isV1) deleteAccount.WithName("DeleteAccount");
+
+        // Spec 054: Consultar intereses del usuario autenticado (no invitado)
+        RouteHandlerBuilder getInterests = group.MapGet("/me/interests", async (
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            Result<UserInterestsDto> result = await sender.Send(new GetMyInterestsQuery(), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithSummary("Spec 054: Consulta las categorías de interés del usuario autenticado")
+        .Produces<UserInterestsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) getInterests.WithName("GetMyInterests");
+
+        // Spec 054: Reemplazar intereses del usuario autenticado (cuerpo <= 1 KB)
+        RouteHandlerBuilder replaceInterests = group.MapPut("/me/interests", async (
+            HttpContext httpContext,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            const int maxInterestsBodyBytes = 1024;
+            if (httpContext.Request.ContentLength is > maxInterestsBodyBytes)
+            {
+                return Result.Failure(Error.Validation(
+                    "UserInterests.PayloadTooLarge",
+                    "El cuerpo de la solicitud excede el límite de 1 KB.")).ToHttpResult();
+            }
+
+            using var buffer = new MemoryStream();
+            byte[] chunk = new byte[maxInterestsBodyBytes + 1];
+            int totalRead = 0;
+            while (true)
+            {
+                int read = await httpContext.Request.Body.ReadAsync(
+                    chunk.AsMemory(0, Math.Min(chunk.Length, maxInterestsBodyBytes + 1 - totalRead)),
+                    ct);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                totalRead += read;
+                if (totalRead > maxInterestsBodyBytes)
+                {
+                    return Result.Failure(Error.Validation(
+                        "UserInterests.PayloadTooLarge",
+                        "El cuerpo de la solicitud excede el límite de 1 KB.")).ToHttpResult();
+                }
+
+                await buffer.WriteAsync(chunk.AsMemory(0, read), ct);
+            }
+
+            ReplaceMyInterestsCommand? command;
+            try
+            {
+                command = JsonSerializer.Deserialize<ReplaceMyInterestsCommand>(
+                    buffer.GetBuffer().AsSpan(0, (int)buffer.Length),
+                    InterestsJsonOptions);
+            }
+            catch (JsonException)
+            {
+                return Result.Failure(Error.Validation(
+                    "UserInterests.InvalidJson",
+                    "El cuerpo JSON de la solicitud no es válido.")).ToHttpResult();
+            }
+
+            if (command is null)
+            {
+                return Result.Failure(Error.Validation(
+                    "UserInterests.InvalidBody",
+                    "El cuerpo de la solicitud es obligatorio.")).ToHttpResult();
+            }
+
+            Result<UserInterestsDto> result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .Accepts<ReplaceMyInterestsCommand>("application/json")
+        .WithSummary("Spec 054: Reemplaza las categorías de interés del usuario autenticado")
+        .Produces<UserInterestsDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) replaceInterests.WithName("ReplaceMyInterests");
     }
+
+    private static readonly JsonSerializerOptions InterestsJsonOptions = new(JsonSerializerDefaults.Web);
 }

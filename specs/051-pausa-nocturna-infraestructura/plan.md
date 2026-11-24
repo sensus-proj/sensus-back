@@ -41,7 +41,7 @@ No aplica.
 |---|---|---|---|
 | La función se usa para borrar recursos ajenos | Elevación de privilegios | Borrado condicionado a la etiqueta propia; ARN acotados | Bajo |
 | Un tercero invoca la programación desde otra cuenta | Suplantación | `aws:SourceAccount` en la confianza del rol del programador | Bajo |
-| La reanudación falla y deja la API caída | Denegación de servicio | Reintentos, idempotencia, invocación manual documentada | Medio |
+| La reanudación falla y deja la API caída | Denegación de servicio | Reintentos, idempotencia, invocación manual documentada y alarma de errores de la función que nunca se silencia (FR-051-08) | Bajo |
 | Silenciar alarmas oculta un incidente real de noche | Repudio | Solo de 22:30 a 07:00, con la API sin tráfico; se reactivan siempre al reanudar | Medio |
 | La IP elástica nueva cada día rompe la lista de acceso de MongoDB Atlas | Denegación de servicio | Supuesto documentado en la spec | Medio |
 
@@ -49,6 +49,11 @@ No aplica.
 
 - Log JSON por ejecución con acción y entorno, retención de 7 días.
 - Las alarmas de la Spec 015 se silencian solo durante la pausa.
+- Alarma `sensus-night-switch-errors-<entorno>` (FR-051-08, T051-10): métrica estándar `Errors` de la función, suma en 5 min
+  ≥ 1, datos faltantes como no incumplidos, acción al tema SNS de alertas. **No** forma parte de la lista que la función
+  silencia (`ALARM_NAMES`) y el rol de la función no tiene permiso sobre ella. Motivo: el 2026-11-19 el arranque de las
+  07:00 falló y, al quedar las alarmas silenciadas, la caída de 5.5 h solo se detectó por el reporte de un usuario.
+  Costo: séptima alarma de 10 gratuitas; la métrica `Errors` de Lambda no tiene costo.
 
 ## 6. Costo AWS
 

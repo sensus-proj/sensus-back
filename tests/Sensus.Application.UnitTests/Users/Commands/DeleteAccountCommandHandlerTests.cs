@@ -18,6 +18,7 @@ public class DeleteAccountCommandHandlerTests
     private readonly IProfileImageStorage _imageStorage = Substitute.For<IProfileImageStorage>();
     private readonly IOfferRepository _offerRepository = Substitute.For<IOfferRepository>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
     private readonly DeleteAccountCommandHandler _handler;
 
     public DeleteAccountCommandHandlerTests()
@@ -31,7 +32,8 @@ public class DeleteAccountCommandHandlerTests
             _passwordHasher,
             _imageStorage,
             _offerRepository,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _cdnCacheInvalidator);
     }
 
     private User ArrangeAuthenticatedUser(string password)
@@ -152,5 +154,44 @@ public class DeleteAccountCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Auth.InvalidCredentials");
         await _userRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default, default);
+    }
+
+    // Regresión FR-030-08 / CA-030-06: purga de intereses (054), interacciones (055) y caché de afinidad.
+    [Fact]
+    public async Task Handle_WhenValid_ShouldPurgeInterestsInteractionsAndAffinityCache()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+
+        var user = User.Create("Consumidor", "purge@sensus.com", "hashed-secret", true, DateTime.UtcNow).Value;
+        typeof(User).GetProperty("Id")?.SetValue(user, userId);
+
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword("ValidPass123#", "hashed-secret").Returns(true);
+
+        var cache = Substitute.For<ICacheService>();
+        var interestsRepo = Substitute.For<IUserInterestsRepository>();
+        var interactionRecorder = Substitute.For<IOfferInteractionRecorder>();
+
+        var handler = new DeleteAccountCommandHandler(
+            _userRepository,
+            _comercioRepository,
+            _tokenRepository,
+            _currentUserService,
+            _passwordHasher,
+            _imageStorage,
+            _offerRepository,
+            _dateTimeProvider,
+            _cdnCacheInvalidator,
+            cacheService: cache,
+            userInterestsRepository: interestsRepo,
+            offerInteractionRecorder: interactionRecorder);
+
+        var result = await handler.Handle(new DeleteAccountCommand("ValidPass123#"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await interestsRepo.Received(1).DeleteByUserIdAsync(userId, Arg.Any<CancellationToken>());
+        await interactionRecorder.Received(1).PurgeByUserAsync(userId, Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveAsync(Sensus.Application.Offers.FeedCacheKeys.Affinity(userId), Arg.Any<CancellationToken>());
     }
 }

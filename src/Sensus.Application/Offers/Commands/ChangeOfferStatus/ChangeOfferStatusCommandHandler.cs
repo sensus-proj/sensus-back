@@ -18,6 +18,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ChangeOfferStatusCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly IOfferStatusHistoryRepository? _statusHistoryRepository;
 
     public ChangeOfferStatusCommandHandler(
         IOfferRepository offerRepository,
@@ -26,7 +27,8 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<ChangeOfferStatusCommandHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IOfferStatusHistoryRepository? statusHistoryRepository = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -35,6 +37,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cacheService = cacheService;
+        _statusHistoryRepository = statusHistoryRepository;
     }
 
     public async Task<Result<OfferDto>> Handle(ChangeOfferStatusCommand request, CancellationToken cancellationToken)
@@ -105,6 +108,13 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
 
         await _offerRepository.UpdateAsync(offer, cancellationToken);
         await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
+
+        if (_statusHistoryRepository is not null)
+        {
+            await _statusHistoryRepository.AddAsync(
+                new OfferStatusTransition(offer.Id, previousStatus, offer.Status, userId, "Manual", now),
+                cancellationToken);
+        }
 
         _logger.LogInformation(
             "Oferta {OfferId} transicionada de {PreviousStatus} a {NewStatus} por el comercio {ComercioId} a las {NowUtc}.",

@@ -1,22 +1,21 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 034 Creación de oferta"
-  version: 1.0.0
-  description: "Contrato observable de creación de oferta. La aceptación 202 por moderación pendiente y el límite de ofertas activas siguen abiertos en la Spec 034."
+  version: 1.1.0
+  description: "Contrato de POST /api/v1/offers con catálogo OfferCategory (FR-034-08) y soporte de borrador privado saveAsDraft (FR-034-04)."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers:
     post:
-      summary: Crear una oferta del comercio autenticado
+      summary: "Crear una oferta comercial"
       operationId: createOffer
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreateOffer'
+            schema: { $ref: '#/components/schemas/CreateOfferRequest' }
       responses:
         '201':
           description: Oferta creada
@@ -25,16 +24,14 @@ paths:
               schema: { type: string, format: uri-reference }
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Offer'
+              schema: { $ref: '#/components/schemas/OfferDto' }
         '400':
-          description: Solicitud inválida
+          description: Solicitud inválida (incluye categoría ausente o fuera de OfferCategory cuando OfferCategory:RequireStrictValidation=true)
           content:
             application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401': { description: Autenticación requerida }
-        '403': { description: Se requiere un comerciante con comercio activo }
+        '403': { description: Comercio no activo o rol insuficiente }
 components:
   securitySchemes:
     bearerAuth:
@@ -42,7 +39,11 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    CreateOffer:
+    OfferCategory:
+      type: string
+      enum: [Grocery, CleaningHome, Perishables, Dairy, Food, Bakery, Beverages, Pets, Pharmacy]
+      description: Catálogo de producto OfferCategory (distinto de MerchantCategory).
+    CreateOfferRequest:
       type: object
       required: [title, description, originalPrice, discountPercentage, stock, startsAt, endsAt]
       properties:
@@ -52,19 +53,21 @@ components:
         discountPercentage: { type: integer, minimum: 1, maximum: 90 }
         stock: { type: integer, minimum: 1 }
         startsAt: { type: string, format: date-time }
-        endsAt:
-          type: string
-          format: date-time
-          description: Posterior a startsAt.
+        endsAt: { type: string, format: date-time }
         imageUrl:
           type: [string, 'null']
+          format: uri
           description: Para publicar, debe ser la URL aprobada de un activo del comerciante. En la carga se envía textContext con el título recortado, un salto de línea y la descripción recortada.
-        category: { type: [string, 'null'] }
+        category:
+          oneOf:
+            - $ref: '#/components/schemas/OfferCategory'
+            - type: 'null'
+          description: Obligatoria al publicar cuando OfferCategory:RequireStrictValidation=true (tras publicar móvil T15.15).
         saveAsDraft:
           type: boolean
           default: false
           description: Guarda un borrador privado visible solo en el inventario del comercio y sin envío de avisos.
-    Offer:
+    OfferDto:
       type: object
       properties:
         id: { type: string, format: uuid }
@@ -93,3 +96,4 @@ components:
         status: { type: integer }
         detail: { type: string }
         instance: { type: string }
+        errors: { type: object }

@@ -20,9 +20,11 @@
 | T051-06 | Prueba de la franja horaria, `cdk synth` y `cdk diff` contra la cuenta real | Pruebas | `FR-051-01` | T051-05 | Hecho |
 | T051-07 | Spec, ADR 0014, constitución v2.4.0 y registro de requisitos | Docs | `FR-051-07` | T051-06 | Hecho |
 | T051-08 | Tras el despliegue: invocar `stop` y `start` a mano y verificar CA-051-01 y CA-051-02 | Pruebas | `FR-051-04` | despliegue | Pendiente |
+| T051-09 | Corregir el permiso de `CreateNatGateway` (una condición por recurso: NAT por etiqueta de la solicitud, IP por etiqueta del recurso, solo la subred pública) y reutilizar o liberar IPs sobrantes; verificado con el simulador de políticas de IAM (9 casos) | IaC | `NFR-051-02` | T051-08 | Hecho (pendiente de despliegue) |
+| T051-10 | Alarma de errores de la función de la pausa, fuera de la lista que se silencia y con acción al correo de alertas | IaC | `FR-051-08` | T051-09 | Hecho (CA-051-05 se verifica tras el despliegue) |
 
 ## Notas de ejecución
 
-- El despliegue lo hace el workflow `deploy-serverless.yml` al llegar a `main`: inyecta los secretos de la
-  Lambda. Un `cdk deploy` local los borraría, porque no están en las variables de entorno de la máquina.
+- El despliegue lo hace solo el workflow `deploy-serverless.yml` al llegar a `main`. Los secretos de la API viven
+  en SSM Parameter Store (`/sensus/<entorno>/`) y ningún despliegue los toca (Spec 045, FR-045-11).
 - La función se invoca a mano con `aws lambda invoke --function-name sensus-night-switch-prod --payload '{"action":"start"}'`.

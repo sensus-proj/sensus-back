@@ -1,23 +1,76 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 035 Edición de oferta"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 035. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: "Contrato de PUT /api/v1/offers/{id} con validación de OfferCategory (FR-035-08)."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/offers/{id}:
     put:
-      summary: "Borrador de PUT /api/v1/offers/{id}"
+      summary: "Editar una oferta existente"
+      operationId: updateOffer
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateOfferRequest' }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
+        '200':
+          description: Oferta actualizada
+        '400':
+          description: Solicitud inválida, stock inferior a apartados activos o contenido rechazado por moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '403': { description: No es dueño de la oferta o no tiene comercio activo }
+        '404': { description: Oferta no encontrada }
+        '409': { description: Conflicto de concurrencia optimista (versión obsoleta) }
+        '422':
+          description: Contenido no procesable por infracción de reglas semánticas de moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferCategory:
+      type: string
+      enum: [Grocery, CleaningHome, Perishables, Dairy, Food, Bakery, Beverages, Pets, Pharmacy]
+    UpdateOfferRequest:
+      type: object
+      required: [title, description, originalPrice, discountPercentage, stock, startsAt, endsAt, expectedVersion]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, minLength: 5, maxLength: 500 }
+        originalPrice: { type: number, exclusiveMinimum: 0 }
+        discountPercentage: { type: integer, minimum: 1, maximum: 90 }
+        stock: { type: integer, minimum: 1 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        imageUrl: { type: [string, 'null'], format: uri }
+        expectedVersion: { type: integer, minimum: 1 }
+        category:
+          oneOf:
+            - $ref: '#/components/schemas/OfferCategory'
+            - type: 'null'
+          description: No puede vaciarse en ofertas publicadas ni enviarse fuera de OfferCategory cuando OfferCategory:RequireStrictValidation=true.
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

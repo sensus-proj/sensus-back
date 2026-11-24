@@ -4,13 +4,13 @@
 |---|---|
 | ID | 023 |
 | Slug | `entrega-cdn` |
-| Estado | Pendiente |
+| Estado | Implementada |
 | Ola | 4 |
 | Tipo | Nuevo |
-| Dueño | Por asignar |
+| Dueño | Rodrigo |
 | Dependencias | 022 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Versión | 2.0.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` |
 
 ---
 
@@ -76,7 +76,8 @@ Servir el contenido aprobado a través de Cloudinary CDN con optimización autom
 
 | Método | Ruta | Autorización |
 |---|---|---|
-| — | — | — |
+| POST | `/api/v1/media/{id}/delivery-url` | JWT (Invitado o Registrado) |
+| GET | `/api/v1/media/{id}/delivery` | Ninguna (firma HMAC en query) |
 
 ## 8. Dependencias y supuestos
 
@@ -91,6 +92,9 @@ Servir el contenido aprobado a través de Cloudinary CDN con optimización autom
 ## 10. Preguntas abiertas
 
 - ¿Todo el contenido requiere URL firmada?
+  - **[RESUELTO 2026-11-22]**: Sí, la entrega a clientes mediante `/api/v1/media/{id}/delivery` requiere firma HMAC criptográfica con expiración corta (TTL acotado a 15 min por defecto, máx 24 h).
+- ¿Cómo se maneja el contenido en cuarentena frente a la entrega?
+  - **[RESUELTO 2026-11-22]**: Fail-closed estricto: el contenido en cuarentena (`MediaAssetStatus.Quarantined`, `Pending` o `Rejected`) **NO** se entrega por `/delivery` a nadie (responde 404 uniforme como recurso no disponible). La revisión de cuarentena por administradores usa su propio flujo en Spec 019, nunca este endpoint de entrega.
 
 ## 11. Trazabilidad
 

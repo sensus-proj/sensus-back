@@ -9,7 +9,6 @@ using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.SNS;
-using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
 using CfnRoute = Amazon.CDK.AWS.Apigatewayv2.CfnRoute;
 using CfnRouteProps = Amazon.CDK.AWS.Apigatewayv2.CfnRouteProps;
@@ -31,7 +30,11 @@ public sealed partial class SensusInfraStack : Stack
         : base(scope, id, props)
     {
         var envName = (Node.TryGetContext("environment") as string ?? "prod").ToLowerInvariant();
-        var budgetEmail = Node.TryGetContext("budgetEmail") as string ?? "alerts@sensus.local";
+        // Correo de alarmas: llega por contexto desde el SECRETO de GitHub ALERTS_EMAIL; nunca se versiona (FR-045-12).
+        // Sin correo no se usa un relleno: el workflow de despliegue falla antes (FR-045-15) y la síntesis de CI no crea suscripción.
+        string? alertsEmail = Node.TryGetContext("budgetEmail") is string email && !string.IsNullOrWhiteSpace(email)
+            ? email.Trim()
+            : null;
         var allowedOrigins = ResolveAllowedOrigins();
 
         // Spec 051: pausa nocturna configurable por contexto (por defecto 22:30 a 07:00, hora del centro de México).
@@ -95,7 +98,12 @@ public sealed partial class SensusInfraStack : Stack
             Sid = "AllowSsmParameterStoreRead",
             Effect = Effect.ALLOW,
             Actions = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"],
-            Resources = [$"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}/*"]
+            // GetParametersByPath se autoriza sobre la ruta misma; GetParameter(s), sobre cada parámetro.
+            Resources =
+            [
+                $"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}",
+                $"arn:aws:ssm:{Region}:{Account}:parameter/sensus/{envName}/*"
+            ]
         }));
 
         // 3. Función AWS Lambda para .NET 10 sobre Amazon Linux 2023 ARM64 / Graviton2 (FR-045-03)
@@ -114,31 +122,13 @@ public sealed partial class SensusInfraStack : Stack
             ["AiBudgetStore__TableName"] = budgetTable.TableName,
             ["Observability__Metrics__Enabled"] = "true",
             ["Observability__Metrics__Namespace"] = AppMetricsNamespace,
+            ["Interactions__Enabled"] = "true",
             ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
         };
 
-        string[] passthroughKeys =
-        [
-            "MongoDbSettings__ConnectionString",
-            "MONGODB_CONNECTION_STRING",
-            "MONGO_URI",
-            "JwtSettings__Secret",
-            "ClaimCodeSettings__Secret",
-            "Cloudinary__CloudName",
-            "Cloudinary__ApiKey",
-            "Cloudinary__ApiSecret",
-            "OpenAiSettings__ApiKey",
-            "MailerSettings__ApiKey"
-        ];
-
-        foreach (var key in passthroughKeys)
-        {
-            var val = System.Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrWhiteSpace(val))
-            {
-                lambdaEnv[key] = val;
-            }
-        }
+        // Los secretos (MongoDB, JWT, código de apartado, Cloudinary, OpenAI, correo, clave HMAC de interacciones
+        // /sensus/<env>/Interactions/HmacKeysJson) ya no viajan como variables de entorno: la API los lee de SSM
+        // Parameter Store bajo AWS_SSM_PARAMETER_PREFIX (Principio VIII, brecha G-01 y Spec 055 FR-055-04).
 
         var apiFunction = new Function(this, "SensusApiFunction", new FunctionProps
         {
@@ -208,13 +198,38 @@ public sealed partial class SensusInfraStack : Stack
 
         // 5. Alarmas de Observabilidad en Amazon CloudWatch (FR-045-06, Spec 015)
         // FR-015-03: canal de notificación único (SNS con suscripción por correo) para todas las alarmas.
-        var alarmEmail = Node.TryGetContext("alarmEmail") as string ?? budgetEmail;
+        var alarmEmail = Node.TryGetContext("alarmEmail") as string ?? alertsEmail;
         var alarmTopic = new Topic(this, "SensusAlarmTopic", new TopicProps
         {
             TopicName = $"sensus-alarms-{envName}",
             DisplayName = "Alarmas de Sensus Backend"
         });
-        alarmTopic.AddSubscription(new EmailSubscription(alarmEmail));
+        if (!string.IsNullOrWhiteSpace(alarmEmail))
+        {
+            // FR-045-13: identificador fijo. AddSubscription(new EmailSubscription(...)) derivaba el identificador lógico del
+            // propio correo, que terminaba en la plantilla y en los logs de CI de un repositorio público.
+            _ = new Subscription(this, "SensusAlarmEmailSubscription", new SubscriptionProps
+            {
+                Topic = alarmTopic,
+                Protocol = SubscriptionProtocol.EMAIL,
+                Endpoint = alarmEmail
+            });
+        }
+
+        // FR-045-14: AWS Budgets publica en el tema (solo desde esta cuenta), así el presupuesto no depende del correo.
+        var budgetsPublish = alarmTopic.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "AllowBudgetsPublish",
+            Effect = Effect.ALLOW,
+            Principals = [new ServicePrincipal("budgets.amazonaws.com")],
+            Actions = ["SNS:Publish"],
+            Resources = [alarmTopic.TopicArn],
+            Conditions = new Dictionary<string, object>
+            {
+                ["StringEquals"] = new Dictionary<string, string> { ["aws:SourceAccount"] = Account },
+                ["ArnLike"] = new Dictionary<string, string> { ["aws:SourceArn"] = $"arn:aws:budgets::{Account}:*" }
+            }
+        }));
         var alarmAction = new SnsAction(alarmTopic);
 
         var errorsAlarm = new Alarm(this, "SensusLambdaErrorsAlarm", new AlarmProps
@@ -320,15 +335,37 @@ public sealed partial class SensusInfraStack : Stack
             TreatMissingData = TreatMissingData.NOT_BREACHING
         });
 
-        // NFR-015-01: 5 alarmas en total, dentro de las 10 gratuitas de CloudWatch.
-        Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm];
+        // Spec 055 (NFR-055-04, T055-08): alarma al 70 % del tope de 150 MB de offer_interactions o del clúster M0 (512 MB).
+        // Usa la décima métrica personalizada gratuita (10/10) y la sexta alarma gratuita (6/10) en CloudWatch.
+        var interactionsStorageMaxPctMetric = new Metric(new MetricProps
+        {
+            Namespace = AppMetricsNamespace,
+            MetricName = "InteractionStorageMaxPct",
+            Period = Duration.Hours(24),
+            Statistic = "Maximum"
+        });
+
+        var interactionsStorageAlarm = new Alarm(this, "SensusInteractionsStorageAlarm", new AlarmProps
+        {
+            AlarmName = $"sensus-interactions-storage-70pct-{envName}",
+            AlarmDescription = "Alerta cuando offer_interactions supera 70 % de 150 MB o el cluster Atlas M0 supera 70 % de 512 MB",
+            Metric = interactionsStorageMaxPctMetric,
+            Threshold = 70,
+            EvaluationPeriods = 1,
+            ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            TreatMissingData = TreatMissingData.NOT_BREACHING
+        });
+
+        // NFR-015-01 / Spec 055 / Spec 051: 7 alarmas en total (6 operativas + errores de la pausa), dentro de las 10 gratuitas.
+        Alarm[] operationalAlarms = [errorsAlarm, throttlesAlarm, api5xxAlarm, latencyAlarm, appThrottledAlarm, interactionsStorageAlarm];
         foreach (var alarm in operationalAlarms)
         {
             alarm.AddAlarmAction(alarmAction);
         }
 
         // Spec 051: de noche la API no acepta tráfico y las alarmas se silencian para no notificar fallos esperados.
-        CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, scheduleTimeZone, nightStopAt, morningStartAt);
+        // La alarma de errores de la propia pausa (FR-051-08) recibe la acción aparte para que nunca se silencie.
+        CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, alarmAction, scheduleTimeZone, nightStopAt, morningStartAt);
 
         // Panel mínimo de operación (alcance de la Spec 015); CloudWatch incluye 3 paneles gratuitos.
         var dashboard = new Dashboard(this, "SensusOperationsDashboard", new DashboardProps
@@ -350,11 +387,13 @@ public sealed partial class SensusInfraStack : Stack
             }));
 
         // 6. Presupuesto Mensual en AWS Budgets con Alarma de Costo (FR-045-07, Principio VI)
-        _ = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps
+        // FR-045-14: el presupuesto notifica al tema SNS; cambiar el correo ya no obliga a recrearlo. El sufijo -v2 permite el
+        // reemplazo de esta única vez (de suscriptor EMAIL a SNS) sin chocar con el nombre del presupuesto existente.
+        var budget = new CfnBudget(this, "SensusZeroCostBudget", new CfnBudgetProps
         {
             Budget = new CfnBudget.BudgetDataProperty
             {
-                BudgetName = $"sensus-zero-cost-budget-{envName}",
+                BudgetName = $"sensus-zero-cost-budget-{envName}-v2",
                 BudgetType = "COST",
                 TimeUnit = "MONTHLY",
                 BudgetLimit = new CfnBudget.SpendProperty
@@ -378,13 +417,17 @@ public sealed partial class SensusInfraStack : Stack
                     {
                         new CfnBudget.SubscriberProperty
                         {
-                            SubscriptionType = "EMAIL",
-                            Address = budgetEmail
+                            SubscriptionType = "SNS",
+                            Address = alarmTopic.TopicArn
                         }
                     }
                 }
             }
         });
+        if (budgetsPublish.PolicyDependable is not null)
+        {
+            budget.Node.AddDependency(budgetsPublish.PolicyDependable);
+        }
 
         // 7. Salidas del Stack (FR-045-10)
         _ = new CfnOutput(this, "ApiGatewayUrl", new CfnOutputProps
@@ -403,6 +446,12 @@ public sealed partial class SensusInfraStack : Stack
         {
             Description = "Nombre del grupo de logs en Amazon CloudWatch",
             Value = apiLogGroup.LogGroupName
+        });
+
+        _ = new CfnOutput(this, "InteractionsHmacSsmParameterPath", new CfnOutputProps
+        {
+            Description = "Ruta SSM SecureString para las claves HMAC versionadas de Spec 055 (rotacion <= 90 dias)",
+            Value = $"/sensus/{envName}/Interactions/HmacKeysJson"
         });
     }
 

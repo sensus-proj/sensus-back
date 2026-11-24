@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Parcial en Back_Rocio. El endpoint y el origen de actividad están integrados. |
+| Estado | Implementado (retro-spec) |
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |
-| Depende de | [001](../001-registro-usuario/spec.md), [007](../007-ofertas-cercanas/spec.md), [032](../032-detalle-oferta-y-vistas/spec.md), [034](../034-creacion-oferta/spec.md), 052 (sesión de invitado) |
+| Depende de | [001](../001-registro-usuario/spec.md), [007](../007-ofertas-cercanas/spec.md), [032](../032-detalle-oferta-y-vistas/spec.md), [034](../034-creacion-oferta/spec.md), [052](../052-sesion-invitado/spec.md) |
 
 ## 1. Contexto y objetivo
 
@@ -41,7 +41,7 @@ Permitir que usuarios registrados expresen y retiren «Me gusta» sobre las publ
 | ID | Tipo | Requisito | Prioridad / Métrica | Estado |
 |---|---|---|---|---|
 | `FR-057-01` | FR | Exponer `POST /api/v1/offers/{id}/like` para usuarios registrados con alternancia idempotente y respuesta `OfferLikeStatusDto` | Must | Implementado |
-| `FR-057-02` | FR | Incluir `LikesCount` e `IsLikedByMe` reales en `GET /api/v1/offers/{id}`, `GET /api/v1/offers/nearby` y `GET /api/v1/merchants/my-offers` | Must | Pendiente en Back_Rocio |
+| `FR-057-02` | FR | Incluir `LikesCount` e `IsLikedByMe` reales en `GET /api/v1/offers/{id}`, `GET /api/v1/offers/nearby` y `GET /api/v1/merchants/my-offers` | Must | Implementado |
 | `FR-057-03` | FR | Garantizar unicidad `(UserId, OfferId)` mediante índice único compuesto en MongoDB y rechazar ofertas inexistentes o archivadas con `404` | Must | Implementado |
 | `FR-057-04` | FR | Invalidar caché de detalle (`OfferCacheKeys.Detail(offer.Id)`) tras alternar «Me gusta» sin alterar `OfferCategory` ni handlers de creación/edición | Must | Implementado |
 | `NFR-057-01` | NFR | Seguridad y control de abuso: `RegisteredUserPolicy`, `SensitiveWritePolicy` y respuesta `403` para invitados | 100 % endpoints de escritura | Implementado |

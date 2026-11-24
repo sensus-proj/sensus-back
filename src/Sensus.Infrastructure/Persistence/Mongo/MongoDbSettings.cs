@@ -21,4 +21,11 @@ public sealed class MongoDbSettings
     public string FriendRequestsCollectionName { get; set; } = "friend_requests";
     public string SharedOffersCollectionName { get; set; } = "shared_offers";
     public string SanctionsCollectionName { get; set; } = "sanctions";
+    public string UserInterestsCollectionName { get; set; } = "user_interests";
+    public string OfferInteractionsCollectionName { get; set; } = "offer_interactions";
+    public string FeedPostsCollectionName { get; set; } = "feed_posts";
+    public string FeedCommentsCollectionName { get; set; } = "feed_comments";
+    public string ContentReportsCollectionName { get; set; } = "content_reports";
+    public string OfferStatusHistoryCollectionName { get; set; } = "offer_status_history";
+    public string ModerationAuditCollectionName { get; set; } = "moderation_audit";
 }

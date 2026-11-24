@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Documenta estado actual con brechas |
-| Versión | 1.0.0 |
-| Constitution Check | FAIL |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado del plan | Completo |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 
@@ -48,10 +48,11 @@ Evaluación previa a la implementación.
 | I | PASS | `FR-012-01` y 3 requisitos más, con criterios de aceptación medibles |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | FAIL | CORS abierto y RequireHttpsMetadata desactivado |
-| V | PASS | Estrategia de pruebas definida en §7 |
+| IV | PASS | CORS restringido a `Cors:AllowedOrigins` sin AllowAnyOrigin; HSTS y redirección HTTPS fuera de Development |
+| V | PASS | `CorsAndHttpsSecurityTests.cs` (5/5 pruebas en verde: preflight permitido y denegado, HSTS y redirección HTTPS en Production, sin HSTS en Dev) |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
+| VIII | PASS | OWASP ASVS 5.0 L2 / API Top 10: preflight estricto, mitigación de downgrade attacks vía HSTS (31536000s) y HTTPS |
 
 > **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
 

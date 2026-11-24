@@ -2,6 +2,7 @@ using Amazon;
 using Amazon.DynamoDBv2;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Settings;
@@ -19,6 +20,7 @@ using Sensus.Infrastructure.Observability;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
+using Sensus.Infrastructure.Security;
 using Sensus.Infrastructure.Services;
 using StackExchange.Redis;
 
@@ -41,6 +43,13 @@ public static class DependencyInjection
             return metricsSettings.Value.Enabled
                 ? new EmbeddedMetricsPublisher(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
                 : new NoOpRequestMetricsPublisher();
+        });
+        services.AddSingleton<IAiMetricsPublisher>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedAiMetricsPublisher(metricsSettings, sp.GetRequiredService<IDateTimeProvider>())
+                : new NullAiMetricsPublisher();
         });
 
         // Autenticación, BCrypt y JWT
@@ -182,10 +191,31 @@ public static class DependencyInjection
         services.AddSingleton<IMediaStorage, CloudinaryMediaStorage>();
         services.AddScoped<IMediaAssetRepository, MongoMediaAssetRepository>();
 
+        // Auditoría de moderación append-only (Spec 021)
+        services.Configure<ModerationAuditSettings>(
+            configuration.GetSection(ModerationAuditSettings.SectionName));
+        services.AddScoped<IModerationAuditRepository, MongoModerationAuditRepository>();
+
+        // Entrega de contenido por CDN con URLs firmadas (Spec 023)
+        services.Configure<MediaDeliverySettings>(
+            configuration.GetSection(MediaDeliverySettings.SectionName));
+        services.AddSingleton<IMediaDeliveryUrlGenerator, HmacMediaDeliveryUrlGenerator>();
+        services.AddSingleton<ICdnCacheInvalidator, CloudinaryCdnCacheInvalidator>();
+        services.AddHttpClient<IMediaContentProxy, CloudinaryMediaContentProxy>();
+
         // Registro de dispositivos para push (Spec 027)
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();
         services.AddScoped<IFriendRequestRepository, MongoFriendRequestRepository>();
         services.AddScoped<ISharedOfferRepository, MongoSharedOfferRepository>();
+        services.AddScoped<IOfferLikeRepository, MongoOfferLikeRepository>();
+        services.AddScoped<IStoreReviewRepository, MongoStoreReviewRepository>();
+        services.AddScoped<IFeedCommentRepository, MongoFeedCommentRepository>();
+        services.AddScoped<IFeedPostVisibilityLookup, MongoFeedPostVisibilityLookup>();
+        services.Configure<ContentReportSettings>(
+            configuration.GetSection(ContentReportSettings.SectionName));
+        services.AddScoped<IContentReportRepository, MongoContentReportRepository>();
+        services.AddScoped<IReportTargetService, MongoReportTargetService>();
+        services.AddScoped<IOfferStatusHistoryRepository, MongoOfferStatusHistoryRepository>();
 
         // Sanciones y baneo (Spec 020): configuración, persistencia y métricas
         services.Configure<Sensus.Application.Common.Settings.SanctionSettings>(
@@ -202,8 +232,41 @@ public static class DependencyInjection
         // Preferencias de notificación (Spec 044)
         services.AddScoped<INotificationSettingsRepository, MongoNotificationSettingsRepository>();
 
-        // Servicio de migración de SQL a MongoDB Atlas
+        // Intereses del usuario (Spec 054)
+        services.AddScoped<IUserInterestsRepository, MongoUserInterestsRepository>();
+
+        // Registro seudonimizado de interacciones y métricas en Atlas M0 (Spec 055)
+        services.Configure<InteractionSettings>(
+            configuration.GetSection(InteractionSettings.SectionName));
+        services.AddSingleton<IUserPseudonymizer, HmacUserPseudonymizer>();
+        services.AddScoped<IOfferInteractionRepository, MongoOfferInteractionRepository>();
+        services.AddSingleton<IInteractionMetricsPublisher>(sp =>
+        {
+            IOptions<MetricsSettings> metricsSettings = sp.GetRequiredService<IOptions<MetricsSettings>>();
+            return metricsSettings.Value.Enabled
+                ? new EmbeddedInteractionMetricsPublisher(
+                    metricsSettings,
+                    sp.GetRequiredService<IOptions<InteractionSettings>>(),
+                    sp.GetRequiredService<IDateTimeProvider>(),
+                    sp.GetRequiredService<ILogger<EmbeddedInteractionMetricsPublisher>>())
+                : new NullInteractionMetricsPublisher();
+        });
+        services.AddScoped<IOfferInteractionRecorder, MongoOfferInteractionRecorder>();
+        services.AddScoped<InteractionMetricsAggregationService>();
+
+        // Feed de promociones por intereses (Spec 042)
+        services.Configure<Sensus.Application.Common.Settings.FeedRankingSettings>(
+            configuration.GetSection(Sensus.Application.Common.Settings.FeedRankingSettings.SectionName));
+        services.AddScoped<IUserAffinityReader, MongoUserAffinityReader>();
+        services.AddScoped<IFeedSnapshotStore, RedisFeedSnapshotStore>();
+        services.AddSingleton<IFeedMetricsPublisher, StructuredFeedMetricsPublisher>();
+
+        // Servicio de migración de SQL a MongoDB Atlas y migración de categorías (FR-034-09)
+        services.Configure<Sensus.Application.Common.Settings.OfferCategorySettings>(
+            configuration.GetSection(Sensus.Application.Common.Settings.OfferCategorySettings.SectionName));
         services.AddScoped<SqlToMongoMigrationService>();
+        services.AddScoped<OfferCategoryMigrationService>();
+        services.AddScoped<IOfferCategoryMigration>(sp => sp.GetRequiredService<OfferCategoryMigrationService>());
 
         return services;
     }

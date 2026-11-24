@@ -32,11 +32,11 @@ public sealed record StoreReviewsSummaryDto(
     int TotalReviews,
     IReadOnlyList<RatingBreakdownItemDto> Breakdown,
     IReadOnlyList<StoreReviewDto> Reviews,
-    int PageNumber,
-    int PageSize)
-{
-    public int TotalPages => (int)Math.Ceiling(TotalReviews / (double)PageSize);
-}
+    int PageNumber = 1,
+    int PageSize = 20,
+    int TotalPages = 1,
+    bool HasNextPage = false,
+    bool HasPreviousPage = false);
 
 public sealed record ReviewLikeStatusDto(
     Guid ReviewId,

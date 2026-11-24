@@ -1,8 +1,10 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.TestKit.Fakes;
@@ -24,6 +26,16 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryAiTraceLogRepository AiTraceLogRepository { get; } = new();
     public InMemoryFriendRequestRepository FriendRequestRepository { get; } = new();
     public InMemorySharedOfferRepository SharedOfferRepository { get; } = new();
+    public InMemoryUserInterestsRepository UserInterestsRepository { get; } = new();
+    public InMemoryOfferInteractionRepository OfferInteractionRepository { get; } = new();
+    public InMemoryOfferLikeRepository OfferLikeRepository { get; } = new();
+    public InMemoryStoreReviewRepository StoreReviewRepository { get; } = new();
+    public InMemoryFeedCommentRepository FeedCommentRepository { get; } = new();
+    public InMemoryFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = new();
+    public InMemoryContentReportRepository ContentReportRepository { get; } = new();
+    public InMemoryReportTargetService ReportTargetService { get; } = new();
+    public InMemoryOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = new();
+    public InMemoryModerationAuditRepository ModerationAuditRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -74,6 +86,55 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton<ISharedOfferRepository>(SharedOfferRepository);
+
+            services.RemoveAll<IUserInterestsRepository>();
+            services.AddSingleton<IUserInterestsRepository>(UserInterestsRepository);
+
+            services.RemoveAll<IOfferInteractionRepository>();
+            services.AddSingleton<IOfferInteractionRepository>(OfferInteractionRepository);
+            services.Configure<InteractionSettings>(settings =>
+            {
+                settings.ActiveKeyVersion = 1;
+                settings.HmacKeys[1] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            });
+            services.RemoveAll<IOfferLikeRepository>();
+            services.AddSingleton<IOfferLikeRepository>(OfferLikeRepository);
+
+            services.RemoveAll<IStoreReviewRepository>();
+            services.AddSingleton<IStoreReviewRepository>(StoreReviewRepository);
+
+            services.RemoveAll<IFeedCommentRepository>();
+            services.AddSingleton<IFeedCommentRepository>(FeedCommentRepository);
+
+            services.RemoveAll<IFeedPostVisibilityLookup>();
+            services.AddSingleton<IFeedPostVisibilityLookup>(FeedPostVisibilityLookup);
+
+            services.RemoveAll<IContentReportRepository>();
+            services.AddSingleton<IContentReportRepository>(ContentReportRepository);
+
+            services.RemoveAll<IReportTargetService>();
+            services.AddSingleton<IReportTargetService>(ReportTargetService);
+
+            services.RemoveAll<IOfferStatusHistoryRepository>();
+            services.AddSingleton<IOfferStatusHistoryRepository>(OfferStatusHistoryRepository);
+
+            services.RemoveAll<ITextModerationService>();
+            services.AddSingleton<ITextModerationService>(new FakeApprovingTextModerationService());
+
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton<IModerationAuditRepository>(ModerationAuditRepository);
         });
+    }
+
+    private sealed class FakeApprovingTextModerationService : ITextModerationService
+    {
+        public Task<TextModerationResult> ModerateTextAsync(string text, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TextModerationResult(true, "Texto aprobado.", [], "Approved"));
+
+        public Task<TextModerationResult> ModerateContentTextAsync(
+            string text,
+            string contentContext,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TextModerationResult(true, "Texto aprobado.", [], "Approved"));
     }
 }

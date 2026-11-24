@@ -1,8 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
 using Sensus.Application.Offers.Notifications;
@@ -21,6 +23,7 @@ public class CreateOfferCommandHandlerTests
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly IMediaAssetRepository _mediaAssets = Substitute.For<IMediaAssetRepository>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly CreateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -34,6 +37,9 @@ public class CreateOfferCommandHandlerTests
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _logger = Substitute.For<ILogger<CreateOfferCommandHandler>>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
 
@@ -43,6 +49,7 @@ public class CreateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService,
             mediaAssets: _mediaAssets);
     }
@@ -160,7 +167,7 @@ public class CreateOfferCommandHandlerTests
             .Returns(Task.FromResult<Comercio?>(comercio));
         var notifier = Substitute.For<INearbyOfferNotifier>();
         var handler = new CreateOfferCommandHandler(
-            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _cacheService, notifier);
+            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _auditRecorder, _cacheService, notifier);
         var command = new CreateOfferCommand(
             "Detergente", "Detergente líquido de 3 litros", 100m, 20, 10, _now, _now.AddDays(5), null);
 
@@ -172,5 +179,41 @@ public class CreateOfferCommandHandlerTests
             _offerRepository.AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
             notifier.NotifyAsync(Arg.Is<Offer>(o => o.Id == result.Value.Id), _userId, Arg.Any<CancellationToken>());
         });
+    }
+
+    [Fact]
+    public async Task Handle_WhenStrictCategoryEnabled_ShouldRejectMissingOrInvalidAndAcceptValidCode()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var strictHandler = new CreateOfferCommandHandler(
+            _offerRepository,
+            _comercioRepository,
+            _currentUserService,
+            _dateTimeProvider,
+            _logger,
+            _auditRecorder,
+            _cacheService,
+            categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var missingResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: null),
+            CancellationToken.None);
+        missingResult.IsFailure.Should().BeTrue();
+        missingResult.Error.Code.Should().Be("Offer.CategoryRequired");
+
+        var invalidResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: "Moda"),
+            CancellationToken.None);
+        invalidResult.IsFailure.Should().BeTrue();
+        invalidResult.Error.Code.Should().Be("Offer.InvalidCategory");
+
+        var validResult = await strictHandler.Handle(
+            new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: "Bakery"),
+            CancellationToken.None);
+        validResult.IsSuccess.Should().BeTrue();
+        validResult.Value.Category.Should().Be("Bakery");
     }
 }

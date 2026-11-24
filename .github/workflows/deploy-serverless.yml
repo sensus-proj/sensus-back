@@ -32,20 +32,22 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
-      MongoDbSettings__ConnectionString: ${{ secrets.MONGODB_CONNECTION_STRING || secrets.MONGO_URI }}
-      JwtSettings__Secret: ${{ secrets.JWT_SECRET }}
-      ClaimCodeSettings__Secret: ${{ secrets.CLAIM_CODE_SECRET }}
-      Cloudinary__CloudName: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
-      Cloudinary__ApiKey: ${{ secrets.CLOUDINARY_API_KEY }}
-      Cloudinary__ApiSecret: ${{ secrets.CLOUDINARY_API_SECRET }}
-      OpenAiSettings__ApiKey: ${{ secrets.OPENAI_API_KEY }}
-      MailerSettings__ApiKey: ${{ secrets.MAILER_API_KEY }}
+      # Correo de alarmas y presupuesto como SECRETO (FR-045-12): GitHub lo enmascara como *** en los logs. Una variable
+      # se imprimiría en claro en cada paso, y el repositorio es público. Los secretos de la API viven en SSM.
+      ALERTS_EMAIL: ${{ secrets.ALERTS_EMAIL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Verificar correo de alertas (FR-045-15)
+        run: |
+          if [ -z "$ALERTS_EMAIL" ]; then
+            echo "::error::Falta el secreto de repositorio ALERTS_EMAIL (Settings > Secrets and variables > Actions > Secrets). Sin él, ninguna alarma notifica."
+            exit 1
+          fi
 
       - name: Configurar .NET 10
         uses: actions/setup-dotnet@v4
@@ -84,13 +86,15 @@ jobs:
 
       - name: Sintetizar plantilla CloudFormation (cdk synth)
         working-directory: infra
-        run: cdk synth --context environment=${{ inputs.environment || 'prod' }}
+        # --quiet: no imprimir la plantilla en el log (FR-045-13); contiene el correo, el ID de cuenta y los orígenes CORS.
+        run: cdk synth --quiet --context environment=${{ inputs.environment || 'prod' }} --context budgetEmail="$ALERTS_EMAIL"
 
       - name: Desplegar stack en AWS (cdk deploy)
         working-directory: infra
         run: |
           cdk deploy --require-approval never \
             --context environment=${{ inputs.environment || 'prod' }} \
+            --context budgetEmail="$ALERTS_EMAIL" \
             --outputs-file cdk-outputs.json
           if [ -f cdk-outputs.json ]; then
             echo "### 🚀 Sensus Serverless Desplegado en AWS" >> "$GITHUB_STEP_SUMMARY"

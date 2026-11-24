@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 052 Sesión de invitado"
+  version: 1.0.0
+  description: >
+    Emisión de un JWT de invitado sin credenciales (SE-008). El invitado tiene radio máximo de 2 km y no accede a
+    operaciones de usuario registrado. Retro-spec del comportamiento en producción.
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/auth/guest:
+    post:
+      summary: Inicia una sesión de invitado
+      operationId: createGuestSession
+      security: []
+      responses:
+        '200':
+          description: Token de invitado emitido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GuestSession' }
+        '429':
+          description: Límite de tasa auth-strict superado (10 por 60 s)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+components:
+  schemas:
+    GuestSession:
+      type: object
+      required: [token, tokenType, expiresAtUtc, maxRadiusMeters, role]
+      properties:
+        token: { type: string, description: JWT firmado con rol Invitado }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresAtUtc: { type: string, format: date-time }
+        maxRadiusMeters: { type: integer, example: 2000 }
+        role: { type: string, enum: [Invitado] }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

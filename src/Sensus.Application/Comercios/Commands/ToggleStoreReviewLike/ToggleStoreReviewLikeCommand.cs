@@ -43,9 +43,9 @@ public sealed class ToggleStoreReviewLikeCommandHandler
                 Error.NotFound("StoreReview.NotFound", "La reseña solicitada no existe."));
         }
 
-        var likes = await _storeReviewRepository.ToggleLikeAsync(review.Id, userId, cancellationToken);
-        return likes is { } updated
-            ? Result.Success(new ReviewLikeStatusDto(review.Id, updated.Count, updated.IsLiked))
-            : Result.Failure<ReviewLikeStatusDto>(Error.NotFound("StoreReview.NotFound", "La reseña solicitada no existe."));
+        bool isLiked = review.ToggleLike(userId);
+        await _storeReviewRepository.UpdateAsync(review, cancellationToken);
+
+        return Result.Success(new ReviewLikeStatusDto(review.Id, review.LikedByUserIds.Count, isLiked));
     }
 }

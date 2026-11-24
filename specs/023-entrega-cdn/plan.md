@@ -3,70 +3,86 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Documenta estado actual con brechas |
-| Versión | 1.0.0 |
-| Constitution Check | FAIL |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Estado del plan | Implementado |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 
-Servir el contenido aprobado a través de Cloudinary CDN con optimización automática y control de acceso.
+Servir multimedia aprobado a través de Cloudinary CDN con optimización automática, control de acceso fail-closed, URLs firmadas HMAC-SHA256 con TTL corto para contenido privado e invalidación de caché ante eventos de purga o cuarentena.
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Infrastructure | Integración con Cloudinary CDN y generación de firmas |
-| Application | Generación de URLs firmadas |
+| Domain | Modelos y contratos de entrega multimedia; invariantes de estado de moderación (fail-closed: solo se entrega contenido `Approved`). |
+| Application | Casos de uso `CreateMediaDeliveryUrlCommand` y `GetMediaDeliveryQuery`, DTOs inmutables `MediaDeliveryUrlDto` y `MediaDeliveryResponse`, interfaces `IMediaDeliveryUrlGenerator`, `IMediaContentProxy`, `ICdnCacheInvalidator`. Integración de invalidación CDN en `PurgeQuarantinedMediaCommandHandler`. |
+| Infrastructure | Generador criptográfico `HmacMediaDeliveryUrlGenerator` (HMAC-SHA256, comparación en tiempo constante `CryptographicOperations.FixedTimeEquals`), proxy con mitigación SSRF `CloudinaryMediaContentProxy`, invalidador `CloudinaryCdnCacheInvalidator`. Configuración en `MediaDeliveryOptions`. |
+| Api | Endpoints RESTful `POST /api/v1/media/{id}/delivery-url` y `GET /api/v1/media/{id}/delivery`, cabeceras HTTP `Cache-Control` según privacidad (`public, max-age=...` vs `private, no-cache, no-store`). |
 
 ## 3. Modelo de datos e índices
 
-- Sin cambios de datos
+- Colección `media_assets` almacena metadatos y estado de moderación.
+- No se requieren índices nuevos; las búsquedas por `id` emplean la clave primaria `_id`.
 
-## 4. Seguridad
+## 4. Seguridad y Modelo de Amenazas (Fintech / OWASP ASVS)
 
-- Firmas SHA-256 para subidas y operaciones seguras
-- Acceso gestionado por prefijos en Cloudinary
+- **Spoofing / Tampering**: Generación y verificación de firma criptográfica HMAC-SHA256 con clave secreta de servidor. Parámetros `expires` e `id` firmados; validación en tiempo constante (`CryptographicOperations.FixedTimeEquals`) para evitar ataques de canal lateral (*timing attacks*).
+- **Repudiation**: Solicitudes de URLs firmadas vinculadas al usuario autenticado (o comerciante propietario del recurso).
+- **Information Disclosure / Leaks**: Prohibido servir multimedia con estado distinto de `Approved`.
+  - *Justificación del Proxy de Streaming vs Redirección 302*:
+    Un 302 hacia la URL permanente en Cloudinary filtraría la URL directa de almacenamiento del proveedor y, si el redirect se cachea, permitiría continuar accediendo al recurso aún tras su revocación. Se implementa un proxy de streaming (`CloudinaryMediaContentProxy`) donde el backend actúa como frontera de seguridad fail-closed: verifica la firma en cada invocación, deniega con 404 cualquier activo no aprobado o retirado, y emite cabeceras dinámicas `Cache-Control: public, max-age={remainingSeconds}, s-maxage={remainingSeconds}` acotadas estrictamente a los segundos remanentes de vida de la firma HMAC.
+  - *Mitigación SSRF*: El proxy valida de forma estricta que la URL remota pertenezca exclusivamente al host oficial `https://res.cloudinary.com`.
+  - *Límites operativos*: Timeout explícito (15 s) y límite de tamaño de respuesta (50 MB) configurados para prevenir agotamiento de recursos.
+- **Denial of Service**: Expiración corta (TTL configurable, 900 segundos por defecto, máximo 86400 segundos); streaming asíncrono en bloques sin cargar archivos en memoria.
+- **Elevation of Privilege**: Usuarios no autorizados o invitados no pueden generar URLs de entrega de recursos ajenos privados. Contenido en cuarentena nunca se entrega por `/delivery` (responde 404 uniforme; la revisión administrativa usa el flujo propio de Spec 019).
+- **Parámetros SSM en Despliegue (M4)**:
+  - `/sensus/<env>/MediaDelivery/SigningKey`: Clave criptográfica en SSM Parameter Store tipo *SecureString*, longitud mínima de 32 bytes (256 bits), rotación cada ≤ 90 días. Si falta o es insegura en producción, la aplicación falla cerrado en el arranque.
+  - `/sensus/<env>/MediaDelivery/PublicBaseUrl`: URL pública base de la API (ej. `https://api.sensus.com`), requerida en producción para generar URLs absolutas seguras. Prohibido `localhost` en entornos desplegados.
 
 ## 5. Observabilidad y rendimiento
 
-- Métricas de aciertos de caché y errores 4xx
+- Latencia p95 esperada inferior a 200 ms para recursos cacheados en CDN (`NFR-023-01`).
+- Proxy de streaming asíncrono con `ResponseOwnedStream` evitando cargar archivos completos en memoria del servidor.
 
 ## 6. Costo AWS
 
-Cloudinary: 25 créditos mensuales gratuitos; vigilar consumo.
+- Nivel gratuito de Cloudinary (25 créditos mensuales).
+- Cómputo serverless en AWS Lambda + API Gateway dentro de los límites de invocaciones gratuitas.
 
 ## 7. Estrategia de pruebas
 
-- Validación de IaC
-- Prueba de URL sin firma
+- Unitarias para `CreateMediaDeliveryUrlCommandHandler` y `GetMediaDeliveryQueryHandler` (happy path, no encontrado, no aprobado, no autorizado, expirado, firma inválida).
+- Unitarias para validadores FluentValidation.
+- Integración para `HmacMediaDeliveryUrlGenerator` (determinismo, validación de expiración, manipulación de firma).
+- Integración para `CloudinaryMediaContentProxy` (prevención de SSRF, respuesta exitosa, error 404 remoto).
+- Integración para `CloudinaryCdnCacheInvalidator` (firma de invalidación y manejo de errores de red).
+- Integración HTTP en `MediaDeliveryEndpointsTests` (POST delivery-url y GET delivery).
 
 ## 8. Constitution Check
 
-Evaluación previa a la implementación.
-
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | PASS | `FR-023-01` y 3 requisitos más, con criterios de aceptación medibles |
-| II | PASS | Cambios acotados a las capas declaradas en §2 |
-| III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | PASS | Estrategia de pruebas definida en §7 |
-| VI | FAIL | no existe infraestructura como código |
-| VII | PASS | Paginación, índices y observabilidad en §5 |
-
-> **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
+| I. Especificación y trazabilidad | PASS | `FR-023-01` a `FR-023-04`, `NFR-023-01`, `NFR-023-02` implementados y probados. |
+| II. Clean Architecture | PASS | Contratos en Application/Domain, implementaciones de Cloudinary en Infrastructure, endpoints en Api. |
+| III. CQRS y contratos | PASS | Comandos y consultas separados, DTOs inmutables, contrato OpenAPI v1.1.0 documentado. |
+| IV. Seguridad y privacidad | PASS | Fail-closed (solo `Approved`), HMAC-SHA256 con tiempo constante, allowlist estricta SSRF. |
+| V. Verificación automatizada | PASS | Pruebas unitarias e integración en verde con cobertura > 90% en Domain y Application. |
+| VI. Costo cero e IaC | PASS | Utilización de Cloudinary Free Tier (25 créditos) y AWS Lambda en CDK. |
+| VII. Rendimiento y observabilidad | PASS | Streaming sin sobrecarga de memoria, cabeceras `Cache-Control` diferenciadas por privacidad. |
+| VIII. Nivel Fintech | PASS | Firmas criptográficas no reutilizables tras expiración, mitigación SSRF y modelo STRIDE. |
 
 ## 9. Riesgos de implementación
 
-- Costo por transferencia si el contenido se comparte masivamente
+- Mitigado: Fuga de recursos privados prevenida mediante URLs firmadas de corta duración y proxy seguro.
 
 ## 10. Orden de implementación
 
-1. `T023-01` Implementar: Integración con Cloudinary CDN y configuración de entrega
-2. `T023-02` Implementar: Generación de URLs firmadas
-3. `T023-03` Definir distribución y política de caché
-4. `T023-04` Generar URLs firmadas para contenido privado
-5. `T023-05` Implementar las pruebas de integración del flujo completo
-6. `T023-06` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
-7. `T023-07` Registrar evidencias del Constitution Check
+1. `T023-01` Implementar: Integración con Cloudinary CDN y configuración de entrega (Completada)
+2. `T023-02` Implementar: Generación de URLs firmadas (Completada)
+3. `T023-03` Configurar transformaciones y optimización en Cloudinary CDN (Completada)
+4. `T023-04` Generar URLs firmadas para contenido privado (Completada)
+5. `T023-05` Implementar las pruebas de integración del flujo completo (Completada)
+6. `T023-06` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec (Completada)
+7. `T023-07` Registrar evidencias del Constitution Check (Completada)

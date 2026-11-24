@@ -18,13 +18,13 @@ El backend está completado. Quedan las comprobaciones en AWS y los escaneos de 
 - [x] Tabla con TTL, `PAY_PER_REQUEST` y etiquetas en CDK
 - [x] IAM limitado a `GetItem` y `UpdateItem` sobre la tabla
 - [x] *Fail-closed* probado (error, *timeout*, sin configuración)
-- [x] Pruebas con DynamoDB Local (T049-09) — incrementos concurrentes y vencimiento original
+- [x] Pruebas con DynamoDB Local (`DynamoDbBudgetCounterStoreIntegrationTests` + `DynamoDbLocalBudgetCounterStoreTests` + `ci.yml` con `amazon/dynamodb-local:2.6.1`) (T049-09)
 - [x] El guardián registra gasto y cuota en DynamoDB Local, aplica los topes y bloquea ante registros inválidos (T049-11)
 
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Build con `-warnaserror` y `dotnet format` limpios
-- [x] Pruebas en verde y cobertura ≥ 80 % — 1102 pruebas, Domain 89,89 %, Application 96,63 %
+- [x] Pruebas en verde y cobertura ≥ 80 % en Domain y Application
 - [ ] `cdk synth` y `cdk diff` revisados — `synth` revisado; `diff` pendiente (requiere credenciales de AWS)
 - [x] Síntesis local de este árbol verificada. La plantilla incluye DynamoDB con clave `pk`, TTL `expiresAt`, `PAY_PER_REQUEST` y permisos `GetItem` y `UpdateItem` limitados a la tabla.
 - [ ] Turno de Sensi en el entorno desplegado con incremento real observado en DynamoDB y p95 desde Lambda
@@ -51,7 +51,8 @@ El backend está completado. Quedan las comprobaciones en AWS y los escaneos de 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Claude (sesión) | Parcial | Enmienda v2.2.0, ADR 0013, código, CDK y pruebas (864 en verde, build y `format` limpios). Pendiente: DynamoDB Local (T049-09), `cdk diff`, `cdk deploy` autorizado y verificación en producción |
-| 2026-11-22 | Codex | Parcial | `DynamoDbLocalBudgetCounterStoreTests` ejecutada contra `amazon/dynamodb-local:2.6.1`. `origin/main` registra que CD desplegó la tabla en la corrida `44610076245`. Queda pendiente evidencia del turno y la latencia en AWS. |
+| 2026-11-19 | Antigravity | Parcial (T049-09 cerrada) | Implementada `DynamoDbBudgetCounterStoreIntegrationTests` (concurrencia atómica, expiración y TTL `expiresAt`) cableada a `amazon/dynamodb-local:2.6.1` con digest SHA-256 en `.github/workflows/ci.yml` (`T049-09` completada). Verificado: build Release `-warnaserror` 0 advertencias/errores, `dotnet format` limpio, 1110 pruebas .NET locales en verde (746 unitarias, 4 arquitectura, 3 E2E, 357 integración excluyendo `NotificationMongoRepositoryTests` por Docker detenido) y cobertura `Sensus.Domain` 91.23 % / `Sensus.Application` 93.94 %. Tabla ya desplegada en prod por CD (`44610076245`); pendiente prueba en vivo de un turno Sensi en producción (`T049-10`). |
+| 2026-11-22 | Codex | Parcial (T049-11 verificada) | `DynamoDbLocalBudgetCounterStoreTests` ejecutada contra `amazon/dynamodb-local:2.6.1` validando guardián de cuota y contadores corruptos. `origin/main` registra que CD desplegó la tabla en la corrida `44610076245`. Queda pendiente evidencia del turno y la latencia en AWS. |
 
 ## G. Validación en el entorno desplegado
 

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Parcial en Back_Rocio. Reseñas y respuestas integradas. |
+| Estado | Implementado (retro-spec) |
 | Versión | 1.0.0 |
 | Fecha | 2026-11-19 |
 | Autor | Equipo Sensus |

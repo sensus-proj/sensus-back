@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Parcial (retro-spec) |
-| Versión | 1.0.0 |
-| Fecha | 2026-11-19 |
+| Estado | Completo |
+| Versión | 1.1.0 |
+| Fecha | 2026-11-23 |
 | Autor | Equipo Sensus |
-| Depende de | [001](../001-registro-usuario/spec.md), [005](../005-activacion-comerciante/spec.md), [006](../006-consulta-mi-comercio/spec.md), [017](../017-moderacion-multimodal/spec.md), 052 (sesión de invitado), [059](../059-moderacion-texto-filtro-groserias/spec.md) |
+| Depende de | [001](../001-registro-usuario/spec.md), [005](../005-activacion-comerciante/spec.md), [006](../006-consulta-mi-comercio/spec.md), [017](../017-moderacion-multimodal/spec.md), [052](../052-sesion-invitado/spec.md), [059](../059-moderacion-texto-filtro-groserias/spec.md) |
 
 ## 1. Contexto y objetivo
 
@@ -33,7 +33,7 @@ Permitir que los usuarios registrados evalúen cualquier comercio activo con una
 | `RN-056-01` | Solo cuentas autenticadas registradas (`RegisteredUserPolicy`) pueden publicar reseñas, responder comentarios o dar «Me gusta». Los invitados (`Invitado`) solo pueden consultar el resumen en modo lectura. |
 | `RN-056-02` | La calificación debe estar entre `1` y `5` estrellas inclusive. |
 | `RN-056-03` | El comentario de reseña debe tener entre `1` y `600` caracteres una vez recortados espacios; una respuesta debe tener entre `1` y `500` caracteres. |
-| `RN-056-04` | En Back_Rocio, tanto los comentarios de reseña como las respuestas pasan por `ReviewTextModeration`, que aplica el filtro y exige veredicto aprobado del puerto de moderación de publicaciones antes de persistir en el repositorio público. |
+| `RN-056-04` | Tanto los comentarios de reseña como las respuestas pasan obligatoriamente por `ContentModerationHelper` (`ProfanityFilter` + `ITextModerationService` fail-closed) antes de persistirse. |
 | `RN-056-05` | Cada reseña almacena autor (`AuthorUserId`, `AuthorName`, `AuthorPhotoUrl`) y marca temporal UTC (`CreatedAtUtc`) para mostrar nombre, avatar, fecha y año en cliente. |
 
 ## 4. Requisitos funcionales y no funcionales
@@ -46,7 +46,7 @@ Permitir que los usuarios registrados evalúen cualquier comercio activo con una
 | `FR-056-04` | FR | Permitir responder en hilo a una reseña (1–500 caracteres) vía `POST /api/v1/merchants/reviews/{reviewId}/replies` solo a usuarios registrados | Must | Implementado |
 | `FR-056-05` | FR | Moderar todo comentario y respuesta mediante `ProfanityFilter` y `ITextModerationService` (*fail-closed*) antes de guardar en MongoDB | Must | Implementado |
 | `FR-056-06` | FR | Poblar `AverageRating` y `ReviewCount` reales en `ComercioDto` (`GET /api/v1/merchants/me` y `/nearby`) e invalidar caché de comercio al crear reseña | Must | Implementado |
-| `FR-056-07` | FR | Aplicar paginación `page`/`pageSize` (20/100) con metadatos en el resumen de reseñas | Should | Implementado |
+| `FR-056-07` | FR | Aplicar paginación `PagedResult` (`pageSize` 20/100) al listado de reseñas de un comercio cuando supere el umbral inicial | Should | Implementado |
 | `NFR-056-01` | NFR | Seguridad y límites de tasa: lectura con `read-heavy`, escritura con `sensitive-write` y errores estándar RFC 7807 `ProblemDetails` | 100 % endpoints | Implementado |
 | `NFR-056-02` | NFR | Persistencia e índices: colección `store_reviews` con índice compuesto `(MerchantId asc, CreatedAtUtc desc)` | Sin full-scan por comercio | Implementado |
 | `NFR-056-03` | NFR | Privacidad: excluir correo electrónico y credenciales de autores en `StoreReviewDto` y `StoreReviewReplyDto` | 0 campos PII sensibles | Implementado |

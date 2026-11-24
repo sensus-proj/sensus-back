@@ -6,7 +6,7 @@
 | Estado del plan | Retro-spec alineada a implementación |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 

@@ -173,7 +173,8 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Autenticación con JWT sin estado; valida firma, emisor, audiencia y expiración.
 - Toda operación se autoriza en el servidor. El cliente nunca es fuente de verdad de permisos.
 - El cierre de sesión debe invalidar el token de forma verificable (spec 004).
-- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados.
+- TLS 1.2 o superior en toda comunicación; nunca desactives la validación de certificados. Única excepción
+  vigente: EX-004 (HTTP hacia el servicio de correo `mailersensus.somee.com` hasta el 2026-12-20, spec 029).
 - Rate limiting obligatorio en endpoints sensibles; umbrales en configuración (spec 013).
 - Secretos solo en AWS Secrets Manager o SSM. **Nunca** en código, `.env` versionado, logs ni tests.
   El secreto JWT actual en `appsettings.json` está pendiente de retiro (specs 001 y 002).
@@ -225,7 +226,7 @@ Todo lo nuevo o modificado, en backend y móvil, cumple desde el primer commit:
 
 - Todo recurso se define en `infra/` con AWS CDK en C#. **Prohibido** crear recursos en consola o por CLI.
 - Solo servicios del nivel gratuito, salvo las excepciones vigentes del Apéndice E (EX-001 a EX-003). Cómputo exclusivamente Lambda detrás de API Gateway.
-- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). **Nunca** ejecutes `cdk deploy` desde una máquina local: se despliega por CI, que inyecta los secretos de la Lambda.
+- La infraestructura se pausa de 22:30 a 07:00 (`America/Mexico_City`, Spec 051). Se despliega solo por CI. Los secretos de la API viven en SSM Parameter Store bajo `/sensus/<entorno>/` y la API los lee al arrancar; ningún despliegue los toca. El correo de alarmas llega por el **secreto** de repositorio `ALERTS_EMAIL` (nunca como variable: las variables se imprimen en claro en los logs de CI).
 - Multimedia en Cloudinary (Tier gratuito); observabilidad exclusivamente en CloudWatch.
 - Todo recurso etiquetado con `project`, `environment`, `owner`.
 - Toda decisión técnica declara su costo mensual estimado y su consumo frente al Free Tier.
@@ -314,9 +315,11 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 - **Commits**: Conventional Commits con requisito — `feat(FR-012-03): ...`, `fix(FR-030-01): ...`.
 - **Repositorio**: `origin` = `https://github.com/sensus-proj/sensus-back.git`. El remote `legacy`
   (`Elrorro334/sensus-back`) es archivo de solo lectura y no recibe push. La rama de integración es
-  `Sprint1` y `main` debe quedar siempre desplegable.
-- **Ramas**: una por requisito (`FR-NNN-nn` / `NFR-NNN-nn`) desde `Sprint1`, y PR a `Sprint1`. Prohibido
-  el push directo a `main` y el `push --force` sobre ramas compartidas.
+  `develop` y `main` debe quedar siempre desplegable: todo merge a `main` despliega a producción por CI.
+- **Ramas**: flujo `rama de trabajo → develop → main`. Las ramas de trabajo (por requisito, `FR-NNN-nn` /
+  `NFR-NNN-nn`, o personales como `Back_<nombre>`) salen de `develop` y vuelven por PR a `develop`; `main`
+  solo recibe PR desde `develop`. El CI (escáneres y pruebas) corre en todo push y PR a `develop` y `main`.
+  Prohibido el push directo a `main` o `develop` y el `push --force` sobre ramas compartidas.
 - **C#**: `nullable` habilitado, `async/await` sin `.Result` ni `.Wait()`, `record` para DTOs,
   `CancellationToken` en toda operación de E/S.
 - **Nombres**: código e identificadores en inglés; specs y documentación en español.

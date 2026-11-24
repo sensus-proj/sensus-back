@@ -21,4 +21,6 @@ public sealed record OfferDto(
     DateTime CreatedAtUtc,
     DateTime? LastModifiedAtUtc,
     int Version = 1,
-    string? Category = null);
+    string? Category = null,
+    int LikesCount = 0,
+    bool IsLikedByMe = false);

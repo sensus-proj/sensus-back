@@ -16,7 +16,7 @@ namespace Sensus.IntegrationTests.Offers;
 
 public sealed class CreateOfferEndpointsTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>
 {
-    private static readonly DateTime Now = new(2026, 11, 22, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Now = DateTime.UtcNow;
     private static readonly CreateOfferCommand ValidOffer = new(
         "Oferta de prueba", "Descripción de la oferta", 100m, 25, 3, Now, Now.AddDays(1));
 

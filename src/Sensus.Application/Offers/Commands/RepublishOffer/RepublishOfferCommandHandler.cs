@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.RepublishOffer;
@@ -16,6 +18,9 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<RepublishOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly ITextModerationService? _textModerationService;
+    private readonly IOfferStatusHistoryRepository? _statusHistoryRepository;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public RepublishOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -23,14 +28,20 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<RepublishOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        IModerationAuditRecorder auditRecorder,
+        ICacheService? cacheService = null,
+        ITextModerationService? textModerationService = null,
+        IOfferStatusHistoryRepository? statusHistoryRepository = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
+        _textModerationService = textModerationService;
+        _statusHistoryRepository = statusHistoryRepository;
     }
 
     public async Task<Result<OfferDto>> Handle(RepublishOfferCommand request, CancellationToken cancellationToken)
@@ -58,14 +69,56 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         }
 
         DateTime now = _dateTimeProvider.UtcNow;
+        OfferStatus previousStatus = offer.Status;
         Result republishResult = offer.Republish(request.NewStartsAt, request.NewEndsAt, request.NewStock, now);
         if (republishResult.IsFailure)
         {
             return Result.Failure<OfferDto>(republishResult.Error);
         }
 
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
+            _textModerationService,
+            $"Título: {offer.Title}\nDescripción: {offer.Description}\nCategoría: {offer.Category ?? string.Empty}",
+            "Republicación de producto u oferta comercial",
+            "Offer.ContentModerationRejected",
+            "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+            cancellationToken);
+
+        // Spec 021 (FR-021-01): la republicación también deja evidencia de la decisión.
+        ModerationAuditEntry auditEntry = new(
+            offer.Id,
+            ModerationTargetType.Offer,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "offer_republish",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores);
+
+        if (!evaluation.IsApproved)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+            return Result.Failure<OfferDto>(
+                evaluation.RejectionError
+                ?? Error.Validation("Offer.ContentModerationRejected", "El título o descripción de la publicación contiene lenguaje antisonante o prohibido."));
+        }
+
+        // Spec 021 (FR-021-01): sin evidencia persistida la oferta no se republica (fail-closed).
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<OfferDto>(auditResult.Error);
+        }
+
         await _offerRepository.UpdateAsync(offer, cancellationToken);
         await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
+
+        if (_statusHistoryRepository is not null)
+        {
+            await _statusHistoryRepository.AddAsync(
+                new OfferStatusTransition(offer.Id, previousStatus, offer.Status, userId, "Republish", now),
+                cancellationToken);
+        }
 
         _logger.LogInformation("Oferta {OfferId} republicada exitosamente por el comercio {ComercioId}. Nueva vigencia hasta {EndsAtUtc}",
             offer.Id, comercio.Id, offer.EndsAt);

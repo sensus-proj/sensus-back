@@ -24,8 +24,11 @@
 | T034-10 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-034-01` | T034-09 | Parcial. Pruebas del contrato actual incorporadas. |
 | T034-11 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-034-01` | T034-10 | Completada |
 | T034-12 | Registrar evidencias del Constitution Check | Docs | `FR-034-01` | T034-11 | Completada |
-| T034-13 | Guardar un borrador privado, proteger sus transiciones y verificar el contrato HTTP | Domain / Application / Pruebas | `FR-034-04` | T034-02 | Verificada localmente |
-| T034-14 | Verificar que la imagen de una oferta pertenece al comercio y fue moderada con el mismo título y descripción | Application / Infrastructure / Pruebas | `FR-034-03` | T034-05 | Verificada localmente |
+| T034-13 | Enum `OfferCategory`, `OfferCategoryCatalog` y validación obligatoria al publicar, con pruebas de `400` y `201` (detrás de `OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) | Domain y Application | `FR-034-08` | T034-12 | Completada |
+| T034-14 | Migración única de categorías existentes con evidencia de documentos convertidos y nulos | Infrastructure | `FR-034-09` | T034-13 | Completada |
+| T034-15 | Ejecutar la migración de categorías una sola vez al arrancar la API con un servicio en segundo plano tolerante a fallos, y marcador insert-once que conserve la evidencia de la primera ejecución ante arranques concurrentes | Api e Infrastructure | `FR-034-09` | T034-14 | Completada |
+| T034-16 | Guardar un borrador privado, proteger sus transiciones y verificar el contrato HTTP | Domain / Application / Pruebas | `FR-034-04` | T034-02 | Verificada localmente |
+| T034-17 | Verificar que la imagen de una oferta pertenece al comercio y fue moderada con el mismo título y descripción | Application / Infrastructure / Pruebas | `FR-034-03` | T034-05 | Verificada localmente |
 
 ## Notas de ejecución
 

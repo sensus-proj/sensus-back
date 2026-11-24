@@ -96,4 +96,58 @@ public interface IOfferRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Obtiene candidatas visibles para el feed dentro del radio geográfico excluyendo comercios del usuario
+    /// (Spec 042, FR-042-01, FR-042-05).
+    /// </summary>
+    Task<IReadOnlyList<FeedOfferCandidate>> GetFeedCandidatesAsync(
+        double latitude,
+        double longitude,
+        int radiusMeters,
+        Guid excludeMerchantOwnerUserId,
+        int maxCandidates,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<FeedOfferCandidate>>(Array.Empty<FeedOfferCandidate>());
+
+    /// <summary>
+    /// Revalida visibilidad y datos vigentes de un conjunto de ofertas pertenecientes a una instantánea en Redis
+    /// (Spec 042, FR-042-05, FR-042-08).
+    /// </summary>
+    Task<IReadOnlyList<FeedOfferCandidate>> GetFeedCandidatesByIdsAsync(
+        IReadOnlyCollection<Guid> offerIds,
+        double referenceLatitude,
+        double referenceLongitude,
+        Guid excludeMerchantOwnerUserId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<FeedOfferCandidate>>(Array.Empty<FeedOfferCandidate>());
+
+    /// <summary>
+    /// Búsqueda híbrida geoespacial: combina índice de texto en español (stemming) y prefijo normalizado
+    /// sobre títulos, o fallback a ofertas cercanas cuando la consulta está vacía (Spec 041).
+    /// </summary>
+    Task<IReadOnlyList<OfferSearchCandidate>> SearchOffersHybridAsync(
+        string? normalizedQuery,
+        string? rawQuery,
+        double latitude,
+        double longitude,
+        int radiusMeters,
+        int maxCandidates,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<OfferSearchCandidate>>(Array.Empty<OfferSearchCandidate>());
+
+    /// <summary>
+    /// Obtiene la oferta origen validada como visible y las alternativas candidatas de la misma categoría
+    /// dentro del radio máximo y con precio final comparable &lt;= ratio * precio final original (Spec 043).
+    /// </summary>
+    Task<OfferAlternativesLookupResult> GetAlternativesAsync(
+        Guid offerId,
+        int maxDistanceMeters,
+        decimal comparablePriceRatio,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(OfferAlternativesLookupResult.NotFoundOrUnavailable());
 }

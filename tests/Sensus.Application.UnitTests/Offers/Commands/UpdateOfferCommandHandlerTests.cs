@@ -1,7 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.UpdateOffer;
 using Sensus.Domain.Entities;
@@ -19,6 +21,7 @@ public class UpdateOfferCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly UpdateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -33,6 +36,9 @@ public class UpdateOfferCommandHandlerTests
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _logger = Substitute.For<ILogger<UpdateOfferCommandHandler>>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
 
@@ -43,6 +49,7 @@ public class UpdateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService);
     }
 
@@ -326,6 +333,59 @@ public class UpdateOfferCommandHandlerTests
 
         await _cacheService.Received(1).RemoveAsync(OfferCacheKeys.Detail(offer.Id), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenStrictCategoryEnabled_ShouldRejectClearingCategoryOnPublishedOffer()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            comercio.Id,
+            "Título original",
+            "Descripción original",
+            100m,
+            10,
+            90m,
+            10,
+            _now,
+            _now.AddDays(2),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            _now,
+            version: 1,
+            category: "Bakery");
+
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Offer?>(offer));
+        _offerClaimRepository.GetActiveClaimCountAsync(offer.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(0));
+
+        var strictHandler = new UpdateOfferCommandHandler(
+            _offerRepository,
+            _offerClaimRepository,
+            _comercioRepository,
+            _currentUserService,
+            _dateTimeProvider,
+            _logger,
+            _auditRecorder,
+            _cacheService,
+            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+
+        var result = await strictHandler.Handle(
+            CreateValidCommand(offer.Id, expectedVersion: 1) with { Category = "" },
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.CategoryRequired");
+        offer.Category.Should().Be("Bakery");
+        await _offerRepository.DidNotReceiveWithAnyArgs()
+            .UpdateWithVersionCheckAsync(Arg.Any<Offer>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     private UpdateOfferCommand CreateValidCommand(Guid offerId, int expectedVersion = 1) =>

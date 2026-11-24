@@ -96,3 +96,37 @@ Evaluación previa a la implementación.
 ### Reasignación de token (FR-027-06)
 
 El índice único de token se mantiene. Cuando un token validado ya está asociado a otro registro, se elimina esa asociación por comparación de identificador y token antes de persistir el nuevo destino. Una colisión concurrente devuelve un conflicto reintentable. Si el segundo paso falla, el dispositivo queda sin asociación con ese token hasta que el cliente reintente. Esto evita que un intento fallido reactive la asociación anterior. Sin recursos nuevos ni costo incremental.
+
+## 11. Runbook operacional para acciones externas (T027-07 y T027-13)
+
+Las siguientes acciones deben ser ejecutadas por el responsable del proyecto con acceso a la consola de AWS y hardware físico:
+
+### Paso 1: Aprovisionamiento de credenciales FCM en AWS SSM (T027-07)
+1. En la consola de Google Cloud / Firebase del proyecto `sensus-dev-4f843`:
+   - Ir a **Configuración del proyecto** > **Cuentas de servicio**.
+   - Seleccionar **Firebase Cloud Messaging API Admin**.
+   - Generar una nueva clave privada en formato JSON (`service-account.json`).
+2. En la consola de AWS o mediante AWS CLI autenticado en la cuenta de destino:
+   - Crear o actualizar el parámetro SSM en formato `SecureString` bajo la ruta `/sensus/<entorno>/Fcm/CredentialsJson` (o `${AWS_SSM_PARAMETER_PREFIX}/push/fcm-service-account`):
+     ```bash
+     aws ssm put-parameter \
+       --name "/sensus/dev/Fcm/CredentialsJson" \
+       --type "SecureString" \
+       --value file://service-account.json \
+       --overwrite
+     ```
+3. Verificar que el rol IAM de la Lambda de backend tenga permiso `ssm:GetParameter` sobre dicha ruta y clave KMS asociada.
+
+### Paso 2: Integración y generación de token en app móvil Android (T027-12)
+1. En el repositorio `sensus-app-mobile`:
+   - Colocar el archivo `google-services.json` oficial del ambiente en `app/`.
+   - Compilar el proyecto en modo Debug: `./gradlew assembleDebug`.
+   - Instalar el APK en un dispositivo físico con Android 8.0+ y Google Play Services.
+2. Iniciar sesión en la app y otorgar permiso de notificaciones (`POST_NOTIFICATIONS` en Android 13+).
+3. Verificar en Logcat que la app invoque `PUT /api/v1/users/device-token` con el token FCM obtenido y que el backend responda `200 OK`.
+
+### Paso 3: Verificación de notificación push en dispositivo físico (T027-13)
+1. Con la app instalada en el dispositivo físico, autenticar un segundo usuario en otro cliente o mediante API.
+2. Disparar un evento social o de negocio (ej. enviar una solicitud de amistad hacia el usuario del dispositivo o apartar una oferta).
+3. Confirmar que el dispositivo físico recibe la notificación en la bandeja del sistema operativo.
+4. Tocar la notificación push y validar que la app se abra directamente en la pantalla de destino asociada al evento.

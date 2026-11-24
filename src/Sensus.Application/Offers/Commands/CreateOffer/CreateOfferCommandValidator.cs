@@ -1,10 +1,13 @@
 using FluentValidation;
+using Microsoft.Extensions.Options;
+using Sensus.Application.Common.Settings;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Application.Offers.Commands.CreateOffer;
 
 public sealed class CreateOfferCommandValidator : AbstractValidator<CreateOfferCommand>
 {
-    public CreateOfferCommandValidator()
+    public CreateOfferCommandValidator(IOptions<OfferCategorySettings>? categorySettings = null)
     {
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("El título de la oferta es obligatorio.")
@@ -27,5 +30,13 @@ public sealed class CreateOfferCommandValidator : AbstractValidator<CreateOfferC
 
         RuleFor(x => x.EndsAt)
             .GreaterThan(x => x.StartsAt).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio.");
+
+        When(_ => categorySettings?.Value.RequireStrictValidation == true, () =>
+        {
+            RuleFor(x => x.Category)
+                .NotEmpty().WithMessage("La categoría de la oferta es obligatoria.")
+                .Must(c => OfferCategoryCatalog.TryParse(c, out _))
+                .WithMessage($"La categoría debe pertenecer al catálogo OfferCategory: {string.Join(", ", OfferCategoryCatalog.Names)}.");
+        });
     }
 }

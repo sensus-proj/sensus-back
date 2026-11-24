@@ -6,6 +6,7 @@ using Sensus.Application.Comercios.Commands.ReplyStoreReview;
 using Sensus.Application.Comercios.Commands.ToggleStoreReviewLike;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Comercios.Queries.GetStoreReviews;
+using Sensus.Application.Common.Models;
 
 namespace Sensus.Api.Endpoints;
 
@@ -23,14 +24,20 @@ public static class StoreReviewEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new GetStoreReviewsQuery(merchantId, page ?? 1, pageSize ?? 20), ct);
+            var result = await sender.Send(
+                new GetStoreReviewsQuery(
+                    merchantId,
+                    page ?? PaginationPolicy.DefaultPageNumber,
+                    pageSize ?? PaginationPolicy.DefaultPageSize),
+                ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.GuestOrRegisteredPolicy)
         .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
         .WithName("GetStoreReviews")
-        .WithSummary("Obtiene la calificación promedio y reseñas estilo Play Store de un comercio")
+        .WithSummary("Obtiene la calificación promedio y reseñas paginadas estilo Play Store de un comercio")
         .Produces<StoreReviewsSummaryDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{merchantId:guid}/reviews", async (

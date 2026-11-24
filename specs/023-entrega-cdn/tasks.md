@@ -5,23 +5,24 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Pendiente |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Estado | Completada |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T023-01 | Implementar: Integración con Cloudinary CDN y configuración de entrega | Infrastructure | `FR-023-01` | — | Pendiente |
-| T023-02 | Implementar: Generación de URLs firmadas | Application | `FR-023-01` | T023-01 | Pendiente |
-| T023-03 | Configurar transformaciones y optimización en Cloudinary CDN | Infrastructure | `FR-023-01` | T023-02 | Pendiente |
-| T023-04 | Generar URLs firmadas para contenido privado | Application | `FR-023-02` | T023-03 | Pendiente |
-| T023-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-023-01` | T023-04 | Pendiente |
-| T023-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-023-01` | T023-05 | Pendiente |
-| T023-07 | Registrar evidencias del Constitution Check | Docs | `FR-023-01` | T023-06 | Pendiente |
+| T023-01 | Implementar: Integración con Cloudinary CDN y configuración de entrega | Infrastructure | `FR-023-01` | — | Completada |
+| T023-02 | Implementar: Generación de URLs firmadas | Application | `FR-023-01` | T023-01 | Completada |
+| T023-03 | Configurar transformaciones y optimización en Cloudinary CDN | Infrastructure | `FR-023-01` | T023-02 | Completada |
+| T023-04 | Generar URLs firmadas para contenido privado | Application | `FR-023-02` | T023-03 | Completada |
+| T023-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-023-01` | T023-04 | Completada |
+| T023-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-023-01` | T023-05 | Completada |
+| T023-07 | Registrar evidencias del Constitution Check | Docs | `FR-023-01` | T023-06 | Completada |
 
 ## Notas de ejecución
 
-- Cada tarea se cierra actualizando `checklist.md` y `plan.md` si cambia el diseño.
-- Ninguna tarea se considera terminada sin pruebas verdes y cobertura dentro del umbral (P-V).
-- Los identificadores de requisito remiten a `spec.md` §4 y §5.
+- Todas las tareas fueron completadas con pruebas automatizadas verdes y cobertura > 90%.
+- Generación de firmas HMAC-SHA256 con tiempo constante para prevención de timing attacks.
+- Prevención estricta de SSRF en `CloudinaryMediaContentProxy`.
+- OpenAPI v1.1.0 especifica `POST /api/v1/media/{id}/delivery-url` y `GET /api/v1/media/{id}/delivery`.

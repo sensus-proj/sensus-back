@@ -22,4 +22,8 @@ public sealed record Error(
     public static Error Forbidden(string code, string message, IReadOnlyDictionary<string, object?> extensions) =>
         new(code, message, ErrorType.Forbidden, extensions);
     public static Error Unprocessable(string code, string message) => new(code, message, ErrorType.Unprocessable);
+
+    // Ref: FR-021-01 - fallo de persistencia de evidencia de moderación (fail-closed).
+    public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
+    public static Error PayloadTooLarge(string code, string message) => new(code, message, ErrorType.PayloadTooLarge);
 }

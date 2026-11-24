@@ -9,15 +9,18 @@ public sealed class HttpMailerEmailSender : IEmailSender
 {
     private readonly HttpClient _httpClient;
     private readonly MailerSettings _settings;
+    private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<HttpMailerEmailSender> _logger;
 
     public HttpMailerEmailSender(
         HttpClient httpClient,
         IOptions<MailerSettings> options,
+        IDateTimeProvider dateTimeProvider,
         ILogger<HttpMailerEmailSender> logger)
     {
         _httpClient = httpClient;
         _settings = options.Value;
+        _dateTimeProvider = dateTimeProvider;
         _logger = logger;
     }
 
@@ -37,6 +40,16 @@ public sealed class HttpMailerEmailSender : IEmailSender
         }
 
         var requestUri = new Uri(new Uri(_settings.BaseUrl.TrimEnd('/') + "/"), "api/mail/sensus/send");
+
+        // FR-029-10 (EX-004): HTTP sin TLS solo hacia el host exceptuado y antes de su expiración.
+        if (!MailerTransportPolicy.IsAllowed(requestUri, _settings, _dateTimeProvider.UtcNow))
+        {
+            _logger.LogError(
+                "Envío de correo rechazado: el servicio de correo no usa HTTPS y no está cubierto por la excepción EX-004 vigente (esquema {Scheme}).",
+                requestUri.Scheme);
+            throw new InvalidOperationException(
+                "El servicio de correo debe usar HTTPS; HTTP solo se permite para el host y el plazo de la excepción EX-004.");
+        }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         if (!string.IsNullOrWhiteSpace(_settings.ApiKey))

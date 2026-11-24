@@ -18,12 +18,6 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
-        - name: page
-          in: query
-          schema: { type: integer, minimum: 1, default: 1 }
-        - name: pageSize
-          in: query
-          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
         '200':
           description: Resumen con promedio, total, desglose 5..1 estrellas y reseñas
@@ -207,9 +201,6 @@ components:
         merchantName: { type: string }
         averageRating: { type: number, format: double }
         totalReviews: { type: integer, minimum: 0 }
-        pageNumber: { type: integer, minimum: 1 }
-        pageSize: { type: integer, minimum: 1, maximum: 100 }
-        totalPages: { type: integer, minimum: 0 }
         breakdown:
           type: array
           items: { $ref: '#/components/schemas/RatingBreakdownItemDto' }

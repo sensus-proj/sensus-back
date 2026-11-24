@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Offers;
 using Sensus.Domain.Common;
 using Sensus.Domain.Enums;
@@ -16,19 +17,25 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
     private readonly IGeocodingService _geocodingService;
     private readonly ICacheService? _cacheService;
     private readonly IOfferRepository? _offerRepository;
+    private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public UpdateMerchantProfileCommandHandler(
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IGeocodingService geocodingService,
+        IModerationAuditRecorder auditRecorder,
         ICacheService? cacheService = null,
-        IOfferRepository? offerRepository = null)
+        IOfferRepository? offerRepository = null,
+        ITextModerationService? textModerationService = null)
     {
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _geocodingService = geocodingService;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
         _offerRepository = offerRepository;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<ComercioDto>> Handle(UpdateMerchantProfileCommand request, CancellationToken cancellationToken)
@@ -50,6 +57,37 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
         var nombreComercial = !string.IsNullOrWhiteSpace(request.NombreComercial)
             ? request.NombreComercial
             : comercio.NombreComercial;
+
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
+            _textModerationService,
+            $"Nombre del comercio: {nombreComercial}\nDirección: {request.Direccion}",
+            "Actualización de nombre y datos de comercio",
+            "Comercio.ContentModerationRejected",
+            "El nombre o datos del comercio contienen lenguaje antisonante u ofensivo.",
+            cancellationToken);
+
+        var auditEntry = new ModerationAuditEntry(
+            comercio.Id,
+            ModerationTargetType.Comercio,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "comercio_update",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores,
+            ActorId: usuarioId.ToString(),
+            ActorType: ModerationActorType.User);
+
+        if (!evaluation.IsApproved)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+            return Result.Failure<ComercioDto>(evaluation.RejectionError ?? Error.Validation("Comercio.ContentModerationRejected", "Contenido rechazado por moderación."));
+        }
+
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<ComercioDto>(auditResult.Error);
+        }
 
         var direccionCambio = !string.Equals(comercio.Direccion, request.Direccion, StringComparison.OrdinalIgnoreCase) ||
                               !string.Equals(comercio.CodigoPostal, request.CodigoPostal, StringComparison.OrdinalIgnoreCase);

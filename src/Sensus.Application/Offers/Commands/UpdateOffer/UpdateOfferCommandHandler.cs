@@ -1,9 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Commands.UpdateOffer;
@@ -17,6 +21,9 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
+    private readonly IOptions<OfferCategorySettings>? _categorySettings;
+    private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public UpdateOfferCommandHandler(
         IOfferRepository offerRepository,
@@ -25,7 +32,10 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<UpdateOfferCommandHandler> logger,
-        ICacheService? cacheService = null)
+        IModerationAuditRecorder auditRecorder,
+        ICacheService? cacheService = null,
+        IOptions<OfferCategorySettings>? categorySettings = null,
+        ITextModerationService? textModerationService = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -33,7 +43,10 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
+        _categorySettings = categorySettings;
+        _textModerationService = textModerationService;
     }
 
     public async Task<Result<OfferDto>> Handle(UpdateOfferCommand request, CancellationToken cancellationToken)
@@ -63,6 +76,7 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         int activeClaimsCount = await _offerClaimRepository.GetActiveClaimCountAsync(offer.Id, cancellationToken);
 
         DateTime now = _dateTimeProvider.UtcNow;
+        bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
         Result<bool> updateResult = offer.Update(
             request.Title,
             request.Description,
@@ -75,7 +89,8 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
             activeClaimsCount,
             request.ExpectedVersion,
             now,
-            request.Category);
+            request.Category,
+            requireStrictCategory);
 
         if (updateResult.IsFailure)
         {
@@ -86,8 +101,42 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
         if (contentChanged)
         {
             _logger.LogInformation(
-                "Contenido visible de la oferta {OfferId} modificado por el comercio {ComercioId}. Se requiere re-moderación.",
+                "Contenido visible de la oferta {OfferId} modificado por el comercio {ComercioId}. Ejecutando re-moderación.",
                 offer.Id, comercio.Id);
+
+            ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
+                _textModerationService,
+                $"Título: {request.Title}\nDescripción: {request.Description}\nCategoría: {request.Category ?? string.Empty}",
+                "Edición de publicación de producto u oferta comercial",
+                "Offer.ContentModerationRejected",
+                "El título o descripción de la publicación contiene lenguaje antisonante o prohibido.",
+                cancellationToken);
+
+            // Spec 021 (FR-021-01): la re-moderación de una edición también queda auditada.
+            ModerationAuditEntry auditEntry = new(
+                offer.Id,
+                ModerationTargetType.Offer,
+                evaluation.Verdict,
+                evaluation.Decision,
+                "offer_update",
+                evaluation.FlaggedCategories,
+                evaluation.CategoryScores);
+
+            if (!evaluation.IsApproved)
+            {
+                await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+                return Result.Failure<OfferDto>(
+                    evaluation.RejectionError
+                    ?? Error.Validation("Offer.ContentModerationRejected", "El título o descripción de la publicación contiene lenguaje antisonante o prohibido."));
+            }
+
+            // Spec 021 (FR-021-01): sin evidencia persistida la edición no se publica (fail-closed).
+            Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+            if (auditResult.IsFailure)
+            {
+                return Result.Failure<OfferDto>(auditResult.Error);
+            }
         }
 
         bool updated = await _offerRepository.UpdateWithVersionCheckAsync(offer, request.ExpectedVersion, cancellationToken);

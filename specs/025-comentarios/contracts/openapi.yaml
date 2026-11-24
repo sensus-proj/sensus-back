@@ -2,30 +2,135 @@ openapi: 3.1.0
 info:
   title: "Sensus API — Spec 025 Comentarios del feed"
   version: 1.0.0
-  description: "Borrador del contrato del spec 025. Completar esquemas antes de implementar."
+  description: "Alta moderada de comentarios y listado paginado ascendente por publicación del feed."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/feed/posts/{id}/comments:
     post:
-      summary: "Borrador de POST /api/v1/feed/posts/{id}/comments"
+      summary: "Crear comentario moderado en una publicación visible"
+      operationId: createFeedPostComment
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateFeedCommentRequest' }
       responses:
-        '201': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '201':
+          description: Comentario publicado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedCommentDto' }
+        '400':
+          description: Longitud inválida (> 300 chars o vacío) o texto rechazado por moderación
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '403':
+          description: Invitado no autorizado para comentar
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Publicación inexistente o no visible
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de escritura excedido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
     get:
-      summary: "Borrador de GET /api/v1/feed/posts/{id}/comments"
+      summary: "Listar comentarios paginados de una publicación visible ordenados por fecha ascendente"
+      operationId: getFeedPostComments
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '200':
+          description: Página de comentarios ordenados por fecha ascendente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedFeedCommentsDto' }
+        '400':
+          description: Parámetros de paginación fuera de rango
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '404':
+          description: Publicación inexistente o no visible
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    CreateFeedCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 300
+    FeedCommentDto:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        authorUserId: { type: string, format: uuid }
+        authorName: { type: string }
+        authorPhotoUrl: { type: string, nullable: true }
+        content: { type: string }
+        createdAtUtc: { type: string, format: date-time }
+    PagedFeedCommentsDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FeedCommentDto' }
+        totalCount: { type: integer }
+        pageNumber: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
+        hasPreviousPage: { type: boolean }
+        hasNextPage: { type: boolean }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

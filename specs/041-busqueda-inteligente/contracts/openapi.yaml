@@ -1,22 +1,107 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 041 Búsqueda de ofertas"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 041. Completar esquemas antes de implementar."
+  version: 1.2.0
+  description: >
+    Búsqueda híbrida determinista de ofertas visibles combinando índice de texto en español
+    (stemming nativo), prefijo sobre título normalizado sin acentos y cercanía geoespacial.
 servers:
   - url: https://localhost:5001
 paths:
-  /api/v1/ml/search:
+  /api/v1/offers/search:
     get:
-      summary: "Borrador de GET /api/v1/ml/search"
+      summary: Busca ofertas visibles por texto (stemming español y prefijo) y cercanía
+      operationId: searchOffers
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Texto libre (vacío para fallback cercano, o 2 a 80 caracteres sin control chars)
+          schema: { type: string, minLength: 0, maxLength: 80 }
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, format: double, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, format: double, minimum: -180, maximum: 180 }
+        - name: radiusKm
+          in: query
+          required: false
+          description: Radio de búsqueda en km (1..50; para invitados el servidor lo recorta a 2 km)
+          schema: { type: number, format: double, minimum: 1, maximum: 50, default: 10 }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
+        '200':
+          description: Página de resultados ordenada de forma determinista
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferSearchPage' }
+        '400':
+          description: Parámetros fuera de la lista de permitidos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: Sin token o token inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de tasa excedido (read-heavy)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    OfferSearchPage:
+      type: object
+      required: [items, totalCount, pageNumber, pageSize, totalPages]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/OfferSearchItem' }
+        totalCount: { type: integer }
+        pageNumber: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
+    OfferSearchItem:
+      type: object
+      required: [offerId, title, category, finalPrice, distanceMeters, expiresAtUtc, merchantId, merchantName, score]
+      properties:
+        offerId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        category: { type: [string, 'null'] }
+        imageUrl: { type: [string, 'null'], format: uri }
+        originalPrice: { type: number }
+        finalPrice: { type: number }
+        stock: { type: integer }
+        distanceMeters: { type: integer }
+        expiresAtUtc: { type: string, format: date-time }
+        merchantId: { type: string, format: uuid }
+        merchantName: { type: string }
+        score: { type: number, format: double }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        traceId: { type: string }

@@ -72,10 +72,9 @@ public sealed class MongoCommunityActivityTests : IAsyncLifetime
         await reviews.AddAsync(ownReview);
         var otherReview = StoreReview.Create(merchant.Id, stranger, "Tercero", null, 4, "Reseña ajena", now.AddDays(-1)).Value;
         await reviews.AddAsync(otherReview);
-        var reply = StoreReviewReply.Create(friend, "Amiga", null, "Respuesta visible", now.AddMinutes(2)).Value;
-        Assert.True(await reviews.AddReplyAsync(otherReview.Id, reply));
-        var unrelatedReply = StoreReviewReply.Create(stranger, "Tercero", null, "Respuesta ajena", now.AddMinutes(15)).Value;
-        Assert.True(await reviews.AddReplyAsync(otherReview.Id, unrelatedReply));
+        otherReview.AddReply(friend, "Amiga", null, "Respuesta visible", now.AddMinutes(2));
+        otherReview.AddReply(stranger, "Tercero", null, "Respuesta ajena", now.AddMinutes(15));
+        await reviews.UpdateAsync(otherReview);
 
         var first = await reader.ReadAsync([viewer, friend], 1, 1, CancellationToken.None);
         var second = await reader.ReadAsync([viewer, friend], 2, 1, CancellationToken.None);
@@ -86,11 +85,12 @@ public sealed class MongoCommunityActivityTests : IAsyncLifetime
         Assert.Equal("OfferLike", Assert.Single(second.Items).ActivityType);
         Assert.Equal("Mi reseña", Assert.Single(third.Items).CommentText);
         Assert.False(third.HasNextPage);
-        var changed = await reviews.ToggleLikeAsync(ownReview.Id, friend);
-        Assert.Equal((true, 1), changed);
-        Assert.Equal((false, 0), await reviews.ToggleLikeAsync(ownReview.Id, friend));
-        var (page, ratings) = await reviews.GetMerchantPageAsync(merchant.Id, 1, 1);
+        Assert.True(ownReview.ToggleLike(friend));
+        await reviews.UpdateAsync(ownReview);
+        var (page, totalCount) = await reviews.GetPagedByMerchantIdAsync(merchant.Id, 1, 1);
+        var stats = await reviews.GetRatingSummaryAsync(merchant.Id);
         Assert.Single(page);
-        Assert.Equal(2, ratings.Values.Sum());
+        Assert.Equal(2, totalCount);
+        Assert.Equal(2, stats.TotalReviews);
     }
 }

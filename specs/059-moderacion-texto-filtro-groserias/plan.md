@@ -6,7 +6,7 @@
 | Estado del plan | Retro-spec + remediación de umbrales en configuración |
 | Versión | 1.0.0 |
 | Constitution Check | PASS tras remediación `T059-03` |
-| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ## 1. Resumen técnico
 
@@ -15,8 +15,6 @@ La moderación de texto combina dos barreras secuenciales:
 2. **Moderación semántica IA (`OpenAiTextModerationService`):** invoca `ModerateContentTextAsync` (con `gpt-4o-mini` estructurado en JSON o `omni-moderation-latest` vía `/moderations`) siempre bajo comportamiento *fail-closed* y leyendo los umbrales (`DefaultLowThreshold`, `DefaultHighThreshold`, `CategoryThresholds`, `Sensi:TextModerationThresholds`) exclusivamente desde configuración (`appsettings.json` / `IOptions<OpenAiSettings>`).
 
 ## 2. Cambios por capa
-
-Para habilitar la Spec 058 en `Back_Rocio`, las reseñas y respuestas usan el filtro de texto y el puerto obligatorio de moderación de publicaciones. La aplicación devuelve un error si el proveedor no confirma la aprobación y excluye la reseña o respuesta del repositorio público. Una falla de auditoría también detiene la escritura pública. La extensión a otros flujos de `FR-059-02` conserva su propio seguimiento.
 
 | Capa | Cambio |
 |---|---|

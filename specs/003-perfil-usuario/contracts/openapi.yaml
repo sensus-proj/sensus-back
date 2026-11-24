@@ -21,6 +21,29 @@ paths:
         '200': { description: OK }
         '400': { description: Solicitud inválida }
         '401': { description: No autenticado }
+  /api/v1/users/photo-signature:
+    post:
+      summary: Parámetros firmados para subir la foto de perfil a Cloudinary
+      operationId: generatePhotoSignature
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Parámetros firmados (sin el secreto de Cloudinary)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cloudName, apiKey, timestamp, folder, signature]
+                properties:
+                  cloudName: { type: string }
+                  apiKey: { type: string }
+                  timestamp: { type: integer, format: int64 }
+                  folder: { type: string, example: 'sensus/profiles/{userId}' }
+                  signature: { type: string }
+        '401':
+          description: Sin token
+        '403':
+          description: Token de invitado
 components:
   securitySchemes:
     bearerAuth:

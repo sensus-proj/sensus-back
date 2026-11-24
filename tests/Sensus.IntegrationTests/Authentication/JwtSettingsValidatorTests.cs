@@ -41,4 +41,24 @@ public class JwtSettingsValidatorTests
 
         result.Succeeded.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(16)]
+    public void Validate_ShouldFail_WhenGuestExpiryMinutesOutOfAllowedRange(int guestMinutes)
+    {
+        var settings = new JwtSettings
+        {
+            Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
+            Issuer = "SensusApi",
+            Audience = "SensusApp",
+            ExpiryMinutes = 1440,
+            GuestExpiryMinutes = guestMinutes
+        };
+
+        var result = _validator.Validate(null, settings);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("GuestExpiryMinutes");
+    }
 }
