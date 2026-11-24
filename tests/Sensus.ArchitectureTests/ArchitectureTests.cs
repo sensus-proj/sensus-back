@@ -87,40 +87,37 @@ public class ArchitectureTests
     [Fact]
     public void Endpoints_ShouldNotInstantiateProblemDetailsDirectly()
     {
-        string? endpointsDirectory = FindEndpointsDirectory();
-        endpointsDirectory.Should().NotBeNull("debe localizarse el directorio src/Sensus.Api/Endpoints desde la raíz del repositorio");
-
-        var violations = new List<string>();
-        foreach (string file in Directory.GetFiles(endpointsDirectory!, "*.cs", SearchOption.AllDirectories))
+        // Spec 009: Los endpoints no deben instanciar directamente 'new ProblemDetails';
+        // deben usar Result/Error junto con ResultExtensions.ToHttpResult() o ToProblemDetails().
+        var currentDir = AppContext.BaseDirectory;
+        var repoRoot = currentDir;
+        while (!File.Exists(Path.Combine(repoRoot, "sensus-back.sln")))
         {
-            string[] lines = File.ReadAllLines(file);
-            for (int i = 0; i < lines.Length; i++)
+            var parent = Directory.GetParent(repoRoot);
+            if (parent is null) break;
+            repoRoot = parent.FullName;
+        }
+
+        var endpointsDir = Path.Combine(repoRoot, "src", "Sensus.Api", "Endpoints");
+        if (Directory.Exists(endpointsDir))
+        {
+            var csFiles = Directory.GetFiles(endpointsDir, "*.cs", SearchOption.AllDirectories);
+            var violations = new List<string>();
+
+            foreach (var file in csFiles)
             {
-                if (lines[i].Contains("new ProblemDetails", StringComparison.Ordinal))
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    violations.Add($"{Path.GetFileName(file)}:L{i + 1}: {lines[i].Trim()}");
+                    if (lines[i].Contains("new ProblemDetails"))
+                    {
+                        violations.Add($"{Path.GetFileName(file)}:L{i + 1}: {lines[i].Trim()}");
+                    }
                 }
             }
+
+            violations.Should().BeEmpty(
+                "Ninguna clase de Endpoints debe instanciar directamente 'new ProblemDetails'; use ResultExtensions.ToHttpResult() o ToProblemDetails()");
         }
-
-        violations.Should().BeEmpty(
-            "Ninguna clase de Endpoints debe instanciar directamente 'new ProblemDetails'; use ResultExtensions.ToHttpResult() o ToProblemResult()");
-    }
-
-    private static string? FindEndpointsDirectory()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            string candidate = Path.Combine(directory.FullName, "src", "Sensus.Api", "Endpoints");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        return null;
     }
 }

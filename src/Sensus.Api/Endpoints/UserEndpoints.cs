@@ -227,12 +227,9 @@ public static class UserEndpoints
             const int maxInterestsBodyBytes = 1024;
             if (httpContext.Request.ContentLength is > maxInterestsBodyBytes)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "UserInterests.PayloadTooLarge",
-                    Detail = "El cuerpo de la solicitud excede el límite de 1 KB."
-                });
+                return Result.Failure(Error.Validation(
+                    "UserInterests.PayloadTooLarge",
+                    "El cuerpo de la solicitud excede el límite de 1 KB.")).ToHttpResult();
             }
 
             using var buffer = new MemoryStream();
@@ -251,12 +248,9 @@ public static class UserEndpoints
                 totalRead += read;
                 if (totalRead > maxInterestsBodyBytes)
                 {
-                    return Results.Problem(new ProblemDetails
-                    {
-                        Status = StatusCodes.Status400BadRequest,
-                        Title = "UserInterests.PayloadTooLarge",
-                        Detail = "El cuerpo de la solicitud excede el límite de 1 KB."
-                    });
+                    return Result.Failure(Error.Validation(
+                        "UserInterests.PayloadTooLarge",
+                        "El cuerpo de la solicitud excede el límite de 1 KB.")).ToHttpResult();
                 }
 
                 await buffer.WriteAsync(chunk.AsMemory(0, read), ct);
@@ -271,22 +265,16 @@ public static class UserEndpoints
             }
             catch (JsonException)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "UserInterests.InvalidJson",
-                    Detail = "El cuerpo JSON de la solicitud no es válido."
-                });
+                return Result.Failure(Error.Validation(
+                    "UserInterests.InvalidJson",
+                    "El cuerpo JSON de la solicitud no es válido.")).ToHttpResult();
             }
 
             if (command is null)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "UserInterests.InvalidBody",
-                    Detail = "El cuerpo de la solicitud es obligatorio."
-                });
+                return Result.Failure(Error.Validation(
+                    "UserInterests.InvalidBody",
+                    "El cuerpo de la solicitud es obligatorio.")).ToHttpResult();
             }
 
             Result<UserInterestsDto> result = await sender.Send(command, ct);

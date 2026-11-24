@@ -36,19 +36,7 @@ public static class ResultExtensions
         return MapError(result.Error);
     }
 
-    /// <summary>
-    /// Construye un <see cref="ProblemDetails"/> de borde sin instanciarlo desde los endpoints.
-    /// Los endpoints solo validan forma/autorización; el detalle de negocio vive en el dominio (AGENTS.md §7.4).
-    /// </summary>
-    public static IResult ToProblemResult(int statusCode, string title, string detail) =>
-        Results.Problem(new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail
-        });
-
-    private static IResult MapError(Error error)
+    public static ProblemDetails ToProblemDetails(this Error error, HttpContext? httpContext = null)
     {
         int statusCode = ResolveStatusCode(error.Type);
         string correlationId = httpContext?.Items[CorrelationIdMiddleware.ItemKey]?.ToString()

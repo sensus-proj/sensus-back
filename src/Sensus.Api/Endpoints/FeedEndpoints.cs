@@ -38,12 +38,9 @@ public static class FeedEndpoints
         {
             if (!lat.HasValue || !lng.HasValue)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "OfferFeed.CoordinatesRequired",
-                    Detail = "Las coordenadas lat y lng son obligatorias."
-                });
+                return Result.Failure(Error.Validation(
+                    "OfferFeed.CoordinatesRequired",
+                    "Las coordenadas lat y lng son obligatorias.")).ToHttpResult();
             }
 
             Guid? parsedSnapshotId = null;
@@ -51,12 +48,9 @@ public static class FeedEndpoints
             {
                 if (!Guid.TryParse(snapshotId.Trim(), out Guid parsed) || parsed == Guid.Empty)
                 {
-                    return Results.Problem(new ProblemDetails
-                    {
-                        Status = StatusCodes.Status400BadRequest,
-                        Title = "OfferFeed.InvalidSnapshotId",
-                        Detail = "El parámetro snapshotId debe tener formato GUID válido."
-                    });
+                    return Result.Failure(Error.Validation(
+                        "OfferFeed.InvalidSnapshotId",
+                        "El parámetro snapshotId debe tener formato GUID válido.")).ToHttpResult();
                 }
 
                 parsedSnapshotId = parsed;
@@ -116,18 +110,16 @@ public static class FeedEndpoints
 
                     if (normalizedContentType is not ("image/jpeg" or "image/png" or "image/webp"))
                     {
-                        return ResultExtensions.ToProblemResult(
-                            StatusCodes.Status400BadRequest,
+                        return Result.Failure(Error.Validation(
                             "FeedPost.UnsupportedImageType",
-                            "Formato de imagen no admitido. Use JPEG, PNG o WebP.");
+                            "Formato de imagen no admitido. Use JPEG, PNG o WebP.")).ToHttpResult();
                     }
 
                     if (image.Length > MaxFeedImageBytes)
                     {
-                        return ResultExtensions.ToProblemResult(
-                            StatusCodes.Status413PayloadTooLarge,
+                        return Result.Failure(Error.PayloadTooLarge(
                             "FeedPost.ImageTooLarge",
-                            "La imagen supera el límite de 4,5 MB.");
+                            "La imagen supera el límite de 4,5 MB.")).ToHttpResult();
                     }
 
                     using var buffer = new MemoryStream();
