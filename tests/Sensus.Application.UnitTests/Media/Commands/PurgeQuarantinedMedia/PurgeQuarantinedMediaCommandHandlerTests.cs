@@ -16,6 +16,7 @@ public sealed class PurgeQuarantinedMediaCommandHandlerTests
     private readonly IMediaAssetRepository _repository = Substitute.For<IMediaAssetRepository>();
     private readonly IMediaStorage _storage = Substitute.For<IMediaStorage>();
     private readonly IDateTimeProvider _clock = Substitute.For<IDateTimeProvider>();
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
     private readonly PurgeQuarantinedMediaCommandHandler _handler;
 
     public PurgeQuarantinedMediaCommandHandlerTests()
@@ -25,7 +26,8 @@ public sealed class PurgeQuarantinedMediaCommandHandlerTests
             _repository,
             _storage,
             _clock,
-            Substitute.For<ILogger<PurgeQuarantinedMediaCommandHandler>>());
+            Substitute.For<ILogger<PurgeQuarantinedMediaCommandHandler>>(),
+            _cdnCacheInvalidator);
     }
 
     private static MediaAsset Quarantined(int ageDays) =>

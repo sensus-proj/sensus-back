@@ -72,11 +72,11 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-008-05` | 008 | FR | No dejar referencias a rutas en español en el código | Must | Implementado |
 | `NFR-008-01` | 008 | NFR | Rutas duplicadas | Cero en el contrato OpenAPI | Implementado |
 | `NFR-008-02` | 008 | NFR | Cobertura del contrato | 100 % de rutas bajo /api/v1 en inglés | Implementado |
-| `FR-009-01` | 009 | FR | Toda respuesta de error usa ProblemDetails | Must | Pendiente |
-| `FR-009-02` | 009 | FR | Incluir traceId o correlationId en cada error | Must | Pendiente |
-| `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Pendiente |
-| `FR-009-04` | 009 | FR | Mantener un catálogo de códigos de error documentado | Should | Pendiente |
-| `NFR-009-01` | 009 | NFR | Estabilidad del formato | Sin cambios incompatibles dentro de v1 | Pendiente |
+| `FR-009-01` | 009 | FR | Toda respuesta de error usa ProblemDetails | Must | Implementado |
+| `FR-009-02` | 009 | FR | Incluir traceId o correlationId en cada error | Must | Implementado |
+| `FR-009-03` | 009 | FR | No exponer stack traces ni nombres de colecciones | Must | Implementado |
+| `FR-009-04` | 009 | FR | Mantener un catálogo de códigos de error documentado | Should | Implementado |
+| `NFR-009-01` | 009 | NFR | Estabilidad del formato | Sin cambios incompatibles dentro de v1 | Implementado |
 | `FR-010-01` | 010 | FR | Exponer PagedResult con items, page, pageSize, total y totalPages | Must | Implementado |
 | `FR-010-02` | 010 | FR | Aplicar 20 elementos por defecto y 100 como máximo | Must | Implementado |
 | `FR-010-03` | 010 | FR | Rechazar pageSize fuera de rango con 400 | Must | Implementado |
@@ -91,7 +91,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Implementado |
 | `FR-012-03` | 012 | FR | Redirigir a HTTPS fuera de desarrollo | Must | Implementado |
 | `FR-012-04` | 012 | FR | Habilitar HSTS en producción | Should | Implementado |
-| `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Pendiente |
+| `NFR-012-01` | 012 | NFR | Orígenes permitidos | Lista explícita, cero comodines en producción | Implementado |
 | `FR-013-01` | 013 | FR | Limitar peticiones por IP | Must | Implementado |
 | `FR-013-02` | 013 | FR | Limitar peticiones por usuario autenticado | Must | Implementado |
 | `FR-013-03` | 013 | FR | Responder 429 con Retry-After | Must | Implementado |
@@ -120,7 +120,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
-| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
+| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
+| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Parcial |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
@@ -147,12 +148,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-020-04` | 020 | NFR | Rendimiento de consulta | Paginación 20/100 sobre índices declarados | Implementado |
 | `FR-020-08` | 020 | FR | Notificar por push al usuario al aplicar y al revertir una sanción | Must | Implementado |
 | `NFR-020-05` | 020 | NFR | Seguridad de nivel fintech (Principio VIII) | Sin enumeración de cuentas; autorización en borde y caso de uso | Implementado |
-| `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Pendiente |
-| `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Pendiente |
-| `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Pendiente |
-| `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Pendiente |
-| `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Pendiente |
-| `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Pendiente |
+| `FR-021-01` | 021 | FR | Registrar cada decisión con veredicto, puntajes y umbral | Must | Implementado |
+| `FR-021-02` | 021 | FR | Impedir la modificación de registros de auditoría | Must | Implementado |
+| `FR-021-03` | 021 | FR | Permitir consulta paginada por administrador | Must | Implementado |
+| `FR-021-04` | 021 | FR | Definir retención conforme a la política de datos | Must | Implementado |
+| `NFR-021-01` | 021 | NFR | Integridad | Registros sin actualización ni borrado manual | Implementado |
+| `NFR-021-02` | 021 | NFR | Latencia de consulta | p95 < 800 ms | Implementado |
 | `FR-022-01` | 022 | FR | Aceptar una imagen multipart y devolver su identificador | Must | Implementado |
 | `FR-022-02` | 022 | FR | Validar tipo MIME real (JPEG, PNG, WebP) por firma de bytes | Must | Implementado |
 | `FR-022-03` | 022 | FR | Rechazar archivos mayores a 4,5 MB con 413 | Must | Implementado |
@@ -163,14 +164,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Implementado |
 | `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Implementado |
 | `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Implementado |
-| `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Pendiente |
-| `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Pendiente |
-| `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Pendiente |
-| `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Pendiente |
-| `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Pendiente |
-| `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Pendiente |
+| `FR-023-01` | 023 | FR | Servir multimedia mediante Cloudinary CDN | Must | Implementado |
+| `FR-023-02` | 023 | FR | Firmar URLs cuando el contenido sea privado | Must | Implementado |
+| `FR-023-03` | 023 | FR | Aplicar cabeceras de caché por tipo de contenido | Should | Implementado |
+| `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Implementado |
+| `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Implementado |
+| `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Implementado |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Implementado |
-| `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Implementado |
+| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Parcial |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Implementado |
 | `FR-024-04` | 024 | FR | Resolver la moderación de forma síncrona: 201 con la publicación aprobada, 400 ante rechazo o indisponibilidad del moderador | Must | Implementado |
 | `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Implementado |
@@ -189,7 +190,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
 | `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
 | `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-026-04` | 026 | FR | Limitar el radio a 50 km y rechazar valores fuera de rango | Must | Pendiente |
+| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Pendiente |
 | `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Pendiente |
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
@@ -197,8 +198,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
 | `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
 | `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Parcial |
-| `FR-027-04` | 027 | FR | Configurar FCM HTTP v1 como proveedor de producción para Android | Must | Pendiente |
-| `FR-027-05` | 027 | FR | Desactivar tokens rechazados definitivamente por el proveedor | Must | Pendiente |
+| `FR-027-04` | 027 | FR | Configurar FCM HTTP v1 como proveedor de producción para Android | Must | Bloqueada (acción externa SSM) |
+| `FR-027-05` | 027 | FR | Desactivar tokens rechazados definitivamente por el proveedor | Must | Implementado |
 | `FR-027-06` | 027 | FR | Reasignar un token que cambia de usuario sin dejar acceso residual | Must | Implementado |
 | `FR-027-07` | 027 | FR | No fallar si el usuario no tiene dispositivos activos | Should | Implementado |
 | `NFR-027-01` | 027 | NFR | Latencia de registro | p95 < 300 ms | Implementado |
@@ -271,7 +272,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
-| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Pendiente |
+| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
@@ -281,14 +282,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Pendiente |
 | `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Implementado |
 | `FR-035-02` | 035 | FR | Rechazar la edición de ofertas de otro comercio con 403 | Must | Implementado |
-| `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Pendiente |
+| `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Implementado |
 | `FR-035-04` | 035 | FR | Impedir reducir el stock por debajo de los apartados activos | Must | Implementado |
 | `FR-035-05` | 035 | FR | Rechazar ediciones concurrentes con 409 usando version | Must | Implementado |
 | `FR-035-06` | 035 | FR | No cambiar el identificador ni los apartados existentes | Must | Implementado |
-| `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Pendiente |
+| `FR-035-07` | 035 | FR | Mantener la oferta oculta mientras la re-moderación está pendiente | Must | Implementado |
 | `FR-035-08` | 035 | FR | Rechazar con `400` una edición que quite la categoría de una oferta publicada o use un valor fuera de `OfferCategory` (spec 034) | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
-| `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Pendiente |
-| `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Pendiente |
+| `NFR-035-01` | 035 | NFR | Latencia de edición | p95 < 700 ms | Implementado |
+| `NFR-035-02` | 035 | NFR | Pérdida de cambios | Cero sobrescrituras silenciosas | Implementado |
 | `FR-036-01` | 036 | FR | Cambiar el estado de una oferta propia entre Published, Paused y Archived | Must | Implementado |
 | `FR-036-02` | 036 | FR | Rechazar transiciones no permitidas con 409 | Must | Implementado |
 | `FR-036-03` | 036 | FR | Ocultar de inmediato las ofertas pausadas o archivadas | Must | Implementado |
@@ -524,10 +525,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-053-01` | 053 | FR | Comercios activos dentro del radio, ordenados por cercanía | Must | Implementado |
 | `FR-053-02` | 053 | FR | Radio por defecto 2000 m; tope 2 km invitados y 50 km registrados | Must | Implementado |
 | `FR-053-03` | 053 | FR | Acceso para registrados e invitados | Must | Implementado |
-| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Pendiente |
-| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Pendiente |
-| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Pendiente |
-| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
+| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Implementado |
+| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Implementado |
+| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Implementado |
+| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Implementado |
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
 | `FR-054-01` | 054 | FR | Exponer `GET /api/v1/users/me/interests` | Must | Implementado |
@@ -574,7 +575,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
 | `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
 | `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
-| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Implementado |
 | `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
 | `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
 | `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |

@@ -32,6 +32,10 @@ public sealed class MediaAssetDocument
     [BsonElement("createdAtUtc")]
     public DateTime CreatedAtUtc { get; set; }
 
+    [BsonElement("moderatedTextFingerprint")]
+    [BsonIgnoreIfNull]
+    public string? ModeratedTextFingerprint { get; set; }
+
     public static MediaAssetDocument FromDomain(MediaAsset mediaAsset)
     {
         return new MediaAssetDocument
@@ -42,7 +46,8 @@ public sealed class MediaAssetDocument
             SecureUrl = mediaAsset.SecureUrl,
             ContentType = mediaAsset.ContentType,
             Status = (int)mediaAsset.Status,
-            CreatedAtUtc = mediaAsset.CreatedAtUtc
+            CreatedAtUtc = mediaAsset.CreatedAtUtc,
+            ModeratedTextFingerprint = mediaAsset.ModeratedTextFingerprint
         };
     }
 
@@ -54,7 +59,8 @@ public sealed class MediaAssetDocument
             SecureUrl,
             ContentType,
             (MediaAssetStatus)Status,
-            CreatedAtUtc);
+            CreatedAtUtc,
+            ModeratedTextFingerprint);
 
         // Restaurar el Id persistido
         typeof(MediaAsset).GetProperty("Id")?.SetValue(mediaAsset, Id);

@@ -53,7 +53,7 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
         if (detail is null)
         {
             Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-            if (offer is null || offer.Status == OfferStatus.Archived)
+            if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived)
             {
                 return Result.Failure<OfferDetailDto>(NotFound());
             }

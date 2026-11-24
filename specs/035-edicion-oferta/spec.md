@@ -4,13 +4,13 @@
 |---|---|
 | ID | 035 |
 | Slug | `edicion-oferta` |
-| Estado | Pendiente |
+| Estado | Completo |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 034, 033 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.1.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 

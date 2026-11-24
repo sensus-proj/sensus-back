@@ -52,9 +52,10 @@ public sealed class DynamoDbBudgetCounterStore : IBudgetCounterStore
                     TableName = _settings.TableName,
                     ConsistentRead = true,
                     Key = new Dictionary<string, AttributeValue> { [KeyAttribute] = new() { S = key } },
-                    ProjectionExpression = "#a, #e",
+                    ProjectionExpression = "#k, #a, #e",
                     ExpressionAttributeNames = new Dictionary<string, string>
                     {
+                        ["#k"] = KeyAttribute,
                         ["#a"] = AmountAttribute,
                         ["#e"] = ExpiresAttribute
                     }
@@ -66,15 +67,20 @@ public sealed class DynamoDbBudgetCounterStore : IBudgetCounterStore
                 return 0d;
             }
 
-            // DynamoDB puede tardar hasta 48 h en purgar: un contador vencido cuenta como 0 (FR-049-07).
-            if (response.Item.TryGetValue(ExpiresAttribute, out var expires)
-                && long.TryParse(expires.N, NumberStyles.Integer, CultureInfo.InvariantCulture, out var expiresAt)
-                && expiresAt <= _timeProvider.GetUtcNow().ToUnixTimeSeconds())
+            if (!response.Item.TryGetValue(ExpiresAttribute, out var expires)
+                || !long.TryParse(expires.N, NumberStyles.Integer, CultureInfo.InvariantCulture, out var expiresAt)
+                || expiresAt <= 0)
+            {
+                return null;
+            }
+
+            // DynamoDB puede tardar en purgar: un contador vencido cuenta como 0 (FR-049-07).
+            if (expiresAt <= _timeProvider.GetUtcNow().ToUnixTimeSeconds())
             {
                 return 0d;
             }
 
-            return response.Item.TryGetValue(AmountAttribute, out var amount) ? ParseAmount(amount.N) : 0d;
+            return response.Item.TryGetValue(AmountAttribute, out var amount) ? ParseAmount(amount.N) : null;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -135,5 +141,7 @@ public sealed class DynamoDbBudgetCounterStore : IBudgetCounterStore
     }
 
     private static double? ParseAmount(string? raw) =>
-        double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
+        decimal.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && value >= 0
+            ? (double)value
+            : null;
 }

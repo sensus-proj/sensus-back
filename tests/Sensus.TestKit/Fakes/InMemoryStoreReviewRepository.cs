@@ -21,6 +21,44 @@ public sealed class InMemoryStoreReviewRepository : IStoreReviewRepository
         return Task.FromResult(items);
     }
 
+    public Task<(IReadOnlyList<StoreReview> Items, long TotalCount)> GetPagedByMerchantIdAsync(
+        Guid merchantId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = _reviews
+            .Where(r => r.MerchantId == merchantId)
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .ToList();
+
+        int safePage = Math.Max(1, pageNumber);
+        int safePageSize = Math.Max(1, pageSize);
+        int skip = (safePage - 1) * safePageSize;
+
+        IReadOnlyList<StoreReview> items = matching
+            .Skip(skip)
+            .Take(safePageSize)
+            .ToList();
+
+        return Task.FromResult((items, (long)matching.Count));
+    }
+
+    public Task<StoreReviewRatingStats> GetRatingSummaryAsync(
+        Guid merchantId,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = _reviews.Where(r => r.MerchantId == merchantId).ToList();
+        int total = matching.Count;
+        double avg = total == 0 ? 0.0 : Math.Round(matching.Average(r => r.Rating), 1);
+
+        var countsByStar = matching
+            .GroupBy(r => r.Rating)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return Task.FromResult(new StoreReviewRatingStats(avg, total, countsByStar));
+    }
+
     public Task<Dictionary<Guid, (double AverageRating, int ReviewCount)>> GetRatingSummariesByMerchantIdsAsync(
         IEnumerable<Guid> merchantIds,
         CancellationToken cancellationToken = default)

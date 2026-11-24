@@ -1,16 +1,16 @@
 # Checklist 012 — CORS y HTTPS por entorno
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 012 está aprobada y sin preguntas bloqueantes
+- [x] La spec 012 está aprobada y sin preguntas bloqueantes
 - [x] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: Ninguna
+- [x] Las dependencias están resueltas: Ninguna
 - [x] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
@@ -21,11 +21,11 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
+- [x] Pruebas unitarias y de integración añadidas y en verde
+- [x] Cobertura ≥ 80 % en Domain y Application
+- [x] Contrato OpenAPI actualizado (middleware HTTP global sin endpoints de negocio)
+- [x] IaC actualizada y `cdk diff` revisado si aplica
+- [x] Logs con correlation-id y sin PII
 - [x] Revisión de seguridad: sin secretos, autorización verificada
 - [x] Constitution Check en PASS o brecha registrada
 
@@ -35,7 +35,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
 - [x] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — BRECHA: sin pruebas de integración de CORS, HTTPS ni HSTS
+- [x] **V. Verificación automatizada** — PASS (`CorsAndHttpsSecurityTests.cs`)
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
 
@@ -43,15 +43,16 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/Security/CorsAndHttpsSecurityTests.cs` | ☑ |
+| Contrato OpenAPI | N/A (Middleware HTTP transversal) | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| 2026-11-15 | Equipo Sensus | PARCIAL | CORS por `Cors:AllowedOrigins`, sin AllowAnyOrigin; HSTS y redirección HTTPS fuera de Development (`Program.cs`). Falta T012-05. Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
+| 2026-11-15 | Equipo Sensus | PARCIAL | CORS por `Cors:AllowedOrigins`, sin AllowAnyOrigin; HSTS y redirección HTTPS fuera de Development (`Program.cs`). Falta T012-05. |
+| 2026-11-23 | Equipo Sensus | COMPLETADO | T012-05 implementada en `CorsAndHttpsSecurityTests.cs` (5/5 pruebas en verde: preflight permitido y denegado, HSTS en Prod, sin HSTS en Dev, redirect HTTP->HTTPS). Checklist cerrado al 100%. |

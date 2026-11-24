@@ -12,7 +12,7 @@ namespace Sensus.IntegrationTests.Ai;
 
 /// <summary>
 /// Pruebas de <see cref="DynamoDbBudgetCounterStore"/> con doble de <see cref="IAmazonDynamoDB"/> (Spec 049).
-/// Las pruebas contra DynamoDB Local con Testcontainers quedan registradas como T049-09.
+/// Las pruebas contra el motor real corresponden a <see cref="DynamoDbLocalBudgetCounterStoreTests"/> (T049-09).
 /// </summary>
 public sealed class DynamoDbBudgetCounterStoreTests
 {

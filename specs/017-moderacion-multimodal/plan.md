@@ -6,7 +6,7 @@
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -21,9 +21,12 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 | Infrastructure | Cliente de OpenAI con timeout, reintentos y mapeo de respuesta |
 | Api | Integración en los flujos de oferta, publicación y comentario |
 
+`T017-12` añade un puerto de Application para moderar el texto de una publicación. El adaptador de OpenAI reutiliza la política de Sensus y el parser de moderación multimodal. Para `FR-017-08` utiliza el modelo configurado de la familia `gpt-4o-mini` y envía únicamente un bloque de texto. El caso de uso de la Spec 024 consume el veredicto para publicar o poner en cuarentena. El puerto no expone una ruta HTTP.
+
 ## 3. Modelo de datos e índices
 
 - moderation_decisions con veredicto, puntajes, umbral y acción
+- Para `FR-017-05`, registrar por solo adición la decisión automática, el identificador de contenido, la fecha y la correlación de la solicitud. El registro excluye el contenido, los motivos en texto libre, identificadores de personas y URLs. Registrar antes de devolver una aprobación al flujo de reseñas. La consulta administrativa y la política de retención del historial corresponden a la Spec 021.
 
 ## 4. Seguridad
 
@@ -32,6 +35,8 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 - Timeout obligatorio
 - Sin endpoint público que permita saltarse el flujo
 
+Para `FR-017-08` se considera el texto como datos sin autoridad (suplantación y manipulación de instrucciones). Solo se acepta un veredicto conocido con categorías estructuradas y puntajes válidos (manipulación). Fallos, demoras y respuestas inválidas producen cuarentena (denegación de servicio). Los logs omiten el texto y las respuestas del proveedor (divulgación). El adaptador carece de permisos para publicar (elevación de privilegios). El flujo llamador conserva la evidencia de decisión (repudio).
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de latencia y de fallos del proveedor
@@ -39,7 +44,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 
 ## 6. Costo AWS
 
-API de moderación sin costo por token; validar límites de uso.
+Para el adaptador de publicaciones aplica EX-002, con techo compartido de 1.00 USD/mes. La modalidad de solo texto no añade recursos AWS ni tokens de imagen.
 
 ## 7. Estrategia de pruebas
 
@@ -59,8 +64,9 @@ Evaluación previa a la implementación.
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
+| VIII | Brecha | El modelo de amenazas del adaptador figura en §4. Queda por verificar la cadena de publicación y registrar evidencia de los controles y escaneos requeridos. |
 
-> Sin excepciones registradas (Apéndice E de la constitución).
+> Aplica EX-002 (Apéndice E de la constitución).
 
 ## 9. Riesgos de implementación
 
@@ -80,3 +86,6 @@ Evaluación previa a la implementación.
 9. `T017-09` Implementar las pruebas de integración del flujo completo
 10. `T017-10` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 11. `T017-11` Registrar evidencias del Constitution Check
+12. `T017-12` Incorporar la entrada de solo texto y probar sus veredictos y fallos conforme a `FR-017-08` y ADR 0015
+13. `T017-13` Retirar la ruta independiente `POST /api/v1/media/moderate` conforme a `FR-017-07`. El flujo de carga conserva su moderación interna.
+14. `T017-14` Validar también las respuestas del adaptador de compatibilidad de imágenes. Una respuesta sin veredicto booleano, categorías o puntajes válidos se envía a cuarentena conforme a `FR-017-04`.

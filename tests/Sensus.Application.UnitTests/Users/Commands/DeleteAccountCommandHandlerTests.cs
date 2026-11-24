@@ -19,6 +19,7 @@ public class DeleteAccountCommandHandlerTests
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
     private readonly IProfileImageStorage _imageStorage = Substitute.For<IProfileImageStorage>();
     private readonly IDateTimeProvider _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
     private readonly ISender _sender = Substitute.For<ISender>();
     private readonly DeleteAccountCommandHandler _handler;
 
@@ -35,6 +36,7 @@ public class DeleteAccountCommandHandlerTests
             _passwordHasher,
             _imageStorage,
             _dateTimeProvider,
+            _cdnCacheInvalidator,
             _sender);
     }
 
@@ -163,6 +165,7 @@ public class DeleteAccountCommandHandlerTests
             _passwordHasher,
             _imageStorage,
             _dateTimeProvider,
+            _cdnCacheInvalidator,
             _sender,
             cacheService: cache,
             userInterestsRepository: interestsRepo,

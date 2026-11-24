@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
@@ -21,6 +22,8 @@ public class CreateOfferCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IMediaAssetRepository _mediaAssets = Substitute.For<IMediaAssetRepository>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly CreateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -34,6 +37,9 @@ public class CreateOfferCommandHandlerTests
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _logger = Substitute.For<ILogger<CreateOfferCommandHandler>>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
 
@@ -43,7 +49,9 @@ public class CreateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
-            _cacheService);
+            _auditRecorder,
+            _cacheService,
+            mediaAssets: _mediaAssets);
     }
 
     [Fact]
@@ -92,6 +100,9 @@ public class CreateOfferCommandHandlerTests
             _now.AddDays(5),
             "https://cloudinary.com/pizza.jpg");
 
+        var proof = ModeratedTextFingerprint.Create($"{command.Title}\n{command.Description}");
+        _mediaAssets.HasApprovedImageAsync(_userId, command.ImageUrl!, proof, Arg.Any<CancellationToken>()).Returns(true);
+
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -106,6 +117,22 @@ public class CreateOfferCommandHandlerTests
 
         await _cacheService.Received(1).RemoveAsync(Arg.Is<string>(k => k.StartsWith("sensus:offers:detail:")), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_RejectsImageWithoutApprovalForCurrentText()
+    {
+        var merchant = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>()).Returns(merchant);
+        var command = new CreateOfferCommand("Oferta vigente", "Descripción cambiada",
+            200m, 25, 10, _now, _now.AddDays(5), "https://cloudinary.com/test.jpg");
+        _mediaAssets.HasApprovedImageAsync(_userId, command.ImageUrl!,
+            ModeratedTextFingerprint.Create("Oferta vigente\nDescripción anterior"), Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Error.Code.Should().Be("Offer.ImageNotApproved");
+        await _offerRepository.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
     }
 
     [Fact]
@@ -140,7 +167,7 @@ public class CreateOfferCommandHandlerTests
             .Returns(Task.FromResult<Comercio?>(comercio));
         var notifier = Substitute.For<INearbyOfferNotifier>();
         var handler = new CreateOfferCommandHandler(
-            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _cacheService, notifier);
+            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _auditRecorder, _cacheService, notifier);
         var command = new CreateOfferCommand(
             "Detergente", "Detergente líquido de 3 litros", 100m, 20, 10, _now, _now.AddDays(5), null);
 
@@ -167,6 +194,7 @@ public class CreateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService,
             categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
 

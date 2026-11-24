@@ -4,6 +4,7 @@ using Sensus.Application.Ai.DTOs;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Settings;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Ai.Services;
@@ -82,7 +83,7 @@ public sealed class CitedOfferEnricher : ICitedOfferEnricher
         try
         {
             var offer = await _offerRepository.GetByIdAsync(offerId, cancellationToken);
-            if (offer is null)
+            if (offer is null || offer.Status == OfferStatus.Draft)
             {
                 return cited;
             }

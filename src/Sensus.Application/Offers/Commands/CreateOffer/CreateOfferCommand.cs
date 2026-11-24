@@ -16,4 +16,5 @@ public sealed record CreateOfferCommand(
     DateTime StartsAt,
     DateTime EndsAt,
     string? ImageUrl = null,
-    string? Category = null) : IRequest<Result<OfferDto>>;
+    string? Category = null,
+    bool SaveAsDraft = false) : IRequest<Result<OfferDto>>;

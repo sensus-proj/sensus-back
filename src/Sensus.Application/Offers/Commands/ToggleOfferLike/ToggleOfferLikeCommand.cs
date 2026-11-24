@@ -46,7 +46,7 @@ public sealed class ToggleOfferLikeCommandHandler : IRequestHandler<ToggleOfferL
         }
 
         Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null || offer.Status == OfferStatus.Archived)
+        if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived)
         {
             return Result.Failure<OfferLikeStatusDto>(
                 Error.NotFound("Offer.NotFound", "La publicación solicitada no existe o no está disponible."));

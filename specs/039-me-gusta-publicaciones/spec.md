@@ -10,7 +10,7 @@
 | Dueño | Por asignar |
 | Dependencias | 024, 013 |
 | Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -65,7 +65,7 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 
 ### CA-039-02
 
-- **Dado** segunda llamada del mismo usuario
+- **Dado** que el usuario ya recibió la confirmación de su me gusta
 - **Cuando** POST /api/v1/feed/posts/{id}/like
 - **Entonces** 200 con liked=false y conteo decrementado
 
@@ -77,9 +77,9 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 
 ### CA-039-04
 
-- **Dado** dos dispositivos del mismo usuario en paralelo
-- **Cuando** se envían ambas peticiones
-- **Entonces** un solo registro y conteo correcto
+- **Dado** una publicación visible con conteo inicial `N` y dos dispositivos del mismo usuario que parten del estado `liked=false`
+- **Cuando** ambos envían en paralelo la solicitud para marcar el me gusta
+- **Entonces** ambas respuestas indican `liked=true`, queda exactamente un registro para ese usuario y publicación y el conteo final es `N + 1`
 
 ## 7. Contratos expuestos
 
@@ -100,7 +100,12 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 
 ## 10. Preguntas abiertas
 
-- ¿Se acepta POST con alternancia o se prefiere DELETE explícito fuera del catálogo?
+Se conserva `POST /api/v1/feed/posts/{id}/like`. El cliente envía el estado deseado en el booleano
+`liked`: `true` para marcar y `false` para quitar. Dos solicitudes con la misma intención producen
+una sola transición. Una pulsación posterior que quita un me gusta confirmado envía `liked=false`.
+
+### Dependencia pendiente
+- Para verificar visibilidad, hace falta confirmar el contrato de lectura de la Spec 024. La consulta de comentarios en `origin/Fin_Beto` es un precedente. Antes de reutilizarla, debe exigir un estado publicado explícito y excluir la cuarentena.
 
 ## 11. Trazabilidad
 

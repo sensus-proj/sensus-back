@@ -15,14 +15,19 @@ public class UpdateMerchantProfileCommandHandlerTests
     private readonly IComercioRepository _comercioRepository = Substitute.For<IComercioRepository>();
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
     private readonly IGeocodingService _geocodingService = Substitute.For<IGeocodingService>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly UpdateMerchantProfileCommandHandler _handler;
 
     public UpdateMerchantProfileCommandHandlerTests()
     {
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _handler = new UpdateMerchantProfileCommandHandler(
             _comercioRepository,
             _currentUserService,
-            _geocodingService);
+            _geocodingService,
+            _auditRecorder);
     }
 
     [Fact]
@@ -211,6 +216,7 @@ public class UpdateMerchantProfileCommandHandlerTests
             _comercioRepository,
             _currentUserService,
             _geocodingService,
+            _auditRecorder,
             cacheService,
             offerRepository);
 

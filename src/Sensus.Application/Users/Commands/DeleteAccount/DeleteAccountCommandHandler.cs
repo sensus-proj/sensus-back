@@ -18,6 +18,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IPasswordHasher _passwordHasher;
     private readonly IProfileImageStorage _imageStorage;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
     private readonly ISender _sender;
     private readonly ICacheService? _cacheService;
     private readonly IAiConversationRepository? _conversationRepository;
@@ -36,7 +37,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         ICurrentUserService currentUserService,
         IPasswordHasher passwordHasher,
         IProfileImageStorage imageStorage,
-        IDateTimeProvider dateTimeProvider,
+                IDateTimeProvider dateTimeProvider,
+        ICdnCacheInvalidator cdnCacheInvalidator,
         ISender sender,
         ICacheService? cacheService = null,
         IAiConversationRepository? conversationRepository = null,
@@ -54,7 +56,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _currentUserService = currentUserService;
         _passwordHasher = passwordHasher;
         _imageStorage = imageStorage;
-        _dateTimeProvider = dateTimeProvider;
+            _dateTimeProvider = dateTimeProvider;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
         _sender = sender;
         _cacheService = cacheService;
         _conversationRepository = conversationRepository;
@@ -88,10 +91,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             return Result.Failure(Error.Unauthorized("Auth.InvalidCredentials", "La contraseña provista para confirmar la eliminación es incorrecta."));
         }
 
-        // Limpieza de foto de perfil en almacenamiento remoto si existe
+        // Limpieza de foto de perfil en almacenamiento remoto si existe e invalidación en CDN (CA-023-03)
         if (!string.IsNullOrWhiteSpace(user.FotoPerfilUrl))
         {
             await _imageStorage.DeleteImageAsync(user.FotoPerfilUrl, cancellationToken);
+            await _cdnCacheInvalidator.InvalidateAsync(user.FotoPerfilUrl, cancellationToken);
         }
 
         // Spec 061 (FR-061-01 a FR-061-05): anonimizar contenido, expirar apartados, archivar ofertas

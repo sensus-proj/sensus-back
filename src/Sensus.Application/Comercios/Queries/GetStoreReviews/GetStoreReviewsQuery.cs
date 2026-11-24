@@ -62,9 +62,37 @@ public sealed class GetStoreReviewsQueryHandler : IRequestHandler<GetStoreReview
                 Error.NotFound("Comercio.NotFound", "El comercio solicitado no existe o no está disponible."));
         }
 
-        IReadOnlyList<StoreReview> reviews = await _storeReviewRepository.GetByMerchantIdAsync(
+        StoreReviewRatingStats? ratingStats = await _storeReviewRepository.GetRatingSummaryAsync(
             comercio.Id,
             cancellationToken);
+
+        (IReadOnlyList<StoreReview>? pagedReviews, long totalCount) = await _storeReviewRepository.GetPagedByMerchantIdAsync(
+            comercio.Id,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+
+        if (pagedReviews is null)
+        {
+            var allReviews = await _storeReviewRepository.GetByMerchantIdAsync(comercio.Id, cancellationToken);
+            totalCount = allReviews.Count;
+            int safePage = Math.Max(1, request.Page);
+            int safeSize = Math.Clamp(request.PageSize, 1, PaginationPolicy.MaxPageSize);
+            pagedReviews = allReviews
+                .OrderByDescending(r => r.CreatedAtUtc)
+                .Skip((safePage - 1) * safeSize)
+                .Take(safeSize)
+                .ToList();
+
+            if (ratingStats is null)
+            {
+                double avg = allReviews.Count > 0 ? Math.Round(allReviews.Average(r => r.Rating), 1) : 0.0;
+                var counts = allReviews.GroupBy(r => r.Rating).ToDictionary(g => g.Key, g => g.Count());
+                ratingStats = new StoreReviewRatingStats(avg, allReviews.Count, counts);
+            }
+        }
+
+        ratingStats ??= new StoreReviewRatingStats(0.0, 0, new Dictionary<int, int>());
 
         Guid? currentUserId = !_currentUserService.IsGuest
             && Guid.TryParse(_currentUserService.UserId, out Guid parsedUserId)
@@ -73,7 +101,9 @@ public sealed class GetStoreReviewsQueryHandler : IRequestHandler<GetStoreReview
         return Result.Success(
             StoreReviewMappingExtensions.BuildSummary(
                 comercio,
-                reviews,
+                ratingStats,
+                pagedReviews,
+                totalCount,
                 currentUserId,
                 request.Page,
                 request.PageSize));

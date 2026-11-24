@@ -110,6 +110,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddHttpClient<IImageModerationService, OpenAiImageModerationService>();
+        services.AddHttpClient<IPublicationTextModerationService, OpenAiImageModerationService>();
         services.AddHttpClient<ITextModerationService, OpenAiTextModerationService>();
 
         // Base de conocimiento estática RAG para Sensi IA (Spec 046)
@@ -215,6 +216,18 @@ public static class DependencyInjection
         // Almacenamiento multimedia en Cloudinary (Spec 022)
         services.AddSingleton<IMediaStorage, CloudinaryMediaStorage>();
         services.AddScoped<IMediaAssetRepository, MongoMediaAssetRepository>();
+
+        // Auditoría de moderación append-only (Spec 021)
+        services.Configure<ModerationAuditSettings>(
+            configuration.GetSection(ModerationAuditSettings.SectionName));
+        services.AddScoped<IModerationAuditRepository, MongoModerationAuditRepository>();
+
+        // Entrega de contenido por CDN con URLs firmadas (Spec 023)
+        services.Configure<MediaDeliverySettings>(
+            configuration.GetSection(MediaDeliverySettings.SectionName));
+        services.AddSingleton<IMediaDeliveryUrlGenerator, HmacMediaDeliveryUrlGenerator>();
+        services.AddSingleton<ICdnCacheInvalidator, CloudinaryCdnCacheInvalidator>();
+        services.AddHttpClient<IMediaContentProxy, CloudinaryMediaContentProxy>();
 
         // Registro de dispositivos para push (Spec 027)
         services.AddScoped<IDeviceRepository, MongoDeviceRepository>();

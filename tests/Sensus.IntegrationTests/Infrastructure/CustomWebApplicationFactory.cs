@@ -5,7 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
+using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
+using Sensus.Application.Friends.DTOs;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
 using Sensus.Domain.Common;
+using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Services;
@@ -55,6 +62,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
     public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
     public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
+    public IMediaContentProxy MediaContentProxy { get; } = Substitute.For<IMediaContentProxy>();
+    public ICdnCacheInvalidator CdnCacheInvalidator { get; } = Substitute.For<ICdnCacheInvalidator>();
+    public ICommunityActivityReader CommunityActivityReader { get; } = Substitute.For<ICommunityActivityReader>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -62,6 +72,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IModerationEvidenceStore>();
+            services.AddSingleton(Substitute.For<IModerationEvidenceStore>());
             // Las pruebas nunca se conectan a un MongoDB real: se ignora cualquier cadena de conexión
             // que llegue por user-secrets o variables de entorno del equipo (AGENTS.md §11, FR-016-02).
             services.PostConfigure<MongoDbSettings>(settings => settings.ConnectionString = string.Empty);
@@ -118,9 +130,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             // Sanciones (Spec 020): sin MongoDB real en los tests de endpoints; sin dispositivos que notificar
             services.RemoveAll<ISanctionRepository>();
             services.AddSingleton(SanctionRepository);
-
-            services.RemoveAll<IModerationAuditRepository>();
-            services.AddSingleton(ModerationAuditRepository);
 
             DeviceRepository.GetActiveByUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns([]);
             services.RemoveAll<IDeviceRepository>();
@@ -217,6 +226,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             StoreReviewRepository.GetByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns([]);
+            StoreReviewRepository.GetRatingSummaryAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new StoreReviewRatingStats(0.0, 0, new Dictionary<int, int>()));
+            StoreReviewRepository.GetPagedByMerchantIdAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns((new List<StoreReview>(), 0L));
             StoreReviewRepository.GetRatingSummariesByMerchantIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(new Dictionary<Guid, (double AverageRating, int ReviewCount)>());
             StoreReviewRepository.GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
@@ -228,6 +241,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 .Returns([]);
             services.RemoveAll<IFriendRequestRepository>();
             services.AddSingleton(FriendRequestRepository);
+
+            CommunityActivityReader.ReadAsync(
+                    Arg.Any<IReadOnlyCollection<Guid>>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(call => new PagedResult<CommunityActivityItemDto>(
+                    [],
+                    0,
+                    call.ArgAt<int>(1),
+                    call.ArgAt<int>(2)));
+            services.RemoveAll<ICommunityActivityReader>();
+            services.AddSingleton(CommunityActivityReader);
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton(SharedOfferRepository);
@@ -251,6 +277,41 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IOfferStatusHistoryRepository>();
             services.AddSingleton(OfferStatusHistoryRepository);
+
+            // Auditoría de moderación (Spec 021): sin MongoDB real en los tests de endpoints.
+            ModerationAuditRepository
+                .ListAsync(
+                    Arg.Any<Guid?>(),
+                    Arg.Any<ModerationTargetType?>(),
+                    Arg.Any<ModerationVerdict?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<(IReadOnlyList<ModerationAuditRecord> Items, long TotalCount)>(([], 0L)));
+            services.RemoveAll<IModerationAuditRepository>();
+            services.AddSingleton(ModerationAuditRepository);
+
+            // Entrega de contenido (Spec 023): clave HMAC determinista por fábrica y sin red externa.
+            services.Configure<MediaDeliverySettings>(settings =>
+            {
+                settings.SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                settings.PublicBaseUrl = "https://localhost";
+                settings.PublicTtlMinutes = 60;
+                settings.PrivateTtlMinutes = 5;
+                settings.PublicCacheSeconds = 86400;
+            });
+
+            MediaContentProxy.OpenReadAsync(Arg.Any<MediaAsset>(), Arg.Any<CancellationToken>())
+                .Returns(Result.Failure<MediaContentPayload>(
+                    Error.Unavailable("MediaDelivery.ContentUnavailable", "El contenido multimedia no está disponible.")));
+            services.RemoveAll<IMediaContentProxy>();
+            services.AddSingleton(MediaContentProxy);
+
+            CdnCacheInvalidator.InvalidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+            services.RemoveAll<ICdnCacheInvalidator>();
+            services.AddSingleton(CdnCacheInvalidator);
         });
     }
 }

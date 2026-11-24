@@ -4,12 +4,14 @@ using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Moderation;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Comercios.Commands.ReplyStoreReview;
 
 /// <summary>
-/// Agrega una respuesta moderada a una reseña existente de un comercio.
+/// Agrega una respuesta moderada a una reseña existente de un comercio (Spec 021, B3).
+/// Ref: FR-021-01 - auditoría obligatoria de cada decisión de moderación (fail-closed).
 /// </summary>
 public sealed record ReplyStoreReviewCommand(Guid ReviewId, string Comment) : IRequest<Result<StoreReviewDto>>;
 
@@ -21,18 +23,21 @@ public sealed class ReplyStoreReviewCommandHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public ReplyStoreReviewCommandHandler(
         IStoreReviewRepository storeReviewRepository,
         IUserRepository userRepository,
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
+        IModerationAuditRecorder auditRecorder,
         ITextModerationService? textModerationService = null)
     {
         _storeReviewRepository = storeReviewRepository;
         _userRepository = userRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
+        _auditRecorder = auditRecorder;
         _textModerationService = textModerationService;
     }
 
@@ -60,7 +65,7 @@ public sealed class ReplyStoreReviewCommandHandler
                 Error.NotFound("User.NotFound", "Usuario no encontrado."));
         }
 
-        Result moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
             request.Comment,
             "Respuesta a comentario de comercio",
@@ -68,9 +73,27 @@ public sealed class ReplyStoreReviewCommandHandler
             ProfanityFilter.DefaultRejectionMessage,
             cancellationToken);
 
-        if (moderationResult.IsFailure)
+        var auditEntry = new ModerationAuditEntry(
+            review.Id,
+            ModerationTargetType.StoreReview,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "store_review_reply",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores,
+            ActorId: userId.ToString(),
+            ActorType: ModerationActorType.User);
+
+        if (!evaluation.IsApproved)
         {
-            return Result.Failure<StoreReviewDto>(moderationResult.Error);
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+            return Result.Failure<StoreReviewDto>(evaluation.RejectionError ?? Error.Validation("StoreReviewReply.ContentModerationRejected", "Contenido rechazado por moderación."));
+        }
+
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<StoreReviewDto>(auditResult.Error);
         }
 
         Result<StoreReviewReply> replyResult = review.AddReply(

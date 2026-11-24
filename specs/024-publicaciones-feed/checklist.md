@@ -1,6 +1,6 @@
 # Checklist 024 — Publicaciones del feed
 
-Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
+Alineado a `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -17,6 +17,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] Ninguna publicación se expone sin veredicto (*fail-closed*, `FR-024-02`)
 - [x] La moderación de texto e imagen ocurre en la misma solicitud, antes de subir la imagen y persistir el post (`FR-024-02`, `FR-024-04`)
+- [ ] Solo texto y texto con imagen se moderan con la entrada correspondiente; ambos caminos quedan en cuarentena ante fallos (`CA-024-01`, `CA-024-06` de `constitution.md` v3.0.0 — pendiente de verificar tras el merge)
 - [x] Ausencia del moderador de texto, de imagen o de almacenamiento multimedia produce 400 sin efectos secundarios (`CA-024-06`)
 - [x] El autor proviene del token JWT (`ICurrentUserService`, `FR-024-03`)
 - [x] El borrado solo lo realiza el autor original o un administrador (403 a terceros, `FR-024-05`, `FR-024-06`)
@@ -24,7 +25,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] El borrado purga la imagen con `IMediaStorage.DeleteImageAsync` usando `ImagePublicId`; el fallo se registra sin revertir el borrado (`CA-024-07`)
 - [x] `multipart/form-data` acepta `content`/`text` e `image` con límite de 4,5 MB y respuesta 413; solo JPEG/PNG/WebP, otros formatos se rechazan con 400 `FeedPost.UnsupportedImageType` antes de moderar o subir
 - [x] La visibilidad usa lista de permitidos: solo `Published` y `!isDeleted` (`FR-024-07`)
-- [x] Los estados del post son consistentes (`PendingModeration`, `Published`, `Quarantined`, `Deleted`)
+- [x] El estado es consultable y los estados del post son consistentes (`PendingModeration`, `Published`, `Quarantined`, `Deleted`)
 
 ## C. Antes de entregar (Definition of Done)
 

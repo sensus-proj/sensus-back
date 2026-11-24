@@ -4,13 +4,13 @@
 |---|---|
 | ID | 012 |
 | Slug | `cors-y-https` |
-| Estado | Pendiente |
+| Estado | Completo |
 | Ola | 6 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | Ninguna |
 | Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
 
 ---
 

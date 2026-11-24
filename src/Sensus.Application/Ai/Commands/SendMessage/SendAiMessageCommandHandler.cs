@@ -722,7 +722,7 @@ public sealed class SendAiMessageCommandHandler : IRequestHandler<SendAiMessageC
             usage));
     }
 
-    private static void ExtractOffersFromToolResult(
+    internal static void ExtractOffersFromToolResult(
         string toolName,
         string resultJson,
         HashSet<string> citedOfferIds,

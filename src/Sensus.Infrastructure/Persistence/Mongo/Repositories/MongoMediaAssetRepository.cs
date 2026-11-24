@@ -37,6 +37,14 @@ public sealed class MongoMediaAssetRepository : IMediaAssetRepository
         return document?.ToDomain();
     }
 
+    public Task<bool> HasApprovedImageAsync(
+        Guid ownerId, string secureUrl, string moderatedTextFingerprint, CancellationToken cancellationToken = default) =>
+        _collection.Find(asset => asset.OwnerId == ownerId
+                && asset.SecureUrl == secureUrl
+                && asset.Status == (int)MediaAssetStatus.Approved
+                && asset.ModeratedTextFingerprint == moderatedTextFingerprint)
+            .AnyAsync(cancellationToken);
+
     public async Task<int> CountByUserAndDateAsync(
         Guid userId,
         DateTime dateUtc,

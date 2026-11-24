@@ -7,6 +7,10 @@ using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Media.Commands.PurgeQuarantinedMedia;
 
+/// <summary>
+/// Purga activos en cuarentena vencidos y solicita la invalidación de su caché en CDN (Spec 019 / Spec 023).
+/// Ref: FR-023-04 - invalidación de caché CDN al retirar contenido; M1 - dependencia obligatoria.
+/// </summary>
 public sealed class PurgeQuarantinedMediaCommandHandler
     : IRequestHandler<PurgeQuarantinedMediaCommand, Result<PurgeQuarantinedMediaResultDto>>
 {
@@ -14,17 +18,20 @@ public sealed class PurgeQuarantinedMediaCommandHandler
     private readonly IMediaStorage _mediaStorage;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<PurgeQuarantinedMediaCommandHandler> _logger;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
 
     public PurgeQuarantinedMediaCommandHandler(
         IMediaAssetRepository mediaAssetRepository,
         IMediaStorage mediaStorage,
         IDateTimeProvider dateTimeProvider,
-        ILogger<PurgeQuarantinedMediaCommandHandler> logger)
+        ILogger<PurgeQuarantinedMediaCommandHandler> logger,
+        ICdnCacheInvalidator cdnCacheInvalidator)
     {
         _mediaAssetRepository = mediaAssetRepository;
         _mediaStorage = mediaStorage;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
     }
 
     public async Task<Result<PurgeQuarantinedMediaResultDto>> Handle(
@@ -61,6 +68,18 @@ public sealed class PurgeQuarantinedMediaCommandHandler
                 failed++;
                 _logger.LogWarning("No se pudo eliminar el activo en cuarentena {MediaId} del almacenamiento.", asset.Id);
                 continue;
+            }
+
+            try
+            {
+                await _cdnCacheInvalidator.InvalidateAsync(asset.PublicId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "No se pudo invalidar la caché CDN para el activo purgado {MediaId}.",
+                    asset.Id);
             }
 
             asset.Purge();

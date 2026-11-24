@@ -141,6 +141,9 @@ public sealed class SocialFeaturesAndProfanityTests
         var clock = Substitute.For<IDateTimeProvider>();
         clock.UtcNow.Returns(FixedNow);
         var moderation = ApprovingModeration();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
 
         // Calificación 5 y calificación 4 => promedio 4.5
         var createAsBuyerA = new CreateStoreReviewCommandHandler(
@@ -149,6 +152,7 @@ public sealed class SocialFeaturesAndProfanityTests
             reviewRepo,
             MockCurrentUser(buyerA.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var firstSummary = await createAsBuyerA.Handle(
@@ -170,6 +174,7 @@ public sealed class SocialFeaturesAndProfanityTests
             reviewRepo,
             MockCurrentUser(buyerB.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var secondSummary = await createAsBuyerB.Handle(
@@ -193,6 +198,7 @@ public sealed class SocialFeaturesAndProfanityTests
             userRepo,
             MockCurrentUser(buyerA.Id),
             clock,
+            auditRecorder,
             moderation);
 
         var badReply = await replyHandler.Handle(
@@ -275,22 +281,57 @@ public sealed class SocialFeaturesAndProfanityTests
         await reviewRepo.AddAsync(myReview);
         await reviewRepo.AddAsync(strangerReview);
 
+        var activityReader = Substitute.For<ICommunityActivityReader>();
+        activityReader.ReadAsync(
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Contains(me.Id) && ids.Contains(friend.Id) && !ids.Contains(stranger.Id)),
+                1,
+                20,
+                Arg.Any<CancellationToken>())
+            .Returns(new Sensus.Application.Common.Models.PagedResult<Sensus.Application.Friends.DTOs.CommunityActivityItemDto>(
+                [
+                    new(
+                        $"review:{myReview.Id}",
+                        GetFriendsCommunityActivityQueryHandler.ActivityStoreReview,
+                        me.Id,
+                        me.NombreCompleto,
+                        null,
+                        null,
+                        merchant.Id,
+                        merchant.NombreComercial,
+                        merchant.Direccion,
+                        myReview.Comment,
+                        myReview.Rating,
+                        myReview.CreatedAtUtc),
+                    new(
+                        $"offer-like:{offer.Id}",
+                        GetFriendsCommunityActivityQueryHandler.ActivityOfferLike,
+                        friend.Id,
+                        friend.NombreCompleto,
+                        null,
+                        offer.Id,
+                        merchant.Id,
+                        offer.Title,
+                        merchant.NombreComercial,
+                        null,
+                        null,
+                        FixedNow.AddMinutes(-10))
+                ],
+                2,
+                1,
+                20));
+
         var handler = new GetFriendsCommunityActivityQueryHandler(
             MockCurrentUser(me.Id),
             friendRepo,
-            likeRepo,
-            reviewRepo,
-            offerRepo,
-            comercioRepo,
-            userRepo);
+            activityReader);
 
-        var result = await handler.Handle(new GetFriendsCommunityActivityQuery(20), CancellationToken.None);
+        var result = await handler.Handle(new GetFriendsCommunityActivityQuery(1, 20), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
-        result.Value.Select(i => i.ActorUserId).Should().NotContain(stranger.Id);
-        result.Value[0].ActivityType.Should().Be(GetFriendsCommunityActivityQueryHandler.ActivityStoreReview);
-        result.Value[1].ActivityType.Should().Be(GetFriendsCommunityActivityQueryHandler.ActivityOfferLike);
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.Items.Select(i => i.ActorUserId).Should().NotContain(stranger.Id);
+        result.Value.Items[0].ActivityType.Should().Be(GetFriendsCommunityActivityQueryHandler.ActivityStoreReview);
+        result.Value.Items[1].ActivityType.Should().Be(GetFriendsCommunityActivityQueryHandler.ActivityOfferLike);
     }
 
     private static ICurrentUserService MockCurrentUser(Guid userId)
@@ -363,6 +404,29 @@ public sealed class SocialFeaturesAndProfanityTests
 
         public Task<IReadOnlyList<StoreReview>> GetByMerchantIdAsync(Guid merchantId, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<StoreReview>>(_reviews.Where(r => r.MerchantId == merchantId).OrderByDescending(r => r.CreatedAtUtc).ToList());
+
+        public Task<(IReadOnlyList<StoreReview> Items, long TotalCount)> GetPagedByMerchantIdAsync(
+            Guid merchantId,
+            int pageNumber,
+            int pageSize,
+            CancellationToken ct = default)
+        {
+            var matching = _reviews.Where(r => r.MerchantId == merchantId).OrderByDescending(r => r.CreatedAtUtc).ToList();
+            int skip = (Math.Max(1, pageNumber) - 1) * Math.Max(1, pageSize);
+            IReadOnlyList<StoreReview> paged = matching.Skip(skip).Take(Math.Max(1, pageSize)).ToList();
+            return Task.FromResult((paged, (long)matching.Count));
+        }
+
+        public Task<StoreReviewRatingStats> GetRatingSummaryAsync(
+            Guid merchantId,
+            CancellationToken ct = default)
+        {
+            var matching = _reviews.Where(r => r.MerchantId == merchantId).ToList();
+            int total = matching.Count;
+            double avg = total == 0 ? 0.0 : Math.Round(matching.Average(r => r.Rating), 1);
+            var counts = matching.GroupBy(r => r.Rating).ToDictionary(g => g.Key, g => g.Count());
+            return Task.FromResult(new StoreReviewRatingStats(avg, total, counts));
+        }
 
         public Task<Dictionary<Guid, (double AverageRating, int ReviewCount)>> GetRatingSummariesByMerchantIdsAsync(
             IEnumerable<Guid> merchantIds,

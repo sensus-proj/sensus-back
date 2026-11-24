@@ -60,7 +60,8 @@ public sealed class FeedCommentsTests
             userRepo,
             currentUser,
             clock,
-            NullLogger<CreateFeedCommentCommandHandler>.Instance);
+            NullLogger<CreateFeedCommentCommandHandler>.Instance,
+            Substitute.For<IModerationAuditRecorder>());
 
         Result<FeedCommentDto> result = await handler.Handle(new CreateFeedCommentCommand(postId, "Me interesa"), CancellationToken.None);
 
@@ -91,7 +92,8 @@ public sealed class FeedCommentsTests
             userRepo,
             currentUser,
             clock,
-            NullLogger<CreateFeedCommentCommandHandler>.Instance);
+            NullLogger<CreateFeedCommentCommandHandler>.Instance,
+            Substitute.For<IModerationAuditRecorder>());
 
         Result<FeedCommentDto> result = await handler.Handle(
             new CreateFeedCommentCommand(postId, "Esto es una mierda total"),
@@ -122,6 +124,10 @@ public sealed class FeedCommentsTests
         moderation.ModerateContentTextAsync(Arg.Any<string>(), "feed_comment", Arg.Any<CancellationToken>())
             .Returns(new TextModerationResult(true, Decision: "Approved"));
 
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+
         var handler = new CreateFeedCommentCommandHandler(
             commentRepo,
             postLookup,
@@ -129,6 +135,7 @@ public sealed class FeedCommentsTests
             currentUser,
             clock,
             NullLogger<CreateFeedCommentCommandHandler>.Instance,
+            auditRecorder,
             moderation);
 
         Result<FeedCommentDto> result = await handler.Handle(
