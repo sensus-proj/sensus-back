@@ -14,19 +14,41 @@ paths:
       operationId: getFriendsCommunityActivity
       security: [{ bearerAuth: [] }]
       parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
         - name: limit
           in: query
           required: false
-          description: Cantidad máxima de eventos a devolver (acotado al rango 1..100, por defecto 50)
-          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+          deprecated: true
+          description: Alias temporal de pageSize.
+          schema: { type: integer, minimum: 1, maximum: 100 }
       responses:
         '200':
-          description: Lista ordenada cronológicamente descendente de actividad social entre amigos
+          description: Página de actividad social entre amigos ordenada cronológicamente
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: '#/components/schemas/CommunityActivityItemDto' }
+                type: object
+                required: [items, totalCount, pageNumber, pageSize, totalPages, hasPreviousPage, hasNextPage]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CommunityActivityItemDto' }
+                  totalCount: { type: integer, minimum: 0 }
+                  pageNumber: { type: integer, minimum: 1 }
+                  pageSize: { type: integer, minimum: 1, maximum: 100 }
+                  totalPages: { type: integer, minimum: 0 }
+                  hasPreviousPage: { type: boolean }
+                  hasNextPage: { type: boolean }
+        '400':
+          description: Parámetros de paginación inválidos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401':
           description: No autenticado
           content:

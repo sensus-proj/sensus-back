@@ -2,12 +2,14 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Sensus.Application.Comercios.Commands.RegisterComercio;
 using Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
 using Sensus.IntegrationTests.Infrastructure;
@@ -383,16 +385,68 @@ public class MerchantProfileEndpointsTests : IClassFixture<CustomWebApplicationF
             -99.3436).Value;
 
         _factory.ComercioRepository
-            .GetNearbyAsync(20.0536, -99.3436, 2000, Arg.Any<CancellationToken>())
-            .Returns([comercio]);
+            .GetNearbyAsync(20.0536, -99.3436, 2000, 2, 1, Arg.Any<CancellationToken>())
+            .Returns((new List<Comercio> { comercio }, 3));
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/nearby?lat=20.0536&lng=-99.3436&radiusMeters=2000");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/nearby?lat=20.0536&lng=-99.3436&radiusKm=2&radioMetros=1000&page=2&pageSize=1");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var items = await response.Content.ReadFromJsonAsync<List<ComercioDto>>();
-        items.Should().NotBeNull();
-        items!.Should().ContainSingle(c => c.NombreComercial == "Tienda Vecina");
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<ComercioDto>>();
+        page.Should().NotBeNull();
+        page!.Items.Should().ContainSingle(c => c.NombreComercial == "Tienda Vecina");
+        page.PageNumber.Should().Be(2);
+        page.PageSize.Should().Be(1);
+        page.TotalCount.Should().Be(3);
+        page.HasNextPage.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("lat=91&lng=0")]
+    [InlineData("lat=0&lng=-181")]
+    [InlineData("lat=NaN&lng=0")]
+    [InlineData("lat=0&lng=0&radiusKm=0")]
+    [InlineData("lat=0&lng=0&page=0")]
+    [InlineData("lat=0&lng=0&pageSize=101")]
+    public async Task GetNearbyMerchants_WithInvalidQuery_ReturnsBadRequest(string query)
+    {
+        var user = User.Create("Vecino", "vecino.validation@sensus.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/merchants/nearby?{query}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateTokenForUser(user));
+
+        using var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+    }
+
+    [Fact]
+    public async Task GetNearbyMerchants_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        using var response = await _client.GetAsync("/api/v1/merchants/nearby?lat=0&lng=0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetNearbyMerchants_ExceedingReadLimit_ReturnsTooManyRequests()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("RateLimiting:ReadHeavy:PermitLimit", "1"));
+        using var client = factory.CreateClient();
+        var user = User.Create("Vecino", "vecino.ratelimit@sensus.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _factory.ComercioRepository.GetNearbyAsync(0, 0, 2000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((Array.Empty<Comercio>(), 0));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateTokenForUser(user));
+
+        using var first = await client.GetAsync("/api/v1/merchants/nearby?lat=0&lng=0");
+        using var limited = await client.GetAsync("/api/v1/merchants/nearby?lat=0&lng=0");
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        limited.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        limited.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
 }

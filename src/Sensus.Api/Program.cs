@@ -11,6 +11,8 @@ using Sensus.Api.Middlewares;
 using Sensus.Api.Services;
 using Sensus.Application;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Domain.Enums;
@@ -18,6 +20,7 @@ using Sensus.Domain.Repositories;
 using Sensus.Infrastructure;
 using Sensus.Infrastructure.Authentication;
 using Sensus.Infrastructure.Migration;
+using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 using Sensus.Infrastructure.Services;
 
@@ -66,6 +69,18 @@ builder.Services.AddApplication();
 
 // 2. Capa de Infraestructura (BCrypt, JWT, MongoDB Atlas)
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<ICommunityActivityReader, MongoCommunityActivityReader>();
+builder.Services.AddScoped<IOfferLikeRepository, MongoOfferLikeRepository>();
+builder.Services.AddScoped<IStoreReviewRepository, MongoStoreReviewRepository>();
+builder.Services.AddScoped<ReviewTextModeration>();
+builder.Services.AddScoped<IModerationEvidenceStore>(services =>
+{
+    var http = services.GetRequiredService<IHttpContextAccessor>();
+    return new MongoModerationEvidenceStore(services.GetRequiredService<MongoDbContext>(), () =>
+        Guid.TryParse(http.HttpContext?.Items[CorrelationIdMiddleware.ItemKey] as string, out var identifier)
+            ? identifier.ToString("D")
+            : System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("D"));
+});
 builder.Services.AddScoped<IClaimPushNotifier, ClaimPushNotifier>();
 builder.Services.AddScoped<IClaimPushReceiptStore, MongoClaimPushReceiptStore>();
 builder.Services.AddScoped<INearbyOfferNotifier, NearbyOfferNotifier>();

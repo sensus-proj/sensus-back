@@ -292,13 +292,16 @@ Implementados, pendientes de verificar: GET de apartado autenticado con QR solo 
 
 Se contrastó la cuarentena exigida por el Principio IV y la spec 019 con Cloudinary como almacenamiento multimedia exclusivo (Principio VI). La ruta actual retiene en Cloudinary y escribe antes del veredicto. Se dejó en el plan 034 una propuesta §4.3 para retención temporal privada en MongoDB con TTL antes de Cloudinary. Pendientes aprobación, implementación de moderación y alertas, y verificación del punto 3. La consulta de SDK sigue mostrando 9.0.317 y 11.0.100, sin SDK compatible con global.json. No se cambiaron endpoints ni se activó Firebase.
 
-### 2026-11-20 — Feed de promociones por intereses (specs 042, 054 y 055)
+### 2026-11-20 — Feed de promociones por intereses (specs 042, 054 y 055) y ADR 0015 (ML.NET diferido)
 
-Decisión del responsable: el «ML» de Sensus es un **feed de promociones separado del feed social**, ordenado por intereses, sin acceso de invitados y en `GET /api/v1/feed/offers` (sustituye a `/api/v1/ml/recommendations`, nunca implementado). Solo documentación, sin código. Spec 042 reescrita a v2.0.0 y alineada a v2.4.0: puntaje determinista (interés explícito, afinidad, cercanía, urgencia y popularidad), diversidad (máximo 3 seguidas por categoría), exploración determinista (1 de cada 5), instantánea en Redis para paginación estable y STRIDE. Nueva spec 054 (intereses opcionales al registrarse, `GET`/`PUT /api/v1/users/me/interests`, máximo 5 categorías del catálogo) y nueva spec 055 (impresiones, aperturas y apartados seudonimizados con HMAC y clave en SSM, TTL de 180 días, sin endpoints). ADR 0009 actualizado: el ranking sigue siendo determinista; un modelo aprendido (Random Forest con ML.NET) requerirá ADR nuevo con datos de 055. Riesgo abierto: el volumen de 055 puede superar 512 MB en un clúster MongoDB gratuito (controles en plan 055 §6). Siguiente paso: revisar las specs y empezar por 054 → 055 → 042. Las specs 041 y 043 siguen en v1.2.0 y deben alinearse antes de implementarse.
+Decisión del responsable: el «ML» de Sensus es un **feed de promociones separado del feed social**, ordenado por intereses, sin acceso de invitados y en `GET /api/v1/feed/offers`. Spec 042 reescrita a v2.0.0; nuevas specs 054 y 055. ADR 0015 (ML.NET `FastForest`) queda en «Propuesta — diferida».
 
-### 2026-11-20 — ADR 0015 diferido: ranking aprendido con ML.NET
+### 2026-11-22 — Avances en Back_Rocio (specs 017, 026, 033, 034, 039, 049, 053 y 058)
 
-Borrador del ADR 0015 en estado «Propuesta — diferida». Dirección elegida: Random Forest de ML.NET (`FastForest`) ejecutado en la Lambda del backend, detrás de un puerto `IOfferFeedScorer` con la fórmula del ADR 0009 como respaldo; entrenamiento dentro de AWS (Lambda programada y S3 privado con SHA-256), sin sacar datos a GitHub. ONNX queda como plan B (ML.NET lo consume) y se descarta ejecutar el modelo en el celular. Se reabre con ≥ 60 días, ≥ 100 000 impresiones, ≥ 2 000 apartados y ≥ 500 usuarios con apartado en la spec 055. Se añadieron al índice de ADR las filas 0014 (faltaba) y 0015. Sin código ni commit.
+- **Spec 053 y Spec 058:** Implementada paginación y validación en `GetNearbyComercios` (`FR-053-04..07`) y paginación en BD con `PagedResult` y `MongoCommunityActivityReader` en `CommunityEndpoints` (`FR-058-04`).
+- **Spec 034:** Implementado `saveAsDraft` con inventario privado, protección de transiciones y validación de huella de imagen moderada con texto (`HasApprovedImageAsync`).
+- **Spec 033 y 049:** Adaptador FCM HTTP v1 con doble HTTP y pruebas de concurrencia/cuota en `DynamoDbLocalBudgetCounterStoreTests`.
+- **Spec 026 y 039:** Preparación documental (`constitution.md` v3.0.0 / ADR 0015 moderación de publicaciones solo texto, parámetros OpenAPI 026 y `liked` en 039), pendiente de contrato de visibilidad de la Spec 024.
 
 ### 2026-11-20 — Correcciones de documentación del ML
 

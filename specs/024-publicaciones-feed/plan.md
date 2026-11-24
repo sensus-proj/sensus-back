@@ -6,7 +6,7 @@
 | Estado del plan | Aprobado |
 | Versión | 1.0.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -28,7 +28,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 ## 4. Seguridad
 
 - Autor tomado del token
-- Moderación obligatoria antes de exponer
+- Moderación con `gpt-4o-mini` y la política de Sensus antes de exponer o subir a Cloudinary. Enviar solo texto si no hay imagen y ambas modalidades juntas cuando la haya. Cuarentena ante fallo, timeout, cuota agotada o respuesta inválida.
 - Borrado autorizado por rol o autoría
 
 ## 5. Observabilidad y rendimiento
@@ -37,7 +37,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 
 ## 6. Costo AWS
 
-Sin costo incremental: Lambda y API Gateway dentro del Free Tier.
+Lambda y API Gateway dentro del Free Tier. Las llamadas de moderación consumen el techo agregado de 1 USD/mes de EX-002. Se medirá el costo unitario de solo texto antes de habilitar el flujo.
 
 ## 7. Estrategia de pruebas
 

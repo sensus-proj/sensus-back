@@ -4,7 +4,7 @@
 |---|---|
 | ID | 034 |
 | Slug | `creacion-oferta` |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -105,6 +105,12 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 - **Cuando** `POST /api/v1/offers`
 - **Entonces** `201` y la oferta guarda el código `Bakery`
 
+### CA-034-08 (FR-034-04) — Borrador privado
+
+- **Dado** un comerciante autenticado con una oferta válida
+- **Cuando** solicita crear con `saveAsDraft=true`
+- **Entonces** recibe `201` con `status=Draft`. La oferta aparece en su inventario, queda oculta en los endpoints públicos y no genera notificaciones.
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -125,7 +131,7 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 
 ## 10. Preguntas abiertas
 
-- ¿El descuento se expresa como porcentaje o como precio final?
+El contrato actual recibe el porcentaje. El precio final lo calcula el servidor conforme a `FR-034-06`.
 
 ## 11. Trazabilidad
 

@@ -6,13 +6,13 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Pendiente |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T039-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-039-01` | — | Pendiente |
+| T039-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-039-01` | — | En curso. Borrador con intención explícita y respuesta documentada. |
 | T039-02 | Implementar: Regla de me gusta único por usuario | Domain | `FR-039-01` | T039-01 | Pendiente |
 | T039-03 | Implementar: ToggleLikeCommand y cálculo del conteo | Application | `FR-039-01` | T039-02 | Pendiente |
 | T039-04 | Implementar: Índice único postId + userId y contador atómico | Infrastructure | `FR-039-01` | T039-03 | Pendiente |

@@ -22,15 +22,18 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
     private readonly IBudgetCounterStore _store;
     private readonly SensiSettings _settings;
     private readonly ILogger<AiBudgetGuard> _logger;
+    private readonly TimeProvider _clock;
 
     public AiBudgetGuard(
         IBudgetCounterStore store,
         IOptions<OpenAiSettings> settings,
-        ILogger<AiBudgetGuard> logger)
+        ILogger<AiBudgetGuard> logger,
+        TimeProvider? clock = null)
     {
         _store = store;
         _settings = settings.Value.Sensi;
         _logger = logger;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<bool> CanExecuteTurnAsync(
@@ -46,7 +49,8 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         }
 
         // 1. Validar cuota diaria del usuario
-        var todayCount = await _store.GetAsync(GetDailyCountKey(userId), cancellationToken);
+        var now = _clock.GetUtcNow();
+        var todayCount = await _store.GetAsync(GetDailyCountKey(userId, now), cancellationToken);
         if (todayCount is null)
         {
             _logger.LogWarning("No fue posible leer la cuota diaria de Sensi IA. Operando en modo fail-closed (EX-001).");
@@ -56,14 +60,13 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         if (todayCount.Value >= _settings.DailyMessageLimitPerUser)
         {
             _logger.LogWarning(
-                "Usuario {UserId} alcanzó el límite diario de {Limit} mensajes de Sensi IA.",
-                userId,
+                "Se alcanzó el límite diario de {Limit} mensajes de Sensi IA.",
                 _settings.DailyMessageLimitPerUser);
             return false;
         }
 
         // 2. Validar techo mensual estricto (EX-001)
-        var spend = await _store.GetAsync(GetMonthlySpendKey(), cancellationToken);
+        var spend = await _store.GetAsync(GetMonthlySpendKey(now), cancellationToken);
         if (spend is null)
         {
             _logger.LogWarning("No fue posible leer el gasto mensual de Sensi IA. Operando en modo fail-closed (EX-001).");
@@ -103,7 +106,7 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
             return false;
         }
 
-        var reasoningSpend = await _store.GetAsync(GetMonthlyReasoningSpendKey(), cancellationToken);
+        var reasoningSpend = await _store.GetAsync(GetMonthlyReasoningSpendKey(_clock.GetUtcNow()), cancellationToken);
         return reasoningSpend.HasValue
             && (decimal)reasoningSpend.Value < (decimal)_settings.ReasoningBudgetCapUsd;
     }
@@ -121,8 +124,9 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         }
 
         // Incremento atómico del gasto mensual total
+        var now = _clock.GetUtcNow();
         var newTotal = await _store.IncrementAsync(
-            GetMonthlySpendKey(),
+            GetMonthlySpendKey(now),
             (double)actualCostUsd,
             MonthlyCounterTtl,
             cancellationToken);
@@ -131,7 +135,7 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         if (routingTier == AiRoutingTier.Reasoning)
         {
             await _store.IncrementAsync(
-                GetMonthlyReasoningSpendKey(),
+                GetMonthlyReasoningSpendKey(now),
                 (double)actualCostUsd,
                 MonthlyCounterTtl,
                 cancellationToken);
@@ -139,7 +143,7 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
 
         // Contador diario de mensajes por usuario
         var newDaily = await _store.IncrementAsync(
-            GetDailyCountKey(userId),
+            GetDailyCountKey(userId, now),
             1d,
             DailyCounterTtl,
             cancellationToken);
@@ -151,11 +155,10 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
         }
 
         _logger.LogInformation(
-            "Gasto registrado Sensi IA: +{Cost:F6} USD ({Tier}). Acumulado mes: {TotalSpend:F4} USD. Mensajes hoy usuario {UserId}: {DailyCount}",
+            "Gasto registrado Sensi IA: +{Cost:F6} USD ({Tier}). Acumulado mes: {TotalSpend:F4} USD. Mensajes hoy: {DailyCount}",
             actualCostUsd,
             routingTier,
             newTotal.Value,
-            userId,
             (long)newDaily.Value);
     }
 
@@ -168,16 +171,16 @@ public sealed class AiBudgetGuard : IAiBudgetGuard
             return 0;
         }
 
-        var count = await _store.GetAsync(GetDailyCountKey(userId), cancellationToken);
+        var count = await _store.GetAsync(GetDailyCountKey(userId, _clock.GetUtcNow()), cancellationToken);
         return count.HasValue ? (int)count.Value : 0;
     }
 
-    private static string GetMonthlySpendKey() =>
-        $"spend:{DateTime.UtcNow:yyyyMM}";
+    private static string GetMonthlySpendKey(DateTimeOffset now) =>
+        FormattableString.Invariant($"spend:{now:yyyyMM}");
 
-    private static string GetMonthlyReasoningSpendKey() =>
-        $"spend:reasoning:{DateTime.UtcNow:yyyyMM}";
+    private static string GetMonthlyReasoningSpendKey(DateTimeOffset now) =>
+        FormattableString.Invariant($"spend:reasoning:{now:yyyyMM}");
 
-    private static string GetDailyCountKey(Guid userId) =>
-        $"daily:{userId}:{DateTime.UtcNow:yyyyMMdd}";
+    private static string GetDailyCountKey(Guid userId, DateTimeOffset now) =>
+        FormattableString.Invariant($"daily:{userId}:{now:yyyyMMdd}");
 }

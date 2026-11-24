@@ -47,6 +47,9 @@ Sin costo incremental: Lambda y API Gateway dentro del Free Tier.
 
 ## 7. Estrategia de pruebas
 
+- `T033-15`: desde el POST de apartado, verificar el código y el QR de la respuesta, el uso del adaptador FCM HTTP v1 y los datos de cada destinatario. El HTTP externo se sustituye por un doble local y se verifica también la preferencia de desactivación. Esta prueba local complementa la comprobación física de entrega y el p95 en el entorno objetivo.
+- `T033-16`: en MongoDB Local, dos clientes compiten por la última unidad y dos inserciones compiten por el índice único de apartado activo del mismo usuario y oferta.
+
 - Unitarias de la máquina de estados
 - Integración de concurrencia por la última unidad
 - Prueba de canje duplicado y de código ajeno

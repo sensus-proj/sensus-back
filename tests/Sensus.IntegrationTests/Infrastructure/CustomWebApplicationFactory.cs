@@ -5,7 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Common.Settings;
+using Sensus.Application.Friends.DTOs;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -56,6 +60,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IModerationAuditRepository ModerationAuditRepository { get; } = Substitute.For<IModerationAuditRepository>();
     public IMediaContentProxy MediaContentProxy { get; } = Substitute.For<IMediaContentProxy>();
     public ICdnCacheInvalidator CdnCacheInvalidator { get; } = Substitute.For<ICdnCacheInvalidator>();
+    public ICommunityActivityReader CommunityActivityReader { get; } = Substitute.For<ICommunityActivityReader>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -63,6 +68,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IModerationEvidenceStore>();
+            services.AddSingleton(Substitute.For<IModerationEvidenceStore>());
             // Las pruebas nunca se conectan a un MongoDB real: se ignora cualquier cadena de conexión
             // que llegue por user-secrets o variables de entorno del equipo (AGENTS.md §11, FR-016-02).
             services.PostConfigure<MongoDbSettings>(settings => settings.ConnectionString = string.Empty);
@@ -204,6 +211,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 .Returns([]);
             services.RemoveAll<IFriendRequestRepository>();
             services.AddSingleton(FriendRequestRepository);
+
+            CommunityActivityReader.ReadAsync(
+                    Arg.Any<IReadOnlyCollection<Guid>>(),
+                    Arg.Any<int>(),
+                    Arg.Any<int>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(call => new PagedResult<CommunityActivityItemDto>(
+                    [],
+                    0,
+                    call.ArgAt<int>(1),
+                    call.ArgAt<int>(2)));
+            services.RemoveAll<ICommunityActivityReader>();
+            services.AddSingleton(CommunityActivityReader);
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton(SharedOfferRepository);

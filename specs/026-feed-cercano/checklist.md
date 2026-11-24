@@ -1,6 +1,6 @@
 # Checklist 026 — Feed geolocalizado
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -8,7 +8,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [ ] La spec 026 está aprobada y sin preguntas bloqueantes
 - [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 024, 007, 010
+- [ ] Las dependencias están resueltas: 024, 007, 010. La 024 está a cargo de su responsable. Para integrar la 026 falta verificar su contrato de lectura y el cambio de visibilidad al eliminar.
 - [ ] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 
@@ -18,6 +18,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [ ] La consulta usa el índice
 - [ ] El TTL de caché está documentado
 - [ ] Las publicaciones sin ubicación quedan fuera
+- [ ] La API acepta un radio de 5 km y devuelve 400 por encima del máximo (`CA-026-01`, `CA-026-05`)
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -39,6 +40,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [ ] **V. Verificación automatizada** — PASS
 - [ ] **VI. Costo cero e IaC** — PASS
 - [ ] **VII. Rendimiento y observabilidad** — PASS
+- [ ] **VIII. DevSecOps de nivel fintech** — verificar los controles de STRIDE y las puertas de CI aplicables
 
 ## E. Evidencia
 

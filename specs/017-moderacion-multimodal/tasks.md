@@ -6,7 +6,7 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Parcial |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 
@@ -18,11 +18,14 @@
 | T017-04 | Implementar: Integración en los flujos de oferta, publicación y comentario | Api | `FR-017-01` | T017-03 | Parcial |
 | T017-05 | Definir IModerationService y el modelo de veredicto | Domain | `FR-017-01` | T017-04 | Completada |
 | T017-06 | Implementar el cliente con timeout y fail-closed | Infrastructure | `FR-017-04` | T017-05 | Completada |
-| T017-07 | Registrar la decisión completa para auditoría | Application | `FR-017-05` | T017-06 | Parcial |
-| T017-08 | Encadenar la moderación a la creación de ofertas | Application | `FR-017-06` | T017-07 | Parcial |
+| T017-07 | Registrar la decisión completa para auditoría | Application | `FR-017-05` | T017-06 | Registro de solo adición en multimedia y reseñas. Resta publicar desde el flujo de la 024. |
+| T017-08 | Encadenar la moderación a la creación de ofertas | Application | `FR-017-06` | T017-07 | La creación verifica propietario, aprobación y huella del texto para imágenes. Sigue abierta la cuarentena previa a Cloudinary. |
 | T017-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-017-01` | T017-08 | Completada |
 | T017-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-017-01` | T017-09 | Completada |
 | T017-11 | Registrar evidencias del Constitution Check | Docs | `FR-017-01` | T017-10 | Completada |
+| T017-12 | Añadir y probar la moderación de publicaciones de solo texto con la política de Sensus | Infrastructure | `FR-017-08` | T017-06 | Adaptador implementado. Integración con el flujo de publicación y cuarentena pendiente en la Spec 024. |
+| T017-13 | Retirar el endpoint independiente y comprobar que no es accesible | Api / Pruebas | `FR-017-07` | T017-06 | Verificada localmente |
+| T017-14 | Enviar a cuarentena respuestas incompletas del adaptador de compatibilidad | Infrastructure / Pruebas | `FR-017-04` | T017-06 | Verificada localmente |
 
 ## Notas de ejecución
 

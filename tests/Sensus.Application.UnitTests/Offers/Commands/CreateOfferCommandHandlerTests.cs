@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers;
 using Sensus.Application.Offers.Commands.CreateOffer;
@@ -21,6 +22,7 @@ public class CreateOfferCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IMediaAssetRepository _mediaAssets = Substitute.For<IMediaAssetRepository>();
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly CreateOfferCommandHandler _handler;
 
@@ -48,7 +50,8 @@ public class CreateOfferCommandHandlerTests
             _dateTimeProvider,
             _logger,
             _auditRecorder,
-            _cacheService);
+            _cacheService,
+            mediaAssets: _mediaAssets);
     }
 
     [Fact]
@@ -97,6 +100,9 @@ public class CreateOfferCommandHandlerTests
             _now.AddDays(5),
             "https://cloudinary.com/pizza.jpg");
 
+        var proof = ModeratedTextFingerprint.Create($"{command.Title}\n{command.Description}");
+        _mediaAssets.HasApprovedImageAsync(_userId, command.ImageUrl!, proof, Arg.Any<CancellationToken>()).Returns(true);
+
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -111,6 +117,22 @@ public class CreateOfferCommandHandlerTests
 
         await _cacheService.Received(1).RemoveAsync(Arg.Is<string>(k => k.StartsWith("sensus:offers:detail:")), Arg.Any<CancellationToken>());
         await _cacheService.Received(1).RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_RejectsImageWithoutApprovalForCurrentText()
+    {
+        var merchant = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>()).Returns(merchant);
+        var command = new CreateOfferCommand("Oferta vigente", "Descripción cambiada",
+            200m, 25, 10, _now, _now.AddDays(5), "https://cloudinary.com/test.jpg");
+        _mediaAssets.HasApprovedImageAsync(_userId, command.ImageUrl!,
+            ModeratedTextFingerprint.Create("Oferta vigente\nDescripción anterior"), Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Error.Code.Should().Be("Offer.ImageNotApproved");
+        await _offerRepository.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
     }
 
     [Fact]

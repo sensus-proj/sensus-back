@@ -1,6 +1,6 @@
 # Checklist 039 — Me gusta en publicaciones
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0.
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -8,7 +8,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [ ] La spec 039 está aprobada y sin preguntas bloqueantes
 - [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 024, 013
+- [ ] Las dependencias están resueltas: 024, 013. Falta confirmar el contrato de visibilidad de la 024.
 - [ ] El alcance y las exclusiones están declarados
 - [ ] El impacto en seguridad, costo y rendimiento fue evaluado
 
@@ -39,6 +39,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [ ] **V. Verificación automatizada** — PASS
 - [ ] **VI. Costo cero e IaC** — PASS
 - [ ] **VII. Rendimiento y observabilidad** — PASS
+- [ ] **VIII. DevSecOps de nivel fintech** — verificar los controles de STRIDE y CI
 
 ## E. Evidencia
 

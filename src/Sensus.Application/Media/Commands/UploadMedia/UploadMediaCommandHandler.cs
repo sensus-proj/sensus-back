@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
 using Sensus.Application.Sanctions.Commands.ApplySanction;
@@ -23,6 +24,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
     private readonly ILogger<UploadMediaCommandHandler> _logger;
     private readonly IModerationAuditRecorder _auditRecorder;
     private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
+    private readonly IModerationEvidenceStore? _evidence;
 
     public UploadMediaCommandHandler(
         IMediaStorage mediaStorage,
@@ -33,7 +35,8 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         ISender sender,
         ILogger<UploadMediaCommandHandler> logger,
         IModerationAuditRecorder auditRecorder,
-        ICdnCacheInvalidator cdnCacheInvalidator)
+        ICdnCacheInvalidator cdnCacheInvalidator,
+        IModerationEvidenceStore? evidence = null)
     {
         _mediaStorage = mediaStorage;
         _moderationService = moderationService;
@@ -44,6 +47,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         _logger = logger;
         _auditRecorder = auditRecorder;
         _cdnCacheInvalidator = cdnCacheInvalidator;
+        _evidence = evidence;
     }
 
     public async Task<Result<UploadMediaResponseDto>> Handle(
@@ -85,7 +89,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             request.TextContext,
             cancellationToken);
 
-        MediaAssetStatus status = moderationResult.IsApproved
+        MediaAssetStatus status = moderationResult is { IsApproved: true, Decision: "Approved" }
             ? MediaAssetStatus.Approved
             : moderationResult.Decision == "Quarantine"
                 ? MediaAssetStatus.Quarantined
@@ -99,7 +103,18 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             status == MediaAssetStatus.Rejected ? null : uploadResult.Value.SecureUrl,
             request.ContentType,
             status,
-            _dateTimeProvider.UtcNow);
+            _dateTimeProvider.UtcNow,
+            status == MediaAssetStatus.Approved && !string.IsNullOrWhiteSpace(request.TextContext)
+                ? ModeratedTextFingerprint.Create(request.TextContext)
+                : null);
+
+        if (_evidence is not null)
+        {
+            await _evidence.AppendAsync(new ModerationEvidence(
+                mediaAsset.Id, "MediaAsset", moderationResult.Decision, moderationResult.FlaggedCategories,
+                moderationResult.CategoryScores, moderationResult.AppliedThresholdSummary,
+                status == MediaAssetStatus.Approved ? "Allow" : "Block", mediaAsset.CreatedAtUtc), cancellationToken);
+        }
 
         // Spec 021 (FR-021-01): la evidencia se registra antes de publicar. Si no se puede persistir, el
         // contenido no se publica (fail-closed).

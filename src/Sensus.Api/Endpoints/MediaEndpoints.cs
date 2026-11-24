@@ -2,7 +2,6 @@ using System.IO;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
-using Sensus.Application.Media.Commands.ModerateImage;
 using Sensus.Application.Media.Commands.ReleaseQuarantinedMedia;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
@@ -107,20 +106,5 @@ public static class MediaEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         if (isV1) upload.WithName("UploadMedia");
-
-        RouteHandlerBuilder moderate = group.MapPost("/moderate", async (
-            [FromBody] ModerateImageCommand command,
-            ISender sender,
-            CancellationToken ct) =>
-        {
-            Result<ModerateImageResponseDto> result = await sender.Send(command, ct);
-            return result.ToHttpResult();
-        })
-        .WithSummary("Valida imágenes mediante OpenAI Omni-Moderation detectando contenido inapropiado antes de su almacenamiento")
-        .Produces<ModerateImageResponseDto>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status401Unauthorized);
-
-        if (isV1) moderate.WithName("ModerateImage");
     }
 }

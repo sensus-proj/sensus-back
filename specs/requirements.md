@@ -120,7 +120,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
-| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
+| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
+| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Parcial |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
@@ -170,7 +171,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Implementado |
 | `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Implementado |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Pendiente |
-| `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Pendiente |
+| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Pendiente |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Pendiente |
 | `FR-024-04` | 024 | FR | Devolver 202 mientras la moderación está pendiente | Should | Pendiente |
 | `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Pendiente |
@@ -189,7 +190,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
 | `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
 | `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-026-04` | 026 | FR | Limitar el radio a 50 km y rechazar valores fuera de rango | Must | Pendiente |
+| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Pendiente |
 | `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Pendiente |
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
@@ -271,7 +272,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
-| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Pendiente |
+| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
@@ -523,10 +524,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-053-01` | 053 | FR | Comercios activos dentro del radio, ordenados por cercanía | Must | Implementado |
 | `FR-053-02` | 053 | FR | Radio por defecto 2000 m; tope 2 km invitados y 50 km registrados | Must | Implementado |
 | `FR-053-03` | 053 | FR | Acceso para registrados e invitados | Must | Implementado |
-| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Pendiente |
-| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Pendiente |
-| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Pendiente |
-| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
+| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Implementado |
+| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Implementado |
+| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Implementado |
+| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Implementado |
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
 | `FR-054-01` | 054 | FR | Exponer `GET /api/v1/users/me/interests` | Must | Implementado |
@@ -573,7 +574,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
 | `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
 | `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
-| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Implementado |
 | `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
 | `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
 | `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |

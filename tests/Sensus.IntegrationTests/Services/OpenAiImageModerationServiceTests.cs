@@ -23,6 +23,65 @@ public sealed class OpenAiImageModerationServiceTests
         }
     }
 
+    private sealed class AsyncMockHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            handler(request, cancellationToken);
+    }
+
+    [Theory]
+    [InlineData("""{"decision":"Approved","flagged_categories":[],"category_scores":{"weapons":0.0}}""", "Approved")]
+    [InlineData("""{"decision":"Rejected","flagged_categories":["weapons"],"category_scores":{"weapons":0.95}}""", "Rejected")]
+    [InlineData("""{"decision":"Approved","flagged_categories":[]}""", "Quarantine")]
+    [InlineData("""{"decision":"Unexpected","flagged_categories":[],"category_scores":{"weapons":0}}""", "Quarantine")]
+    [InlineData("""{"decision":"Approved","flagged_categories":[],"category_scores":{"weapons":2}}""", "Quarantine")]
+    [InlineData("""{"decision":"Approved","flagged_categories":["weapons"],"category_scores":{"weapons":0.95}}""", "Quarantine")]
+    [InlineData("invalid-json", "Quarantine")]
+    [InlineData("", "Quarantine")]
+    public async Task ModerateTextAsync_SendsOnlyTextAndValidatesVerdict(string content, string expectedDecision)
+    {
+        string? requestBody = null;
+        var handler = new AsyncMockHandler(async (request, cancellationToken) =>
+        {
+            request.RequestUri!.AbsolutePath.Should().Be("/v1/chat/completions");
+            requestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    choices = new[] { new { message = new { content } } }
+                }), Encoding.UTF8, "application/json")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new OpenAiImageModerationService(httpClient,
+            Options.Create(new OpenAiSettings { ApiKey = "test-placeholder", Model = "gpt-4o-mini" }), _logger);
+
+        var result = await service.ModerateTextAsync("Hoy hay pan recién horneado.");
+
+        result.Decision.Should().Be(expectedDecision);
+        result.IsApproved.Should().Be(expectedDecision == "Approved");
+        using var body = JsonDocument.Parse(requestBody!);
+        body.RootElement.GetProperty("model").GetString().Should().Be("gpt-4o-mini");
+        var userContent = body.RootElement.GetProperty("messages")[1].GetProperty("content");
+        userContent.GetArrayLength().Should().Be(1);
+        userContent[0].GetProperty("type").GetString().Should().Be("text");
+        userContent[0].GetProperty("text").GetString().Should().Contain("Hoy hay pan recién horneado.");
+    }
+
+    [Fact]
+    public async Task ModerateTextAsync_WhenProviderTimesOut_ReturnsQuarantine()
+    {
+        using var httpClient = new HttpClient(new DelegatingMockHandler(_ => throw new TaskCanceledException()));
+        var service = new OpenAiImageModerationService(httpClient,
+            Options.Create(new OpenAiSettings { ApiKey = "test-placeholder", Model = "gpt-4o-mini" }), _logger);
+
+        var result = await service.ModerateTextAsync("Publicación de prueba");
+
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
+
     [Fact]
     public async Task ModerateImageBytesAsync_WhenBytesAreEmpty_ReturnsRejected()
     {
@@ -111,6 +170,27 @@ public sealed class OpenAiImageModerationServiceTests
         result.Message.Should().Be("Imagen aprobada.");
     }
 
+    [Theory]
+    [InlineData("""{"categories":{"hate":false},"category_scores":{"hate":0.1}}""")]
+    [InlineData("""{"flagged":false,"categories":{"hate":false}}""")]
+    [InlineData("""{"flagged":false,"categories":{"hate":false},"category_scores":{"hate":1.1}}""")]
+    [InlineData("""{"flagged":false,"categories":{"hate":true},"category_scores":{"hate":0.1}}""")]
+    [InlineData("""{"flagged":false,"categories":{"hate":false},"category_scores":{"violence":0.1}}""")]
+    public async Task ModerateImageBytesAsync_WhenOmniVerdictIsIncomplete_ReturnsQuarantine(string result)
+    {
+        using var httpClient = new HttpClient(new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent($$"""{"results":[{{result}}]}""", Encoding.UTF8, "application/json")
+        }));
+        var service = new OpenAiImageModerationService(httpClient,
+            Options.Create(new OpenAiSettings { ApiKey = "test-placeholder", Model = "omni-moderation-latest" }), _logger);
+
+        var verdict = await service.ModerateImageBytesAsync([1, 2, 3]);
+
+        verdict.IsApproved.Should().BeFalse();
+        verdict.Decision.Should().Be("Quarantine");
+    }
+
     [Fact]
     public async Task ModerateImageBytesAsync_WhenOpenAiFlagsImage_ReturnsRejectedWithCategories()
     {
@@ -128,6 +208,11 @@ public sealed class OpenAiImageModerationServiceTests
                     {
                         ["hate"] = true,
                         ["violence"] = false
+                    },
+                    category_scores = new Dictionary<string, double>
+                    {
+                        ["hate"] = 0.92,
+                        ["violence"] = 0.01
                     }
                 }
             }
@@ -263,8 +348,8 @@ public sealed class OpenAiImageModerationServiceTests
                 new
                 {
                     flagged = false,
-                    categories = new Dictionary<string, bool>(),
-                    category_scores = new Dictionary<string, double>()
+                    categories = new Dictionary<string, bool> { ["hate"] = false },
+                    category_scores = new Dictionary<string, double> { ["hate"] = 0.01 }
                 }
             }
         });

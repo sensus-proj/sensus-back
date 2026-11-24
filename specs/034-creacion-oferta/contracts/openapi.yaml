@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: "Sensus API — Spec 034 Creación de oferta"
   version: 1.1.0
-  description: "Contrato de POST /api/v1/offers con catálogo OfferCategory (FR-034-08)."
+  description: "Contrato de POST /api/v1/offers con catálogo OfferCategory (FR-034-08) y soporte de borrador privado saveAsDraft (FR-034-04)."
 servers:
   - url: https://localhost:5001
 paths:
@@ -19,6 +19,9 @@ paths:
       responses:
         '201':
           description: Oferta creada
+          headers:
+            Location:
+              schema: { type: string, format: uri-reference }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OfferDto' }
@@ -27,7 +30,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }
-        '401': { description: No autenticado }
+        '401': { description: Autenticación requerida }
         '403': { description: Comercio no activo o rol insuficiente }
 components:
   securitySchemes:
@@ -51,12 +54,19 @@ components:
         stock: { type: integer, minimum: 1 }
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time }
-        imageUrl: { type: [string, 'null'], format: uri }
+        imageUrl:
+          type: [string, 'null']
+          format: uri
+          description: Para publicar, debe ser la URL aprobada de un activo del comerciante. En la carga se envía textContext con el título recortado, un salto de línea y la descripción recortada.
         category:
           oneOf:
             - $ref: '#/components/schemas/OfferCategory'
             - type: 'null'
           description: Obligatoria al publicar cuando OfferCategory:RequireStrictValidation=true (tras publicar móvil T15.15).
+        saveAsDraft:
+          type: boolean
+          default: false
+          description: Guarda un borrador privado visible solo en el inventario del comercio y sin envío de avisos.
     OfferDto:
       type: object
       properties:
@@ -85,4 +95,5 @@ components:
         title: { type: string }
         status: { type: integer }
         detail: { type: string }
+        instance: { type: string }
         errors: { type: object }

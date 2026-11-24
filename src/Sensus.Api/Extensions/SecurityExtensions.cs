@@ -68,8 +68,11 @@ public static class SecurityExtensions
                     problem.Extensions["correlationId"] = correlationId;
                 }
 
-                context.HttpContext.Response.ContentType = "application/problem+json";
-                await context.HttpContext.Response.WriteAsJsonAsync(problem, cancellationToken: token);
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    problem,
+                    options: null,
+                    contentType: "application/problem+json",
+                    cancellationToken: token);
             };
 
             options.AddPolicy(AuthStrictPolicy, httpContext =>

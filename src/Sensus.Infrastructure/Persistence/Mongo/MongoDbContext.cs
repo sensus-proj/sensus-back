@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Sensus.Application.Common.Settings;
 using Sensus.Domain.Enums;
@@ -123,6 +124,10 @@ public sealed class MongoDbContext
 
     public IMongoCollection<SanctionDocument> Sanctions =>
         _database?.GetCollection<SanctionDocument>(_settings.SanctionsCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
+    public IMongoCollection<MongoDB.Bson.BsonDocument> ModerationDecisions =>
+        _database?.GetCollection<MongoDB.Bson.BsonDocument>("moderation_decisions")
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
     public IMongoCollection<SchemaMigrationDocument> SchemaMigrations =>
@@ -549,14 +554,21 @@ public sealed class MongoDbContext
                 .Descending(l => l.CreatedAtUtc);
             OfferLikes.Indexes.CreateOne(new CreateIndexModel<OfferLikeDocument>(offerLikeOfferKeys));
 
-            var reviewMerchantKeys = Builders<StoreReviewDocument>.IndexKeys
-                .Ascending(r => r.MerchantId)
-                .Descending(r => r.CreatedAtUtc);
-            StoreReviews.Indexes.CreateOne(new CreateIndexModel<StoreReviewDocument>(reviewMerchantKeys));
+            var reviewsKeys = Builders<StoreReviewDocument>.IndexKeys;
+            StoreReviews.Indexes.CreateMany([
+                new CreateIndexModel<StoreReviewDocument>(reviewsKeys.Ascending(r => r.MerchantId).Descending(r => r.CreatedAtUtc)),
+                new CreateIndexModel<StoreReviewDocument>(reviewsKeys.Ascending(r => r.AuthorUserId)),
+                new CreateIndexModel<StoreReviewDocument>(new MongoDB.Bson.BsonDocument("replies.authorUserId", 1))
+            ]);
+
+            var approvedImageKeys = Builders<MediaAssetDocument>.IndexKeys
+                .Ascending(asset => asset.OwnerId)
+                .Ascending(asset => asset.SecureUrl);
+            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(approvedImageKeys));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogDebug(ex, "Nota: Los índices sociales de likes y reseñas ya existen o el clúster aún no está disponible.");
+            _logger.LogDebug(ex, "Nota: Los índices sociales, de actividad o de imágenes ya existen o el clúster aún no está disponible.");
         }
 
         try

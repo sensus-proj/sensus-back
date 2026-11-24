@@ -84,6 +84,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddHttpClient<IImageModerationService, OpenAiImageModerationService>();
+        services.AddHttpClient<IPublicationTextModerationService, OpenAiImageModerationService>();
         services.AddHttpClient<ITextModerationService, OpenAiTextModerationService>();
 
         // Base de conocimiento estática RAG para Sensi IA (Spec 046)

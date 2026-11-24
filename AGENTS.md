@@ -3,11 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
-| Documento normativo | `constitution.md` **v2.4.0** |
+| Documento normativo | `constitution.md` **v3.0.0** |
 | Fuente de arquitectura | `docs/architecture/arquitecturaNva.docx` |
 | Alcance | Todo el repositorio |
 | Idioma | Documentación en español; código e identificadores en inglés |
-| Última actualización | 2026-11-19 |
+| Última actualización | 2026-11-22 |
 
 > Este archivo es **operativo**. En caso de conflicto con `constitution.md`, prevalece la constitución y
 > este archivo MUST corregirse en el mismo cambio.
@@ -181,8 +181,8 @@ tratamiento de warnings; `global.json` fija el SDK. No los contradigas por proye
 - Logs operativos (CloudWatch) sin PII, sin tokens, sin contenido moderado y sin prompts o respuestas
   en claro del asistente. Incluye siempre `correlation-id`. La auditoría redactada del asistente IA en
   MongoDB cumple TTL y purga ante eliminación de cuenta (`constitution.md` v2.2.0).
-- **Moderación obligatoria antes de publicar o guardar en Cloudinary**, con imagen **y** texto en la misma
-  solicitud.
+- **Moderación obligatoria antes de publicar o guardar en Cloudinary**. Si hay imagen, se modera junto
+  con el texto en la misma solicitud. Las publicaciones de la Spec 024 sin imagen se moderan solo con texto.
 - **Fail-closed**: si la moderación falla o expira, el contenido va a cuarentena. Nunca se publica.
 - Umbrales de moderación en configuración; nunca en código. Toda decisión se registra con veredicto,
   categorías, puntajes, umbral aplicado y acción.
@@ -332,4 +332,4 @@ Si algún punto no se cumple, la tarea **no está terminada**. Repórtalo, no lo
 
 ---
 
-**Alineado a `constitution.md` v2.4.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
+**Alineado a `constitution.md` v3.0.0 — actualizar este archivo ante cualquier enmienda MAJOR o MINOR.**
