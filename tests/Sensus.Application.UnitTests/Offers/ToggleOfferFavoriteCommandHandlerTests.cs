@@ -126,6 +126,7 @@ public sealed class ToggleOfferFavoriteCommandHandlerTests
         5,
         Now.AddDays(-1),
         Now.AddDays(1),
+        nowUtc: Now,
         category: "Food").Value;
 
     private static Offer ArchivedOffer() => Offer.Reconstitute(

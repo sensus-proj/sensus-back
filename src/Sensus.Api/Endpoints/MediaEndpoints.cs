@@ -56,35 +56,29 @@ public static class MediaEndpoints
         {
             if (file is null || file.Length == 0)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Archivo requerido",
-                    Detail = "No se proporcionó ningún archivo de imagen."
-                });
+                return ResultExtensions.ToProblemResult(
+                    StatusCodes.Status400BadRequest,
+                    "Archivo requerido",
+                    "No se proporcionó ningún archivo de imagen.");
             }
 
             const long MaxFileSizeBytes = 4_500_000; // 4,5 MB (FR-022-03)
             if (file.Length > MaxFileSizeBytes)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status413RequestEntityTooLarge,
-                    Title = "Archivo demasiado grande",
-                    Detail = $"El archivo excede el tamaño máximo de 4,5 MB ({file.Length / 1024 / 1024:F2} MB)."
-                });
+                return ResultExtensions.ToProblemResult(
+                    StatusCodes.Status413RequestEntityTooLarge,
+                    "Archivo demasiado grande",
+                    $"El archivo excede el tamaño máximo de 4,5 MB ({file.Length / 1024 / 1024:F2} MB).");
             }
 
             string contentType = file.ContentType;
             // Validar que el content type sea uno permitido
             if (!_allowedMediaTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Tipo de contenido no permitido",
-                    Detail = "Solo se permiten imágenes JPEG, PNG y WebP."
-                });
+                return ResultExtensions.ToProblemResult(
+                    StatusCodes.Status400BadRequest,
+                    "Tipo de contenido no permitido",
+                    "Solo se permiten imágenes JPEG, PNG y WebP.");
             }
 
             using MemoryStream ms = new();
@@ -104,12 +98,10 @@ public static class MediaEndpoints
                     _ => StatusCodes.Status400BadRequest
                 };
 
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = statusCode,
-                    Title = result.Error.Code,
-                    Detail = result.Error.Message
-                });
+                return ResultExtensions.ToProblemResult(
+                    statusCode,
+                    result.Error.Code,
+                    result.Error.Message);
             }
 
             UploadMediaResponseDto dto = result.Value;

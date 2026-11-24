@@ -38,12 +38,10 @@ public static class FeedEndpoints
         {
             if (!lat.HasValue || !lng.HasValue)
             {
-                return Results.Problem(new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "OfferFeed.CoordinatesRequired",
-                    Detail = "Las coordenadas lat y lng son obligatorias."
-                });
+                return ResultExtensions.ToProblemResult(
+                    StatusCodes.Status400BadRequest,
+                    "OfferFeed.CoordinatesRequired",
+                    "Las coordenadas lat y lng son obligatorias.");
             }
 
             Guid? parsedSnapshotId = null;
@@ -51,12 +49,10 @@ public static class FeedEndpoints
             {
                 if (!Guid.TryParse(snapshotId.Trim(), out Guid parsed) || parsed == Guid.Empty)
                 {
-                    return Results.Problem(new ProblemDetails
-                    {
-                        Status = StatusCodes.Status400BadRequest,
-                        Title = "OfferFeed.InvalidSnapshotId",
-                        Detail = "El parámetro snapshotId debe tener formato GUID válido."
-                    });
+                    return ResultExtensions.ToProblemResult(
+                        StatusCodes.Status400BadRequest,
+                        "OfferFeed.InvalidSnapshotId",
+                        "El parámetro snapshotId debe tener formato GUID válido.");
                 }
 
                 parsedSnapshotId = parsed;
@@ -116,22 +112,18 @@ public static class FeedEndpoints
 
                     if (normalizedContentType is not ("image/jpeg" or "image/png" or "image/webp"))
                     {
-                        return Results.Problem(new ProblemDetails
-                        {
-                            Status = StatusCodes.Status400BadRequest,
-                            Title = "FeedPost.UnsupportedImageType",
-                            Detail = "Formato de imagen no admitido. Use JPEG, PNG o WebP."
-                        });
+                        return ResultExtensions.ToProblemResult(
+                            StatusCodes.Status400BadRequest,
+                            "FeedPost.UnsupportedImageType",
+                            "Formato de imagen no admitido. Use JPEG, PNG o WebP.");
                     }
 
                     if (image.Length > MaxFeedImageBytes)
                     {
-                        return Results.Problem(new ProblemDetails
-                        {
-                            Status = StatusCodes.Status413PayloadTooLarge,
-                            Title = "FeedPost.ImageTooLarge",
-                            Detail = "La imagen supera el límite de 4,5 MB."
-                        });
+                        return ResultExtensions.ToProblemResult(
+                            StatusCodes.Status413PayloadTooLarge,
+                            "FeedPost.ImageTooLarge",
+                            "La imagen supera el límite de 4,5 MB.");
                     }
 
                     using var buffer = new MemoryStream();

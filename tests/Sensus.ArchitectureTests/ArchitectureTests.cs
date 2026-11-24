@@ -83,4 +83,44 @@ public class ArchitectureTests
         testResult.IsSuccessful.Should().BeTrue(
             "Todos los Handlers de MediatR deben terminar con el sufijo 'Handler'");
     }
+
+    [Fact]
+    public void Endpoints_ShouldNotInstantiateProblemDetailsDirectly()
+    {
+        string? endpointsDirectory = FindEndpointsDirectory();
+        endpointsDirectory.Should().NotBeNull("debe localizarse el directorio src/Sensus.Api/Endpoints desde la raíz del repositorio");
+
+        var violations = new List<string>();
+        foreach (string file in Directory.GetFiles(endpointsDirectory!, "*.cs", SearchOption.AllDirectories))
+        {
+            string[] lines = File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("new ProblemDetails", StringComparison.Ordinal))
+                {
+                    violations.Add($"{Path.GetFileName(file)}:L{i + 1}: {lines[i].Trim()}");
+                }
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "Ninguna clase de Endpoints debe instanciar directamente 'new ProblemDetails'; use ResultExtensions.ToHttpResult() o ToProblemResult()");
+    }
+
+    private static string? FindEndpointsDirectory()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            string candidate = Path.Combine(directory.FullName, "src", "Sensus.Api", "Endpoints");
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return null;
+    }
 }
