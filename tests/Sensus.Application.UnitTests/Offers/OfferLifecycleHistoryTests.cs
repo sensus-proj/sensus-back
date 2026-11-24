@@ -76,12 +76,17 @@ public sealed class OfferLifecycleHistoryTests
         comercioRepo.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(comercio);
         offerRepo.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
 
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         var handler = new RepublishOfferCommandHandler(
             offerRepo,
             comercioRepo,
             currentUser,
             clock,
             NullLogger<RepublishOfferCommandHandler>.Instance,
+            auditRecorder,
             statusHistoryRepository: historyRepo);
 
         var result = await handler.Handle(new RepublishOfferCommand(offer.Id, Now, Now.AddDays(2), 15), CancellationToken.None);

@@ -699,4 +699,133 @@ public sealed class SendAiMessageCommandHandlerTests
                 !m.FaqCacheHit &&
                 m.EstimatedCostUsd == 0m));
     }
+
+    [Fact]
+    public void ExtractOffersFromToolResult_ShouldHandleAllSearchOffersVariants()
+    {
+        var citedIds = new HashSet<string>();
+        var citedOffers = new List<CitedOfferDto>();
+        var candidates = new List<RecommendedPackageItem>();
+
+        const string json = "{\"offers\":[" +
+            "{\"id\":\"o1\"}," +
+            "{\"id\":\"o2\",\"title\":null,\"discountedPrice\":10,\"merchantId\":null}," +
+            "{\"id\":null,\"title\":\"NoId\"}," +
+            "{\"id\":\"\",\"title\":\"EmptyId\"}," +
+            "{\"id\":\"o1\",\"title\":\"Duplicate\"}" +
+            "]}";
+
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.SearchOffers,
+            json,
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(2);
+        citedOffers[0].OfferId.Should().Be("o1");
+        citedOffers[0].Title.Should().BeEmpty();
+        citedOffers[0].OfferPriceMxn.Should().Be(0m);
+        citedOffers[0].RegularPriceMxn.Should().Be(0m);
+        citedOffers[0].AvailableStock.Should().Be(1);
+        citedOffers[0].MerchantId.Should().BeEmpty();
+
+        citedOffers[1].OfferId.Should().Be("o2");
+        citedOffers[1].Title.Should().BeEmpty();
+        citedOffers[1].OfferPriceMxn.Should().Be(10m);
+        citedOffers[1].RegularPriceMxn.Should().Be(10m);
+        citedOffers[1].MerchantId.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ExtractOffersFromToolResult_ShouldHandleAllOfferDetailVariants()
+    {
+        var citedIds = new HashSet<string>();
+        var citedOffers = new List<CitedOfferDto>();
+        var candidates = new List<RecommendedPackageItem>();
+
+        const string json1 = "{\"found\":true,\"id\":\"d1\"}";
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.GetOfferDetail,
+            json1,
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(1);
+        citedOffers[0].OfferId.Should().Be("d1");
+        citedOffers[0].Title.Should().BeEmpty();
+        citedOffers[0].MerchantName.Should().BeEmpty();
+        citedOffers[0].MerchantId.Should().BeEmpty();
+
+        const string json2 = "{\"found\":true,\"id\":\"d2\",\"title\":null,\"discountedPrice\":50,\"merchant\":{\"id\":\"m3\",\"nombre\":\"Nom\"}}";
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.GetOfferDetail,
+            json2,
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(2);
+        citedOffers[1].OfferId.Should().Be("d2");
+        citedOffers[1].Title.Should().BeEmpty();
+        citedOffers[1].OfferPriceMxn.Should().Be(50m);
+        citedOffers[1].RegularPriceMxn.Should().Be(50m);
+        citedOffers[1].MerchantName.Should().Be("Nom");
+        citedOffers[1].MerchantId.Should().Be("m3");
+
+        // also test with empty merchant object
+        const string json2b = "{\"found\":true,\"id\":\"d2b\",\"merchant\":{}}";
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.GetOfferDetail,
+            json2b,
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(3);
+        citedOffers[2].MerchantName.Should().BeEmpty();
+        citedOffers[2].MerchantId.Should().BeEmpty();
+
+        const string json3 = "{\"found\":false,\"id\":\"d3\"}";
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.GetOfferDetail,
+            json3,
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(3);
+
+        SendAiMessageCommandHandler.ExtractOffersFromToolResult(
+            SensiToolNames.GetOfferDetail,
+            "not-json",
+            citedIds,
+            citedOffers,
+            candidates);
+
+        citedOffers.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void AiCacheKeys_Faq_ShouldHandleWhitespaceOrNullParameters()
+    {
+        var key = AiCacheKeys.Faq(string.Empty, "   ", "prompt", "   ");
+        key.Should().StartWith("sensus:ai:faq:1.0.0:unknown:none:");
+
+        var key2 = AiCacheKeys.Faq("2.0.0", "User", "prompt", "Home");
+        key2.Should().StartWith("sensus:ai:faq:2.0.0:user:home:");
+    }
+
+    [Fact]
+    public void InteractionDailyQualityMetric_Rates_ShouldCalculateAccurately()
+    {
+        var zero = new InteractionDailyQualityMetric("v1", FeedSlot.Ranked, 0, 0, 0);
+        zero.OpenRate.Should().Be(0d);
+        zero.ClaimRate.Should().Be(0d);
+
+        var positive = new InteractionDailyQualityMetric("v1", FeedSlot.Ranked, 100, 10, 5);
+        positive.OpenRate.Should().Be(0.1d);
+        positive.ClaimRate.Should().Be(0.05d);
+    }
 }

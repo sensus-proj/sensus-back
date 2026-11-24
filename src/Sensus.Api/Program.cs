@@ -11,6 +11,8 @@ using Sensus.Api.Middlewares;
 using Sensus.Api.Services;
 using Sensus.Application;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
 using Sensus.Application.Offers.Notifications;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Domain.Enums;
@@ -18,6 +20,7 @@ using Sensus.Domain.Repositories;
 using Sensus.Infrastructure;
 using Sensus.Infrastructure.Authentication;
 using Sensus.Infrastructure.Migration;
+using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 using Sensus.Infrastructure.Services;
 
@@ -46,11 +49,38 @@ if (string.IsNullOrWhiteSpace(configuredSecret) && (builder.Environment.IsDevelo
     });
 }
 
+// Spec 023 (FR-023-02): la clave HMAC de entrega nunca se versiona. Solo en Development y Testing se deriva una
+// clave determinista para pruebas locales. En producción, si falta, la emisión de URLs falla cerrada (503) sin
+// tumbar el arranque.
+var configuredMediaDeliveryKey = builder.Configuration["MediaDelivery:SigningKey"];
+if (string.IsNullOrWhiteSpace(configuredMediaDeliveryKey)
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
+{
+    var mediaKeySeed = Encoding.UTF8.GetBytes($"Sensus.MediaDelivery.Deterministic.{builder.Environment.EnvironmentName}");
+    configuredMediaDeliveryKey = Convert.ToBase64String(SHA256.HashData(mediaKeySeed));
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["MediaDelivery:SigningKey"] = configuredMediaDeliveryKey
+    });
+}
+
 // 1. Capa de Aplicación
 builder.Services.AddApplication();
 
 // 2. Capa de Infraestructura (BCrypt, JWT, MongoDB Atlas)
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<ICommunityActivityReader, MongoCommunityActivityReader>();
+builder.Services.AddScoped<IOfferLikeRepository, MongoOfferLikeRepository>();
+builder.Services.AddScoped<IStoreReviewRepository, MongoStoreReviewRepository>();
+builder.Services.AddScoped<ReviewTextModeration>();
+builder.Services.AddScoped<IModerationEvidenceStore>(services =>
+{
+    var http = services.GetRequiredService<IHttpContextAccessor>();
+    return new MongoModerationEvidenceStore(services.GetRequiredService<MongoDbContext>(), () =>
+        Guid.TryParse(http.HttpContext?.Items[CorrelationIdMiddleware.ItemKey] as string, out var identifier)
+            ? identifier.ToString("D")
+            : System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("D"));
+});
 builder.Services.AddScoped<IClaimPushNotifier, ClaimPushNotifier>();
 builder.Services.AddScoped<IClaimPushReceiptStore, MongoClaimPushReceiptStore>();
 builder.Services.AddScoped<INearbyOfferNotifier, NearbyOfferNotifier>();
@@ -189,6 +219,49 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Fail("La sesión ha sido revocada o la contraseña fue restablecida.");
             }
+        },
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                Title = "Unauthorized",
+                Status = StatusCodes.Status401Unauthorized,
+                Detail = "No se proporcionó un token de autenticación válido o ha expirado.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/problem+json";
+
+            var correlationId = context.HttpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+                ?? context.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
+                Title = "Forbidden",
+                Status = StatusCodes.Status403Forbidden,
+                Detail = "No tiene permisos suficientes para acceder a este recurso.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["correlationId"] = correlationId;
+
+            await context.Response.WriteAsJsonAsync(problem);
         }
     };
 });
@@ -320,6 +393,8 @@ app.MapUserEndpoints();
 app.MapMerchantEndpoints();
 app.MapOfferEndpoints();
 app.MapMediaEndpoints();
+app.MapMediaDeliveryEndpoints();
+app.MapModerationAuditEndpoints();
 app.MapSanctionEndpoints();
 app.MapAiEndpoints();
 app.MapFriendEndpoints();

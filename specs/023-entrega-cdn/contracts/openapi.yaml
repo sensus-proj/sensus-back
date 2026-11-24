@@ -1,0 +1,189 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 023 Entrega de contenido por CDN"
+  version: 1.1.0
+  description: >
+    Contrato para la entrega de contenido multimedia aprobado y privado a través de Cloudinary CDN
+    y URLs firmadas mediante HMAC-SHA256 con TTL estricto (Spec 023, FR-023-01 a FR-023-04).
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/media/{id}/delivery-url:
+    post:
+      summary: Emite una URL firmada de corta vigencia para entregar un activo multimedia
+      operationId: createMediaDeliveryUrl
+      tags:
+        - "Entrega de multimedia (Spec 023)"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador único del activo multimedia
+      responses:
+        '200':
+          description: URL firmada generada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaDeliveryUrlDto'
+        '400':
+          description: Identificador de activo inválido
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: No autenticado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Acceso denegado o activo no entregable (pendiente, rechazado o cuarentena no autorizado)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Activo multimedia no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          description: Demasiadas solicitudes (Rate limit excedido)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '503':
+          description: Servicio de entrega no disponible o no configurado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/media/{id}/delivery:
+    get:
+      summary: Entrega el contenido multimedia validando firma HMAC y vigencia temporal
+      operationId: getMediaDelivery
+      tags:
+        - "Entrega de multimedia (Spec 023)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador único del activo multimedia
+        - name: expires
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: Timestamp Unix (en segundos) de expiración de la URL
+        - name: signature
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Firma HMAC-SHA256 codificada en Base64Url
+      responses:
+        '200':
+          description: Flujo binario del activo multimedia aprobado servido vía proxy con Cache-Control acotado al tiempo remanente de la firma
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: "public, max-age=3600, s-maxage=3600"
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Firma ausente, inválida o expirada
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Activo multimedia no encontrado o retirado (no disponible)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          description: Demasiadas solicitudes (Rate limit excedido)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '503':
+          description: Contenido no disponible en el almacenamiento
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    MediaDeliveryUrlDto:
+      type: object
+      required:
+        - mediaId
+        - deliveryUrl
+        - expiresAtUtc
+        - scope
+        - status
+        - cacheMaxAgeSeconds
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        deliveryUrl:
+          type: string
+        expiresAtUtc:
+          type: string
+          format: date-time
+        scope:
+          type: string
+          enum: [Public, Private]
+        status:
+          type: string
+          enum: [Approved, Quarantined]
+        cacheMaxAgeSeconds:
+          type: integer
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

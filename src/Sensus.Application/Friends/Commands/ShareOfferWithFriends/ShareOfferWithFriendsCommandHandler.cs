@@ -77,7 +77,7 @@ public sealed class ShareOfferWithFriendsCommandHandler
         }
 
         Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null)
+        if (offer is null || offer.Status == OfferStatus.Draft)
         {
             return Result.Failure<ShareOfferResultDto>(
                 Error.NotFound("Offer.NotFound", "La oferta seleccionada no está disponible."));

@@ -1,6 +1,6 @@
 # Checklist 017 — Moderación multimodal de contenido
 
-Alineado a `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0.
+Alineado a `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0
 
 Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra con casillas pendientes.
 
@@ -14,11 +14,13 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
+- [ ] El flujo de publicación de la 024 persiste la cuarentena ante fallos. El adaptador ya valida el veredicto y devuelve cuarentena con respuestas malformadas o timeout (`CA-017-06`).
+
 - [x] Imagen y texto viajan en la misma solicitud
 - [ ] Ningún camino permite publicar sin veredicto
 - [x] El timeout está probado
 - [x] La clave no está en el repositorio
-- [ ] No existe endpoint público de moderación
+- [x] No existe endpoint público de moderación
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -35,8 +37,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — BRECHA: existe el endpoint público `POST /api/v1/media/moderate`, contrario a FR-017-07
-- [ ] **IV. Seguridad y privacidad** — BRECHA: la oferta acepta `ImageUrl` sin verificar que proviene de un MediaAsset aprobado (corregido envío a cuarentena ante fallo, timeout o falta de clave)
+- [x] **III. CQRS y contratos** — La ruta independiente responde 404 (FR-017-07)
+- [ ] **IV. Seguridad y privacidad** — La creación de ofertas con imagen verifica un activo aprobado y su contexto. Sigue abierta la cuarentena previa al almacenamiento en Cloudinary y la integración con la 024.
 - [x] **V. Verificación automatizada** — PASS
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
@@ -58,3 +60,6 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 |---|---|---|---|
 | 2026-11-15 | Equipo Sensus | PARCIAL | `OpenAiImageModerationService` con omni-moderation y modo visión, timeout configurable y fail-closed. La moderación ocurre en la carga (`UploadMediaCommandHandler`). Auditoría documental 2026-11-15: build -warnaserror OK; 523 unitarias, 4 de arquitectura y 116 de integración en verde; check-specs OK. |
 | 2026-11-15 | Equipo Sensus | Spec v1.2.0 | FR-017-02 y FR-017-03 alineados al modelo real (`gpt-4o-mini` en visión con política de Sensus, decisión D28); costo registrado en `EX-002` (`constitution.md` v2.1.0). Corregido el *fail-open* sin clave de `OpenAiImageModerationService.cs`: sin clave, errores y timeouts envían a cuarentena (fail-closed, `constitution.md` §2.4) con pruebas de regresión verificadas. |
+| 2026-11-22 | Codex | Parcial | `OpenAiImageModerationServiceTests` verifica la solicitud de solo texto a `gpt-4o-mini`, el resultado estructurado y el comportamiento fail-closed. `MediaEndpointsTests` verifica que la ruta independiente no existe. Pendientes la integración de publicación, la cuarentena de imágenes de ofertas y la auditoría completa. |
+| 2026-11-22 | Codex | T017-14 verificada | El adaptador de compatibilidad envía a cuarentena veredictos sin campos requeridos, puntajes fuera de rango y resultados contradictorios. Cinco casos de regresión. |
+| 2026-11-22 | Codex | Parcial | El registro append-only de multimedia y reseñas conserva veredicto, categorías, puntajes, política o umbral, acción y correlación. La consulta de administración queda en 021. Falta conectar la publicación de la Spec 024. |

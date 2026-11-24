@@ -38,10 +38,12 @@ public static class FeedEndpoints
         {
             if (!lat.HasValue || !lng.HasValue)
             {
-                return ResultExtensions.ToProblemResult(
-                    StatusCodes.Status400BadRequest,
-                    "OfferFeed.CoordinatesRequired",
-                    "Las coordenadas lat y lng son obligatorias.");
+                return Results.Problem(new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "OfferFeed.CoordinatesRequired",
+                    Detail = "Las coordenadas lat y lng son obligatorias."
+                });
             }
 
             Guid? parsedSnapshotId = null;
@@ -49,10 +51,12 @@ public static class FeedEndpoints
             {
                 if (!Guid.TryParse(snapshotId.Trim(), out Guid parsed) || parsed == Guid.Empty)
                 {
-                    return ResultExtensions.ToProblemResult(
-                        StatusCodes.Status400BadRequest,
-                        "OfferFeed.InvalidSnapshotId",
-                        "El parámetro snapshotId debe tener formato GUID válido.");
+                    return Results.Problem(new ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "OfferFeed.InvalidSnapshotId",
+                        Detail = "El parámetro snapshotId debe tener formato GUID válido."
+                    });
                 }
 
                 parsedSnapshotId = parsed;

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
 using Sensus.Application.Comercios.DTOs;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Users.Commands.Login;
 using Sensus.Application.Users.Commands.RegisterUser;
 using Sensus.Application.Users.DTOs;
@@ -88,8 +89,8 @@ public class MerchantE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFact
         var nearbyRes = await _client.SendAsync(nearbyReq);
         nearbyRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var nearbyList = await nearbyRes.Content.ReadFromJsonAsync<List<ComercioDto>>();
+        var nearbyList = await nearbyRes.Content.ReadFromJsonAsync<PagedResult<ComercioDto>>();
         nearbyList.Should().NotBeNull();
-        nearbyList!.Should().Contain(c => c.NombreComercial == "Panadería Artesanal Nueva");
+        nearbyList!.Items.Should().Contain(c => c.NombreComercial == "Panadería Artesanal Nueva");
     }
 }

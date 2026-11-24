@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Sensus.Application.Comercios.DTOs;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.UpdateProfile;
 using Sensus.Application.Users.DTOs;
@@ -59,11 +60,11 @@ public class GuestModeE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFac
         var nearbyRes = await _client.SendAsync(nearbyReq);
         nearbyRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var comercios = await nearbyRes.Content.ReadFromJsonAsync<List<ComercioDto>>();
+        var comercios = await nearbyRes.Content.ReadFromJsonAsync<PagedResult<ComercioDto>>();
         comercios.Should().NotBeNull();
         // Solo debe retornar el cercano (<2km), nunca el lejano (>2km)
-        comercios!.Should().ContainSingle(c => c.NombreComercial == "Café Cercano");
-        comercios.Should().NotContain(c => c.NombreComercial == "Tienda Lejana");
+        comercios!.Items.Should().ContainSingle(c => c.NombreComercial == "Café Cercano");
+        comercios.Items.Should().NotContain(c => c.NombreComercial == "Tienda Lejana");
 
         // 3. SE-008: Intentar modificar perfil de usuario -> 403 Forbidden (solo RegisteredUser)
         using var editProfileReq = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/profile")

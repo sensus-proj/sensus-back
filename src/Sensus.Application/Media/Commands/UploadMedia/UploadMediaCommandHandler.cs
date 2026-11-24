@@ -1,11 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Media.Commands.UploadMedia;
 using Sensus.Application.Media.DTOs;
 using Sensus.Application.Sanctions.Commands.ApplySanction;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 using IMediaAssetRepository = Sensus.Domain.Repositories.IMediaAssetRepository;
 
@@ -20,6 +22,9 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ISender _sender;
     private readonly ILogger<UploadMediaCommandHandler> _logger;
+    private readonly IModerationAuditRecorder _auditRecorder;
+    private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
+    private readonly IModerationEvidenceStore? _evidence;
 
     public UploadMediaCommandHandler(
         IMediaStorage mediaStorage,
@@ -28,7 +33,10 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         ICurrentUserService currentUser,
         IDateTimeProvider dateTimeProvider,
         ISender sender,
-        ILogger<UploadMediaCommandHandler> logger)
+        ILogger<UploadMediaCommandHandler> logger,
+        IModerationAuditRecorder auditRecorder,
+        ICdnCacheInvalidator cdnCacheInvalidator,
+        IModerationEvidenceStore? evidence = null)
     {
         _mediaStorage = mediaStorage;
         _moderationService = moderationService;
@@ -37,6 +45,9 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         _dateTimeProvider = dateTimeProvider;
         _sender = sender;
         _logger = logger;
+        _auditRecorder = auditRecorder;
+        _cdnCacheInvalidator = cdnCacheInvalidator;
+        _evidence = evidence;
     }
 
     public async Task<Result<UploadMediaResponseDto>> Handle(
@@ -78,7 +89,7 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
             request.TextContext,
             cancellationToken);
 
-        MediaAssetStatus status = moderationResult.IsApproved
+        MediaAssetStatus status = moderationResult is { IsApproved: true, Decision: "Approved" }
             ? MediaAssetStatus.Approved
             : moderationResult.Decision == "Quarantine"
                 ? MediaAssetStatus.Quarantined
@@ -86,18 +97,53 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
 
         // FR-019-02: el contenido rechazado se elimina del almacenamiento y no conserva URL; el que queda en
         // cuarentena conserva la URL solo de forma interna para una eventual liberación (FR-019-04).
-        if (status == MediaAssetStatus.Rejected)
-        {
-            await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
-        }
-
         MediaAsset mediaAsset = MediaAsset.Create(
             parsedUserId,
             uploadResult.Value.PublicId,
             status == MediaAssetStatus.Rejected ? null : uploadResult.Value.SecureUrl,
             request.ContentType,
             status,
-            _dateTimeProvider.UtcNow);
+            _dateTimeProvider.UtcNow,
+            status == MediaAssetStatus.Approved && !string.IsNullOrWhiteSpace(request.TextContext)
+                ? ModeratedTextFingerprint.Create(request.TextContext)
+                : null);
+
+        if (_evidence is not null)
+        {
+            await _evidence.AppendAsync(new ModerationEvidence(
+                mediaAsset.Id, "MediaAsset", moderationResult.Decision, moderationResult.FlaggedCategories,
+                moderationResult.CategoryScores, moderationResult.AppliedThresholdSummary,
+                status == MediaAssetStatus.Approved ? "Allow" : "Block", mediaAsset.CreatedAtUtc), cancellationToken);
+        }
+
+        // Spec 021 (FR-021-01): la evidencia se registra antes de publicar. Si no se puede persistir, el
+        // contenido no se publica (fail-closed).
+        ModerationAuditEntry auditEntry = new(
+            mediaAsset.Id,
+            ModerationTargetType.MediaAsset,
+            ToVerdict(status),
+            moderationResult.Decision,
+            "media_upload",
+            moderationResult.FlaggedCategories,
+            moderationResult.CategoryScores,
+            moderationResult.AppliedThresholdSummary);
+
+        if (status == MediaAssetStatus.Rejected)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+            await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
+            await _cdnCacheInvalidator.InvalidateAsync(uploadResult.Value.PublicId, cancellationToken);
+        }
+        else
+        {
+            Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+            if (auditResult.IsFailure)
+            {
+                await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
+                await _cdnCacheInvalidator.InvalidateAsync(uploadResult.Value.PublicId, cancellationToken);
+                return Result.Failure<UploadMediaResponseDto>(auditResult.Error);
+            }
+        }
 
         await _mediaAssetRepository.AddAsync(mediaAsset, cancellationToken);
 
@@ -116,6 +162,17 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
 
         return Result.Success(dto);
     }
+
+    /// <summary>
+    /// Spec 021: traduce el estado del activo al veredicto auditado.
+    /// </summary>
+    private static ModerationVerdict ToVerdict(MediaAssetStatus status) =>
+        status switch
+        {
+            MediaAssetStatus.Approved => ModerationVerdict.Approved,
+            MediaAssetStatus.Quarantined => ModerationVerdict.Quarantined,
+            _ => ModerationVerdict.Rejected
+        };
 
     /// <summary>
     /// Spec 020 (FR-020-01): una decisión de banda alta dispara la sanción. Un fallo al sancionar nunca debe

@@ -7,6 +7,7 @@ using NSubstitute;
 using Sensus.Application.Comercios.Commands.RegisterComercio;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -64,8 +65,8 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
             19.4320,
             -99.1330).Value;
 
-        _factory.ComercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio> { dummyComercio });
+        _factory.ComercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((new List<Comercio> { dummyComercio }, 1));
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
@@ -77,13 +78,13 @@ public class GuestSessionEndpointsTests : IClassFixture<CustomWebApplicationFact
 
         // Assert: El endpoint responde 200 OK y el repositorio fue invocado con máximo 2000 metros
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var results = await response.Content.ReadFromJsonAsync<List<ComercioDto>>();
+        var results = await response.Content.ReadFromJsonAsync<PagedResult<ComercioDto>>();
         results.Should().NotBeNull();
-        results!.Should().HaveCount(1);
-        results[0].NombreComercial.Should().Be("Cafetería Local");
+        results!.Items.Should().HaveCount(1);
+        results.Items[0].NombreComercial.Should().Be("Cafetería Local");
 
         await _factory.ComercioRepository.Received(1)
-            .GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>());
+            .GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>());
     }
 
     [Fact]

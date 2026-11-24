@@ -21,6 +21,7 @@ public class UpdateOfferCommandHandlerTests
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly UpdateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -35,6 +36,9 @@ public class UpdateOfferCommandHandlerTests
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _logger = Substitute.For<ILogger<UpdateOfferCommandHandler>>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
 
@@ -45,6 +49,7 @@ public class UpdateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService);
     }
 
@@ -368,6 +373,7 @@ public class UpdateOfferCommandHandlerTests
             _currentUserService,
             _dateTimeProvider,
             _logger,
+            _auditRecorder,
             _cacheService,
             Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
 

@@ -14,6 +14,7 @@ public class RegisterUserCommandHandlerTests
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly RegisterUserCommandHandler _handler;
 
     public RegisterUserCommandHandlerTests()
@@ -23,13 +24,17 @@ public class RegisterUserCommandHandlerTests
         _jwtTokenGenerator = Substitute.For<IJwtTokenGenerator>();
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
 
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Sensus.Domain.Common.Result.Success());
+
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc));
 
         _handler = new RegisterUserCommandHandler(
             _userRepository,
             _passwordHasher,
             _jwtTokenGenerator,
-            _dateTimeProvider);
+            _dateTimeProvider,
+            _auditRecorder);
     }
 
     [Fact]

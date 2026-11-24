@@ -26,6 +26,7 @@ public class ContentModerationHandlersTests
         var jwt = Substitute.For<IJwtTokenGenerator>();
         var clock = Substitute.For<IDateTimeProvider>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         userRepo.ExistsByEmailAsync("test@sensus.com", Arg.Any<CancellationToken>()).Returns(false);
         moderation.ModerateContentTextAsync(
@@ -34,7 +35,7 @@ public class ContentModerationHandlersTests
                 Arg.Any<CancellationToken>())
             .Returns(new TextModerationResult(false, "El nombre contiene palabras antisonantes.", ["profanity"], "Rejected"));
 
-        var handler = new RegisterUserCommandHandler(userRepo, hasher, jwt, clock, moderation);
+        var handler = new RegisterUserCommandHandler(userRepo, hasher, jwt, clock, audit, moderation);
 
         var result = await handler.Handle(
             new RegisterUserCommand("Nombre Grosero", "test@sensus.com", "Password123#", true),
@@ -52,6 +53,8 @@ public class ContentModerationHandlersTests
         var userRepo = Substitute.For<IUserRepository>();
         var currentUser = Substitute.For<ICurrentUserService>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
+        var cdnInvalidator = Substitute.For<ICdnCacheInvalidator>();
 
         currentUser.UserId.Returns(user.Id.ToString());
         userRepo.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
@@ -61,7 +64,12 @@ public class ContentModerationHandlersTests
                 Arg.Any<CancellationToken>())
             .Returns(new TextModerationResult(false, "Lenguaje ofensivo detectado.", ["profanity"], "Rejected"));
 
-        var handler = new UpdateProfileCommandHandler(userRepo, currentUser, textModerationService: moderation);
+        var handler = new UpdateProfileCommandHandler(
+            userRepo,
+            currentUser,
+            audit,
+            cdnInvalidator,
+            textModerationService: moderation);
 
         var result = await handler.Handle(new UpdateProfileCommand("Alias Ofensivo", null), CancellationToken.None);
 
@@ -81,6 +89,7 @@ public class ContentModerationHandlersTests
         var jwt = Substitute.For<IJwtTokenGenerator>();
         var clock = Substitute.For<IDateTimeProvider>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         currentUser.IsAuthenticated.Returns(true);
         currentUser.UserId.Returns(user.Id.ToString());
@@ -99,6 +108,7 @@ public class ContentModerationHandlersTests
             geocoding,
             jwt,
             clock,
+            audit,
             moderation);
 
         var result = await handler.Handle(
@@ -119,6 +129,7 @@ public class ContentModerationHandlersTests
         var currentUser = Substitute.For<ICurrentUserService>();
         var geocoding = Substitute.For<IGeocodingService>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         currentUser.UserId.Returns(userId.ToString());
         comercioRepo.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(comercio);
@@ -132,6 +143,7 @@ public class ContentModerationHandlersTests
             comercioRepo,
             currentUser,
             geocoding,
+            audit,
             textModerationService: moderation);
 
         var result = await handler.Handle(
@@ -154,6 +166,7 @@ public class ContentModerationHandlersTests
         var clock = Substitute.For<IDateTimeProvider>();
         var logger = Substitute.For<ILogger<CreateOfferCommandHandler>>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         clock.UtcNow.Returns(FixedNow);
         currentUser.UserId.Returns(userId.ToString());
@@ -170,6 +183,7 @@ public class ContentModerationHandlersTests
             currentUser,
             clock,
             logger,
+            audit,
             textModerationService: moderation);
 
         var result = await handler.Handle(
@@ -207,6 +221,7 @@ public class ContentModerationHandlersTests
         var clock = Substitute.For<IDateTimeProvider>();
         var logger = Substitute.For<ILogger<UpdateOfferCommandHandler>>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         clock.UtcNow.Returns(FixedNow.AddMinutes(5));
         currentUser.UserId.Returns(userId.ToString());
@@ -226,6 +241,7 @@ public class ContentModerationHandlersTests
             currentUser,
             clock,
             logger,
+            audit,
             textModerationService: moderation);
 
         var result = await handler.Handle(
@@ -273,6 +289,7 @@ public class ContentModerationHandlersTests
         var clock = Substitute.For<IDateTimeProvider>();
         var logger = Substitute.For<ILogger<RepublishOfferCommandHandler>>();
         var moderation = Substitute.For<ITextModerationService>();
+        var audit = Substitute.For<IModerationAuditRecorder>();
 
         clock.UtcNow.Returns(FixedNow.AddMinutes(10));
         currentUser.UserId.Returns(userId.ToString());
@@ -290,6 +307,7 @@ public class ContentModerationHandlersTests
             currentUser,
             clock,
             logger,
+            audit,
             textModerationService: moderation);
 
         var result = await handler.Handle(

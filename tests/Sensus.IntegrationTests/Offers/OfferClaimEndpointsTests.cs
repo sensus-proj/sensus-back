@@ -1,13 +1,20 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Notifications;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Repositories;
+using Sensus.Infrastructure.Services;
 using Sensus.IntegrationTests.Infrastructure;
 
 namespace Sensus.IntegrationTests.Offers;
@@ -237,6 +244,97 @@ public class OfferClaimEndpointsTests : IClassFixture<CustomWebApplicationFactor
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         await _factory.OfferRepository.DidNotReceiveWithAnyArgs()
             .TryReserveStockAsync(default, default, default);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ClaimOffer_UsesFcmContractAndRespectsMerchantPreferences(bool merchantPushEnabled)
+    {
+        string buyerToken = CreateConsumerToken(out Guid buyerId);
+        var (_, merchant) = CreateMerchantToken();
+        var now = DateTime.UtcNow;
+        var offer = Offer.Create(merchant.Id, "Oferta para recoger", "Disponible en el local", 100m, 20, 2,
+            now.AddHours(-1), now.AddDays(1), nowUtc: now).Value;
+        _factory.OfferRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
+        _factory.OfferRepository.TryReserveStockAsync(offer.Id, Arg.Any<DateTime>(), Arg.Any<CancellationToken>()).Returns(true);
+        _factory.ComercioRepository.GetByIdAsync(merchant.Id, Arg.Any<CancellationToken>()).Returns(merchant);
+        OfferClaim? saved = null;
+        _factory.OfferClaimRepository.TryAddAsync(Arg.Any<OfferClaim>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            saved = call.Arg<OfferClaim>();
+            return true;
+        });
+
+        var devices = Substitute.For<IDeviceRepository>();
+        devices.GetActiveByUserAsync(buyerId, Arg.Any<CancellationToken>())
+            .Returns(new List<Device> { Device.Create(buyerId, "buyer", "Android", "buyer-test-device", now) });
+        devices.GetActiveByUserAsync(merchant.UsuarioId, Arg.Any<CancellationToken>())
+            .Returns(new List<Device> { Device.Create(merchant.UsuarioId, "merchant", "Android", "merchant-test-device", now) });
+        var settings = NotificationSettings.CreateDefaults(merchant.UsuarioId);
+        settings.Update(merchantPushEnabled, null, null, null);
+        var preferences = Substitute.For<INotificationSettingsRepository>();
+        preferences.GetByUserIdAsync(merchant.UsuarioId, Arg.Any<CancellationToken>()).Returns(settings);
+        var receipts = Substitute.For<IClaimPushReceiptStore>();
+        receipts.TryReserveAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var payloads = new ConcurrentBag<JsonElement>();
+        using var http = new HttpClient(new ClaimFcmHandler(async (request, ct) =>
+        {
+            Assert.NotNull(saved);
+            Assert.Equal("/v1/projects/sensus-test/messages:send", request.RequestUri!.AbsolutePath);
+            using var body = await request.Content!.ReadFromJsonAsync<JsonDocument>(cancellationToken: ct);
+            payloads.Add(body!.RootElement.Clone());
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { name = "projects/sensus-test/messages/accepted" })
+            };
+        }))
+        {
+            BaseAddress = new Uri("https://fcm.googleapis.com/")
+        };
+        var dispatcher = new FcmPushDispatcher(http, _ => Task.FromResult(("sensus-test", "test-placeholder")),
+            NullLogger<FcmPushDispatcher>.Instance);
+        using var app = _factory.WithWebHostBuilder(builder => builder.ConfigureServices((_, services) =>
+        {
+            services.Replace(ServiceDescriptor.Singleton(devices));
+            services.Replace(ServiceDescriptor.Singleton(preferences));
+            services.Replace(ServiceDescriptor.Singleton(receipts));
+            services.Replace(ServiceDescriptor.Singleton<IPushDispatcher>(dispatcher));
+        }));
+        using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerToken);
+
+        using var response = await client.PostAsync($"/api/v1/offers/{offer.Id}/claim", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var claim = await response.Content.ReadFromJsonAsync<ClaimOfferResultDto>();
+        Assert.NotNull(claim);
+        Assert.Equal(claim.Code, claim.QrPayload);
+        Assert.Equal(merchantPushEnabled ? 2 : 1, payloads.Count);
+        foreach (var payload in payloads)
+        {
+            Assert.False(payload.GetProperty("validate_only").GetBoolean());
+            var message = payload.GetProperty("message");
+            var data = message.GetProperty("data");
+            bool isBuyer = message.GetProperty("token").GetString() == "buyer-test-device";
+            Assert.Equal(isBuyer ? "claim_confirmed" : "merchant_offer_claimed", data.GetProperty("type").GetString());
+            Assert.Equal(claim.ClaimId, data.GetProperty("claimId").GetGuid());
+            Assert.Equal(offer.Id, data.GetProperty("offerId").GetGuid());
+            Assert.Equal(isBuyer ? 4 : 3, data.EnumerateObject().Count());
+            if (isBuyer)
+            {
+                Assert.Equal(claim.ExpiresAtUtc, data.GetProperty("expiresAtUtc").GetDateTime());
+            }
+        }
+        Assert.Contains(payloads, payload => payload.GetProperty("message").GetProperty("token").GetString() == "buyer-test-device");
+    }
+
+    private sealed class ClaimFcmHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            send(request, cancellationToken);
     }
 
     [Fact]

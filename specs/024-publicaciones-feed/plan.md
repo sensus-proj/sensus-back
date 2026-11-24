@@ -6,7 +6,7 @@
 | Estado del plan | Aprobado |
 | Versión | 2.1.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -33,7 +33,7 @@ Permitir crear y eliminar publicaciones en el feed social con texto (1 a 500 car
 | Amenaza (STRIDE) | Mitigación implementada |
 |---|---|
 | **S**poofing | El autor de la publicación se extrae exclusivamente del JWT (`sub`/`UserId` verificado en servidor), nunca del cuerpo del payload. |
-| **T**ampering | Moderación previa *fail-closed* y síncrona antes de persistir o publicar texto e imagen. Ante rechazo o fallo del servicio, la solicitud se rechaza con 400, no se sube la imagen y no se persiste la publicación. La visibilidad posterior usa lista de permitidos (`Published` y `!isDeleted`). |
+| **T**ampering | Moderación previa *fail-closed* y síncrona con `gpt-4o-mini` y la política de Sensus antes de persistir o subir a Cloudinary: enviar solo texto si no hay imagen y ambas modalidades juntas en la misma solicitud cuando haya imagen. Ante rechazo, fallo, timeout, cuota agotada o respuesta inválida, queda en cuarentena / se rechaza sin subir la imagen ni publicar el post. La visibilidad posterior usa lista de permitidos (`Published` y `!isDeleted`). |
 | **R**epudiation | Auditoría inmutable de autor, fecha de creación (`createdAtUtc`) y estado de moderación. |
 | **I**nformation Disclosure | ProblemDetails estándar RFC 7807/7231 sin filtrar nombres de colecciones ni trazas internas. Los posts eliminados o en cuarentena devuelven 404 o no aparecen en consultas. |
 | **D**enial of Service | Rate limiting aplicado en `POST` (`SensitiveWritePolicy`), tamaño máximo de texto fijado en 500 caracteres y límite de 4,5 MB para la imagen (`413`). |
@@ -48,7 +48,7 @@ Permitir crear y eliminar publicaciones en el feed social con texto (1 a 500 car
 
 ## 6. Costo AWS
 
-Sin costo incremental: funciones Lambda .NET 10 y API Gateway HTTP API v2 dentro del Free Tier. Almacenamiento multimedia en Cloudinary Free Tier.
+Lambda .NET 10 y API Gateway HTTP API v2 dentro del Free Tier; almacenamiento multimedia en Cloudinary Free Tier. Las llamadas de moderación consumen el techo agregado de 1 USD/mes de `EX-002`; se medirá el costo unitario de solo texto antes de habilitar el flujo.
 
 ## 7. Estrategia de pruebas
 

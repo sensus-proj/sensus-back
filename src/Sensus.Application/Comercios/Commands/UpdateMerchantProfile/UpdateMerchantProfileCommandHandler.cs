@@ -18,11 +18,13 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
     private readonly ICacheService? _cacheService;
     private readonly IOfferRepository? _offerRepository;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IModerationAuditRecorder _auditRecorder;
 
     public UpdateMerchantProfileCommandHandler(
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
         IGeocodingService geocodingService,
+        IModerationAuditRecorder auditRecorder,
         ICacheService? cacheService = null,
         IOfferRepository? offerRepository = null,
         ITextModerationService? textModerationService = null)
@@ -30,6 +32,7 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _geocodingService = geocodingService;
+        _auditRecorder = auditRecorder;
         _cacheService = cacheService;
         _offerRepository = offerRepository;
         _textModerationService = textModerationService;
@@ -55,7 +58,7 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
             ? request.NombreComercial
             : comercio.NombreComercial;
 
-        var moderationResult = await ContentModerationHelper.EnsureApprovedAsync(
+        ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
             $"Nombre del comercio: {nombreComercial}\nDirección: {request.Direccion}",
             "Actualización de nombre y datos de comercio",
@@ -63,9 +66,27 @@ public sealed class UpdateMerchantProfileCommandHandler : IRequestHandler<Update
             "El nombre o datos del comercio contienen lenguaje antisonante u ofensivo.",
             cancellationToken);
 
-        if (moderationResult.IsFailure)
+        var auditEntry = new ModerationAuditEntry(
+            comercio.Id,
+            ModerationTargetType.Comercio,
+            evaluation.Verdict,
+            evaluation.Decision,
+            "comercio_update",
+            evaluation.FlaggedCategories,
+            evaluation.CategoryScores,
+            ActorId: usuarioId.ToString(),
+            ActorType: ModerationActorType.User);
+
+        if (!evaluation.IsApproved)
         {
-            return Result.Failure<ComercioDto>(moderationResult.Error);
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+            return Result.Failure<ComercioDto>(evaluation.RejectionError ?? Error.Validation("Comercio.ContentModerationRejected", "Contenido rechazado por moderación."));
+        }
+
+        Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<ComercioDto>(auditResult.Error);
         }
 
         var direccionCambio = !string.Equals(comercio.Direccion, request.Direccion, StringComparison.OrdinalIgnoreCase) ||
