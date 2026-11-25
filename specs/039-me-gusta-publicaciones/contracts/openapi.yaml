@@ -1,13 +1,16 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 039 Me gusta en publicaciones"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 039. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: >-
+    Contrato implementado de la Spec 039. El cliente envía la intención explícita `liked`;
+    dos solicitudes con la misma intención producen una sola transición (FR-039-05, CA-039-04).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/feed/posts/{id}/like:
     post:
+      operationId: SetFeedPostLike
       summary: Establecer el estado del me gusta sobre una publicación visible
       security: [{ bearerAuth: [] }]
       parameters:
@@ -22,33 +25,67 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [liked]
-              properties:
-                liked:
-                  type: boolean
-                  description: Estado deseado del me gusta del usuario autenticado.
+              $ref: '#/components/schemas/SetFeedPostLikeRequest'
       responses:
         '200':
-          description: Estado resultante y conteo actualizado.
+          description: Estado resultante y conteo actualizado. No expone quién reaccionó.
           content:
             application/json:
               schema:
-                type: object
-                required: [liked, likeCount]
-                properties:
-                  liked:
-                    type: boolean
-                  likeCount:
-                    type: integer
-                    minimum: 0
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: Publicación inexistente o no visible }
-        '429': { description: Límite de solicitudes superado }
+                $ref: '#/components/schemas/FeedPostLikeStatus'
+        '400':
+          description: Cuerpo ausente, malformado o `liked` no booleano.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '401':
+          description: No autenticado
+        '403':
+          description: Token de invitado; se requiere usuario registrado.
+        '404':
+          description: Publicación inexistente, pendiente, en cuarentena o eliminada (respuesta uniforme).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: >-
+            Límite de 60 solicitudes por usuario y hora superado (FR-039-06, configurable en
+            `RateLimiting:PostLikes`). Incluye la cabecera `Retry-After`.
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    SetFeedPostLikeRequest:
+      type: object
+      required: [liked]
+      additionalProperties: false
+      properties:
+        liked:
+          type: boolean
+          description: Estado deseado del me gusta del usuario autenticado.
+    FeedPostLikeStatus:
+      type: object
+      required: [liked, likeCount]
+      properties:
+        liked:
+          type: boolean
+        likeCount:
+          type: integer
+          minimum: 0
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        correlationId: { type: string }

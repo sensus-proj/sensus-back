@@ -11,9 +11,9 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-24 |
+| **Última actualización** | 2026-11-25 |
 | **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044. En `develop`: `implement` cerrado al 100 % para specs **009**, **012**, **035** y **056**, y **027** al máximo posible desde backend con runbook operacional documentado. En `sprint3_oscar`: `specify → plan → tasks → checklist → implement` completadas para **Spec 047 v1.2.0** (CI-CD y DevSecOps al 100 %), **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas), **Spec 024 v2.1.0** (Publicaciones del feed al 100 %, T024-01 a T024-08), **Spec 038 v2.1.0** (Favoritos de ofertas, T038-01 a T038-09), **Spec 029 v2.0.0** (Recuperación de contraseña, T029-01 a T029-21), **Spec 037 v2.0.0** (Inventario de ofertas del comerciante, T037-01 a T037-10), **Spec 048 v2.0.0** (Caché distribuido con Redis, T048-01 a T048-26), **Spec 044 v2.0.0** (Ajustes de notificaciones, T044-01 a T044-15), **Spec 060 v2.0.0** (Baja lógica de cuenta y purga diferida, T060-01 a T060-12), **Spec 061 v2.0.0** (Anonimización de contenido y cierre comercial, T061-01 a T061-12) y **Spec 030 v2.0.0** (`Escindida` en 060/061). Orden confirmado 029 → 037 → 048 → 044 → 030 completado. |
-| **Rama de trabajo** | `sprint3_oscar` integrando `develop` (PR #67; merge en curso resuelto en el árbol de trabajo) |
+| **Rama de trabajo** | `Back_Rocio`, avanzada por fast-forward a `origin/main` `25c5ba2` (CI y CD en verde el 2026-11-25) |
 | **Agente** | OpenCode / Antigravity |
 | **Constitución vigente** | v3.0.0 (2026-11-23, incluye cierre de EX-004) |
 | **AGENTS.md vigente** | v3.0.0 |
@@ -494,3 +494,39 @@ Decisiones confirmadas por el responsable y aplicadas a los cuatro artefactos y 
 - Gates verificados: build `-warnaserror` 0/0, formato limpio, `check-specs.mjs` 59 specs, 920 unitarias + 4 arquitectura + 3 E2E + 498/509 integración, cobertura Domain 89,35 % / Application 96,16 %. Las 11 pruebas Testcontainers siguen fallando por `npipe://./pipe/docker_engine`; no se omitieron ni se bajaron umbrales.
 - EX-003 (Valkey Serverless con VPC/NAT fuera del Free Tier) y G-14 (caché sin IAM/RBAC) quedan documentadas; `cdk synth`/`cdk deploy` no se ejecutaron.
 - Siguiente paso del orden aprobado: **Spec 044** (ajustes de notificaciones, FCM real con credencial en SSM). Sin operaciones de Git.
+### 2026-11-25 — Auditoría SDD y re-evaluación de los Constitution Check en FAIL (Back_Rocio)
+
+- `Back_Rocio` se actualizó por *fast-forward* a `origin/main` `25c5ba2`. CI y CD de ese commit en verde.
+- Auditoría SDD: las 61 specs tienen sus cuatro artefactos. Hay inconsistencias de estado (spec vs tasks vs README),
+  versiones de la constitución mezcladas (v1.2.0 a v3.0.0), 056–059 fuera de plantilla, `FR-050-07` ausente de
+  `requirements.md` y prefijos ajenos en tareas de 038, 046 y 051.
+- Constitution Check re-evaluado contra v3.0.0 (plan 1.1.0): **015 pasa a PASS** (alarmas y Budgets en CDK).
+  **001, 002, 003, 005 y 006 pasan de FAIL a PARCIAL**: el secreto JWT ya no está en el repositorio (FR-045-11) y existe
+  `CorrelationIdMiddleware`, pero faltan casos de integración (400 en register/login, 401 en `/merchants/activate`,
+  403/404 en `/merchants/me`, 401 en `/users/photo-signature`) y pruebas de persistencia de usuarios/comercios con
+  MongoDB real. 002 conserva la brecha G-06 (`ExpiryMinutes: 1440`). T001-05 completada; T002-02 parcial (sin
+  evidencia de rotación del secreto histórico).
+- **G-12 sigue Abierta y vencida (2026-11-23)**: requiere rotar la clave de Figma en el móvil; no se cerró sin evidencia.
+- Siguiente paso: cerrar G-12 con evidencia del responsable; agregar las pruebas de integración faltantes de 001–006.
+
+### 2026-11-25 — Implementación de las Specs 039 (me gusta) y 026 (feed cercano) en Back_Rocio
+
+- Verificado antes de empezar: ninguna rama remota tiene commits ausentes en `Back_Rocio` y no hay PRs abiertos.
+- **Spec 039**: `POST /api/v1/feed/posts/{id}/like` con intención explícita `liked`. `FeedPostLike`, `IFeedPostLikeRepository`,
+  `SetFeedPostLikeCommand` y colección `feed_post_likes` con índice único `ux_feed_post_likes_post_user`. El conteo se deriva
+  de los registros únicos (sin contador desnormalizado ni transacciones; decisión en `plan.md` §3). Política `post-likes`
+  configurable en `RateLimiting:PostLikes` (60/h).
+- **Spec 026**: `GET /api/v1/feed/nearby` (radio 0–5 km, paginación 20/100, orden `createdAtUtc` desc + `_id` desc).
+  `FeedPost` acepta `latitude`/`longitude` opcionales al crear (extensión compatible del contrato de la 024) y las guarda
+  como GeoJSON `location`. Índice `ix_feed_posts_status_location_created_at` fijado con `hint`. Caché `feed:nearby:*` con TTL
+  `Redis:TtlByEntityMinutes:Feed`, invalidada al crear con ubicación y al eliminar.
+- **Corrección transversal**: `UseRateLimiter` se movió después de `UseAuthentication` en `Program.cs`. Antes, las políticas
+  "por usuario" (FR-038-06 y FR-039-06) particionaban por IP porque el usuario aún no estaba autenticado.
+- Gates: build `-warnaserror` 0/0 y `dotnet format` limpio (con SDK 11.0.100 porque el SDK 10.0.401 de `global.json` no está
+  instalado en esta máquina), 1174 unitarias + 5 arquitectura + 3 E2E + 643/677 integración. Las 34 fallas son
+  `DockerUnavailableException`, incluidas 8 nuevas de `MongoFeedSocialIntegrationTests`. Cobertura con unitarias: Domain 90,9 % y
+  Application 89,2 %.
+- Pendiente: ejecutar las pruebas de MongoDB con Docker o en CI, escaneos de CI (Principio VIII) y prueba de carga para
+  NFR-026-01 y NFR-039-01. La anonimización de la Spec 061 no invalida `feed:nearby:*` (el nombre del autor puede quedar
+  en caché hasta 5 minutos). Sin operaciones de Git.
+- Siguiente paso: levantar Docker y correr `MongoFeedSocialIntegrationTests`; luego decidir si se hace commit en `Back_Rocio`.
