@@ -239,6 +239,7 @@ public static class DependencyInjection
         services.AddScoped<IFeedPostRepository, MongoFeedPostRepository>();
         services.AddScoped<IFeedCommentRepository, MongoFeedCommentRepository>();
         services.AddScoped<IFeedPostVisibilityLookup, MongoFeedPostVisibilityLookup>();
+        services.AddScoped<IFeedPostLikeRepository, MongoFeedPostLikeRepository>();
         services.Configure<ContentReportSettings>(
             configuration.GetSection(ContentReportSettings.SectionName));
         services.AddScoped<IContentReportRepository, MongoContentReportRepository>();

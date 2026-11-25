@@ -15,7 +15,9 @@ public sealed record CreateFeedPostCommand(
     string Content,
     string? ImageUrl = null,
     byte[]? ImageBytes = null,
-    string? ImageContentType = null) : IRequest<Result<FeedPostDto>>;
+    string? ImageContentType = null,
+    double? Latitude = null,
+    double? Longitude = null) : IRequest<Result<FeedPostDto>>;
 
 public sealed class CreateFeedPostCommandValidator : AbstractValidator<CreateFeedPostCommand>
 {
@@ -32,6 +34,12 @@ public sealed class CreateFeedPostCommandValidator : AbstractValidator<CreateFee
         RuleFor(x => x.ImageUrl)
             .Must(url => string.IsNullOrWhiteSpace(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
             .WithMessage("La URL de la imagen debe ser una URL absoluta válida.");
+
+        // Spec 026: ubicación opcional compartida por el autor; ambas coordenadas o ninguna.
+        RuleFor(x => x)
+            .Must(x => FeedPost.ValidateLocation(x.Latitude, x.Longitude).IsSuccess)
+            .WithName("location")
+            .WithMessage("La ubicación requiere latitud entre -90 y 90 y longitud entre -180 y 180.");
     }
 }
 
@@ -44,6 +52,7 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
     private readonly ITextModerationService? _textModerationService;
     private readonly IImageModerationService? _imageModerationService;
     private readonly IMediaStorage? _mediaStorage;
+    private readonly ICacheService? _cacheService;
     private readonly ILogger<CreateFeedPostCommandHandler> _logger;
 
     public CreateFeedPostCommandHandler(
@@ -54,8 +63,10 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         ILogger<CreateFeedPostCommandHandler> logger,
         ITextModerationService? textModerationService = null,
         IImageModerationService? imageModerationService = null,
-        IMediaStorage? mediaStorage = null)
+        IMediaStorage? mediaStorage = null,
+        ICacheService? cacheService = null)
     {
+        _cacheService = cacheService;
         _postRepository = postRepository;
         _userRepository = userRepository;
         _currentUserService = currentUserService;
@@ -159,7 +170,9 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             createdAtUtc: _dateTimeProvider.UtcNow,
             authorPhotoUrl: author?.FotoPerfilUrl,
             status: FeedPostStatus.Published,
-            imagePublicId: imagePublicId);
+            imagePublicId: imagePublicId,
+            latitude: request.Latitude,
+            longitude: request.Longitude);
 
         if (entityResult.IsFailure)
         {
@@ -168,6 +181,12 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
 
         FeedPost post = entityResult.Value;
         await _postRepository.AddAsync(post, cancellationToken);
+
+        // Spec 026 (FR-026-06): la nueva publicación aparece en la siguiente lectura del feed cercano.
+        if (_cacheService is not null && post.HasLocation)
+        {
+            await _cacheService.RemoveByPrefixAsync(FeedCacheKeys.NearbyPrefix, cancellationToken);
+        }
 
         _logger.LogInformation("Publicación {PostId} creada por usuario {UserId}", post.Id, userId);
 

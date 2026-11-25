@@ -22,6 +22,7 @@ public static class SecurityExtensions
     public const string SensitiveWritePolicy = "sensitive-write";
     public const string FavoritesPolicy = "favorites";
     public const string AiChatPolicy = "ai-chat";
+    public const string PostLikesPolicy = "post-likes";
 
     public const string RegisteredUserPolicy = "RegisteredUser";
     public const string MerchantOnlyPolicy = "MerchantOnly";
@@ -148,6 +149,18 @@ public static class SecurityExtensions
                     {
                         PermitLimit = settings.Favorites.PermitLimit,
                         Window = TimeSpan.FromSeconds(settings.Favorites.WindowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            // FR-039-06: 60 alternancias de me gusta por usuario y hora (umbral en configuración).
+            options.AddPolicy(PostLikesPolicy, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = settings.PostLikes.PermitLimit,
+                        Window = TimeSpan.FromSeconds(settings.PostLikes.WindowSeconds),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0
                     }));

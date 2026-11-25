@@ -4,7 +4,7 @@
 |---|---|
 | ID | 039 |
 | Slug | `me-gusta-publicaciones` |
-| Estado | Pendiente |
+| Estado | Backend completado |
 | Ola | 3 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -106,6 +106,8 @@ una sola transición. Una pulsación posterior que quita un me gusta confirmado 
 
 ### Dependencia pendiente
 - Para verificar visibilidad, hace falta confirmar el contrato de lectura de la Spec 024. La consulta de comentarios en `origin/Fin_Beto` es un precedente. Antes de reutilizarla, debe exigir un estado publicado explícito y excluir la cuarentena.
+
+**Resolución (2026-11-25).** La visibilidad se verifica con `IFeedPostVisibilityLookup`, que exige `status = Published` y `isDeleted = false` y excluye la cuarentena. Detalle en `plan.md` §3.
 
 ## 11. Trazabilidad
 

@@ -10,6 +10,7 @@ public sealed class RateLimitingSettings
     public RateLimitTierSettings SensitiveWrite { get; set; } = new() { PermitLimit = 30, WindowSeconds = 60 };
     public RateLimitTierSettings Favorites { get; set; } = new() { PermitLimit = 120, WindowSeconds = 3600 };
     public RateLimitTierSettings AiChat { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
+    public RateLimitTierSettings PostLikes { get; set; } = new() { PermitLimit = 60, WindowSeconds = 3600 };
 }
 
 public sealed class RateLimitTierSettings

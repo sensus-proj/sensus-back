@@ -4,7 +4,7 @@
 |---|---|
 | ID | 026 |
 | Slug | `feed-cercano` |
-| Estado | Pendiente |
+| Estado | Backend completado |
 | Ola | 3 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -133,6 +133,8 @@ eliminación comunica el cambio de visibilidad a las lecturas con caché.
 El diseño de caché debe preservar la exclusión inmediata de publicaciones eliminadas
 (`FR-026-02` y requisito de exclusión inmediata en la Spec 024). La Spec 010 figura parcial, pero el backend ya dispone de
 `PagedResult<T>` y la Spec 007 aporta un precedente de consulta geoespacial paginada.
+
+**Resolución (2026-11-25).** La Spec 024 ya está integrada en `Back_Rocio`. La implementación usa su contrato persistido (`feed_posts`: `status`, `isDeleted`, `createdAtUtc`) y añade la ubicación opcional al crear la publicación. La eliminación invalida la caché del feed cercano. Detalle en `plan.md` §3.
 
 ## 11. Trazabilidad
 

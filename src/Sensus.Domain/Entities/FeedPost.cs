@@ -24,6 +24,16 @@ public sealed class FeedPost : BaseEntity
     public DateTime? UpdatedAtUtc { get; private set; }
     public DateTime? DeletedAtUtc { get; private set; }
 
+    /// <summary>
+    /// Ubicación que el autor comparte explícitamente al publicar (Spec 026, decisión 2026-11-22).
+    /// Sin ubicación, la publicación queda fuera del feed cercano (FR-026-05).
+    /// </summary>
+    public double? Latitude { get; private set; }
+
+    public double? Longitude { get; private set; }
+
+    public bool HasLocation => Latitude.HasValue && Longitude.HasValue;
+
     private FeedPost()
     {
     }
@@ -40,8 +50,12 @@ public sealed class FeedPost : BaseEntity
         bool isDeleted,
         DateTime createdAtUtc,
         DateTime? updatedAtUtc,
-        DateTime? deletedAtUtc) : base(id)
+        DateTime? deletedAtUtc,
+        double? latitude = null,
+        double? longitude = null) : base(id)
     {
+        Latitude = latitude;
+        Longitude = longitude;
         AuthorUserId = authorUserId;
         AuthorDisplayName = authorDisplayName;
         AuthorPhotoUrl = authorPhotoUrl;
@@ -64,12 +78,20 @@ public sealed class FeedPost : BaseEntity
         Guid? id = null,
         string? authorPhotoUrl = null,
         FeedPostStatus status = FeedPostStatus.Published,
-        string? imagePublicId = null)
+        string? imagePublicId = null,
+        double? latitude = null,
+        double? longitude = null)
     {
         if (authorUserId == Guid.Empty)
         {
             return Result.Failure<FeedPost>(
                 Error.Validation("FeedPost.InvalidAuthor", "El autor de la publicación es obligatorio."));
+        }
+
+        Result locationResult = ValidateLocation(latitude, longitude);
+        if (locationResult.IsFailure)
+        {
+            return Result.Failure<FeedPost>(locationResult.Error);
         }
 
         string trimmed = (content ?? string.Empty).Trim();
@@ -101,9 +123,40 @@ public sealed class FeedPost : BaseEntity
             isDeleted: false,
             createdAtUtc: createdAtUtc,
             updatedAtUtc: null,
-            deletedAtUtc: null);
+            deletedAtUtc: null,
+            latitude: latitude,
+            longitude: longitude);
 
         return Result.Success(post);
+    }
+
+    /// <summary>
+    /// Invariante de ubicación (Spec 026): ambas coordenadas o ninguna, finitas y dentro de rango.
+    /// </summary>
+    public static Result ValidateLocation(double? latitude, double? longitude)
+    {
+        if (!latitude.HasValue && !longitude.HasValue)
+        {
+            return Result.Success();
+        }
+
+        if (!latitude.HasValue || !longitude.HasValue)
+        {
+            return Result.Failure(Error.Validation(
+                "FeedPost.IncompleteLocation",
+                "La ubicación requiere latitud y longitud."));
+        }
+
+        double lat = latitude.Value;
+        double lng = longitude.Value;
+        if (!double.IsFinite(lat) || !double.IsFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180)
+        {
+            return Result.Failure(Error.Validation(
+                "FeedPost.InvalidLocation",
+                "La latitud debe estar entre -90 y 90 y la longitud entre -180 y 180."));
+        }
+
+        return Result.Success();
     }
 
     public static FeedPost Rehydrate(
@@ -118,7 +171,9 @@ public sealed class FeedPost : BaseEntity
         DateTime createdAtUtc,
         DateTime? updatedAtUtc,
         DateTime? deletedAtUtc,
-        string? imagePublicId = null)
+        string? imagePublicId = null,
+        double? latitude = null,
+        double? longitude = null)
     {
         return new FeedPost(
             id,
@@ -132,7 +187,9 @@ public sealed class FeedPost : BaseEntity
             isDeleted,
             createdAtUtc,
             updatedAtUtc,
-            deletedAtUtc);
+            deletedAtUtc,
+            latitude,
+            longitude);
     }
 
     /// <summary>

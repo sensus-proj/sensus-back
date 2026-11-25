@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Pendiente de validar la integración con la Spec 024 |
+| Estado del plan | Implementado sobre el contrato persistido de la Spec 024 |
 | Versión | 1.0.0 |
-| Constitution Check | Pendiente de verificación |
+| Constitution Check | PASS salvo Principio VIII (escaneos de CI pendientes) |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
@@ -22,8 +22,10 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 
 ## 3. Modelo de datos e índices
 
-- Índice compuesto de estado, ubicación `2dsphere` y fecha según `NFR-026-02`. Los nombres de la colección y de los campos se toman del contrato persistido de la Spec 024.
-- El filtro exige el estado publicado de forma explícita y una ubicación válida. Se ordena por fecha descendente y se usa el identificador como desempate estable.
+- Índice compuesto `ix_feed_posts_status_location_created_at` sobre `status`, `location` (`2dsphere`) y `createdAtUtc` (descendente) en `feed_posts`, según `NFR-026-02`. La consulta y el conteo lo fijan con `hint` para no depender del planificador.
+- **Ubicación (decisión 2026-11-22, implementada 2026-11-25).** `FeedPost` admite `latitude`/`longitude` opcionales que el autor comparte al crear la publicación (`POST /api/v1/feed/posts`, JSON o `multipart/form-data`). Se validan en el dominio: ambas o ninguna, finitas y en rango. Se persisten como punto GeoJSON `location` y se omiten si no hay ubicación, por lo que el `2dsphere` no indexa esas publicaciones (`FR-026-05`). Es una extensión compatible del contrato de la Spec 024.
+- El filtro exige `status = Published`, `isDeleted = false` y `location` dentro de `$centerSphere`. Se ordena por `createdAtUtc` descendente y `_id` descendente como desempate estable.
+- **Caché (`FR-026-06`).** `ICacheService` (Spec 048) con clave `feed:nearby:{lat}:{lng}:{radio}:{página}:{tamaño}` y TTL de la entidad `Feed` en `Redis:TtlByEntityMinutes` (5 minutos). Las coordenadas se redondean a 4 decimales (~11 m) para la consulta y la clave. Crear una publicación con ubicación o eliminar cualquier publicación invalida el prefijo `feed:nearby:` (`CA-026-06`).
 
 ## 4. Seguridad
 
@@ -62,14 +64,14 @@ Evaluación previa a la implementación.
 
 | Principio | Decisión | Evidencia |
 |---|---|---|
-| I | Pendiente | Falta verificar el contrato persistido de la dependencia 024 antes de cerrar OpenAPI y la proyección. |
+| I | PASS | Contrato persistido de la 024 verificado; OpenAPI y proyección cerrados en `contracts/openapi.yaml` v1.1.0. |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
-| VIII | Pendiente | STRIDE documentado en §4. Faltan pruebas del flujo autenticado, visibilidad con caché y evidencia de los controles de CI. |
+| VIII | Pendiente | STRIDE documentado en §4. Flujo autenticado (401/403) y visibilidad con caché probados; faltan los escaneos bloqueantes de CI y la ejecución de las pruebas de MongoDB. |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 

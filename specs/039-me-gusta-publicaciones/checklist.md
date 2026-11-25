@@ -6,54 +6,55 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 039 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 024, 013. Falta confirmar el contrato de visibilidad de la 024.
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] La spec 039 está aprobada y sin preguntas bloqueantes. La intención explícita `liked` quedó definida en §10.
+- [x] Los requisitos tienen identificador y criterio medible
+- [x] Las dependencias están resueltas: 024, 013. La visibilidad usa `IFeedPostVisibilityLookup` sobre el contrato persistido de la 024 (`status = Published` y `isDeleted = false`).
+- [x] El alcance y las exclusiones están declarados
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado (`plan.md` §4–§6)
 
 ## B. Específicos de este spec
 
-- [ ] Un usuario solo puede dar un me gusta por publicación
-- [ ] El conteo nunca es negativo
-- [ ] La operación es consistente entre dispositivos
-- [ ] Solo se reacciona a contenido visible
+- [x] Un usuario solo puede dar un me gusta por publicación. Índice único `ux_feed_post_likes_post_user`.
+- [x] El conteo nunca es negativo. Se deriva de registros únicos y se acota con `FeedPostLike.ClampCount`.
+- [ ] La operación es consistente entre dispositivos. Prueba de concurrencia `Likes_ParallelLikesFromSameUser_LeaveOneRecordAndCountNPlusOne` escrita; falta ejecutarla con Docker o en CI.
+- [x] Solo se reacciona a contenido visible. 404 uniforme probado en unitarias e integración.
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Código en la capa correcta y test de arquitectura en verde (5/5)
+- [ ] Pruebas unitarias y de integración añadidas y en verde. Unitarias y de endpoint en verde; las de persistencia con Testcontainers no se ejecutaron por falta de Docker local.
+- [x] Cobertura ≥ 80 % en Domain y Application (Domain 90,9 %, Application 89,2 % con pruebas unitarias)
+- [x] Contrato OpenAPI actualizado (`contracts/openapi.yaml` v1.1.0)
+- [x] IaC actualizada y `cdk diff` revisado si aplica. No aplica: sin recursos AWS nuevos.
+- [x] Logs con correlation-id y sin PII. Solo se registran `postId`, intención y transición.
+- [x] Revisión de seguridad: sin secretos, autorización verificada (401, 403 invitado, 404, 429)
+- [ ] Constitution Check en PASS o brecha registrada. Principio VIII pendiente de los escaneos de CI.
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
-- [ ] **VIII. DevSecOps de nivel fintech** — verificar los controles de STRIDE y CI
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS
+- [ ] **V. Verificación automatizada** — Pendiente de ejecutar las pruebas de persistencia en CI
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS. `NFR-039-01` (p95 < 300 ms) pendiente de prueba de carga.
+- [ ] **VIII. DevSecOps de nivel fintech** — STRIDE en `plan.md` §4; faltan los escaneos bloqueantes de CI
 
 ## E. Evidencia
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/Feed/FeedPostLikesTests.cs` | ☑ |
+| Pruebas de integración (endpoint) | `tests/Sensus.IntegrationTests/Feed/FeedPostLikeEndpointsTests.cs` | ☑ |
+| Pruebas de integración (MongoDB) | `tests/Sensus.IntegrationTests/Persistence/MongoFeedSocialIntegrationTests.cs` | ☐ |
+| Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-25 | Rocio Cruz | Backend completado | Build `-warnaserror` sin advertencias. Unitarias 1174/1174, arquitectura 5/5, E2E 3/3. Integración 643/677: las 34 fallas son `DockerUnavailableException` (Testcontainers), incluidas 3 de esta spec. `dotnet format --verify-no-changes` limpio. El limitador se movió después de `UseAuthentication` para particionar por usuario. |

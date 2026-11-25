@@ -348,9 +348,6 @@ app.UseMiddleware<Sensus.Api.Middlewares.RequestMetricsMiddleware>();
 app.UseExceptionHandler();
 app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);
-// NFR-029-03: debe ejecutarse antes del limitador para particionar /recover por hash del correo.
-app.UseRecoverEmailPartitionKey();
-app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)
 {
@@ -375,6 +372,11 @@ else
 }
 
 app.UseAuthentication();
+// El limitador va después de la autenticación para que las políticas "por usuario" (FR-038-06, FR-039-06)
+// particionen por el sujeto del JWT; las solicitudes anónimas siguen particionando por IP.
+// NFR-029-03: la clave de /recover debe calcularse antes del limitador.
+app.UseRecoverEmailPartitionKey();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // Endpoint de verificación de salud
