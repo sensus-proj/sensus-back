@@ -4,29 +4,31 @@
 |---|---|
 | ID | 029 |
 | Slug | `recuperacion-password` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 1 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 001, 004, 013 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Versión | 2.0.0 |
+| Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ---
 
 ## 1. Contexto y problema
 
-Permitir que un usuario que olvidó su contraseña solicite un enlace de recuperación de un solo uso y establezca una contraseña nueva sin revelar si el correo existe.
+Permitir que un usuario que olvidó su contraseña solicite un enlace de recuperación de un solo uso y establezca una contraseña nueva sin revelar si el correo existe. El correo se entrega mediante Amazon SES sobre TLS 1.2 o superior, sin transportes HTTP ni credenciales de proveedores externos.
 
 ## 2. Alcance
 
 **Incluye**
 
 - Solicitud de recuperación sin enumeración de cuentas
-- Token de un solo uso con hash y TTL
+- Token de un solo uso con hash y vigencia de 30 minutos
 - Confirmación de nueva contraseña
 - Revocación de sesiones activas tras el cambio
-- Envío por correo con Amazon SES
+- Envío por correo con Amazon SES sobre TLS 1.2 o superior
+- Límite de 3 solicitudes por correo y hora, particionado por hash SHA-256 del correo normalizado
+- Retiro del alias HTTP y de la credencial del proveedor anterior, con cierre de EX-004
 
 **No incluye**
 
@@ -38,7 +40,7 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 - Visitante
 - Usuario registrado
-- Servicio de correo
+- Amazon SES (servicio de correo)
 
 ## 4. Requisitos funcionales
 
@@ -47,23 +49,23 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 | FR-029-01 | Exponer POST /api/v1/auth/recover y responder 202 siempre | Must |
 | FR-029-02 | Generar token de 32 bytes, almacenar solo su hash y caducarlo en 30 minutos | Must |
 | FR-029-03 | Invalidar tokens anteriores del mismo usuario al emitir uno nuevo | Must |
-| FR-029-04 | Enviar el enlace por correo mediante Amazon SES | Must |
+| FR-029-04 | Enviar el enlace por correo mediante Amazon SES con TLS 1.2 o superior | Must |
 | FR-029-05 | Exponer POST /api/v1/auth/recover/confirm para fijar la nueva contraseña | Must |
 | FR-029-06 | Rechazar tokens expirados, ya usados o inexistentes con 400 | Must |
 | FR-029-07 | Revocar todas las sesiones activas tras el cambio de contraseña | Must |
-| FR-029-08 | Aceptar `POST /auth/reset-password` como alias de compatibilidad de `/auth/recover/confirm`: mismo comando, misma política de tasa `recover` y mismas respuestas | Must |
-| FR-029-09 | Retirar el alias `/auth/reset-password` cuando la app móvil use la ruta canónica | Should |
-| FR-029-10 | Permitir HTTP sin TLS hacia el servicio de correo solo si el host coincide con `MailerSettings:InsecureHttpAllowedHost` y la fecha actual es anterior a `MailerSettings:InsecureHttpAllowedUntil` (excepción EX-004); en cualquier otro caso, rechazar el envío sin contactar al servicio | Must |
-| FR-029-11 | Rotar la clave del servicio de correo (`MailerSettings:ApiKey` en SSM) cada 30 días como máximo mientras EX-004 esté vigente | Must |
-| FR-029-12 | Migrar el envío de correo a un canal con TLS 1.2 o superior antes del 2026-12-20 y retirar EX-004 | Must |
+| FR-029-08 | Requisito histórico retirado por FR-029-09: aceptar `POST /api/v1/auth/reset-password` como alias de compatibilidad de `/auth/recover/confirm`, con la misma política de tasa y las mismas respuestas. Ya no está implementado | Must (retirado) |
+| FR-029-09 | El alias `POST /api/v1/auth/reset-password` deja de existir: toda solicitud a esa ruta devuelve 404 y la única ruta canónica es `/api/v1/auth/recover/confirm` | Must |
+| FR-029-10 | Rechazar cualquier transporte de correo sin TLS 1.2 o superior; no se admite excepción HTTP alguna (EX-004 retirada) | Must |
+| FR-029-11 | Retirar la credencial Somee del código y de la configuración; la baja del parámetro SSM `/sensus/<entorno>/MailerSettings/ApiKey` es una tarea operativa externa documentada, no código pendiente. La credencial no se rota porque se da de baja | Must |
+| FR-029-12 | Enviar el correo de recuperación mediante Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must |
 
 ## 5. Requisitos no funcionales
 
 | ID | Requisito | Métrica objetivo |
 |---|---|---|
 | NFR-029-01 | Latencia de solicitud | p95 < 700 ms |
-| NFR-029-02 | Enumeración de cuentas | Cero diferencia de respuesta entre correo existente e inexistente |
-| NFR-029-03 | Límite de solicitudes | 3 por correo y hora |
+| NFR-029-02 | Enumeración de cuentas y redacción de correo en logs | Cero diferencia de respuesta entre correo existente e inexistente; cero correos en registros (`ISensitiveRequest`) |
+| NFR-029-03 | Límite de solicitudes de `/recover` | 3 por correo y hora, particionado por hash SHA-256 del correo normalizado; `RateLimiting:Recover` con `PermitLimit=3` y `WindowSeconds=3600` |
 
 ## 6. Criterios de aceptación
 
@@ -71,7 +73,7 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 - **Dado** correo registrado
 - **Cuando** POST /api/v1/auth/recover
-- **Entonces** 202 y correo con enlace
+- **Entonces** 202 y correo con enlace enviado por SES
 
 ### CA-029-02
 
@@ -99,22 +101,33 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 ### CA-029-06
 
-- **Dado** un token de recuperación válido
-- **Cuando** se envía a `POST /api/v1/auth/reset-password` con la nueva contraseña
-- **Entonces** el resultado es idéntico a `/auth/recover/confirm`: `204`, o `400` con token inválido o vencido, o `429`
+- **Dado** el alias retirado `POST /api/v1/auth/reset-password`
+- **Cuando** se envía una solicitud a esa ruta con un token y una contraseña
+- **Entonces** la API devuelve 404; la ruta no figura en el contrato OpenAPI y solo `/api/v1/auth/recover/confirm` está expuesta
 
 ### CA-029-07
 
-- **Dado** `MailerSettings:BaseUrl` con `http://mailersensus.somee.com`, ese mismo host en `InsecureHttpAllowedHost` y una fecha
-  anterior a `InsecureHttpAllowedUntil`
+- **Dado** `SesEmailSettings` resuelta desde SSM con `From`, `Region`, `ConfigurationSetName` y `Simulate`
 - **Cuando** se envía un correo de recuperación
-- **Entonces** la solicitud sale por HTTP al servicio de correo
+- **Entonces** la solicitud se realiza contra Amazon SES con TLS 1.2 o superior y el registro no contiene el destinatario ni el token
 
 ### CA-029-08
 
-- **Dado** `MailerSettings:BaseUrl` con HTTP y un host distinto del permitido, una fecha vencida o sin fecha configurada
-- **Cuando** se intenta enviar un correo
-- **Entonces** no se realiza ninguna solicitud HTTP, se registra un error sin el destinatario y el envío falla
+- **Dado** el repositorio y la configuración desplegada
+- **Cuando** se inspeccionan los transportes de correo y las opciones de configuración
+- **Entonces** no existe configuración HTTP de correo, ni `HttpMailerEmailSender`, `MailerTransportPolicy` o `MailerSettings`; cualquier transporte sin TLS 1.2 o superior se rechaza
+
+### CA-029-09
+
+- **Dado** un correo con 3 solicitudes previas a `/recover` en la última hora
+- **Cuando** se envía la cuarta solicitud para el mismo correo
+- **Entonces** la API devuelve 429; otro correo conserva su propia cuota y la clave de partición es el hash SHA-256 del correo normalizado, sin PII
+
+### CA-029-10
+
+- **Dado** una solicitud a `/recover` con correo válido
+- **Cuando** se emiten los registros de `LoggingBehavior` y `PerformanceBehavior`
+- **Entonces** el correo aparece redactado y no se registra ningún dato personal
 
 ## 7. Contratos expuestos
 
@@ -122,20 +135,20 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 |---|---|---|
 | POST | `/api/v1/auth/recover` | Pública |
 | POST | `/api/v1/auth/recover/confirm` | Pública |
-| POST | `/api/v1/auth/reset-password` | Pública (alias obsoleto de `/recover/confirm`) |
+
+`POST /api/v1/auth/reset-password` no forma parte del contrato: fue retirado y devuelve 404 (FR-029-09). Contrato detallado en [`contracts/openapi.yaml`](contracts/openapi.yaml).
 
 ## 8. Dependencias y supuestos
 
 - Depende de: 001, 004, 013
 - El comportamiento descrito aplica a la versión v1 de la API.
-- Los secretos y cadenas de conexión se resuelven por configuración de entorno, nunca en código.
+- La configuración y los secretos se resuelven desde SSM Parameter Store bajo `/sensus/<entorno>/`, nunca desde el repositorio.
+- `SesEmailSettings` declara `From`, `Region`, `ConfigurationSetName` y `Simulate`. En la configuración base, `Simulate=false` y `From` vacío (se resuelve por SSM en producción); en Development, `Simulate=true`. No se escriben secretos en archivos versionados.
 
 ## 9. Riesgos
 
 - Un fallo de SES deja al usuario sin enlace
 - El correo es un canal fuera del control del sistema
-- Mientras EX-004 esté vigente, el enlace con el token y la clave `X-Api-Key` viajan en claro entre AWS y Somee: quien
-  intercepte ese tramo puede tomar la cuenta en los 15 minutos de vigencia o enviar correos con la clave
 
 ## 10. Preguntas abiertas
 
@@ -143,7 +156,8 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-029-01`, `FR-029-02`, `FR-029-03`, `FR-029-04`, `FR-029-05`, `FR-029-06`, `FR-029-07`, `FR-029-08`, `FR-029-09`, `FR-029-10`, `FR-029-11`, `FR-029-12`
+- Requisitos de este spec: `FR-029-01`, `FR-029-02`, `FR-029-03`, `FR-029-04`, `FR-029-05`, `FR-029-06`, `FR-029-07`, `FR-029-08`, `FR-029-09`, `FR-029-10`, `FR-029-11`, `FR-029-12`, `NFR-029-01`, `NFR-029-02`, `NFR-029-03`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
+- Contrato: [`contracts/openapi.yaml`](contracts/openapi.yaml)

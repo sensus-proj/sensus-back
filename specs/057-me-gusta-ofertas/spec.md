@@ -19,7 +19,7 @@ Permitir que usuarios registrados expresen y retiren «Me gusta» sobre las publ
 ### Incluye
 - Entidad `OfferLike` con vínculo único `(UserId, OfferId)` y fecha UTC.
 - Endpoint `POST /api/v1/offers/{id}/like` que alterna (agrega o elimina) el «Me gusta» del usuario autenticado y devuelve `OfferLikeStatusDto` (`OfferId`, `LikesCount`, `IsLikedByMe`).
-- Exposición de `LikesCount` y `IsLikedByMe` en `OfferDetailDto` (`GET /api/v1/offers/{id}`), `NearbyOfferDto` (`GET /api/v1/offers/nearby`) y `OfferDto` (`GET /api/v1/merchants/my-offers`).
+- Exposición de `LikesCount` y `IsLikedByMe` en `OfferDetailDto` (`GET /api/v1/offers/{id}`), `NearbyOfferDto` (`GET /api/v1/offers/nearby`) y `MerchantOfferDto` (hereda de `OfferDto`, `GET /api/v1/merchants/my-offers`).
 - Invalidación de caché de detalle de oferta (`OfferCacheKeys.Detail(offer.Id)`) al alternar «Me gusta».
 - Protección con `RegisteredUserPolicy` (impide mutaciones a invitados) y `SensitiveWritePolicy`.
 

@@ -30,6 +30,14 @@ public class RequestPasswordResetCommandHandlerTests
     }
 
     [Fact]
+    public void Command_IsMarkedAsSensitive_ToRedactEmailFromLogs()
+    {
+        var command = new RequestPasswordResetCommand("oscar@sensus.com");
+
+        command.Should().BeAssignableTo<ISensitiveRequest>();
+    }
+
+    [Fact]
     public async Task Handle_ShouldReturnSuccess_EvenIfEmailDoesNotExist_AntiEnumeration()
     {
         _userRepository.GetByEmailAsync("nonexistent@sensus.com", Arg.Any<CancellationToken>())
@@ -61,7 +69,7 @@ public class RequestPasswordResetCommandHandlerTests
         await _emailSender.Received(1).SendEmailAsync(
             user.Correo,
             Arg.Is<string>(s => s.Contains("contraseña")),
-            Arg.Is<string>(html => html.Contains("15 minutos")),
+            Arg.Is<string>(html => html.Contains("30 minutos")),
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }

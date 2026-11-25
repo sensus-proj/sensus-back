@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Offers.Commands.CreateOffer;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Notifications;
@@ -96,17 +97,18 @@ public sealed class CreateOfferEndpointsTests(CustomWebApplicationFactory factor
             .Select(call => (Offer)call.GetArguments()[0]!),
             offer => offer.Id == dto.Id);
         factory.OfferRepository.GetByIdAsync(draft.Id, Arg.Any<CancellationToken>()).Returns(draft);
-        factory.OfferRepository.GetByMerchantIdAsync(merchant.Id, Arg.Any<CancellationToken>())
-            .Returns(new List<Offer> { draft });
+        factory.OfferRepository.GetByMerchantIdPagedAsync(
+                merchant.Id, OfferStatus.Draft, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((new List<Offer> { draft }, 1));
 
         using var detail = await client.GetAsync($"/api/v1/offers/{draft.Id}");
         using var inventory = await client.GetAsync("/api/v1/merchants/my-offers?status=Draft");
 
         Assert.Equal(HttpStatusCode.NotFound, detail.StatusCode);
         Assert.Equal(HttpStatusCode.OK, inventory.StatusCode);
-        var items = await inventory.Content.ReadFromJsonAsync<List<OfferDto>>();
-        Assert.NotNull(items);
-        Assert.Equal(dto.Id, Assert.Single(items).Id);
+        var page = await inventory.Content.ReadFromJsonAsync<PagedResult<MerchantOfferDto>>();
+        Assert.NotNull(page);
+        Assert.Equal(dto.Id, Assert.Single(page.Items).Id);
         await notifier.DidNotReceiveWithAnyArgs().NotifyAsync(default!, default, default);
     }
 

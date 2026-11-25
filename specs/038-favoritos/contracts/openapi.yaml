@@ -1,23 +1,94 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 038 Favoritos de ofertas"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 038. Completar esquemas antes de implementar."
+  version: 2.1.0
+  description: "Contrato OpenAPI para alternar el favorito de una oferta por el usuario autenticado (Spec 038). La señal de favoritos alimenta la afinidad de la spec 042."
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/users/favorites/{id}:
     post:
-      summary: "Borrador de POST /api/v1/users/favorites/{id}"
-      security: [{ bearerAuth: [] }]
+      summary: "Alterna el favorito del usuario autenticado sobre una oferta activa"
+      operationId: "ToggleOfferFavorite"
+      tags:
+        - "Favoritos de Usuario (Spec 038)"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Identificador GUID de la oferta"
+          schema:
+            type: string
+            format: uuid
       responses:
-        '200': { description: OK }
-        '400': { description: Solicitud inválida }
-        '401': { description: No autenticado }
-        '404': { description: No encontrado }
+        '200':
+          description: "Estado resultante de la alternancia y conteo total"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteToggleResponse"
+        '401':
+          description: "No autenticado"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '403':
+          description: "Usuario invitado o con sanción activa"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '404':
+          description: "Oferta inexistente, expirada o archivada"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '429':
+          description: "Límite de tasa excedido (120 alternancias/hora)"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    FavoriteToggleResponse:
+      type: object
+      required:
+        - offerId
+        - favorited
+        - favoriteCount
+      properties:
+        offerId:
+          type: string
+          format: uuid
+        favorited:
+          type: boolean
+          description: "true si la oferta quedó marcada como favorita, false si fue desmarcada"
+        favoriteCount:
+          type: integer
+          minimum: 0
+          description: "Conteo total de favoritos que tiene la oferta"
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

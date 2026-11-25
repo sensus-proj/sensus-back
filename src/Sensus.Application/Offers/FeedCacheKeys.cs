@@ -5,7 +5,10 @@ namespace Sensus.Application.Offers;
 /// </summary>
 public static class FeedCacheKeys
 {
+    /// <summary>Prefijo de todas las instantáneas del feed de ofertas; permite invalidarlas en lote (FR-048-06/08).</summary>
+    public const string SnapshotPrefix = "feed:offers:";
+
     public static string Affinity(Guid userId) => $"feed:affinity:{userId:D}";
 
-    public static string Snapshot(Guid userId, Guid snapshotId) => $"feed:offers:{userId:D}:{snapshotId:D}";
+    public static string Snapshot(Guid userId, Guid snapshotId) => $"{SnapshotPrefix}{userId:D}:{snapshotId:D}";
 }

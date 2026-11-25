@@ -10,6 +10,14 @@ public interface ISanctionRepository
 {
     Task<Sanction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Todas las sanciones del usuario, incluidas las revertidas y vencidas, para copiar su evidencia
+    /// de moderación anonimizada al cerrar la cuenta (Spec 061, FR-061-05).
+    /// </summary>
+    Task<IReadOnlyList<Sanction>> GetAllByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Sanción automática ya emitida para un activo, para garantizar idempotencia.</summary>
     Task<Sanction?> GetByMediaIdAsync(Guid mediaId, CancellationToken cancellationToken = default);
 

@@ -4,19 +4,21 @@
 |---|---|
 | ID | 030 |
 | Slug | `eliminacion-cuenta` |
-| Estado | Pendiente |
+| Estado | Escindida |
 | Ola | 1 |
-| Tipo | Nuevo |
-| Dueño | Por asignar |
+| Tipo | Nuevo (escindida en las specs 060 y 061) |
+| Dueño | Equipo Sensus |
 | Dependencias | 003, 004, 020 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 2.0.0 |
+| Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ---
 
 ## 1. Contexto y problema
 
 Permitir que el titular elimine su cuenta con confirmación explícita, aplicando una retención declarada y purgando sus datos personales en cascada.
+
+**Cierre 2026-11-23.** Esta spec se cierra como **Escindida**: la baja lógica, la revocación inmediata y la purga diferida se ejecutaron en la Spec 060; la anonimización de contenido, la expiración de apartados, el archivado comercial y la auditoría anonimizada se ejecutaron en la Spec 061. El contrato vigente conserva el código `204` de `DELETE /api/v1/users/account`, no el `202` previsto en el borrador original. Los requisitos de esta spec se dan por cubiertos por esas dos specs; no se abre trabajo nuevo bajo el ID 030.
 
 ## 2. Alcance
 
@@ -68,7 +70,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 
 - **Dado** contraseña correcta y confirmación explícita
 - **Cuando** DELETE /api/v1/users/account
-- **Entonces** 202 y cuenta bloqueada
+- **Entonces** `204` y cuenta bloqueada de inmediato (baja lógica de la Spec 060)
 
 ### CA-030-02
 
@@ -120,7 +122,7 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 
 ## 10. Preguntas abiertas
 
-- ¿Se notifica por correo la eliminación completada?
+- ¿Se notifica por correo la eliminación completada? (resuelto: no se notifica; la notificación a terceros queda fuera de alcance, decisión registrada en la Spec 061 §10)
 
 ## 11. Trazabilidad
 
@@ -128,3 +130,16 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
+
+## 12. Cierre por escisión (2026-11-23)
+
+| Requisito de esta spec | Spec de ejecución | Resultado |
+|---|---|---|
+| `FR-030-01`, `FR-030-02`, `FR-030-03` | 060 | Endpoint con `204`, baja lógica con `DeletedAtUtc`, rotación de `SecurityStamp`, rechazo de JWT y login genérico |
+| `FR-030-04` | 060 | Purga diferida e idempotente con `cutoff = ahora - retención`, índice `ix_users_deleted_at` y configuración `AccountDeletion` |
+| `FR-030-05`, `FR-030-07` | 061 | Anonimización de publicaciones y comentarios, auditoría anonimizada con `subjectKey` SHA-256 y TTL configurable |
+| `FR-030-06` | 061 | Apartados activos expirados antes de archivar ofertas e invalidar caché |
+| `FR-030-08` | 030 (T030-13, ya completada) | Purga inmediata de intereses e interacciones al eliminar la cuenta |
+| `NFR-030-01` a `NFR-030-03` | 060 y 061 | Bloqueo < 1 s, purga en ≤ 31 días verificada con reloj simulado y trazabilidad sin PII |
+
+La Spec 030 no queda pendiente de implementación: sus brechas constitucionales quedaron cerradas por las specs 060 y 061, con evidencia en sus respectivos checklists.

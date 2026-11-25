@@ -1,9 +1,10 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers;
+using Sensus.Application.Users.Commands.CloseAccountContent;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
-using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Users.Commands.DeleteAccount;
@@ -16,9 +17,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly ICurrentUserService _currentUserService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IProfileImageStorage _imageStorage;
-    private readonly IOfferRepository _offerRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
+    private readonly ISender _sender;
     private readonly ICacheService? _cacheService;
     private readonly IAiConversationRepository? _conversationRepository;
     private readonly IAiMessageRepository? _messageRepository;
@@ -26,6 +27,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly INotificationLocationRepository? _notificationLocations;
     private readonly IUserInterestsRepository? _userInterestsRepository;
     private readonly IOfferInteractionRecorder? _offerInteractionRecorder;
+    private readonly ILogger<DeleteAccountCommandHandler>? _logger;
+    private readonly ICorrelationIdAccessor? _correlationIdAccessor;
 
     public DeleteAccountCommandHandler(
         IUserRepository userRepository,
@@ -34,16 +37,18 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         ICurrentUserService currentUserService,
         IPasswordHasher passwordHasher,
         IProfileImageStorage imageStorage,
-        IOfferRepository offerRepository,
-        IDateTimeProvider dateTimeProvider,
+                IDateTimeProvider dateTimeProvider,
         ICdnCacheInvalidator cdnCacheInvalidator,
+        ISender sender,
         ICacheService? cacheService = null,
         IAiConversationRepository? conversationRepository = null,
         IAiMessageRepository? messageRepository = null,
         IAiTraceLogRepository? traceLogRepository = null,
         INotificationLocationRepository? notificationLocations = null,
         IUserInterestsRepository? userInterestsRepository = null,
-        IOfferInteractionRecorder? offerInteractionRecorder = null)
+        IOfferInteractionRecorder? offerInteractionRecorder = null,
+        ILogger<DeleteAccountCommandHandler>? logger = null,
+        ICorrelationIdAccessor? correlationIdAccessor = null)
     {
         _userRepository = userRepository;
         _comercioRepository = comercioRepository;
@@ -51,9 +56,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _currentUserService = currentUserService;
         _passwordHasher = passwordHasher;
         _imageStorage = imageStorage;
-        _offerRepository = offerRepository;
         _dateTimeProvider = dateTimeProvider;
         _cdnCacheInvalidator = cdnCacheInvalidator;
+        _sender = sender;
         _cacheService = cacheService;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
@@ -61,6 +66,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _notificationLocations = notificationLocations;
         _userInterestsRepository = userInterestsRepository;
         _offerInteractionRecorder = offerInteractionRecorder;
+        _logger = logger;
+        _correlationIdAccessor = correlationIdAccessor;
     }
 
     public async Task<Result> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
@@ -91,8 +98,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             await _cdnCacheInvalidator.InvalidateAsync(user.FotoPerfilUrl, cancellationToken);
         }
 
-        // FR-030-06: las ofertas se archivan antes de borrar el comercio para que dejen de ser visibles
-        await ArchiveMerchantOffersAsync(userId, cancellationToken);
+        // Spec 061 (FR-061-01 a FR-061-05): anonimizar contenido, expirar apartados, archivar ofertas
+        // y copiar la auditoría anonimizada ANTES de dar de baja la cuenta (spec 060).
+        Result<CloseAccountContentResult> closeResult =
+            await _sender.Send(new CloseAccountContentCommand(userId), cancellationToken);
+        if (closeResult.IsFailure)
+        {
+            return Result.Failure(closeResult.Error);
+        }
 
         // Cascada de purga completa: comercio, tokens de recuperación, datos de Sensi IA y usuario
         await _comercioRepository.DeleteByUsuarioIdAsync(userId, cancellationToken);
@@ -114,7 +127,24 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             await _traceLogRepository.PurgeAllByUserIdAsync(userId, cancellationToken);
         }
 
-        await _userRepository.DeleteAsync(userId, cancellationToken);
+        // Spec 060 (FR-060-01, FR-060-02, FR-060-05): baja lógica con revocación inmediata. El documento
+        // y su PII se conservan hasta la purga diferida; la actualización condicional garantiza
+        // idempotencia y evita emitir dos veces la auditoría de seguridad.
+        DateTime now = _dateTimeProvider.UtcNow;
+        user.MarkAsDeleted(now);
+        bool marked = await _userRepository.MarkAsDeletedAsync(
+            userId,
+            user.DeletedAtUtc!.Value,
+            user.SecurityStamp,
+            cancellationToken);
+
+        if (marked)
+        {
+            _logger?.LogInformation(
+                "SecurityAudit AccountDeletionRequested UserId={UserId} Result=Success CorrelationId={CorrelationId}",
+                userId,
+                _correlationIdAccessor?.CorrelationId ?? "unknown");
+        }
 
         if (_notificationLocations is not null)
         {
@@ -139,24 +169,5 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         }
 
         return Result.Success();
-    }
-
-    private async Task ArchiveMerchantOffersAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null)
-        {
-            return;
-        }
-
-        IReadOnlyList<Offer> offers = await _offerRepository.GetByMerchantIdAsync(comercio.Id, cancellationToken);
-        DateTime now = _dateTimeProvider.UtcNow;
-
-        foreach (Offer offer in offers.Where(o => o.Status != OfferStatus.Archived))
-        {
-            offer.Archive(now);
-            await _offerRepository.UpdateAsync(offer, cancellationToken);
-            await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
-        }
     }
 }

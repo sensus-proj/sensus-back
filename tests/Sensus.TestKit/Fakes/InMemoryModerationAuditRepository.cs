@@ -4,10 +4,22 @@ using Sensus.Domain.Repositories;
 
 namespace Sensus.TestKit.Fakes;
 
+/// <summary>Repositorio en memoria de auditoría de moderación (Spec 021) y copias anonimizadas (Spec 061).</summary>
 public sealed class InMemoryModerationAuditRepository : IModerationAuditRepository
 {
+    private readonly HashSet<Guid> _ids = [];
     private readonly List<ModerationAuditRecord> _items = [];
     private readonly object _lock = new();
+
+    public Task<bool> AddIfNotExistsAsync(
+        ModerationAudit entry,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(_ids.Add(entry.Id));
+        }
+    }
 
     public Task AddAsync(ModerationAuditRecord record, CancellationToken cancellationToken = default)
     {

@@ -3,7 +3,7 @@ namespace Sensus.Application.Offers.DTOs;
 /// <summary>
 /// DTO de salida para ofertas comerciales (SE-022, SE-026 y Specs 034, 036, 037).
 /// </summary>
-public sealed record OfferDto(
+public record OfferDto(
     Guid Id,
     Guid MerchantId,
     string Title,

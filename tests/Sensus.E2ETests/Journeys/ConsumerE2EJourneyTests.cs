@@ -85,7 +85,7 @@ public class ConsumerE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFact
 
         // 6. SE-005: Restablecer contraseña con el token temporal
         var passwordNuevo = "NewPassword456#";
-        var resetRes = await _client.PostAsJsonAsync("/api/v1/auth/reset-password", new ResetPasswordCommand(rawResetToken, passwordNuevo));
+        var resetRes = await _client.PostAsJsonAsync("/api/v1/auth/recover/confirm", new ResetPasswordCommand(rawResetToken, passwordNuevo));
         resetRes.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // 7. SE-002: Iniciar sesión con la nueva contraseña

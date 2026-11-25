@@ -6,10 +6,6 @@ using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
 namespace Sensus.Infrastructure.Persistence.Mongo.Repositories;
 
-/// <summary>
-/// Persistencia de la auditoría de moderación en MongoDB Atlas (Spec 021).
-/// No implementa actualización ni borrado: la colección es de solo adición (NFR-021-01).
-/// </summary>
 public sealed class MongoModerationAuditRepository : IModerationAuditRepository
 {
     private readonly MongoDbContext _context;
@@ -19,13 +15,27 @@ public sealed class MongoModerationAuditRepository : IModerationAuditRepository
         _context = context;
     }
 
-    /// <inheritdoc />
+    public async Task<bool> AddIfNotExistsAsync(
+        ModerationAudit entry,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<ModerationAuditDocument> filter =
+            Builders<ModerationAuditDocument>.Filter.Eq(a => a.Id, entry.Id);
+
+        var result = await _context.ModerationAudit.ReplaceOneAsync(
+            filter,
+            ModerationAuditDocument.FromDomain(entry),
+            new ReplaceOptions { IsUpsert = true },
+            cancellationToken);
+
+        return result.UpsertedId is not null;
+    }
+
     public Task AddAsync(ModerationAuditRecord record, CancellationToken cancellationToken = default) =>
         _context.ModerationAudit.InsertOneAsync(
             ModerationAuditDocument.FromDomain(record),
             cancellationToken: cancellationToken);
 
-    /// <inheritdoc />
     public async Task<(IReadOnlyList<ModerationAuditRecord> Items, long TotalCount)> ListAsync(
         Guid? targetId,
         ModerationTargetType? targetType,
@@ -37,7 +47,7 @@ public sealed class MongoModerationAuditRepository : IModerationAuditRepository
         CancellationToken cancellationToken = default)
     {
         FilterDefinitionBuilder<ModerationAuditDocument> filterBuilder = Builders<ModerationAuditDocument>.Filter;
-        FilterDefinition<ModerationAuditDocument> filter = filterBuilder.Empty;
+        FilterDefinition<ModerationAuditDocument> filter = filterBuilder.Eq(record => record.SubjectKey, string.Empty);
 
         if (targetId is { } id)
         {

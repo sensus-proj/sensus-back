@@ -6,6 +6,9 @@ namespace Sensus.Domain.Entities;
 
 public class PasswordResetToken : BaseEntity, IAggregateRoot
 {
+    /// <summary>Vigencia del enlace de recuperación exigida por FR-029-02.</summary>
+    public const int DefaultExpiryMinutes = 30;
+
     public Guid UserId { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string TokenHash { get; private set; } = string.Empty;
@@ -41,7 +44,7 @@ public class PasswordResetToken : BaseEntity, IAggregateRoot
         string email,
         string rawToken,
         DateTime nowUtc,
-        int expiryMinutes = 15)
+        int expiryMinutes = DefaultExpiryMinutes)
     {
         if (userId == Guid.Empty)
         {

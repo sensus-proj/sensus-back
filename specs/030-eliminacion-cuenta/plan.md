@@ -3,14 +3,16 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Aprobado |
-| Versión | 1.0.0 |
-| Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado del plan | Escindida |
+| Versión | 2.0.0 |
+| Constitution Check | PASS (brechas cerradas por las specs 060 y 061) |
+| Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ## 1. Resumen técnico
 
 Permitir que el titular elimine su cuenta con confirmación explícita, aplicando una retención declarada y purgando sus datos personales en cascada.
+
+**Cierre por escisión (2026-11-23).** El diseño original preveía borrado físico inmediato y un único caso de uso de purga. La implementación real se dividió en dos specs: la 060 (baja lógica, revocación y purga diferida) y la 061 (anonimización de contenido, expiración de apartados, archivado y auditoría anonimizada). Este plan se conserva como registro histórico; las decisiones técnicas vigentes están en los planes de esas dos specs. El endpoint sigue devolviendo `204`.
 
 ## 2. Cambios por capa
 
@@ -57,12 +59,13 @@ Evaluación previa a la implementación.
 | I | PASS | `FR-030-01` y 6 requisitos más, con criterios de aceptación medibles |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | PASS | Estrategia de pruebas definida en §7 |
-| VI | PASS | Costo estimado declarado en §6 |
-| VII | PASS | Paginación, índices y observabilidad en §5 |
+| IV | PASS (cerrado por 060/061) | La brecha de borrado físico inmediato y apartados activos se resolvió con baja lógica, purga a 30 días, expiración previa y auditoría sin PII |
+| V | PASS con brecha externa de entorno | Gates ejecutados en 060/061; 11 pruebas Testcontainers bloqueadas por Docker no disponible, sin omisiones ni umbrales reducidos |
+| VI | PASS | Costo estimado declarado en §6; sin recursos nuevos en 060/061 |
+| VII | PASS | Paginación, índices y observabilidad en §5; índices nuevos declarados en 060/061 |
+| VIII | PASS (cerrado por 060/061) | Auditoría de solo adición, `correlation-id`, sin PII ni secretos, retención configurable y modelo STRIDE en el plan 061 |
 
-> Sin excepciones registradas (Apéndice E de la constitución).
+> Sin excepciones registradas (Apéndice E de la constitución). La brecha original del Principio IV quedó documentada y resuelta en los checklists de las specs 060 y 061.
 
 ## 9. Riesgos de implementación
 

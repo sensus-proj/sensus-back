@@ -11,14 +11,16 @@ using Sensus.Infrastructure.Persistence.Mongo.Documents;
 namespace Sensus.Infrastructure.Persistence.Mongo.Repositories;
 
 /// <summary>
-/// Agrega la afinidad inferida por categoría desde vistas (90 días, peso 1) y apartados (TTL 30 días, peso 3)
-/// del usuario usando consultas indexadas y caché Redis <c>feed:affinity:{userId}</c> (Spec 042, FR-042-04).
+/// Agrega la afinidad inferida por categoría desde vistas (90 días, peso 1), apartados (TTL 30 días, peso 3)
+/// y favoritos (peso 2, Spec 038) del usuario usando consultas indexadas y caché Redis
+/// <c>feed:affinity:{userId}</c> (Spec 042, FR-042-04).
 /// </summary>
 public sealed class MongoUserAffinityReader : IUserAffinityReader
 {
     private const int ViewLookbackDays = 90;
     private const double ViewWeight = 1.0d;
     private const double ClaimWeight = 3.0d;
+    private const double FavoriteWeight = 2.0d;
 
     private readonly MongoDbContext _context;
     private readonly IDateTimeProvider _clock;
@@ -93,7 +95,12 @@ public sealed class MongoUserAffinityReader : IUserAffinityReader
                 .Project(c => c.OfferId)
                 .ToListAsync(cancellationToken);
 
-            if (viewedOfferIds.Count == 0 && claimedOfferIds.Count == 0)
+            List<Guid> favoritedOfferIds = await _context.OfferFavorites
+                .Find(f => f.UserId == userId)
+                .Project(f => f.OfferId)
+                .ToListAsync(cancellationToken);
+
+            if (viewedOfferIds.Count == 0 && claimedOfferIds.Count == 0 && favoritedOfferIds.Count == 0)
             {
                 return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             }
@@ -107,6 +114,11 @@ public sealed class MongoUserAffinityReader : IUserAffinityReader
             foreach (Guid offerId in claimedOfferIds)
             {
                 offerWeights[offerId] = offerWeights.GetValueOrDefault(offerId) + ClaimWeight;
+            }
+
+            foreach (Guid offerId in favoritedOfferIds)
+            {
+                offerWeights[offerId] = offerWeights.GetValueOrDefault(offerId) + FavoriteWeight;
             }
 
             FilterDefinition<OfferDocument> offerFilter =

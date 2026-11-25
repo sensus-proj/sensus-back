@@ -22,6 +22,15 @@ public class User : BaseEntity, IAggregateRoot
     public DateTime FechaRegistro { get; private set; }
     public DateTime? UltimoAcceso { get; private set; }
 
+    /// <summary>
+    /// Marca de baja lógica de la cuenta (Spec 060, FR-060-01). Nula mientras la cuenta está activa.
+    /// La PII se conserva hasta que el proceso de purga elimina el documento.
+    /// </summary>
+    public DateTime? DeletedAtUtc { get; private set; }
+
+    /// <summary>Indica si la cuenta fue dada de baja lógicamente (Spec 060).</summary>
+    public bool IsDeleted => DeletedAtUtc is not null;
+
     public IReadOnlyCollection<string> Roles => _roles.AsReadOnly();
 
     /// <summary>
@@ -165,6 +174,32 @@ public class User : BaseEntity, IAggregateRoot
         }
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Da de baja la cuenta lógicamente, conservando la PII hasta la purga (Spec 060, FR-060-01).
+    /// Desactiva la cuenta y rota el SecurityStamp para revocar de inmediato los tokens emitidos
+    /// (FR-060-02). Devuelve <c>false</c> si la cuenta ya estaba dada de baja (idempotencia).
+    /// </summary>
+    public bool MarkAsDeleted(DateTime deletedAtUtc)
+    {
+        if (IsDeleted)
+        {
+            return false;
+        }
+
+        DeletedAtUtc = DateTime.SpecifyKind(deletedAtUtc, DateTimeKind.Utc);
+        Deactivate();
+        return true;
+    }
+
+    /// <summary>
+    /// Restaura la marca de baja persistida. Uso exclusivo de la capa de persistencia: no rota el stamp.
+    /// </summary>
+    public void RestoreDeletion(DateTime deletedAtUtc)
+    {
+        DeletedAtUtc = DateTime.SpecifyKind(deletedAtUtc, DateTimeKind.Utc);
+        Estatus = false;
     }
 
     /// <summary>

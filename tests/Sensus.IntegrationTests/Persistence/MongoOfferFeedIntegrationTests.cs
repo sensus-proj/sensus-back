@@ -14,21 +14,19 @@ using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 using Sensus.Infrastructure.Persistence.Mongo.Repositories;
 using Sensus.IntegrationTests.Fixtures.OfferFeed;
-using StackExchange.Redis;
 
 namespace Sensus.IntegrationTests.Persistence;
 
 /// <summary>
 /// Pruebas de infraestructura e integración MongoDB/Redis del feed de promociones (Spec 042, T042-04, T042-05, T042-11).
-/// La caché/degradación corre siempre; el fixture en MongoDB corre con <c>MONGO_CONNECTION_STRING</c> (CI/Docker)
-/// y las pruebas contra Redis real corren con <c>REDIS_CONNECTION_STRING</c> (Docker).
+/// La caché/degradación corre siempre; el fixture en MongoDB corre con <c>MONGO_CONNECTION_STRING</c> (CI/Docker).
+/// Las pruebas contra Redis real viven en <c>RedisCacheTestcontainersTests</c> (Spec 048, T048-17).
 /// </summary>
 public sealed class MongoOfferFeedIntegrationTests : IAsyncLifetime
 {
     private static readonly DateTime Now = OfferFeedDeterministicFixture.FixedNowUtc;
 
     private readonly string? _connectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING");
-    private readonly string? _redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
     private readonly string _databaseName = $"sensus_feed_{Guid.NewGuid():N}";
     private MongoDbContext? _context;
     private MongoOfferRepository? _offerRepository;
@@ -169,40 +167,30 @@ public sealed class MongoOfferFeedIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RealRedis_ShouldStoreRetrieveAndIsolateFeedSnapshotsByUserAndTtl()
+    public async Task RealMongo_FavoriteSignal_ShouldContributeToCategoryAffinity()
     {
-        if (string.IsNullOrWhiteSpace(_redisConnectionString))
+        if (_context is null)
         {
             return;
         }
 
-        using ConnectionMultiplexer mux = await ConnectionMultiplexer.ConnectAsync(_redisConnectionString);
-        var cache = new RedisCacheService(
-            Options.Create(new RedisSettings { Enabled = true, DefaultTtlMinutes = 10 }),
-            NullLogger<RedisCacheService>.Instance,
-            mux);
-        var store = new RedisFeedSnapshotStore(cache, NullLogger<RedisFeedSnapshotStore>.Instance);
+        var fixture = new OfferFeedDeterministicFixture();
+        await _context.Offers.InsertOneAsync(OfferDocument.FromDomain(fixture.VisibleOffers.First(o => o.Category == "Food")));
 
-        Guid ownerId = Guid.NewGuid();
-        Guid otherUserId = Guid.NewGuid();
-        Guid snapshotId = Guid.NewGuid();
-        var snapshot = new FeedSnapshot(
-            snapshotId,
-            "feed-v1",
-            Now,
-            [new FeedSnapshotEntry(Guid.NewGuid(), FeedSlot.Ranked), new FeedSnapshotEntry(Guid.NewGuid(), FeedSlot.Exploration)]);
+        Guid userId = Guid.NewGuid();
+        OfferFavorite favorite = OfferFavorite.Create(userId, fixture.VisibleOffers.First(o => o.Category == "Food").Id, Now).Value;
+        await _context.OfferFavorites.InsertOneAsync(OfferFavoriteDocument.FromDomain(favorite));
 
-        bool saved = await store.SaveAsync(ownerId, snapshot, TimeSpan.FromMinutes(1));
-        saved.Should().BeTrue();
+        IDateTimeProvider clock = Substitute.For<IDateTimeProvider>();
+        clock.UtcNow.Returns(Now);
+        var reader = new MongoUserAffinityReader(
+            _context,
+            clock,
+            Options.Create(new FeedRankingSettings()),
+            NullLogger<MongoUserAffinityReader>.Instance);
 
-        FeedSnapshot? restored = await store.GetAsync(ownerId, snapshotId);
-        restored.Should().NotBeNull();
-        restored!.Entries.Should().HaveCount(2);
+        IReadOnlyDictionary<string, double> affinities = await reader.GetCategoryAffinitiesAsync(userId);
 
-        // STRIDE: un snapshotId nunca puede ser leído por otro usuario
-        FeedSnapshot? otherUserRead = await store.GetAsync(otherUserId, snapshotId);
-        otherUserRead.Should().BeNull();
-
-        await cache.RemoveAsync(FeedCacheKeys.Snapshot(ownerId, snapshotId));
+        affinities.Should().ContainKey("Food").WhoseValue.Should().Be(1.0);
     }
 }

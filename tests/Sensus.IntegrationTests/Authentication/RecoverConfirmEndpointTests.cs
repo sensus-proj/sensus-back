@@ -37,7 +37,7 @@ public class RecoverConfirmEndpointTests : IClassFixture<CustomWebApplicationFac
 
         var rawToken = Guid.NewGuid().ToString("N");
         var tokenHash = PasswordResetToken.ComputeHash(rawToken);
-        var resetToken = PasswordResetToken.Create(user.Id, user.Correo, rawToken, _factory.FakeClock.UtcNow, 15).Value;
+        var resetToken = PasswordResetToken.Create(user.Id, user.Correo, rawToken, _factory.FakeClock.UtcNow).Value;
 
         _factory.PasswordResetTokenRepository.TryConsumeAsync(tokenHash, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(true);

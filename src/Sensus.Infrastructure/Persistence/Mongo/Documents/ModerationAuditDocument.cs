@@ -6,8 +6,8 @@ using Sensus.Domain.Enums;
 namespace Sensus.Infrastructure.Persistence.Mongo.Documents;
 
 /// <summary>
-/// Documento de evidencia de moderación en la colección <c>moderation_audit</c> (Spec 021).
-/// Solo se inserta: no existe reemplazo ni borrado desde la aplicación (NFR-021-01).
+/// Documento de evidencia de moderación (Spec 021) y copia anonimizada tras baja de cuenta (Spec 061)
+/// en la colección <c>moderation_audit</c>. Solo se inserta: no existe reemplazo ni borrado desde la aplicación (NFR-021-01).
 /// </summary>
 public sealed class ModerationAuditDocument
 {
@@ -27,6 +27,13 @@ public sealed class ModerationAuditDocument
     [BsonRepresentation(BsonType.String)]
     public ModerationVerdict Verdict { get; set; }
 
+    [BsonElement("subjectKey")]
+    public string SubjectKey { get; set; } = string.Empty;
+
+    [BsonElement("sourceSanctionId")]
+    [BsonRepresentation(BsonType.String)]
+    public Guid SourceSanctionId { get; set; }
+
     [BsonElement("decision")]
     public string Decision { get; set; } = string.Empty;
 
@@ -39,8 +46,17 @@ public sealed class ModerationAuditDocument
     [BsonElement("categoryScores")]
     public Dictionary<string, double> CategoryScores { get; set; } = [];
 
+    [BsonElement("categories")]
+    public List<string> Categories { get; set; } = [];
+
+    [BsonElement("scores")]
+    public Dictionary<string, double> Scores { get; set; } = new();
+
     [BsonElement("thresholdApplied")]
     public string? ThresholdApplied { get; set; }
+
+    [BsonElement("action")]
+    public string Action { get; set; } = string.Empty;
 
     [BsonElement("actorType")]
     [BsonRepresentation(BsonType.String)]
@@ -56,7 +72,31 @@ public sealed class ModerationAuditDocument
     public DateTime CreatedAtUtc { get; set; }
 
     [BsonElement("retainUntilUtc")]
+    [BsonIgnoreIfDefault]
     public DateTime RetainUntilUtc { get; set; }
+
+    [BsonElement("recordedAtUtc")]
+    public DateTime RecordedAtUtc { get; set; }
+
+    [BsonElement("expiresAtUtc")]
+    [BsonIgnoreIfDefault]
+    public DateTime ExpiresAtUtc { get; set; }
+
+    /// <summary>Ref: FR-061-05 - copia anonimizada de evidencia de moderación.</summary>
+    public static ModerationAuditDocument FromDomain(ModerationAudit entry) =>
+        new()
+        {
+            Id = entry.Id,
+            SubjectKey = entry.SubjectKey,
+            SourceSanctionId = entry.SourceSanctionId,
+            Decision = entry.Decision,
+            Categories = entry.Categories.ToList(),
+            Scores = new Dictionary<string, double>(entry.Scores),
+            ThresholdApplied = entry.ThresholdApplied,
+            Action = entry.Action,
+            RecordedAtUtc = entry.RecordedAtUtc,
+            ExpiresAtUtc = entry.ExpiresAtUtc
+        };
 
     /// <summary>Ref: FR-021-01 - proyección completa de la evidencia.</summary>
     public static ModerationAuditDocument FromDomain(ModerationAuditRecord record) =>

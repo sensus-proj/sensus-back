@@ -196,7 +196,8 @@ builder.Services.AddAuthentication(options =>
             var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
             var user = await userRepository.GetByIdAsync(userId, context.HttpContext.RequestAborted);
 
-            if (user is null || !user.Estatus)
+            // Spec 060 (FR-060-02, NFR-060-01): la baja lógica revoca los tokens ya emitidos sin esperar a su expiración.
+            if (user is null || user.IsDeleted || !user.Estatus)
             {
                 context.Fail("El usuario no existe o se encuentra inactivo.");
                 return;
@@ -271,6 +272,7 @@ builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
+builder.Services.AddHostedService<DeletedAccountPurgeBackgroundService>();
 builder.Services.AddHostedService<InteractionStatsBackgroundService>();
 builder.Services.AddHostedService<OfferCategoryMigrationHostedService>();
 
@@ -346,6 +348,8 @@ app.UseMiddleware<Sensus.Api.Middlewares.RequestMetricsMiddleware>();
 app.UseExceptionHandler();
 app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);
+// NFR-029-03: debe ejecutarse antes del limitador para particionar /recover por hash del correo.
+app.UseRecoverEmailPartitionKey();
 app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment() || isLambdaRuntime)

@@ -1,6 +1,6 @@
 # Memoria del Proyecto — Sensus Backend
 
-**Version:** 3.7.0 · **Actualizado:** 2026-11-23 · **Alineado a:** `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0
+**Version:** 3.7.2 · **Actualizado:** 2026-11-24 · **Alineado a:** `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0
 
 > Estado vivo del proyecto para reanudar trabajo sin perder contexto. No es normativo: si contradice a
 > `constitution.md`, prevalece la constitución y este archivo se corrige.
@@ -11,15 +11,16 @@
 
 | Campo | Valor |
 |---|---|
-| **Última actualización** | 2026-11-23 |
-| **Fase SDD** | `implement` cerrado al 100 % para specs **009**, **012**, **035** y **056**, y **027** al máximo posible desde backend con runbook operacional documentado. |
-| **Rama de trabajo** | `main` / `Back_Rodrigo` (cambios locales sin confirmar: Specs 009, 012, 027, 035, 056) |
-| **Agente** | Antigravity |
-| **Constitución vigente** | v2.4.0 (2026-11-19) |
-| **AGENTS.md vigente** | v2.4.0 |
+| **Última actualización** | 2026-11-24 |
+| **Fase SDD** | En `main` (`01dad6e`): `implement` completado para specs 005, 007, 008, 015, 016, 018, 019, 022, 027, 031, 032, 033 y 044. En `develop`: `implement` cerrado al 100 % para specs **009**, **012**, **035** y **056**, y **027** al máximo posible desde backend con runbook operacional documentado. En `sprint3_oscar`: `specify → plan → tasks → checklist → implement` completadas para **Spec 047 v1.2.0** (CI-CD y DevSecOps al 100 %), **Spec 046 v2.0.0** (Sensi IA agéntico de 7 capas), **Spec 024 v2.1.0** (Publicaciones del feed al 100 %, T024-01 a T024-08), **Spec 038 v2.1.0** (Favoritos de ofertas, T038-01 a T038-09), **Spec 029 v2.0.0** (Recuperación de contraseña, T029-01 a T029-21), **Spec 037 v2.0.0** (Inventario de ofertas del comerciante, T037-01 a T037-10), **Spec 048 v2.0.0** (Caché distribuido con Redis, T048-01 a T048-26), **Spec 044 v2.0.0** (Ajustes de notificaciones, T044-01 a T044-15), **Spec 060 v2.0.0** (Baja lógica de cuenta y purga diferida, T060-01 a T060-12), **Spec 061 v2.0.0** (Anonimización de contenido y cierre comercial, T061-01 a T061-12) y **Spec 030 v2.0.0** (`Escindida` en 060/061). Orden confirmado 029 → 037 → 048 → 044 → 030 completado. |
+| **Rama de trabajo** | `sprint3_oscar` integrando `develop` (PR #67; merge en curso resuelto en el árbol de trabajo) |
+| **Agente** | OpenCode / Antigravity |
+| **Constitución vigente** | v3.0.0 (2026-11-23, incluye cierre de EX-004) |
+| **AGENTS.md vigente** | v3.0.0 |
 | **Solución .NET** | `sensus-back.sln` (9 proyectos: `src` + TestKit, UnitTests, IntegrationTests, E2ETests, ArchitectureTests) |
-| **Última tarea completada** | **Cierre al 100 % de Specs 009, 012, 035, 056 y avance máximo de 027** (2026-11-23):<br>1) **Spec 056 (Reseñas de comercios — 100 %)**: paginación en base de datos con Skip/Limit y `CountDocumentsAsync`, agregación MongoDB (`$match + $group`) para promedio, total y desglose 1..5 estrellas sin carga en memoria. Testcontainers reales y pruebas unitarias de equivalencia matemática en verde.<br>2) **Spec 012 (CORS y HTTPS por entorno — 100 %)**: T012-05 cerrada con 5 pruebas de integración en `CorsAndHttpsSecurityTests.cs` (orígenes permitidos/no permitidos, redirección HTTPS en producción, HSTS en producción y ausencia en desarrollo).<br>3) **Spec 009 (ProblemDetails uniforme — 100 %)**: eliminadas las 10 instanciaciones directas `new ProblemDetails` en endpoints (reemplazadas por `Result.ToHttpResult()`), respuesta 429 con `application/problem+json` y correlationId, 7 pruebas de integración en `ProblemDetailsUniformityTests.cs` (400, 401, 403, 404, 409, 429, 500) y regla de arquitectura en `ArchitectureTests.cs`. Catálogo de códigos documentado en `spec.md`.<br>4) **Spec 035 (Edición de oferta — 100 %)**: re-moderación fail-closed (`EvaluateAsync` + `RecordAsync`) verificada, contrato OpenAPI actualizado con 200/400/401/403/404/409/422, y 9 pruebas de integración en `OfferEditEndpointsTests.cs` (200 con versión incrementada, 401, 403, 404, 409 versión obsoleta, 409 stock menor a apartados, 400 stock inválido, moderación fail-closed y auditoría fail-closed).<br>5) **Spec 027 (Registro de dispositivo para push — Máximo backend alcanzado)**: T027-08 cerrada con regresión de reasignación y desvinculación probada contra MongoDB real con Testcontainers en `MongoDeviceRepositoryTests.cs`. T027-07, T027-12 y T027-13 documentadas paso a paso en runbook operacional en `plan.md` §11 y marcadas como bloqueadas por acciones externas / móviles.<br>6) **Verificación integral**: 1,663 pruebas pasando al 100 % en verde (1,090 unitarias, 565 integración, 5 arquitectura, 3 E2E). Cobertura: Domain 92.99 %, Application 95.04 % (ambas > 80 %). `dotnet format` y compilación `-warnaserror` (0 advertencias, 0 errores). |
-| **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). Cero operaciones de Git y cero llamadas a AWS ejecutadas. |
+| **Hito previo (2026-11-23)** | **Integración de `sprint3_oscar` y `develop` (2026-11-23)**:<br>**En `sprint3_oscar` — Cierre de las specs 060, 061 y 030**: baja lógica con `DeletedAtUtc`, rotación de `SecurityStamp`, rechazo de JWT y login, purga diferida con índice y configuración `AccountDeletion` (060); anonimización de posts/comments, expiración de apartados antes de archivar ofertas y auditoría `moderation_audit` sin PII con TTL (061); 030 cerrada como `Escindida`. Regresión E2E de baja (`500` → `204`) corregida con fakes en memoria en `SensusE2EWebApplicationFactory`. Gates locales: build `-warnaserror` 0/0, `dotnet format --verify-no-changes` limpio, `check-specs.mjs` 61 specs válidas, 932 unitarias + 4 arquitectura + 3 E2E + 506/517 integración en verde, cobertura Domain 89,59 % (2357/2631) / Application 96,18 % (6342/6594); 11 pruebas Testcontainers bloqueadas en ese entorno por daemon Docker no disponible.<br>**En `develop` — Cierre al 100 % de Specs 009, 012, 035, 056 y avance máximo de 027**:<br>1) **Spec 056 (Reseñas de comercios — 100 %)**: paginación en base de datos con Skip/Limit y `CountDocumentsAsync`, agregación MongoDB (`$match + $group`) para promedio, total y desglose 1..5 estrellas sin carga en memoria. Testcontainers reales y pruebas unitarias de equivalencia matemática en verde.<br>2) **Spec 012 (CORS y HTTPS por entorno — 100 %)**: T012-05 cerrada con 5 pruebas de integración en `CorsAndHttpsSecurityTests.cs` (orígenes permitidos/no permitidos, redirección HTTPS en producción, HSTS en producción y ausencia en desarrollo).<br>3) **Spec 009 (ProblemDetails uniforme — 100 %)**: eliminadas las 10 instanciaciones directas `new ProblemDetails` en endpoints (reemplazadas por `Result.ToHttpResult()`), respuesta 429 con `application/problem+json` y correlationId, 7 pruebas de integración en `ProblemDetailsUniformityTests.cs` (400, 401, 403, 404, 409, 429, 500) y regla de arquitectura en `ArchitectureTests.cs`. Catálogo de códigos documentado en `spec.md`.<br>4) **Spec 035 (Edición de oferta — 100 %)**: re-moderación fail-closed (`EvaluateAsync` + `RecordAsync`) verificada, contrato OpenAPI actualizado con 200/400/401/403/404/409/422, y 9 pruebas de integración en `OfferEditEndpointsTests.cs`.<br>5) **Spec 027 (Registro de dispositivo para push — Máximo backend alcanzado)**: T027-08 cerrada con regresión de reasignación y desvinculación probada contra MongoDB real con Testcontainers en `MongoDeviceRepositoryTests.cs`; T027-07, T027-12 y T027-13 documentadas paso a paso en runbook operacional en `plan.md` §11 y marcadas como bloqueadas por acciones externas / móviles.<br>6) **Verificación integral en `develop`**: 1,663 pruebas pasando al 100 % en verde (1,090 unitarias, 565 integración, 5 arquitectura, 3 E2E); cobertura Domain 92.99 %, Application 95.04 %; `dotnet format` y `-warnaserror` limpios. |
+| **Última tarea completada** | **Inspección final de calidad/seguridad y revisión del pull (2026-11-24)**: se corrigieron los fallos de CI reproducibles (centralización de `ProblemDetails` en `ResultExtensions.ToProblemDetails()` y test de arquitectura `Endpoints_ShouldNotInstantiateProblemDetailsDirectly`, 5/5) y se entregó informe + plan de remediación priorizado. Tras el `pull` de 11 commits de `develop` se resolvieron los 6 conflictos de código a favor de la versión entrante (spec 009: `ProblemDetails` uniforme con `correlationId`, tipo RFC y `application/problem+json`), conservando el fix de fecha de `ToggleOfferFavoriteCommandHandlerTests` y parcheando los 2 `new ProblemDetails` restantes en `FeedEndpoints`. También se corrigió la propiedad `ModerationAuditRepository` duplicada en `SensusE2EWebApplicationFactory`, la configuración `SesEmailSettings:Simulate` del factory de Production y el stub del inventario paginado en `CreateOfferEndpointsTests` (spec 037). Gates post-merge: build `-warnaserror` 0/0, formato limpio, `check-specs.mjs` 61 specs, 1131 unitarias + 5 arquitectura + 3 E2E + 620/646 integración; cobertura OpenCover fusionada Domain 91,37 % (3156/3454) y Application 95,67 % (7570/7913). Quedan 26 Testcontainers bloqueados por Docker (sin omisiones); el objetivo informal del 90 % en código nuevo no se recalculó porque la línea base cambió con el merge. Seguridad: H5 atendida por la versión entrante (spec 021: `ModerationAuditRecorder`/`ModerationAuditEndpoints`); H1, H2 y H4 siguen abiertos y H3 requiere revisión con ADR 0015/v3.0.0. Sin `SONAR_TOKEN`, SonarAnalyzer, Snyk, gitleaks, semgrep, trivy ni CDK CLI: gate Sonar remoto y DAST/SBOM no verificables localmente. Sin `cdk deploy` ni operaciones de Git por parte del asistente. |
+| **Restricción activa** | Operaciones de Git requieren confirmación explícita del responsable (`AGENTS.md` §12). «No subas cambios de nada» confirmado; cero operaciones de Git y cero llamadas a AWS ejecutadas sin autorización. El merge queda sin `add`/`commit`: el responsable debe finalizarlo. |
 
 ---
 
@@ -27,11 +28,11 @@
 
 | Principio | Estado en el repositorio | Evidencia |
 |---|---|---|
-| I. Especificación y trazabilidad | Implementado | 49 specs en `specs/README.md` (48 activas, 1 en backlog) con `spec/plan/tasks/checklist` y `specs/requirements.md`; los 29 endpoints del catálogo están cubiertos |
+| I. Especificación y trazabilidad | Implementado | 61 specs en `specs/README.md` (59 activas, 1 en backlog, 1 `Escindida`: 030 → 060/061) con `spec/plan/tasks/checklist` validadas por `check-specs.mjs`, y `specs/requirements.md` (602 requisitos); los 29 endpoints del catálogo están cubiertos |
 | II. Clean Architecture | Parcial | Capas existen; falta verificar dependencias con NetArchTest de forma continua |
 | III. CQRS y contratos | Parcial | Hay comandos/handlers y DTOs; faltan OpenAPI unificado y ProblemDetails uniforme (specs 009, 011) |
 | IV. Seguridad y privacidad | Parcial, con brechas | Secreto JWT versionado, CORS abierto, `RequireHttpsMetadata=false`, sin logout (specs 004, 012) |
-| V. Verificación automatizada | Implementado | 1,604 pruebas automatizadas en verde (1,076 unitarias, 524 integración, 4 arquitectura). Cobertura > 90 % en Domain (91.67 %) y Application (90.26 %). Compilación con `-warnaserror` (0 advertencias, 0 errores) y formato verificado |
+| V. Verificación automatizada | Implementado, con brecha externa de entorno | Tras resolver el merge (2026-11-24): 1131 unitarias, 5 de arquitectura, 3 E2E y 620/646 de integración en verde; 26 Testcontainers bloqueados por `npipe://./pipe/docker_engine`, sin omisiones ni umbrales reducidos. Cobertura OpenCover fusionada post-merge: Domain 91,37 % (3156/3454) y Application 95,67 % (7570/7913), ambas por encima del 80 % oficial. Compilación con `-warnaserror` 0/0 y `dotnet format --verify-no-changes` limpio; `check-specs.mjs` valida 61 specs |
 | VI. Costo cero e IaC | Implementado | Proyecto AWS CDK en C# en `infra/` (`SensusInfraStack`, Spec 045): Lambda `.NET 10` (`PROVIDED_AL2023`, `ARM_64`), API Gateway HTTP API v2, CloudWatch (7 días retención + alarmas), SSM Parameter Store (0 USD) y presupuesto en AWS Budgets (1.00 USD) |
 | VII. Rendimiento y observabilidad | Implementado | Paginación estándar, `CorrelationIdMiddleware` con propagación `X-Correlation-Id` en logs y `ProblemDetails`, rate limiting configurable por IP/usuario, métricas EMF CloudWatch y caché distribuida Redis con operaciones atómicas |
 
@@ -74,6 +75,11 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 | D30 | Rama de integración `develop`: flujo `rama de trabajo → develop → main`; `main` solo recibe PR desde `develop`; `Sprint1` deja de usarse (ya no existe en `origin`) | 2026-11-19 | El CI corre en push y PR a `develop` y `main`; cada merge a `main` despliega a producción por CI; `AGENTS.md` §15 y la spec 047 alineados |
 | D31 | Retención explícita de auditoría de moderación fijada en 2555 días (~7 años, FR-021-04) | 2026-11-22 | Configurada mediante índice TTL en MongoDB (`ttl_moderation_audit_retention`) y almacén estrictamente append-only sin mutación ni borrado |
 | D32 | Entrega fail-closed exclusiva para multimedia aprobada (`Approved`) vía Proxy Streaming con TTL acotado (Spec 023) | 2026-11-22 | `/delivery` y `/delivery-url` solo aceptan `Approved` (404 uniforme en cuarentena, pendiente o retirado). Proxy streaming con `Cache-Control` dinámico acotado a expiración de firma HMAC (evita 302 permanente) e invalidación total de CDN |
+| D33 | Cierre de la Spec 029 y orden de trabajo confirmado: 029 → 037 → 048 → 044 → 030. Correo por Amazon SES (`AWSSDK.SimpleEmail` 4.0.100.25, Apache-2.0, sin costo de paquete; SES dentro del free tier, 3.000 mensajes/mes desde Lambda) con TLS 1.2+, TTL de recuperación de 30 minutos, alias `/auth/reset-password` retirado (404), retiro de `HttpMailerEmailSender`, `MailerTransportPolicy`, `MailerSettings` y de la credencial Somee, límite `RateLimiting:Recover` de 3 por correo y hora con hash SHA-256 del correo normalizado, `ISensitiveRequest` en `RequestPasswordResetCommand` y configuración `SesEmailSettings` (`Simulate=false` y `From` vacío en base; `Simulate=true` en Development) | 2026-11-23 | `EX-004` cerrada anticipadamente; no queda excepción TLS vigente y la constitución integra el cierre v2.4.1 junto a v3.0.0. La baja de `/sensus/<entorno>/MailerSettings/ApiKey` es operación externa documentada (T029-16), no código pendiente; la credencial no se rota porque se da de baja. Siguiente paso tras 029: Spec 037 |
+| D34 | Cierre de la Spec 037 v2.0.0: inventario paginado del comerciante con filtro por estado en MongoDB, `MerchantOfferDto` con métricas en tiempo real (vistas desde `Offer.ViewCount`, apartados/canjes por conteo batch `Filter.In`), tres índices declarados, validación 20/100 y contrato OpenAPI v2.0.0 | 2026-11-23 | La pregunta histórica sobre desfase de métricas queda resuelta sin desfase. `OfferDto` pasó a no `sealed` para permitir `MerchantOfferDto : OfferDto` y conservar `LikesCount`/`IsLikedByMe` de la Spec 057. Siguiente paso: Spec 048 |
+| D35 | Cierre de la Spec 048 v2.0.0: ruta canónica `/api/v1/feed/offers`, instantáneas de feed con TTL configurable e invalidación en lote por `feed:offers:`, Redis real con Testcontainers y p95 medido en ambos caminos | 2026-11-23 | EX-003 (Valkey Serverless con VPC/NAT fuera de Free Tier) y G-14 (caché sin IAM/RBAC) quedan documentadas en la constitución. Sin `cdk deploy` ni operaciones de Git. Siguiente paso: Spec 044 |
+| D36 | Cierre de la Spec 044 v2.0.0: preferencias y ubicación consentida con contrato HTTP completo, FCM HTTP v1 con credencial en SSM, alertas con texto moderado *fail-closed* y p95 < 250 ms medido | 2026-11-23 | Entrega FCM física, integración móvil y brecha IV de la spec 034 quedan documentadas como externas; sin secretos en el repositorio. Siguiente paso: Spec 030 (060/061) |
+| D37 | Cierre de la Spec 030 como `Escindida` en las specs 060 (baja lógica, revocación inmediata y purga diferida) y 061 (anonimización, expiración de apartados, archivado y auditoría anonimizada) | 2026-11-23 | `DELETE /api/v1/users/account` conserva el `204` existente (no el `202` del borrador 030). La auditoría de sanciones se copia a `moderation_audit` con `subjectKey` SHA-256 y TTL de 90 días configurable; `sanctions` permanece intacta. El cierre delega en `CloseAccountContentCommand` vía `ISender`. Regresión E2E de baja corregida con fakes en memoria. Orden 029 → 037 → 048 → 044 → 030 completado; siguiente paso: operaciones externas y deuda documentada |
 
 ---
 
@@ -81,16 +87,16 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 
 | Artefacto | Ruta | Estado |
 |---|---|---|
-| Constitución | `constitution.md` | Completa, v1.4.0 |
-| Reglas para agentes | `AGENTS.md` | Completo, v1.3.0 |
-| Memoria | `memory.md` | Este archivo, v3.0.2 |
+| Constitución | `constitution.md` | Completa, v3.0.0 (con cierre EX-004 de 2026-11-23) |
+| Reglas para agentes | `AGENTS.md` | Completo, v3.0.0 |
+| Memoria | `memory.md` | Este archivo, v3.7.1 |
 | Plantillas SDD | `specs/_templates/{spec,plan,tasks,checklist}.md` | Completas, alineadas a v1.2.0 |
-| Índice de specs | `specs/README.md` | Completo, 48 specs |
-| Registro de requisitos | `specs/requirements.md` | Completo |
-| Especificaciones | `specs/001-…` … `specs/048-…` | 48 carpetas con 4 artefactos cada una |
+| Índice de specs | `specs/README.md` | Completo; `check-specs.mjs` valida 61 carpetas con sus cuatro artefactos |
+| Registro de requisitos | `specs/requirements.md` | Completo, 602 requisitos en 61 specs |
+| Especificaciones | `specs/001-…` … `specs/061-…` | 61 carpetas con 4 artefactos cada una; 030 `Escindida` en 060/061 |
 | Contratos por spec | `specs/NNN-slug/contracts/openapi.yaml` | Solo en specs con endpoints |
 | Arquitectura | `docs/architecture/arquitecturaNva.docx` y `docs/architecture/overview.md` | Completos |
-| ADR | `docs/adr/0001` … `0011` + índice | Completos |
+| ADR | `docs/adr/0001` … `0015` + índice | Completos (índice en `docs/adr/README.md`; la fila estaba desactualizada y se corrigió el 2026-11-24) |
 | Solución .NET | `sensus-back.sln` | Existe; `sensus-back.slnx` retirado |
 | Infraestructura | `infra/` (CDK) | Implementada (`SensusInfraStack`) |
 | Pipeline CI | `.github/workflows/ci.yml` + scripts de validación | Escrito |
@@ -109,9 +115,13 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
   *user-secrets* y purgar el historial. No se tocó en esta rama para no alterar el despliegue del equipo
   (specs 001 y 002). `JwtSettingsValidator` ya rechaza los valores filtrados conocidos.
 - **CORS `AllowAnyOrigin`** y `RequireHttpsMetadata = false` en `src/Sensus.Api/Program.cs` (spec 012).
-- **Cobertura real por debajo del umbral**: el último cálculo local dio Domain 25.89 % y Application
-  34.78 % frente al 80 % exigido. El gate de CI fallará hasta remediarlo; no se ha vuelto a medir tras
-  integrar el código de Sprint 1.
+
+- **Testcontainers sin daemon en este entorno**: 26 pruebas de integración fallan con
+  `DockerUnavailableException` al conectar con `npipe://./pipe/docker_engine` (8 `NotificationMongoRepositoryTests`,
+  4 `MongoModerationAuditRepositoryTests`, 3 `MongoOfferDiscoveryIntegrationTests`, 3 `MongoDeviceRepositoryTests`,
+  2 `MongoCommunityActivityTests`, 2 `RedisCacheTestcontainersTests`, 2 `DynamoDbLocalBudgetCounterStoreTests`
+  y 2 `StoreReviewMongoPaginationIntegrationTests`). No se omitieron ni se desactivaron; requieren Docker
+  Desktop/Linux engine disponible para ejecutarse en local. El resto de la integración queda en 620/646 en verde.
 - **El código de Sprint 1 no está especificado**: 67ccc4e7, 10976027 y 594e20be añaden recuperación de
   contraseña, modo invitado, eliminación de cuenta, perfil de comercio y Cloudinary sin ajustarse al flujo
   `specify → clarify → plan → tasks → checklist`. Trazabilidad rota hasta regularizarlo.
@@ -125,10 +135,43 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
   capacidad interna, fuera del catálogo público.
 - **Límite de subida**: API Gateway corta en 10 MB y Lambda síncrona en 6 MB; la spec 022 fija 4,5 MB y
   responde 413 por encima.
-- **Sin IaC ni presupuesto**: el costo 0 USD no es verificable todavía.
+- **IaC y presupuesto**: `infra/` define el stack CDK (Spec 045) y AWS Budgets con techo de 1,00 USD;
+  `cdk synth` no se ejecutó en esta sesión y `cdk deploy` sigue sin autorización.
 - **Sin OpenAPI unificado**: coexisten Swashbuckle y `Microsoft.AspNetCore.OpenApi` (spec 011).
-- **Pruebas existentes**: 97 unitarias, 4 de arquitectura, 31 de integración y 3 E2E en verde tras la
-  integración. Los paquetes de EF Core sin uso ya se retiraron de `Sensus.Infrastructure`.
+- **Pruebas existentes (2026-11-24, tras resolver el merge)**: 1131 unitarias, 5 de arquitectura, 3 E2E y
+  620/646 de integración en verde; 26 de integración bloqueadas por el daemon Docker indicado arriba.
+  Los paquetes de EF Core sin uso ya se retiraron de `Sensus.Infrastructure`.
+
+- **Cobertura de código nuevo (2026-11-24, inspección final)**: OpenCover de los 4 proyectos de test
+  fusionado con criterio Sonar (máximo por punto de secuencia): Domain 85,41 % (2839/3324) y
+  Application 89,60 % (6550/7310), por encima del 80 % oficial. El código nuevo medido
+  (diff `5be894d..HEAD`) queda en 80,52 % (1405/1745), por debajo del objetivo informal del 90 %
+  acordado con el responsable: 17 de 36 archivos medidos están bajo ese objetivo. Archivos críticos
+  060/061 al 100 % (`CloseAccountContentCommandHandler`, `ModerationAudit`) y 90,48 %
+  (`DeleteAccountCommandHandler`). Sin cambio de umbrales ni exclusiones oficiales. Tras el merge la
+  cobertura global fusionada subió a Domain 91,37 % (3156/3454) y Application 95,67 % (7570/7913);
+  la métrica de código nuevo no se recalculó porque la línea base cambió con la integración.
+- **CI con checkout divergente (2026-11-24)**: el CI reportó `CS0102` por una propiedad
+  `ModerationAuditRepository` duplicada en `SensusE2EWebApplicationFactory` y el fallo del test
+  `Endpoints_ShouldNotInstantiateProblemDetailsDirectly`. Ninguno de los dos estados existe en este
+  checkout: la factory tiene una sola propiedad y el test no estaba en ningún ref local/remoto.
+  El lado entrante del pull sí trae el test y la spec 009 resuelta; ambos se conservaron y se
+  parchearon los 2 `new ProblemDetails` de `FeedEndpoints` que aún lo hacían fallar. Tras el `pull`
+  el duplicado de `ModerationAuditRepository` sí apareció en este checkout: se eliminaron la
+  propiedad y su registro DI repetidos en `SensusE2EWebApplicationFactory`.
+- **Hallazgos de seguridad de la inspección final (2026-11-24)**: **Alto** — `LoggingBehavior.cs`
+  y `PerformanceBehavior.cs` registran `{@Request}` de comandos no marcados `ISensitiveRequest`
+  (`CreateFeedPostCommand`, `CreateFeedCommentCommand`, `SendAiMessageCommand`, `ModerateImageCommand`):
+  contenido, prompts e imágenes en CloudWatch (H1, abierto). **Alto** — `UploadMediaCommandHandler`
+  guarda en Cloudinary antes de moderar y `CloudinaryMediaStorage` no fuerza `type=private`/
+  `access_mode=authenticated` (H2, abierto). **Alto** — `FeedEndpoints` acepta `ImageUrl` arbitraria
+  en la variante JSON sin verificar moderación (H3, requiere revisión: ADR 0015/v3.0.0 permite
+  publicaciones sin imagen moderadas solo con texto, pero no URL externa sin moderar). **Medio** —
+  `ContentModerationHelper` devuelve `Approved` si el servicio de moderación es `null`
+  (fail-open estructural, hoy mitigado por DI; H4, abierto). **Medio** — solo se auditaban decisiones
+  `Rejected` (H5, **atendido** por el lado entrante con `ModerationAuditRecorder` y
+  `ModerationAuditEndpoints` de la spec 021). Informe y plan de remediación entregados al responsable.
+- **SCA**: `dotnet list package --vulnerable --include-transitive` → 0 paquetes vulnerables.
 
 ---
 
@@ -144,33 +187,47 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
   - Item 8: `IOfferRepository.GetByMerchantIdPagedAsync` para `get_my_merchant_offers`.
 - **Auditoría documental 2026-11-15** (specs 004, 012, 013, 017, 030, 034–037, 047): las brechas
   quedaron registradas en cada `checklist.md`. Las más relevantes:
-  - **030 (corregido 2026-11-15)**: al eliminar una cuenta comercial ahora se archivan sus ofertas
-    (FR-030-06). Sigue abierto T030-09: los apartados activos de esas ofertas no se resuelven.
+  - **030 (CERRADO POR ESCISIÓN 2026-11-23)**: al eliminar una cuenta comercial se archivan sus
+    ofertas (FR-030-06) y, desde la Spec 061, se expiran primero los apartados activos (antiguo
+    T030-09). La baja lógica y la purga viven en la Spec 060. El endpoint conserva `204`.
   - **034/035/036**: el texto de las ofertas no se modera, `ImageUrl` no se valida contra un MediaAsset
     aprobado, editar no vuelve a moderar y republicar desde Archived no pasa por moderación.
   - **017**: existe el endpoint público `POST /api/v1/media/moderate` (contrario a FR-017-07) y ante
     fallo o timeout la imagen va a cuarentena (corregido en Item 0).
-  - **037**: `GET /merchants/my-offers` sin métricas de apartados, canjes y vistas (paginación agregada en repo).
+  - **037 (RESUELTO 2026-11-23)**: `GET /merchants/my-offers` pasó a `PagedResult<MerchantOfferDto>` con paginación 20/100, filtro en MongoDB y métricas en tiempo real de apartados, canjes y vistas.
   - **013**: umbrales de rate limiting fijos en código (configuración tipada añadida para Sensi en `RateLimitingSettings`).
   - **004**: la revocación usa SecurityStamp, no la lista de jti que describen spec y plan.
   - **036**: `OfferExpirationBackgroundService` no corre de forma continua en Lambda; confirmar el
     disparo de `/expire-check`.
-  - Las specs 034–037 no tienen pruebas de integración de endpoint y sus contratos OpenAPI siguen en
-    borrador.
+  - Las specs 034–036 no tienen pruebas de integración de endpoint y sus contratos OpenAPI siguen en
+    borrador. La spec 037 quedó cerrada con 9 pruebas de integración y contrato OpenAPI v2.0.0.
 
 ## F. Próximos pasos
 
-1. Revisar y fusionar `SprintOscar` → `Sprint1` mediante PR en `sensus-proj/sensus-back`.
-2. Regularizar el código de Sprint 1 contra el SDD: specs retroactivas para recuperación de contraseña
-   (029), modo invitado, eliminación de cuenta (030), perfil de comercio (031) y almacenamiento de imagen
-   de perfil (022/023).
-3. Ejecutar la ola 0: 009–011 (errores, paginación y OpenAPI) antes de tocar endpoints.
-4. Rotar el secreto JWT y purgar el historial; hasta entonces el escaneo de secretos de CI puede fallar.
-5. Medir cobertura real y elevarla al 80 % en Domain y Application.
-6. Ejecutar la ola 1 (001–003, 029, 030) y después la ola 2 (005–007, 031–037).
-7. Renombrar las rutas implementadas a `/api/v1/merchants` y `/api/v1/users/profile`; retirar legacy en la
-   ola 6 (spec 008).
-8. Inicializar `infra/` con CDK y la alarma de presupuesto; activar el job `iac` del pipeline.
+> **Orden confirmado por el responsable (2026-11-23): 029 → 037 → 048 → 044 → 030 COMPLETADO.** La Spec 030 se cerró como `Escindida` y sus alcances se entregaron en las specs 060 y 061, ambas cerradas v2.0.0 con gates reales. El 2026-11-24 se ejecutó la inspección final de calidad/seguridad: se corrigieron los fallos de CI reproducibles, se entregó informe + plan de remediación y se revisó el `pull` de `develop`, dejando los conflictos resueltos en el árbol de trabajo. Siguiente paso: decidir la remediación de H1/H2/H3/H4 y que el responsable cierre el merge. Sin `cdk deploy` ni operaciones de Git por parte del asistente.
+
+0. **Remediación priorizada (P0, decidir con el responsable)**: (a) marcar `ISensitiveRequest` en los
+   comandos con contenido/imagen/prompt y ampliar el redactor de `LoggingBehavior`/
+   `PerformanceBehavior` (H1); (b) moderar antes de guardar en Cloudinary y forzar almacenamiento
+   privado (H2); (c) revisar `ImageUrl` en la variante JSON de `/feed/posts` a la luz de ADR 0015
+   (H3); (d) convertir el fail-open de `ContentModerationHelper` en fail-closed (H4). H5 ya quedó
+   atendida por la spec 021 en el lado entrante. Corregir también el drift documental de
+   `NFR-048-05` (Free Tier vs EX-003) y la dependencia `034` declarada solo en `specs/README.md:51`.1. Operaciones externas fuera del repositorio: baja del parámetro SSM `/sensus/<entorno>/MailerSettings/ApiKey`
+   (credencial Somee dada de baja, no rotada) y aprovisionamiento de `/sensus/<entorno>/push/fcm-service-account`
+   en SSM *SecureString* para la entrega FCM física.
+2. Configurar SES real (`From`, `Region`, `ConfigurationSetName` y credenciales AWS en SSM) y validar el
+   correo de recuperación fuera de `Development`.
+3. Habilitar el daemon Docker en el entorno local/CI para ejecutar las 26 pruebas Testcontainers hoy
+   bloqueadas; no están omitidas y los umbrales no se han reducido.
+4. Cerrar la brecha IV de la Spec 034: moderación conjunta de imagen y texto en la misma solicitud.
+5. Rotar el secreto JWT, retirar el fallback de `Program.cs` y purgar el historial (specs 001/002);
+   hasta entonces el escaneo de secretos de CI puede fallar.
+6. Regularizar la deuda SDD pendiente: specs 017, 021, 026, 033, 034, 036, 039, 049, 050, 053 y 058
+   según corresponda; el índice y `requirements.md` ya reflejan 61 specs y 602 requisitos.
+7. Revisar `EX-003` (Valkey Serverless con VPC/NAT) y `G-14` (caché sin IAM/RBAC) antes de cualquier
+   cambio de infraestructura; todo recurso AWS se define en `infra/` y se despliega solo por CI.
+8. Integrar el trabajo local a `develop` y después a `main` únicamente mediante PR autorizadas por el
+   responsable (`AGENTS.md` §12 y §15).
 
 ---
 
@@ -180,6 +237,7 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 |---|---|---|---|---|
 | EX-001 | VI | Costo variable del proveedor generativo de la Spec 046; sin alternativa generativa gratuita dentro de AWS. Acotada por techo 5.00 USD/mes (elevado desde 1.00 USD el 2026-11-15), *Prompt Caching* en 2 bloques, *Model Router* con afinidad *sticky*, límite de tokens/mensajes diarios por persona, caché y alarma (`NFR-046-02`). Responsable por asignar | Al cierre de Spec 046 o al agotar el techo | Vigente |
 | EX-002 | VI | Costo de la moderación de contenido publicado con `gpt-4o-mini` (Spec 017), elegido porque `omni-moderation-latest` dejaba pasar imágenes con armas. ≈ 0.00013 USD por imagen; techo 1.00 USD/mes con alarma al 80 % y cuarentena al agotarse. Se recomienda un proyecto de OpenAI separado del de Sensi | Al cierre de Spec 017 o al agotar el techo | Vigente |
+| EX-004 | IV y VIII | HTTP hacia `mailersensus.somee.com` para el correo de recuperación (Spec 029), retirado por migración a Amazon SES con TLS 1.2+ | Cerrada anticipadamente el 2026-11-23 | Cerrada el 2026-11-23 (Spec 029, migración a Amazon SES; Sin excepción TLS vigente) |
 
 > Los `FAIL` de los retro-specs 001, 002, 003, 005, 006 y de las specs 012, 015 y 023 no son excepciones:
 > son deuda técnica registrada con tareas de remediación en cada `tasks.md`.
@@ -190,6 +248,14 @@ Estados posibles: **Sin implementar** · **Parcial** · **Implementado** · **Ve
 
 | Versión | Fecha | Cambio |
 |---|---|---|
+| 3.7.2 | 2026-11-24 | Revisión del `pull` de 11 commits de `develop` sobre `b304133`: resueltos los 6 conflictos de código a favor de la versión entrante (spec 009: `ProblemDetails` uniforme, `application/problem+json`, `correlationId`, RFC type) y parcheados los 2 `new ProblemDetails` restantes en `FeedEndpoints`; conservado el fix de fecha de `ToggleOfferFavoriteCommandHandlerTests`. Corregidos además los 3 fallos de CI del lado entrante: propiedad/registro DI duplicados de `ModerationAuditRepository` en `SensusE2EWebApplicationFactory`, falta de `SesEmailSettings:Simulate` en el factory de Production y stub desactualizado del inventario paginado (spec 037) en `CreateOfferEndpointsTests`. 7 incidencias de formato resueltas con `dotnet format`. Gates post-merge: build 0/0, formato limpio, 61 specs, 1131 unitarias + 5 arquitectura + 3 E2E + 620/646 integración; cobertura Domain 91,37 % / Application 95,67 %; 26 Testcontainers bloqueados por Docker. `memory.md` fusiona el estado v3.7.1 entrante con las notas de inspección v3.6.6. Alineado a `constitution.md`/`AGENTS.md` v3.0.0. Sin `add`/`commit`/`push`: el responsable debe cerrar el merge. |
+| 3.6.6 | 2026-11-24 | Inspección final de calidad/seguridad y corrección de fallos de CI reproducibles: `ProblemDetails` centralizados en `ResultExtensions.ToProblemResult()` (12 usos en Feed/Media/User), nuevo test de arquitectura `Endpoints_ShouldNotInstantiateProblemDetailsDirectly` (5/5), test de favoritos hecho determinista (`nowUtc: Now`). Gates: build 0/0, formato limpio, 932 unitarias + 5 arquitectura + 3 E2E + 506/517 integración, cobertura OpenCover fusionada Domain 85,41 % / Application 89,60 % y código nuevo 80,52 % (objetivo 90 % no alcanzado en 17/36 archivos). Confirmados hallazgos Altos (PII en logs; subida a Cloudinary antes de moderar y sin modo privado; `ImageUrl` sin moderar en JSON) y Medios (fail-open de `ContentModerationHelper`; auditoría solo de `Rejected`). Verificado `dotnet list package --vulnerable`: 0 vulnerables. Sin `SONAR_TOKEN`, SonarAnalyzer, Snyk, gitleaks, semgrep, trivy ni CDK CLI: gate Sonar remoto y DAST/SBOM no verificables localmente. El CI mostró un checkout divergente (propiedad duplicada y test inexistente en refs). `check-specs.mjs` 61 specs; drift documental en 048/NFR-048-05 y 044/README. Sin `cdk deploy` ni operaciones de Git. |
+| 3.7.1 | 2026-11-23 | Integración de `sprint3_oscar` y `develop` (PR #67): alinea `constitution.md` y `AGENTS.md` a `v3.0.0` (conservando el cierre de `EX-004` del 2026-11-23), unifica los cierres de `009`, `012`, `035`, `056` y `027` (`develop`) con `024`, `029`, `037`, `038`, `044`, `046`, `047`, `048`, `060`, `061` y `030 Escindida` (`sprint3_oscar`), y renumera `D31`–`D37` sin colisiones. |
+| 3.6.5 | 2026-11-23 | Cierre de las specs 060 y 061 v2.0.0 y de la Spec 030 como `Escindida`. Baja lógica con `DeletedAtUtc`, rotación de `SecurityStamp`, rechazo de token y login, purga diferida idempotente con `ix_users_deleted_at` y configuración `AccountDeletion`; anonimización de posts/comments, expiración de apartados antes de archivar ofertas, `moderation_audit` con `subjectKey` SHA-256 y TTL de 90 días configurable. Regresión E2E de baja (`500` → `204`) corregida con fakes en memoria. `specs/README.md` (61 specs), `specs/requirements.md` (602 requisitos) y los cuatro artefactos de 030/060/061 actualizados. Gates: build 0/0, formato limpio, 932 unitarias + 4 arquitectura + 3 E2E + 506/517 integración, cobertura Domain 89,59 % / Application 96,18 %, `check-specs.mjs` 61 specs. Brecha externa: 11 Testcontainers bloqueados por Docker. Sin `cdk deploy` ni operaciones de Git. |
+| 3.6.4 | 2026-11-23 | Cierre de la Spec 044 v2.0.0 (ajustes de notificaciones): cuatro endpoints HTTP con autorización, valores por defecto, radio 1–50, ubicación consentida con TTL y purga, FCM HTTP v1 con credencial en SSM SecureString y avisos de ofertas con texto moderado *fail-closed*. Nuevas pruebas HTTP de ajustes y medición de p95 < 250 ms. Gates: build 0/0, formato limpio, 920 unitarias + 4 arquitectura + 3 E2E + 503/514 integración, cobertura Domain 89,35 % / Application 96,18 %, `check-specs.mjs` 59 specs. Brechas externas: entrega FCM pendiente de credencial SSM, integración móvil y brecha IV de la spec 034; 11 Testcontainers bloqueados por Docker. Sin `cdk deploy` ni operaciones de Git. Siguiente paso: Spec 030 (060/061). |
+| 3.6.3 | 2026-11-23 | Cierre de la Spec 048 v2.0.0 (caché distribuido con Redis): ruta canónica enmendada a `/api/v1/feed/offers`, instantáneas por usuario con TTL configurable e invalidación en lote por prefijo `feed:offers:` ante mutaciones de ofertas, Redis real con Testcontainers y `REDIS_CONNECTION_STRING` opcional, p95 medido con 20 solicitudes por camino (< 300 ms con caché, < 500 ms sin caché). Cuatro artefactos, `specs/requirements.md` y `specs/README.md` actualizados; NFR-048-01/02 pasan a Implementado con evidencia. Gates: build 0/0, formato limpio, 920 unitarias + 4 arquitectura + 3 E2E + 498/509 integración, cobertura Domain 89,35 % / Application 96,16 %, `check-specs.mjs` 59 specs. Brechas documentadas: 11 Testcontainers bloqueados por Docker no disponible (sin omisiones), EX-003 y G-14. Sin `cdk deploy` ni operaciones de Git. Siguiente paso: Spec 044. |
+| 3.6.2 | 2026-11-23 | Cierre de la Spec 037 v2.0.0 (inventario de ofertas del comerciante): `GET /api/v1/merchants/my-offers` paginado 20/100 con filtro por estado en MongoDB y 400 en valores inválidos; `MerchantOfferDto` con vistas, apartados activos y canjes en tiempo real mediante conteo batch `Filter.In` sin PII; índices `ix_offers_merchant_created`, `ix_offers_merchant_status_created` e `ix_offer_claims_offer_status`; validador de borde, STRIDE y Constitution Check PASS. Cuatro artefactos, `specs/requirements.md`, `specs/README.md` y OpenAPI v2.0.0 actualizados; 16 unitarias y 9 de integración nuevas (incluida latencia p95 < 600 ms). Gates: build 0/0, formato limpio, 920 unitarias + 4 arquitectura + 3 E2E + 498/507 integración, cobertura Domain 89,35 % / Application 96,16 %, `check-specs.mjs` 59 specs. Brecha externa: 9 Testcontainers siguen bloqueados por Docker no disponible, sin omisiones. Siguiente paso: Spec 048. Sin operaciones de Git. |
+| 3.6.1 | 2026-11-23 | Cierre de la Spec 029 v2.0.0 (recuperación de contraseña): correo por Amazon SES con TLS 1.2+ (`AWSSDK.SimpleEmail` 4.0.100.25, Apache-2.0), TTL de 30 minutos, alias `/auth/reset-password` retirado (404), límite de 3 por correo y hora con hash SHA-256, `ISensitiveRequest` y correo redactado en logs, configuración `SesEmailSettings`, retiro de `HttpMailerEmailSender`/`MailerTransportPolicy`/`MailerSettings`, cierre de EX-004 (constitución v2.4.1 y `AGENTS.md` v2.4.1) y documentación de la baja operativa externa del parámetro SSM Somee. Cuatro artefactos y OpenAPI v2.0.0 actualizados; nuevas pruebas unitarias, de integración, de latencia y de `SesEmailSender`. Orden confirmado: 029 → 037 → 048 → 044 → 030; siguiente paso: Spec 037. Sin operaciones de Git. |
 | 3.5.0 | 2026-11-19 | Cierre y endurecimiento DevSecOps/fintech de Sensi IA (Specs 046, 047, 049): 1) `CreateOrResumeConversationCommandHandler` archiva conversación previa con `forceNew = true` + índice único parcial `ux_ai_conversations_owner_active` en `MongoDbContext`; 2) Emisión CloudWatch EMF (`T046-17`, `IAiMetricsPublisher`/`EmbeddedAiMetricsPublisher`, 4 métricas sin dimensiones en `Sensus/Api`, total 9/10 Free Tier, `AiMetricsTests`); 3) Caché distribuida FAQ (`T046-13`, `AiCacheKeys` aislada por `markdownVersion:role:screenContext`, `AiFaq = 60` min, exclusión de PII en prompt/respuesta y validación/conteo de cuota diaria en `AiBudgetGuard` ante hits de caché); 4) Runner real `.github/scripts/run-ai-evals.mjs` (`T046-19`, manifiesto v2.0.0) sin simulación `0.96`, allowlist SSRF en `OPENAI_BASE_URL`, verificación XML `--trx`, 7 pruebas `node:test` y fail-closed si falta `OPENAI_API_KEY` (advertencia: `deploy-serverless.yml` y `ai-evals.yml` requieren `OPENAI_API_KEY` en GitHub Secrets); 5) `MongoAiRepositoriesTests` (`T046-21`) y `DynamoDbBudgetCounterStoreIntegrationTests` (`T049-09`), workflows `ci.yml`/`ai-evals.yml` fijados por SHA de commit y digest SHA-256 de Docker con `SONAR_TOKEN`/`SNYK_TOKEN` acotados por job; 6) Matriz STRIDE + Principio VIII en `specs/046-asistente-sensi-ia/plan.md`. Verificado: `-warnaserror` limpio, `dotnet format` limpio, 1110 pruebas .NET locales (746 unitarias, 4 arquitectura, 3 E2E, 357 integración excluyendo 6 `NotificationMongoRepositoryTests` por Docker detenido), `run-ai-evals.test.mjs` 7/7, Evals `--trx` deterministas 5/5 (100.0 %), cobertura `Sensus.Domain` 91.23 % y `Sensus.Application` 93.94 %. Sin commits (`AGENTS.md` §12). |
 | 3.3.0 | 2026-11-17 | Conclusión de CI-CD y calidad DevSecOps (Spec 047 al 100 %, elevando el avance del 71 % al 100 %): implementación de tareas T047-14 a T047-16. Se creó el runner de Evals sanitizado `.github/scripts/run-ai-evals.mjs` (FR-047-13, FR-047-15, NFR-047-06), el workflow `.github/workflows/ai-evals.yml` para ejecución manual y programada previa a release con artefacto de reporte libre de PII y secretos, la puerta bloqueante determinista en `.github/workflows/ci.yml` para PRs/pushes, y el candado de validación de Evals en `.github/workflows/deploy-serverless.yml` previo al despliegue con AWS CDK. Actualizados spec.md, plan.md, tasks.md, checklist.md, requirements.md y specs/README.md. Verificado: `check-specs.mjs` 50/50 specs conformes y runner de evals en PASS. Sin commits (AGENTS.md §12). |
 | 3.2.9 | 2026-11-16 | SonarCloud del PR 19 en rojo: *Security Rating* B por 20 vulnerabilidades `S6444` (regex sin *timeout*, riesgo ReDoS) y 77.8 % de cobertura en código nuevo (líneas + condiciones; Sonar sí cuenta Infrastructure e integración). Corregido: `GuardrailRegex.Timeout` (1 s) en detector de inyección, detector de fugas, redactor PII y router, y en la extracción de presupuesto del handler; cada uno falla cerrado ante `RegexMatchTimeoutException` (inyección → sospechoso, fuga → respuesta segura, redacción → `[CONTENIDO_REDACTADO]`, router → nivel rápido, presupuesto → sin paquete). Con 100 ms se bloqueaban entradas benignas bajo carga. Nuevas pruebas `OpenAiChatGatewayTests` (gateway de 0 % a cubierto) e `InProcessMcpToolExecutorTests` (21). Estimación local de cobertura Sonar ≈ 90 %. Sin commits. |
@@ -385,3 +451,46 @@ El despliegue de `main` (`37e512c`) falló porque, al configurar `ALERTS_EMAIL`,
       - **Líneas:** **95.03 %** (9,045 / 9,518 líneas) — PASS (umbral 90 %).
       - **Ramas:** **90.54 %** (134 / 148 ramas) — PASS (umbral 90 %).
   - Sin commits ni pushes realizados (cumplimiento estricto de restricción de Git).
+
+### 2026-11-23 — Revisión e implementación de specs 024 y 038
+
+El responsable pidió revisar e implementar ambas specs. Tres decisiones se confirmaron antes de codificar: `FR-024-04` pasa de `202` a `201/400` (moderación síncrona, acorde con CA-024-01), los favoritos se integran como señal de afinidad en la spec 042 y el borrado de publicaciones purga la imagen con `IMediaStorage`.
+
+- **Spec 024 v2.1.0:** `FeedPost.ImagePublicId` y `FeedPostDocument.imagePublicId`; `CreateFeedPostCommandHandler` exige `ITextModerationService` (fall-closed), modera imagen y texto en la misma solicitud, sube la imagen aprobada y persiste `PublicId`/`SecureUrl`; `DeleteFeedPostCommandHandler` purga la imagen y registra fallos sin revertir el borrado; `MongoFeedPostVisibilityLookup.IsVisible` usa lista de permitidos (`Published` y `!isDeleted`, defecto `PendingModeration`); `POST /api/v1/feed/posts` acepta JSON y `multipart/form-data` con límite de 4,5 MB y 413. Cuatro artefactos y OpenAPI actualizados a v2.1.0; nuevas CA-024-06 y CA-024-07.
+- **Spec 038 v2.1.0:** de «Pendiente» a «Implementado» con código ya presente en cuatro capas más el endpoint faltante; `ToggleOfferFavoriteCommandHandler` devuelve 403 `Favorite.GuestForbidden` a invitados (401 sin token) e invalida `OfferCacheKeys.Detail` y `FeedCacheKeys.Affinity`; nueva `FavoritesPolicy` 120/3600 en `RateLimiting:Favorites`; `ix_offer_favorites_user`; `MongoUserAffinityReader` agrega favoritos con peso 2.0. Se corrigió el plan, que hablaba de un `Offer.FavoriteCount` inexistente. Nueve tareas cerradas y CA-038-05 añadida.
+- **Verificación local:** `dotnet build sensus-back.sln --configuration Release -warnaserror` (0/0), `dotnet format --verify-no-changes` (limpio), `Sensus.Application.UnitTests` 910/910, `Sensus.ArchitectureTests` 4/4, 27 pruebas de integración afectadas en verde, `node .github/scripts/check-specs.mjs specs` 59/59. La suite completa de integración quedó en 493/502: las 9 restantes son Testcontainers y fallan porque el daemon de Docker no está disponible (`npipe:////./pipe/dockerDesktopLinuxEngine`), ajeno a este cambio; las 3 fallas reales de la primera corrida se corrigieron ajustando el doble de `IImageModerationService` a *fail-closed* por defecto, anulando esa anulación en los tests de feed y usando la hora real para los tokens de invitado. Además se añadió lista de permitidos JPEG/PNG/WebP en el multipart de `POST /api/v1/feed/posts` (400 `FeedPost.UnsupportedImageType`) con prueba de regresión; cobertura 86,92 % Domain / 90,22 % Application. Sin operaciones de Git.
+
+### 2026-11-23 — Cierre de Spec 029 (recuperación de contraseña)
+
+Decisiones confirmadas por el responsable y aplicadas a los cuatro artefactos y al contrato:
+
+- Orden de trabajo: **029 → 037 → 048 → 044 → 030**. Spec 029 cerrada; siguiente paso, Spec 037.
+- Transporte: Amazon SES (`AWSSDK.SimpleEmail` 4.0.100.25, licencia Apache-2.0, sin costo de paquete; SES dentro del free tier, 3.000 mensajes/mes desde Lambda) con TLS 1.2+; TTL del token de recuperación de 30 minutos.
+- Alias `POST /api/v1/auth/reset-password` retirado: devuelve 404 y no figura en OpenAPI v2.0.0. Ruta canónica: `/api/v1/auth/recover/confirm`.
+- Eliminados `HttpMailerEmailSender`, `MailerTransportPolicy`, `MailerSettings` y toda su configuración. EX-004 cerrada anticipadamente el 2026-11-23; no queda excepción TLS vigente (constitución v2.4.1 y `AGENTS.md` v2.4.1).
+- Credencial Somee retirada del código y la configuración. No se rota: se da de baja. La baja de `/sensus/<entorno>/MailerSettings/ApiKey` es una tarea operativa externa documentada en T029-16, no código pendiente.
+- Límite de `/recover`: 3 solicitudes por correo y hora, particionado por hash SHA-256 del correo normalizado (`RateLimiting:Recover`, `PermitLimit=3`, `WindowSeconds=3600`), sin PII en la clave; 429 en la cuarta solicitud y cuotas separadas por correo.
+- `RequestPasswordResetCommand` implementa `ISensitiveRequest`; `LoggingBehavior` y `PerformanceBehavior` redactan el correo.
+- Configuración `SesEmailSettings` (`From`, `Region`, `ConfigurationSetName`, `Simulate`): base con `Simulate=false` y `From` vacío (resolución por SSM en producción) y Development con `Simulate=true`; sin secretos en el repositorio.
+- Pruebas añadidas/corregidas en código: TTL 30 en `PasswordResetToken`, handler con texto de 30 minutos, 202 idéntico, 400, 404 del alias, 429 por correo, latencia p95 < 700 ms con 20 solicitudes y `SesEmailSenderTests` (simulado, request a SES, fallo sin PII). Se eliminan `MailerTransportPolicyTests`.
+- Solo documentación en esta sesión: no se modificaron `src/`, `tests/`, `infra/` ni `.github/`, y no se ejecutaron operaciones de Git.
+
+### 2026-11-23 — Cierre de Spec 037 (inventario de ofertas del comerciante)
+
+- Las métricas son **en tiempo real**: `viewsCount` desde `Offer.ViewCount` y apartados/canjes desde un conteo batch `Filter.In` sobre los identificadores de la página; no hay desfase de minutos.
+- `GET /api/v1/merchants/my-offers` devuelve `PagedResult<MerchantOfferDto>` con 20 elementos por defecto, 100 como máximo, filtro opcional por `OfferStatus` y orden por creación descendente. `pageSize > 100`, `page < 1` y `status` desconocido devuelven 400 con `ProblemDetails`.
+- `MerchantOfferDto` hereda de `OfferDto` (pasó de `sealed` a no `sealed`) para conservar `LikesCount` e `IsLikedByMe` de la Spec 057 y añadir `ActiveClaimsCount`, `RedemptionsCount` y `ViewsCount`.
+- `IOfferClaimRepository.CountByOfferIdsAsync` tiene implementación por defecto vacía y una implementación Mongo con proyección que excluye `userId`, `codeHash` y fechas: la respuesta solo expone totales.
+- Índices declarados: `ix_offers_merchant_created`, `ix_offers_merchant_status_created` e `ix_offer_claims_offer_status`. No se crearon recursos AWS ni se tocó `infra/`.
+- Gates verificados: build `-warnaserror` 0/0, formato limpio, `check-specs.mjs` 59 specs, 920 unitarias + 4 arquitectura + 3 E2E + 498/507 integración, cobertura Domain 89,35 % / Application 96,16 %. Las 9 pruebas Testcontainers siguen fallando por `npipe://./pipe/docker_engine`; no se omitieron ni se bajaron umbrales.
+- Siguiente paso del orden aprobado: **Spec 048** (`/api/v1/feed/offers`, caché Redis real con Testcontainers). Sin operaciones de Git.
+
+### 2026-11-23 — Cierre de Spec 048 (caché distribuido con Redis)
+
+- La ruta canónica del feed de promociones es `GET /api/v1/feed/offers`; la denominación histórica `/feed/nearby` quedó enmendada en los cuatro artefactos y en `specs/requirements.md`.
+- `FeedCacheKeys.SnapshotPrefix = "feed:offers:"` permite invalidar en lote todas las instantáneas de todos los usuarios cuando cambia una oferta. `OfferCacheKeys.InvalidateAsync` elimina detalle, búsquedas cercanas e instantáneas del feed.
+- `RedisCacheTestcontainersTests` usa Redis real (`redis:7-alpine`) o `REDIS_CONNECTION_STRING`, con round-trip, TTL, aislamiento por usuario e invalidación por prefijo. No hay dobles que simulen el motor.
+- `OfferFeedEndpointsTests.GetFeedOffers_ShouldMeetLatencyTargets_ForCachedAndFallbackPaths` mide 20 solicitudes por camino: p95 < 300 ms con `snapshotId` válido y p95 < 500 ms simulando `IFeedSnapshotStore` no disponible. Por eso NFR-048-01/02 pasan a `Implementado` con evidencia real.
+- Gates verificados: build `-warnaserror` 0/0, formato limpio, `check-specs.mjs` 59 specs, 920 unitarias + 4 arquitectura + 3 E2E + 498/509 integración, cobertura Domain 89,35 % / Application 96,16 %. Las 11 pruebas Testcontainers siguen fallando por `npipe://./pipe/docker_engine`; no se omitieron ni se bajaron umbrales.
+- EX-003 (Valkey Serverless con VPC/NAT fuera del Free Tier) y G-14 (caché sin IAM/RBAC) quedan documentadas; `cdk synth`/`cdk deploy` no se ejecutaron.
+- Siguiente paso del orden aprobado: **Spec 044** (ajustes de notificaciones, FCM real con credencial en SSM). Sin operaciones de Git.

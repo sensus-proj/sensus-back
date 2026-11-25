@@ -39,9 +39,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IAiTraceLogRepository AiTraceLogRepository { get; } = Substitute.For<IAiTraceLogRepository>();
     public IAiChatGateway FakeAiChatGateway { get; } = Substitute.For<IAiChatGateway>();
     public ITextModerationService TextModerationService { get; } = Substitute.For<ITextModerationService>();
+    public IImageModerationService ImageModerationService { get; } = Substitute.For<IImageModerationService>();
+    public IMediaStorage MediaStorage { get; } = Substitute.For<IMediaStorage>();
     public ICacheService CacheService { get; } = Substitute.For<ICacheService>();
     public IBudgetCounterStore BudgetCounterStore { get; } = Substitute.For<IBudgetCounterStore>();
     public ISanctionRepository SanctionRepository { get; } = Substitute.For<ISanctionRepository>();
+    public IModerationAuditRepository ModerationAuditRepository { get; } = Substitute.For<IModerationAuditRepository>();
     public IDeviceRepository DeviceRepository { get; } = Substitute.For<IDeviceRepository>();
     public IUserInterestsRepository UserInterestsRepository { get; } = Substitute.For<IUserInterestsRepository>();
     public IOfferInteractionRecorder OfferInteractionRecorder { get; } = Substitute.For<IOfferInteractionRecorder>();
@@ -49,15 +52,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IFeedSnapshotStore FeedSnapshotStore { get; } = Substitute.For<IFeedSnapshotStore>();
     public IFeedMetricsPublisher FeedMetricsPublisher { get; } = Substitute.For<IFeedMetricsPublisher>();
     public IOfferLikeRepository OfferLikeRepository { get; } = Substitute.For<IOfferLikeRepository>();
+    public IOfferFavoriteRepository OfferFavoriteRepository { get; } = Substitute.For<IOfferFavoriteRepository>();
     public IStoreReviewRepository StoreReviewRepository { get; } = Substitute.For<IStoreReviewRepository>();
     public IFriendRequestRepository FriendRequestRepository { get; } = Substitute.For<IFriendRequestRepository>();
     public ISharedOfferRepository SharedOfferRepository { get; } = Substitute.For<ISharedOfferRepository>();
+    public IFeedPostRepository FeedPostRepository { get; } = Substitute.For<IFeedPostRepository>();
     public IFeedCommentRepository FeedCommentRepository { get; } = Substitute.For<IFeedCommentRepository>();
     public IFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = Substitute.For<IFeedPostVisibilityLookup>();
     public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
     public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
     public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
-    public IModerationAuditRepository ModerationAuditRepository { get; } = Substitute.For<IModerationAuditRepository>();
     public IMediaContentProxy MediaContentProxy { get; } = Substitute.For<IMediaContentProxy>();
     public ICdnCacheInvalidator CdnCacheInvalidator { get; } = Substitute.For<ICdnCacheInvalidator>();
     public ICommunityActivityReader CommunityActivityReader { get; } = Substitute.For<ICommunityActivityReader>();
@@ -151,6 +155,32 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton(TextModerationService);
 
+            // Por defecto fail-closed, igual que el servicio real sin credenciales: los tests de
+            // /media/moderate esperan "Quarantine". Los tests que necesitan aprobación lo sobrescriben.
+            ImageModerationService.ModerateImageBytesAsync(
+                    Arg.Any<byte[]>(),
+                    Arg.Any<string>(),
+                    Arg.Any<string?>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(new ImageModerationResult(false, "No se pudo moderar la imagen.", null, "Quarantine"));
+            services.RemoveAll<IImageModerationService>();
+            services.AddSingleton(ImageModerationService);
+
+            MediaStorage.UploadImageAsync(
+                    Arg.Any<byte[]>(),
+                    Arg.Any<string>(),
+                    Arg.Any<Guid>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(Result.Success(new MediaUploadResult(
+                    $"posts/{Guid.NewGuid():N}",
+                    "https://res.cloudinary.com/sensus/image/upload/v1/posts/sample.jpg")));
+            MediaStorage.DeleteImageAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+            services.RemoveAll<IMediaStorage>();
+            services.AddSingleton(MediaStorage);
+
+            services.RemoveAll<IOfferFavoriteRepository>();
+            services.AddSingleton(OfferFavoriteRepository);
+
             CacheService.IsAvailable.Returns(true);
             CacheService.GetAsync<long?>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((long?)0);
             CacheService.GetAsync<double?>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((double?)0.0);
@@ -227,6 +257,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ISharedOfferRepository>();
             services.AddSingleton(SharedOfferRepository);
+
+            services.RemoveAll<IFeedPostRepository>();
+            services.AddSingleton(FeedPostRepository);
 
             FeedCommentRepository.GetByPostIdPagedAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
                 .Returns([]);

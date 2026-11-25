@@ -1,68 +1,119 @@
 using MediatR;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Offers.Queries.GetMerchantOffers;
 
-public sealed class GetMerchantOffersQueryHandler : IRequestHandler<GetMerchantOffersQuery, Result<IReadOnlyList<OfferDto>>>
+public sealed class GetMerchantOffersQueryHandler
+    : IRequestHandler<GetMerchantOffersQuery, Result<PagedResult<MerchantOfferDto>>>
 {
     private readonly IOfferRepository _offerRepository;
     private readonly IComercioRepository _comercioRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IOfferLikeRepository? _offerLikeRepository;
+    private readonly IOfferClaimRepository? _offerClaimRepository;
 
     public GetMerchantOffersQueryHandler(
         IOfferRepository offerRepository,
         IComercioRepository comercioRepository,
         ICurrentUserService currentUserService,
-        IOfferLikeRepository? offerLikeRepository = null)
+        IOfferLikeRepository? offerLikeRepository = null,
+        IOfferClaimRepository? offerClaimRepository = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
         _currentUserService = currentUserService;
         _offerLikeRepository = offerLikeRepository;
+        _offerClaimRepository = offerClaimRepository;
     }
 
-    public async Task<Result<IReadOnlyList<OfferDto>>> Handle(GetMerchantOffersQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedResult<MerchantOfferDto>>> Handle(
+        GetMerchantOffersQuery request,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) ||
+            !Guid.TryParse(_currentUserService.UserId, out var userId))
         {
-            return Result.Failure<IReadOnlyList<OfferDto>>(Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para ver sus ofertas."));
+            return Result.Failure<PagedResult<MerchantOfferDto>>(
+                Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para ver sus ofertas."));
         }
 
         Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
         if (comercio is null || !comercio.Activo)
         {
-            return Result.Failure<IReadOnlyList<OfferDto>>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
+            return Result.Failure<PagedResult<MerchantOfferDto>>(
+                Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
         }
 
-        IReadOnlyList<Offer> offers = await _offerRepository.GetByMerchantIdAsync(comercio!.Id, cancellationToken);
-
+        OfferStatus? status = null;
         if (!string.IsNullOrWhiteSpace(request.StatusFilter))
         {
-            offers = offers
-                .Where(o => string.Equals(o.Status.ToString(), request.StatusFilter.Trim(), StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            if (!Enum.TryParse<OfferStatus>(request.StatusFilter.Trim(), ignoreCase: true, out var parsedStatus))
+            {
+                return Result.Failure<PagedResult<MerchantOfferDto>>(
+                    Error.Validation("Offer.InvalidStatus", $"El estado '{request.StatusFilter}' no es válido."));
+            }
+
+            status = parsedStatus;
         }
 
-        List<OfferDto> dtos = offers.Select(o => o.ToDto()).ToList();
-        if (_offerLikeRepository is not null && dtos.Count > 0)
+        // FR-037-04 y FR-037-05: el filtro, la ordenación y el límite se resuelven en MongoDB.
+        var (page, pageSize) = PaginationPolicy.Normalize(request.Page, request.PageSize);
+        (IReadOnlyList<Offer> offers, int totalCount) = await _offerRepository.GetByMerchantIdPagedAsync(
+            comercio.Id,
+            status,
+            page,
+            pageSize,
+            cancellationToken);
+
+        List<MerchantOfferDto> items = offers.Select(o => o.ToMerchantOfferDto()).ToList();
+
+        if (_offerLikeRepository is not null && items.Count > 0)
         {
-            // FR-057-02: Enriquecer inventario del comerciante con likes reales.
-            var counts = await _offerLikeRepository.CountByOfferIdsAsync(dtos.Select(d => d.Id), cancellationToken) ?? [];
-            var liked = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, dtos.Select(d => d.Id), cancellationToken) ?? [];
-            dtos = dtos
+            // FR-057-02: enriquecer el inventario con likes reales sin N+1.
+            var likeIds = items.Select(d => d.Id).ToList();
+            var likeCounts = await _offerLikeRepository.CountByOfferIdsAsync(likeIds, cancellationToken) ?? [];
+            var likedByMe = await _offerLikeRepository.GetLikedOfferIdsAsync(userId, likeIds, cancellationToken) ?? [];
+            items = items
                 .Select(d => d with
                 {
-                    LikesCount = counts.GetValueOrDefault(d.Id, 0),
-                    IsLikedByMe = liked.Contains(d.Id),
+                    LikesCount = likeCounts.GetValueOrDefault(d.Id, 0),
+                    IsLikedByMe = likedByMe.Contains(d.Id)
                 })
                 .ToList();
         }
 
-        return Result.Success<IReadOnlyList<OfferDto>>(dtos);
+        if (_offerClaimRepository is not null && items.Count > 0)
+        {
+            // FR-037-03 y NFR-037-02: un único conteo batch para toda la página.
+            IReadOnlyDictionary<Guid, OfferClaimCounts>? claimCounts =
+                await _offerClaimRepository.CountByOfferIdsAsync(
+                    items.Select(d => d.Id),
+                    cancellationToken);
+
+            items = items
+                .Select(d =>
+                {
+                    OfferClaimCounts metrics = claimCounts is not null &&
+                                               claimCounts.TryGetValue(d.Id, out var found)
+                        ? found
+                        : OfferClaimCounts.Empty;
+
+                    return d with
+                    {
+                        ActiveClaimsCount = metrics.ActiveClaims,
+                        RedemptionsCount = metrics.Redemptions
+                    };
+                })
+                .ToList();
+        }
+
+        return Result.Success(new PagedResult<MerchantOfferDto>(items, totalCount, page, pageSize));
     }
 }

@@ -1,5 +1,6 @@
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 
 namespace Sensus.Domain.Repositories;
 
@@ -14,6 +15,17 @@ public interface IOfferClaimRepository
     /// Cuenta los apartados activos asociados a una oferta (FR-035-04, FR-036-04).
     /// </summary>
     Task<int> GetActiveClaimCountAsync(Guid offerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cuenta apartados activos y canjeados de varias ofertas en una sola consulta (Spec 037, FR-037-03
+    /// y NFR-037-02). La implementación por defecto evita obligar a otros adaptadores a implementar el
+    /// conteo batch; los documentos con claves ausentes devuelven <see cref="OfferClaimCounts.Empty"/>.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, OfferClaimCounts>> CountByOfferIdsAsync(
+        IEnumerable<Guid> offerIds,
+        CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, OfferClaimCounts>>(
+                new Dictionary<Guid, OfferClaimCounts>());
 
     Task<OfferClaim?> GetActiveByUserAndOfferAsync(
         Guid userId,
@@ -56,5 +68,14 @@ public interface IOfferClaimRepository
         Guid userId,
         OfferClaimStatus? status = null,
         int limit = 10,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Expira todos los apartados activos de un comercio antes de archivar sus ofertas (Spec 061,
+    /// FR-061-03). Devuelve el número de apartados cuya transición se aplicó.
+    /// </summary>
+    Task<int> ExpireActiveByMerchantAsync(
+        Guid merchantId,
+        DateTime nowUtc,
         CancellationToken cancellationToken = default);
 }

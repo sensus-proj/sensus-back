@@ -1,4 +1,4 @@
-﻿# Índice de especificaciones — Sensus Backend
+# Índice de especificaciones — Sensus Backend
 
 Cada spec es una unidad independiente de alcance con su propio `spec.md`, `plan.md`, `tasks.md` y `checklist.md`.
 La numeración es estable: un spec no cambia de ID una vez creado.
@@ -28,31 +28,31 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 021 | [Auditoría de moderación](021-auditoria-moderacion/spec.md) | Moderación | Nuevo | 4 | Implementado | 017, 020 |
 | 022 | [Carga de multimedia](022-carga-multimedia/spec.md) | Multimedia | Nuevo | 4 | Implementado | 017, 013 |
 | 023 | [Entrega de contenido por CDN](023-entrega-cdn/spec.md) | Multimedia | Nuevo | 4 | Implementado | 022 |
-| 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Pendiente | 017, 022 |
+| 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Parcial | 017, 022 |
 | 025 | [Comentarios del feed](025-comentarios/spec.md) | Contenido | Nuevo | 3 | Implementado | 017, 024, 010 |
 | 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 007, 010 |
 | 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 013 |
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
-| 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Parcial | 001, 004, 013 |
-| 030 | [Eliminación de cuenta y datos](030-eliminacion-cuenta/spec.md) | Autenticación | Nuevo | 1 | Parcial | 003, 004, 020 |
+| 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Implementado | 001, 004, 013 |
+| 030 | [Eliminación de cuenta y datos](030-eliminacion-cuenta/spec.md) | Autenticación | Nuevo | 1 | Escindida (060/061) | 003, 004, 020 |
 | 031 | [Edición del perfil de comercio](031-edicion-perfil-comercio/spec.md) | Comercios | Nuevo | 2 | Implementado | 005, 006 |
 | 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007 |
 | 033 | [Apartado de oferta con código QR](033-apartado-con-qr/spec.md) | Ofertas | Nuevo | 2 | Backend completado | 007, 027, 032, 037 |
 | 034 | [Creación de oferta](034-creacion-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 005, 017, 022 |
 | 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Completo | 034, 033 |
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 035 |
-| 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Parcial | 034, 033, 010 |
-| 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Pendiente | 032 |
+| 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 033, 010 |
+| 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 032 |
 | 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 013 |
 | 040 | [Reportes de contenido](040-reportes-contenido/spec.md) | Contenido | Nuevo | 3 | Implementado | 024, 025, 017, 018 |
 | 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 011, 013, 052 |
 | 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 013, 032, 033, 048, 052, 054, 055 |
 | 043 | [Alternativas a una oferta](043-alternativas-oferta/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 013, 032, 041, 052 |
-| 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 027, 034 |
+| 044 | [Ajustes de notificaciones](044-ajustes-notificaciones/spec.md) | Integraciones | Nuevo | 4 | Implementado | 003, 027, 034 |
 | 045 | [Infraestructura Serverless como Código (AWS CDK)](045-infraestructura-serverless/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 012, 014, 015, 016 |
 | 046 | [Asistente agéntico Sensi IA (7 capas)](046-asistente-sensi-ia/spec.md) | Asistente | Nuevo | 5 | Parcial | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |
 | 047 | [Pipeline CI-CD y calidad DevSecOps](047-ci-cd-pipeline/spec.md) | Plataforma | Nuevo | 7 | Implementado | 009, 010, 011, 012, 013 |
-| 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Parcial | 010, 024, 026, 032 |
+| 048 | [Caché distribuido con Redis](048-cache-distribuido-redis/spec.md) | Plataforma | Nuevo | 7 | Implementado | 010, 024, 026, 032 |
 | 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Backend completado | 045, 046, 048 |
 | 051 | [Pausa nocturna de la infraestructura](051-pausa-nocturna-infraestructura/spec.md) | Plataforma | Nuevo | 7 | Implementado | 015, 045, 048 |
 | 052 | [Sesión de invitado](052-sesion-invitado/spec.md) | Autenticación | Retro-spec | 1 | Implementado (retro-spec) | 002, 013 |
@@ -64,6 +64,8 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 057 | [Me gusta en ofertas (`OfferLike`)](057-me-gusta-ofertas/spec.md) | Ofertas | Retro-spec | 3 | Implementado (retro-spec) | 001, 007, 032, 034, 052 |
 | 058 | [Actividad de amigos en comunidad (`CommunityEndpoints`)](058-actividad-amigos-comunidad/spec.md) | Social | Retro-spec | 5 | Backend completado | 050, 056, 057 |
 | 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Implementado (retro-spec) | 017, 018, 046, 056 |
+| 060 | [Baja lógica de cuenta y purga diferida](060-baja-logica-cuenta-purga-diferida/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 004, 020 |
+| 061 | [Anonimización de contenido y cierre comercial](061-anonimizacion-contenido-cierre-comercial/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 020, 024, 025, 030, 033 |
 
 ## Estados
 
@@ -71,7 +73,9 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 |---|---|
 | Pendiente | Sin trabajo iniciado |
 | Parcial | Existe implementación sin spec o con brechas |
+| Escindida | Spec cerrada cuyo alcance se ejecutó bajo otros IDs estables (caso de 030 → 060/061) |
 | Backend completado | Implementación del backend terminada y verificada localmente. El checklist conserva las verificaciones pendientes de integración con Android, del entorno desplegado o de CI para el cierre formal según la constitución. |
+| Implementado | Capacidad entregada y verificada con sus cuatro artefactos SDD |
 | Implementado (retro-spec) | Funcionalidad existente documentada a posteriori |
 | Backlog | Capacidad fuera del catálogo vigente, sin compromiso de entrega |
 
@@ -87,4 +91,4 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 - Todo cambio de alcance se refleja primero en `spec.md`.
 - Los requisitos se registran en [`requirements.md`](requirements.md).
 
-Total: **57 specs** — Ola 0: 3, Ola 1: 6, Ola 2: 11, Ola 3: 7, Ola 4: 10, Ola 5: 7, Ola 6: 7, Ola 7: 5, Backlog: 1.
+Total: **61 specs** — Ola 0: 3, Ola 1: 8, Ola 2: 11, Ola 3: 7, Ola 4: 10, Ola 5: 9, Ola 6: 7, Ola 7: 5, Backlog: 1. De ellas, 030 está `Escindida` en 060 y 061.
