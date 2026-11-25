@@ -4,7 +4,7 @@
 |---|---|
 | ID | 049 |
 | Slug | `contadores-presupuesto-dynamodb` |
-| Estado | Parcial |
+| Estado | Backend completado |
 | Ola | 7 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

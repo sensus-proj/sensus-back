@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Aprobado |
+| Estado del plan | En revisión. Falta el contrato de visibilidad de la Spec 024. |
 | Versión | 1.0.0 |
-| Constitution Check | PASS |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Constitution Check | Pendiente. Falta verificar la integración con la Spec 024 y el Principio VIII. |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -24,11 +24,20 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 ## 3. Modelo de datos e índices
 
 - post_likes con índice único postId + userId; posts.likeCount
+- Aplicar la intención `liked` de forma atómica. Incrementar o decrementar el contador solo cuando cambia la relación del usuario. Si el contador vive en el documento de la publicación, actualizar la relación, la visibilidad y el contador en la misma transacción, verificando el estado publicado al escribir.
 
 ## 4. Seguridad
 
 - El usuario proviene del token
 - Sin exponer quién reaccionó
+
+| STRIDE | Control previsto |
+|---|---|
+| Suplantación y elevación de privilegios | JWT y actor obtenido exclusivamente de la sesión. |
+| Manipulación | Validar UUID e intención booleana. Proteger el índice único y el contador mediante escritura atómica. |
+| Repudio | Registrar eventos de seguridad con correlación y sin contenido ni credenciales. |
+| Divulgación | Responder 404 uniforme cuando la publicación sea inexistente o no visible. |
+| Denegación de servicio | Limitar por usuario autenticado con un umbral configurable de 60 solicitudes por hora conforme a la Spec 013. |
 
 ## 5. Observabilidad y rendimiento
 
@@ -56,6 +65,7 @@ Evaluación previa a la implementación.
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
+| VIII | Pendiente | STRIDE en §4. Pruebas de permisos y visibilidad y controles de CI por verificar. |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 

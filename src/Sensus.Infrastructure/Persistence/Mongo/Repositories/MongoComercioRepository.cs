@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.GeoJsonObjectModel;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
@@ -45,24 +46,52 @@ public sealed class MongoComercioRepository : IComercioRepository
         return count > 0;
     }
 
-    public async Task<IReadOnlyList<Comercio>> GetNearbyAsync(
+    public async Task<(IReadOnlyList<Comercio> Items, int TotalCount)> GetNearbyAsync(
         double latitud,
         double longitud,
         int radioMetros,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var point = GeoJson.Point(GeoJson.Geographic(longitud, latitud));
-        var filter = Builders<ComercioDocument>.Filter.And(
-            Builders<ComercioDocument>.Filter.Eq(c => c.Activo, true),
-            Builders<ComercioDocument>.Filter.NearSphere(c => c.Ubicacion, point, maxDistance: radioMetros)
-        );
+        BsonDocument[] pipeline =
+        [
+            new("$geoNear", new BsonDocument
+            {
+                { "near", new BsonDocument { { "type", "Point" }, { "coordinates", new BsonArray { longitud, latitud } } } },
+                { "key", "ubicacion" },
+                { "distanceField", "distanceMeters" },
+                { "maxDistance", radioMetros },
+                { "spherical", true },
+                { "query", new BsonDocument("activo", true) }
+            }),
+            new("$facet", new BsonDocument
+            {
+                { "total", new BsonArray { new BsonDocument("$count", "count") } },
+                { "items", new BsonArray
+                    {
+                        new BsonDocument("$sort", new BsonDocument { { "distanceMeters", 1 }, { "_id", 1 } }),
+                        new BsonDocument("$skip", (page - 1L) * pageSize),
+                        new BsonDocument("$limit", pageSize),
+                        new BsonDocument("$unset", "distanceMeters")
+                    }
+                }
+            })
+        ];
 
-        var documents = await _context.Comercios
-            .Find(filter)
-            .Limit(50)
-            .ToListAsync(cancellationToken);
+        var result = await _context.Comercios.Aggregate<BsonDocument>(pipeline, cancellationToken: cancellationToken)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (result is null)
+        {
+            return ([], 0);
+        }
 
-        return documents.Select(d => d.ToDomain()).ToList();
+        var totals = result["total"].AsBsonArray;
+        var total = totals.Count == 0 ? 0 : totals[0]["count"].ToInt32();
+        var items = result["items"].AsBsonArray
+            .Select(item => BsonSerializer.Deserialize<ComercioDocument>(item.AsBsonDocument).ToDomain())
+            .ToList();
+        return (items, total);
     }
 
     public async Task AddAsync(Comercio comercio, CancellationToken cancellationToken = default)

@@ -7,6 +7,7 @@ using NSubstitute;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Friends.DTOs;
+using Sensus.Application.Friends.Queries.GetFriendsActivity;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -224,20 +225,53 @@ public sealed class SocialEndpointsIntegrationTests : IClassFixture<CustomWebApp
         var friendLike = OfferLike.Create(friend.Id, offerId, DateTime.UtcNow.AddMinutes(-5)).Value;
         var friendReview = StoreReview.Create(merchantId, friend.Id, friend.NombreCompleto, null, 5, "Excelente lugar", DateTime.UtcNow.AddMinutes(-2)).Value;
 
-        _factory.OfferLikeRepository
-            .GetByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([friendLike]);
-        _factory.StoreReviewRepository
-            .GetRecentActivityByUserIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([friendReview]);
+        var friendItem = new CommunityActivityItemDto(
+            $"review:{friendReview.Id}",
+            GetFriendsCommunityActivityQueryHandler.ActivityStoreReview,
+            friend.Id,
+            friend.NombreCompleto,
+            null,
+            null,
+            merchantId,
+            merchant.NombreComercial,
+            merchant.Direccion,
+            friendReview.Comment,
+            friendReview.Rating,
+            friendReview.CreatedAtUtc);
+        var likeItem = new CommunityActivityItemDto(
+            $"offer-like:{friendLike.Id}",
+            GetFriendsCommunityActivityQueryHandler.ActivityOfferLike,
+            friend.Id,
+            friend.NombreCompleto,
+            null,
+            offerId,
+            merchantId,
+            offer.Title,
+            merchant.NombreComercial,
+            null,
+            null,
+            friendLike.CreatedAtUtc);
+
+        _factory.CommunityActivityReader
+            .ReadAsync(
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Contains(me.Id) && ids.Contains(friend.Id)),
+                1,
+                20,
+                Arg.Any<CancellationToken>())
+            .Returns(new Sensus.Application.Common.Models.PagedResult<CommunityActivityItemDto>(
+                [friendItem, likeItem],
+                2,
+                1,
+                20));
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         HttpResponseMessage okResp = await _client.GetAsync("/api/v1/community/friends-activity?limit=20");
 
         okResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<CommunityActivityItemDto>? items = await okResp.Content.ReadFromJsonAsync<List<CommunityActivityItemDto>>();
-        items.Should().NotBeNull();
-        items!.Should().HaveCount(2);
-        items.Select(i => i.ActivityType).Should().BeEquivalentTo(["StoreReview", "OfferLike"]);
+        Sensus.Application.Common.Models.PagedResult<CommunityActivityItemDto>? paged =
+            await okResp.Content.ReadFromJsonAsync<Sensus.Application.Common.Models.PagedResult<CommunityActivityItemDto>>();
+        paged.Should().NotBeNull();
+        paged!.Items.Should().HaveCount(2);
+        paged.Items.Select(i => i.ActivityType).Should().BeEquivalentTo(["StoreReview", "OfferLike"]);
     }
 }

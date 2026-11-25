@@ -4,13 +4,13 @@
 |---|---|
 | ID | 017 |
 | Slug | `moderacion-multimodal` |
-| Estado | Pendiente |
+| Estado | Parcial |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 022 |
 | Versión | 1.2.0 |
-| Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -52,6 +52,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 | FR-017-05 | Registrar veredicto, categorías, puntajes y acción adoptada | Must |
 | FR-017-06 | Moderar toda imagen de oferta antes de exponerla públicamente | Must |
 | FR-017-07 | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must |
+| FR-017-08 | Moderar las publicaciones de la Spec 024 sin imagen enviando solo el texto a `gpt-4o-mini` con la política de Sensus y el mismo tratamiento fail-closed de `FR-017-04` | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -92,6 +93,12 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 - **Cuando** se consulta la oferta
 - **Entonces** la oferta permanece oculta
 
+### CA-017-06 — Moderación de solo texto
+
+- **Dado** el texto de una publicación sin imagen
+- **Cuando** se modera el contenido
+- **Entonces** el proveedor recibe solo el texto con la política de Sensus y una respuesta ausente, inválida o fuera de tiempo produce cuarentena
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -116,7 +123,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-017-01`, `FR-017-02`, `FR-017-03`, `FR-017-04`, `FR-017-05`, `FR-017-06`, `FR-017-07`
+- Requisitos de este spec: `FR-017-01`, `FR-017-02`, `FR-017-03`, `FR-017-04`, `FR-017-05`, `FR-017-06`, `FR-017-07`, `FR-017-08`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

@@ -4,10 +4,10 @@
 |---|---|
 | Proyecto | Sensus — Backend API RESTful |
 | Documento | Constitución del proyecto (normativo) |
-| Versión | **2.4.0** |
+| Versión | **3.0.0** |
 | Estado | Ratificada |
 | Fecha de ratificación | 2026-10-28 |
-| Última enmienda | 2026-11-19 (v2.4.0: Redis activo con ElastiCache Serverless Valkey en VPC, NAT administrado y pausa nocturna de 22:30 a 07:00, excepción EX-003; v2.3.0: Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil; v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
+| Última enmienda | 2026-11-23 (v3.0.0 del 2026-11-22: moderación de publicaciones de solo texto, ADR 0015; v2.4.1 del 2026-11-23: cierre anticipado de EX-004 por migración del correo de recuperación a Amazon SES con TLS 1.2+ en la Spec 029, retiro de la credencial Somee y sin excepción TLS vigente; v2.4.0: Redis activo con ElastiCache Serverless Valkey en VPC, NAT administrado y pausa nocturna de 22:30 a 07:00, excepción EX-003; v2.3.0: Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil; v2.2.0: contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB dentro del nivel gratuito, sin VPC; v2.1.0: moderación de contenido publicado con `gpt-4o-mini` y excepción EX-002; v2.0.0: arquitectura agéntica de 7 capas para Sensi IA) |
 | Fuente autoritativa | `arquitecturaNva.docx` |
 | Documento derogado | `Arquitectura Back.docx` (ver §4.2) |
 | Metodología | Spec-Driven Development (SDD) + DevSecOps |
@@ -180,7 +180,7 @@ y el sistema MUST fallar cerrado ante cualquier duda.
 - La autorización MUST verificarse en el servidor en cada operación. El cliente MUST NOT ser fuente de
   verdad de permisos ni de identidad.
 - La moderación de contenido MUST ejecutarse **antes** de publicar o persistir el contenido en Cloudinary.
-- La moderación MUST enviar la imagen y el texto asociado en la misma solicitud (ver §2.4).
+- Si el contenido incluye imagen, la moderación MUST enviar la imagen y el texto asociado en la misma solicitud. Las publicaciones de la Spec 024 que solo contienen texto MUST moderarse con esa única modalidad (ver §2.4).
 - La moderación MUST ser **fail-closed**: ante error, timeout o respuesta inválida del proveedor, el
   contenido MUST NOT publicarse y MUST quedar en cuarentena.
 - Los umbrales de decisión SHOULD externalizarse en configuración y MUST registrarse junto con cada
@@ -436,7 +436,7 @@ responsable, tarea y fecha. Todo cambio nuevo o modificado MUST cumplirlo desde 
 | Programación | Amazon EventBridge Scheduler | — | Pausa nocturna de la infraestructura de 22:30 a 07:00, `America/Mexico_City` (Spec 051) |
 | Contadores de presupuesto y cuota | Amazon DynamoDB (`PAY_PER_REQUEST`, TTL nativo) | — | Contadores atómicos de gasto mensual y mensajes diarios de Sensi IA (EX-001), con *fail-closed* ante indisponibilidad. Sin VPC. Dentro del nivel gratuito permanente (Spec 049 y ADR 0013) |
 | Observabilidad | Amazon CloudWatch | — | Logs, métricas, alarmas, trazas |
-| Moderación de contenido publicado | OpenAI `gpt-4o-mini` en modo visión con la política de Sensus | — | Moderación multimodal de ofertas, publicaciones y comentarios (Spec 017); detecta armas, drogas y simbología de odio que `omni-moderation-latest` dejaba pasar |
+| Moderación de contenido publicado | OpenAI `gpt-4o-mini` con la política de Sensus, en modo visión cuando hay imagen | — | Moderación de ofertas, publicaciones y comentarios (Spec 017) y de publicaciones de solo texto (Spec 024) |
 | Moderación de texto del asistente | OpenAI `omni-moderation-latest` | — | Filtro gratuito de entrada y salida de Sensi IA (Spec 046) |
 | Asistente generativo | OpenAI Chat API (par de modelos fijados por configuración vía *Model Router*, *Prompt Caching* y API de Moderación) + adaptador MCP *in-process* / *Function Calling* en `Sensus.Infrastructure` | — | Asistente agéntico Sensi IA en 7 capas: identidad oficial, RAG Markdown estático, herramientas *read-only* de mínimo privilegio, autorización heredada, *guardrails* duales, afinidad de sesión y *Evals* (Spec 046, Spec 047 y ADR 0012) |
 | Notificaciones push | Abstracción `IPushDispatcher` | — | Despacho de notificaciones; adaptador FCM o SNS seleccionado por configuración |
@@ -484,14 +484,14 @@ omita el veredicto.
 
 | Aspecto | Requisito |
 |---|---|
-| Entrada | Imagen (Base64 o URL) **y** texto asociado (título o comentario) en la misma solicitud |
+| Entrada | Con imagen, enviar imagen (Base64 o URL) **y** texto asociado en la misma solicitud. Para publicaciones de la Spec 024 sin imagen, enviar el texto por sí solo con la misma política de Sensus. |
 | Salida esperada | `decision`, `flagged_categories` y `category_scores` (0.0–1.0) en JSON estructurado y validado por el backend; con `omni-moderation-latest`, `flagged`, `categories` y `category_scores` |
 | Bloques evaluados | Contenido sexual (erotismo, desnudez), violencia (gráfica, general), autolesiones (suicidio, intención, instrucciones) y, por política comercial de Sensus, armas de fuego o blancas, drogas y simbología de odio |
 | Banda baja | Publicación automática |
 | Banda intermedia | Revisión manual |
 | Banda alta | Rechazo automático y baneo del usuario |
 | Umbrales | Externalizados en configuración, por entorno, registrados con cada decisión |
-| Fallo del proveedor | Cuarentena del contenido; nunca publicación |
+| Fallo del proveedor | Ante error, timeout, cuota agotada o respuesta inválida, cuarentena en ambas modalidades; nunca publicación ni almacenamiento en Cloudinary. |
 
 La moderación aplica además al asistente conversacional agéntico, aunque su contenido no se
 publique: todo mensaje de la persona MUST atravesar la etapa de *guardrails* de entrada (API de
@@ -701,7 +701,9 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | 2.1.0 | 2026-11-15 | **MINOR**. Moderación de contenido publicado con `gpt-4o-mini` en modo visión y política de Sensus (armas, drogas, simbología de odio), porque `omni-moderation-latest` dejaba pasar imágenes con armas; `omni-moderation-latest` queda para el texto de Sensi IA (§2.1, §2.4). Nueva excepción `EX-002` por el costo de la moderación (Apéndice E). Deriva de la decisión D28 y de las Specs 017 y 046. |
 | 2.2.0 | 2026-11-15 | **MINOR**. Alta de Amazon DynamoDB en el stack autorizado (§2.1) exclusivamente para los contadores atómicos de presupuesto y cuota diaria de Sensi IA (EX-001), con TTL nativo, modo `PAY_PER_REQUEST`, sin VPC y dentro del nivel gratuito permanente; Redis pasa a ser opcional y de solo caché de lecturas. Motivo: con Redis desactivado en el despliegue, `AiBudgetGuard` fallaba en modo cerrado y toda respuesta de Sensi salía degradada. Alternativas descartadas: ElastiCache (exige VPC y NAT Gateway, ≈ 40 USD/mes) y Redis de un proveedor externo (multi-nube, §2.2). Spec 049 y ADR 0013. |
 | 2.4.0 | 2026-11-19 | **MINOR**. Alta de Amazon ElastiCache Serverless (Valkey), Amazon VPC con NAT Gateway administrado y Amazon EventBridge Scheduler en el stack autorizado (§2.1); Redis pasa de opcional a activo en producción. Nueva excepción EX-003 por el costo y brecha G-14 (caché sin autenticación de usuarios). Pausa nocturna de 22:30 a 07:00. Specs 048 y 051, ADR 0014. |
+| 2.4.1 | 2026-11-23 | **PATCH**. Cierre anticipado de `EX-004` (Apéndice E): la Spec 029 sustituye el transporte HTTP hacia `mailersensus.somee.com` por Amazon SES con TLS 1.2 o superior, retira la credencial Somee y elimina `HttpMailerEmailSender`, `MailerTransportPolicy` y `MailerSettings`. Sin cambio de obligaciones: no queda excepción TLS vigente. La baja del parámetro SSM `/sensus/<entorno>/MailerSettings/ApiKey` es una tarea operativa externa documentada, no código pendiente. |
 | 2.3.0 | 2026-11-19 | **MINOR**. Nuevo Principio VIII, DevSecOps de nivel fintech obligatorio en backend y móvil: estándares ASVS 5.0 (L2 y L3 en flujos críticos), OWASP API Top 10, MASVS L2 + resiliencia, NIST 800-63B, SSDF y SLSA 2; modelado de amenazas, auditoría de solo adición, *step-up* para administradores, DAST, SBOM, gestión de vulnerabilidades con plazos y seguridad reforzada del móvil. Añade el Apéndice F (registro de brechas de adopción) y el régimen de transición. Verificación por release ampliada a ocho principios (§3.3, §3.4, §4.5). |
+| 3.0.0 | 2026-11-22 | **MAJOR**. El Principio IV y §2.4 exigen moderar solo el texto de las publicaciones sin imagen de la Spec 024, manteniendo la moderación conjunta si hay imagen y la cuarentena ante fallos. [ADR 0015](docs/adr/0015-moderacion-publicaciones-solo-texto.md). |
 
 ---
 
@@ -745,7 +747,7 @@ MUST NOT existir excepciones implícitas, permanentes o verbales.
 | Compresión y serialización eficiente | P-VII |
 | CI/CD con pruebas unitarias, integración y seguridad | P-V, §3.1 |
 | Moderación `gpt-4o-mini` (contenido publicado) y `omni-moderation-latest` (texto de Sensi IA) | P-IV, §2.4 |
-| Imagen y texto en la misma solicitud | §2.4 |
+| Imagen y texto en la misma solicitud cuando hay imagen; moderación de texto para publicaciones sin imagen (Spec 024) | §2.4 |
 | `flagged`, `categories`, `category_scores`, seis subcategorías | §2.4 |
 | Bandas de decisión: publicar, revisar, rechazar y banear | §2.4 |
 | Notificaciones push y webhooks | §2.5 |
@@ -796,7 +798,7 @@ Excepciones registradas: [Apéndice E]
 | EX-001 | VI | Costo variable del proveedor generativo de Sensi IA (Spec 046) | La Tesina y el Formato de Aceptación comprometen el asistente y no existe alternativa generativa sin costo dentro del nivel gratuito de AWS. Acotada por techo de gasto mensual (`5.00 USD/mes`, elevado desde `1.00 USD/mes` el 2026-11-15 por decisión del responsable del proyecto), *Prompt Caching* estático en dos bloques, *Model Router* con afinidad *sticky*, límite de tokens y mensajes diarios por persona, caché distribuida, puerta CI/CD de *Evals* y degradación determinista controlada (`NFR-046-02` y ADR 0012) | Por asignar | Al cierre de la Spec 046 o al agotarse el techo de gasto mensual | Vigente |
 | EX-002 | VI | Costo variable de la moderación de contenido publicado con `gpt-4o-mini` (Spec 017) | `omni-moderation-latest` es gratuito pero dejaba pasar imágenes con armas y drogas, incompatibles con el giro de Sensus. Costo estimado ≈ 0.00013 USD por imagen (`detail: low`); techo de `1.00 USD/mes` (≈ 7,500 imágenes) con alarma al `80 %`. Al agotarse, el contenido va a cuarentena (fail-closed), nunca se publica sin veredicto. Se recomienda un proyecto y una clave de OpenAI independientes de Sensi IA para que el gasto de uno no bloquee al otro | Por asignar | Al cierre de la Spec 017 o al agotarse el techo de gasto mensual | Vigente |
 | EX-003 | VI | Costo de la red privada y la caché (NAT Gateway, IP elástica y ElastiCache Serverless Valkey, Spec 048 FR-048-14 y Spec 051) | El responsable del proyecto pidió activar Redis y aprobó el costo el 2026-11-19 (opción A), cubierto con créditos de AWS. Acotado por la pausa nocturna de 22:30 a 07:00 (≈ 29–32 USD/mes frente a ≈ 43 USD), límites de uso de la caché (1 GB y 5000 ECPU/s) y AWS Budgets a 40 USD/mes con alerta al 80 %. Alternativas sin costo descartadas en ADR 0014 | Rodrigo Sánchez | Al agotarse los créditos de AWS o al cierre del semestre, lo que ocurra primero | Vigente |
-| EX-004 | IV y VIII (TLS 1.2 o superior) | Solo la llamada saliente de `HttpMailerEmailSender` al servicio de correo `mailersensus.somee.com` por HTTP sin TLS, para los correos de recuperación de contraseña (Spec 029, FR-029-10 a FR-029-12). El resto de la comunicación sigue obligada a TLS 1.2 o superior | El servicio de correo vive en el plan gratuito de Somee, que no ofrece HTTPS; desde el 2026-11-20 todo envío fallaba con error de TLS y nadie podía recuperar su contraseña. El responsable del proyecto aceptó el riesgo (el token de recuperación y la clave `X-Api-Key` viajan en claro entre AWS y Somee) el 2026-11-20. Controles compensatorios: HTTP permitido solo para ese host y hasta la fecha de expiración, validado en código (fuera de eso el envío se rechaza); token de un solo uso con vigencia de 15 minutos que invalida los anteriores; límite de tasa `recover`; revocación de sesiones tras el cambio; rotación de la clave del servicio de correo cada 30 días mientras la excepción esté vigente | Rodrigo Sánchez | 2026-12-20 (migrar a un proveedor con TLS, T029-17) | Vigente |
+| EX-004 | IV y VIII (TLS 1.2 o superior) | Solo la llamada saliente de `HttpMailerEmailSender` al servicio de correo `mailersensus.somee.com` por HTTP sin TLS, para los correos de recuperación de contraseña (Spec 029, FR-029-10 a FR-029-12). El resto de la comunicación sigue obligada a TLS 1.2 o superior | El servicio de correo vive en el plan gratuito de Somee, que no ofrece HTTPS; desde el 2026-11-20 todo envío fallaba con error de TLS y nadie podía recuperar su contraseña. El responsable del proyecto aceptó el riesgo (el token de recuperación y la clave `X-Api-Key` viajan en claro entre AWS y Somee) el 2026-11-20. Controles compensatorios: HTTP permitido solo para ese host y hasta la fecha de expiración, validado en código (fuera de eso el envío se rechaza); token de un solo uso con vigencia de 15 minutos que invalida los anteriores; límite de tasa `recover`; revocación de sesiones tras el cambio; rotación de la clave del servicio de correo cada 30 días mientras la excepción esté vigente | Rodrigo Sánchez | 2026-12-20 (migrar a un proveedor con TLS, T029-17) | Cerrada el 2026-11-23 (Spec 029, migración a Amazon SES; Sin excepción TLS vigente) |
 
 ### Apéndice F — Registro de brechas de adopción del Principio VIII
 
@@ -824,4 +826,4 @@ vencida es una violación bloqueante (§4.5).
 
 ---
 
-**Versión 2.4.0 — Ratificada el 2026-10-28, enmendada el 2026-11-19.** Toda modificación requiere el procedimiento de §4.3.
+**Versión 3.0.0 — Ratificada el 2026-10-28, enmendada el 2026-11-23.** Toda modificación requiere el procedimiento de §4.3.

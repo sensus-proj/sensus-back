@@ -50,4 +50,21 @@ public sealed class MongoFeedCommentRepository : IFeedCommentRepository
 
         return (int)count;
     }
+
+    public async Task<int> AnonymizeByAuthorAsync(
+        Guid authorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        FilterDefinition<FeedCommentDocument> filter = Builders<FeedCommentDocument>.Filter.And(
+            Builders<FeedCommentDocument>.Filter.Eq(c => c.AuthorUserId, authorUserId),
+            Builders<FeedCommentDocument>.Filter.Ne(c => c.AuthorUserId, Guid.Empty));
+
+        UpdateDefinition<FeedCommentDocument> update = Builders<FeedCommentDocument>.Update
+            .Set(c => c.AuthorUserId, Guid.Empty)
+            .Set(c => c.AuthorDisplayName, FeedComment.DefaultAuthorDisplayName)
+            .Set(c => c.AuthorPhotoUrl, null);
+
+        var result = await _context.FeedComments.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+        return (int)Math.Min(result.ModifiedCount, int.MaxValue);
+    }
 }

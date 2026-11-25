@@ -56,4 +56,48 @@ public class InMemoryUserRepository : IUserRepository
         _users.TryRemove(id, out _);
         return Task.CompletedTask;
     }
+
+    public Task<bool> MarkAsDeletedAsync(
+        Guid id,
+        DateTime deletedAtUtc,
+        string securityStamp,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_users.TryGetValue(id, out User? user) || user.IsDeleted)
+        {
+            return Task.FromResult(false);
+        }
+
+        user.MarkAsDeleted(deletedAtUtc);
+        typeof(User).GetProperty(nameof(User.SecurityStamp))?.SetValue(user, securityStamp);
+        return Task.FromResult(true);
+    }
+
+    public Task<IReadOnlyList<Guid>> GetIdsDeletedBeforeAsync(
+        DateTime cutoffUtc,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Guid> ids = _users.Values
+            .Where(u => u.IsDeleted && u.DeletedAtUtc <= cutoffUtc)
+            .Take(Math.Clamp(limit, 1, 100))
+            .Select(u => u.Id)
+            .ToList();
+        return Task.FromResult(ids);
+    }
+
+    public Task<bool> PurgeDeletedAsync(
+        Guid id,
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_users.TryGetValue(id, out User? user) ||
+            !user.IsDeleted ||
+            user.DeletedAtUtc > cutoffUtc)
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(_users.TryRemove(id, out _));
+    }
 }

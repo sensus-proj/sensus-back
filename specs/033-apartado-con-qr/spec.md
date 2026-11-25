@@ -4,7 +4,7 @@
 |---|---|
 | ID | 033 |
 | Slug | `apartado-con-qr` |
-| Estado | Parcial |
+| Estado | Backend completado |
 | Ola | 2 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -71,13 +71,13 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 
 - **Dado** stock disponible y sin apartado previo
 - **Cuando** POST /api/v1/offers/{id}/claim
-- **Entonces** 201 con código, QR y expiresAt
+- **Entonces** 200 con código, QR y expiresAt
 
 ### CA-033-02
 
 - **Dado** dos usuarios compiten por la última unidad
 - **Cuando** se procesan en paralelo
-- **Entonces** solo uno recibe 201 y el otro 409
+- **Entonces** solo uno recibe 200 y el otro 409
 
 ### CA-033-03
 

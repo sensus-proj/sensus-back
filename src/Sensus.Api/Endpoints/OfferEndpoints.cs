@@ -376,16 +376,22 @@ public static class OfferEndpoints
 
         merchantGroup.MapGet("/my-offers", async (
             [FromQuery] string? status,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
-            var query = new GetMerchantOffersQuery(status);
+            var query = new GetMerchantOffersQuery(
+                status,
+                page ?? PaginationPolicy.DefaultPageNumber,
+                pageSize ?? PaginationPolicy.DefaultPageSize);
             var result = await sender.Send(query, ct);
             return result.ToHttpResult();
         })
         .WithName("GetMyOffers")
-        .WithSummary("SE-026 y Spec 037: Lista las ofertas del comercio propio (activas o pasadas) para su gestión o republicación")
-        .Produces<IReadOnlyList<OfferDto>>(StatusCodes.Status200OK)
+        .WithSummary("SE-026 y Spec 037: Lista paginada de las ofertas del comercio propio con métricas de apartados, canjes y vistas")
+        .Produces<PagedResult<MerchantOfferDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden);
 

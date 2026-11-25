@@ -103,6 +103,7 @@ public sealed class CorsAndHttpsSecurityTests : IClassFixture<CustomWebApplicati
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["JwtSettings:Secret"] = Convert.ToBase64String(new byte[64]),
+                    ["SesEmailSettings:Simulate"] = "true",
                     ["Cors:AllowedOrigins:0"] = "https://sensus.app",
                     ["Cors:AllowedOrigins:1"] = "https://admin.sensus.app"
                 });

@@ -22,6 +22,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly ILogger<CreateOfferCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
+    private readonly IMediaAssetRepository? _mediaAssets;
     private readonly IOptions<OfferCategorySettings>? _categorySettings;
     private readonly ITextModerationService? _textModerationService;
     private readonly IModerationAuditRecorder _auditRecorder;
@@ -36,7 +37,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         ICacheService? cacheService = null,
         INearbyOfferNotifier? nearbyOfferNotifier = null,
         IOptions<OfferCategorySettings>? categorySettings = null,
-        ITextModerationService? textModerationService = null)
+        ITextModerationService? textModerationService = null,
+        IMediaAssetRepository? mediaAssets = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -48,6 +50,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _nearbyOfferNotifier = nearbyOfferNotifier;
         _categorySettings = categorySettings;
         _textModerationService = textModerationService;
+        _mediaAssets = mediaAssets;
     }
 
     public async Task<Result<OfferDto>> Handle(CreateOfferCommand request, CancellationToken cancellationToken)
@@ -79,7 +82,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             comercio.Longitud,
             _dateTimeProvider.UtcNow,
             request.Category,
-            requireStrictCategory);
+            requireValidCategory: requireStrictCategory,
+            saveAsDraft: request.SaveAsDraft);
 
         if (offerResult.IsFailure)
         {
@@ -87,6 +91,14 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         Offer offer = offerResult.Value;
+
+        if (!request.SaveAsDraft && !string.IsNullOrWhiteSpace(offer.ImageUrl)
+            && (_mediaAssets is null || !await _mediaAssets.HasApprovedImageAsync(
+                userId, offer.ImageUrl, ModeratedTextFingerprint.Create($"{offer.Title}\n{offer.Description}"), cancellationToken)))
+        {
+            return Result.Failure<OfferDto>(Error.Validation(
+                "Offer.ImageNotApproved", "La imagen debe estar aprobada para el título y la descripción de esta oferta."));
+        }
 
         ModerationEvaluation evaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
@@ -129,7 +141,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             offer.Id, comercio.Id, offer.EndsAt);
 
         // FR-044-08: el aviso se intenta después de persistir y nunca revierte la creación.
-        if (_nearbyOfferNotifier is not null)
+        if (!request.SaveAsDraft && _nearbyOfferNotifier is not null)
         {
             await _nearbyOfferNotifier.NotifyAsync(offer, userId, cancellationToken);
         }

@@ -1,51 +1,141 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 029 Recuperación de contraseña"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 029. Completar esquemas antes de implementar."
+  version: 2.0.0
+  description: >-
+    Contrato final del spec 029. La ruta canónica de confirmación es
+    `/api/v1/auth/recover/confirm`. El alias `POST /api/v1/auth/reset-password` fue
+    retirado y devuelve 404. El correo se envía por Amazon SES con TLS 1.2 o superior
+    y el token de recuperación caduca a los 30 minutos.
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/auth/recover:
     post:
-      summary: "Borrador de POST /api/v1/auth/recover"
-      security: []
-      responses:
-        '202': { description: Aceptado }
-        '400': { description: Solicitud inválida }
-  /api/v1/auth/recover/confirm:
-    post:
-      summary: "Borrador de POST /api/v1/auth/recover/confirm"
-      security: []
-      responses:
-        '204': { description: Sin contenido }
-        '400': { description: Solicitud inválida }
-  /api/v1/auth/reset-password:
-    post:
-      summary: Alias obsoleto de /api/v1/auth/recover/confirm
-      operationId: resetPassword
-      deprecated: true
+      summary: "Solicitar recuperación de contraseña"
+      operationId: requestPasswordReset
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [token, nuevaPassword]
-              properties:
-                token: { type: string }
-                nuevaPassword: { type: string, format: password }
+              $ref: "#/components/schemas/RecoverRequest"
+      responses:
+        '202':
+          description: Solicitud aceptada; respuesta idéntica para correo existente e inexistente
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+        '400':
+          description: Solicitud inválida
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        '429':
+          description: Límite `recover` superado (3 solicitudes por correo y hora)
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/auth/recover/confirm:
+    post:
+      summary: "Confirmar la nueva contraseña con el token de recuperación"
+      operationId: confirmPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
       responses:
         '204':
-          description: Contraseña restablecida
+          description: Contraseña restablecida y sesiones previas revocadas
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
         '400':
-          description: Token inválido o vencido, o contraseña que no cumple la política
+          description: Token inválido, usado o vencido, o contraseña que no cumple la política
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
         '429':
-          description: Límite de tasa recover superado
+          description: Límite `recover` superado (3 solicitudes por correo y hora)
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/X-Correlation-Id"
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  headers:
+    X-Correlation-Id:
+      description: Identificador de correlación propagado en la petición
+      schema:
+        type: string
+  schemas:
+    RecoverRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Correo de la cuenta; se redacta en los logs
+    ResetPasswordRequest:
+      type: object
+      required: [token, nuevaPassword]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Token de un solo uso recibido por correo, vigente 30 minutos
+        nuevaPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+    ProblemDetails:
+      type: object
+      description: Formato uniforme de error (RFC 7807)
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        correlationId:
+          type: string

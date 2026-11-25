@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -196,6 +197,91 @@ public sealed class OfferFeedEndpointsTests : IClassFixture<CustomWebApplication
         clientE.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenE);
         OfferFeedPageDto? pageE = await clientE.GetFromJsonAsync<OfferFeedPageDto>($"/api/v1/feed/offers?{baseCoords}&radiusKm=10&page=1&pageSize=50");
         pageE!.Items.Should().NotContain(i => i.MerchantId == _fixture.UserEOwnMerchant.Id);
+    }
+
+    [Fact]
+    public async Task GetFeedOffers_ShouldMeetLatencyTargets_ForCachedAndFallbackPaths()
+    {
+        // Spec 048, NFR-048-01 y NFR-048-02: mide p95 del camino con instantánea en caché y del camino
+        // sin caché (Redis no disponible => GetAsync devuelve null y SaveAsync devuelve false).
+        DateTime now = OfferFeedDeterministicFixture.FixedNowUtc;
+        (string token, _) = CreateRegisteredToken(OfferFeedDeterministicFixture.UserCNoSignalsId);
+        _factory.FakeClock.Set(now);
+
+        _factory.OfferRepository.GetFeedCandidatesAsync(
+                Arg.Any<double>(), Arg.Any<double>(), Arg.Any<int>(), Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(call => _fixture.QueryVisibleForUser(call.ArgAt<Guid>(3), call.ArgAt<int>(2)));
+        _factory.OfferRepository.GetFeedCandidatesByIdsAsync(
+                Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<double>(), Arg.Any<double>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                HashSet<Guid> ids = call.ArgAt<IReadOnlyCollection<Guid>>(0).ToHashSet();
+                return _fixture.QueryVisibleForUser(call.ArgAt<Guid>(3), 50_000)
+                    .Where(c => ids.Contains(c.OfferId))
+                    .ToList();
+            });
+
+        var snapshots = new ConcurrentDictionary<(Guid, Guid), FeedSnapshot>();
+        _factory.FeedSnapshotStore.SaveAsync(Arg.Any<Guid>(), Arg.Any<FeedSnapshot>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                snapshots[(call.ArgAt<Guid>(0), call.ArgAt<FeedSnapshot>(1).SnapshotId)] = call.ArgAt<FeedSnapshot>(1);
+                return true;
+            });
+        _factory.FeedSnapshotStore.GetAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(call => snapshots.GetValueOrDefault((call.ArgAt<Guid>(0), call.ArgAt<Guid>(1))));
+
+        using HttpClient client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // Partición propia para no compartir la cuota con la prueba de rate limiting.
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", "198.51.100.99");
+
+        string coords = $"lat={OfferFeedDeterministicFixture.ReferenceLat.ToString(CultureInfo.InvariantCulture)}&lng={OfferFeedDeterministicFixture.ReferenceLng.ToString(CultureInfo.InvariantCulture)}";
+        string baseUrl = $"/api/v1/feed/offers?{coords}&radiusKm=10&page=1&pageSize=20";
+
+        OfferFeedPageDto? first = await client.GetFromJsonAsync<OfferFeedPageDto>(baseUrl);
+        first!.SnapshotId.Should().NotBeNull();
+        Guid snapshotId = first.SnapshotId!.Value;
+
+        List<double> cachedLatencies = [];
+        for (int i = 0; i < 20; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}&snapshotId={snapshotId}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var stopwatch = Stopwatch.StartNew();
+            HttpResponseMessage response = await client.SendAsync(request);
+            stopwatch.Stop();
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            cachedLatencies.Add(stopwatch.Elapsed.TotalMilliseconds);
+        }
+
+        cachedLatencies.Sort();
+        int cachedP95Index = (int)Math.Ceiling(cachedLatencies.Count * 0.95) - 1;
+        cachedLatencies[cachedP95Index].Should().BeLessThan(300);
+
+        // Simula Redis caído: la instantánea no se encuentra y no se puede guardar.
+        _factory.FeedSnapshotStore.GetAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((FeedSnapshot?)null);
+        _factory.FeedSnapshotStore.SaveAsync(Arg.Any<Guid>(), Arg.Any<FeedSnapshot>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        List<double> fallbackLatencies = [];
+        for (int i = 0; i < 20; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, baseUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var stopwatch = Stopwatch.StartNew();
+            HttpResponseMessage response = await client.SendAsync(request);
+            stopwatch.Stop();
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            fallbackLatencies.Add(stopwatch.Elapsed.TotalMilliseconds);
+        }
+
+        fallbackLatencies.Sort();
+        int fallbackP95Index = (int)Math.Ceiling(fallbackLatencies.Count * 0.95) - 1;
+        fallbackLatencies[fallbackP95Index].Should().BeLessThan(500);
     }
 
     [Fact]

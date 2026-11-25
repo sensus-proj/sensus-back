@@ -136,7 +136,7 @@ Content-Type: application/json
   "codigoPostal": "03940"
 }
 
-### 4.3b Recuperación: confirmar nueva contraseña (FR-029-05; /auth/reset-password sigue como alias)
+### 4.3b Recuperación: confirmar nueva contraseña (FR-029-05; ruta canónica sin alias)
 POST {{baseUrl}}/api/v1/auth/recover/confirm
 Content-Type: application/json
 

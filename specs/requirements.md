@@ -120,7 +120,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-04` | 017 | FR | No publicar si el proveedor falla, expira o responde de forma inválida | Must | Implementado |
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
-| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Pendiente |
+| `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
+| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Parcial |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
@@ -169,15 +170,15 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-023-04` | 023 | FR | Invalidar caché al retirar contenido | Should | Implementado |
 | `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Implementado |
 | `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Implementado |
-| `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Pendiente |
-| `FR-024-02` | 024 | FR | No publicar hasta obtener veredicto favorable | Must | Pendiente |
-| `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Pendiente |
-| `FR-024-04` | 024 | FR | Devolver 202 mientras la moderación está pendiente | Should | Pendiente |
-| `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Pendiente |
-| `FR-024-06` | 024 | FR | Permitir a un administrador eliminar cualquier publicación | Should | Pendiente |
-| `FR-024-07` | 024 | FR | Excluir del feed las publicaciones eliminadas de inmediato | Must | Pendiente |
-| `NFR-024-01` | 024 | NFR | Latencia percibida | p95 < 1 s hasta aceptar la solicitud | Pendiente |
-| `NFR-024-02` | 024 | NFR | Consistencia | Sin publicaciones sin veredicto | Pendiente |
+| `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Implementado |
+| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Parcial |
+| `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Implementado |
+| `FR-024-04` | 024 | FR | Resolver la moderación de forma síncrona: 201 con la publicación aprobada, 400 ante rechazo o indisponibilidad del moderador | Must | Implementado |
+| `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Implementado |
+| `FR-024-06` | 024 | FR | Permitir a un administrador eliminar cualquier publicación | Should | Implementado |
+| `FR-024-07` | 024 | FR | Excluir del feed las publicaciones eliminadas de inmediato | Must | Implementado |
+| `NFR-024-01` | 024 | NFR | Latencia percibida | p95 < 1 s hasta aceptar la solicitud | Implementado |
+| `NFR-024-02` | 024 | NFR | Consistencia | Sin publicaciones sin veredicto | Implementado |
 | `FR-025-01` | 025 | FR | Crear comentario en una publicación existente y visible | Must | Implementado |
 | `FR-025-02` | 025 | FR | Moderar el texto antes de publicarlo | Must | Implementado |
 | `FR-025-03` | 025 | FR | Listar comentarios paginados por publicación | Must | Implementado |
@@ -189,7 +190,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
 | `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
 | `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-026-04` | 026 | FR | Limitar el radio a 50 km y rechazar valores fuera de rango | Must | Pendiente |
+| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Pendiente |
 | `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Pendiente |
 | `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
 | `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
@@ -211,32 +212,32 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-028-05` | 028 | FR | Registrar eventos fallidos para reintento | Should | Backlog |
 | `NFR-028-01` | 028 | NFR | Latencia de respuesta | p95 < 500 ms | Backlog |
 | `NFR-028-02` | 028 | NFR | Duplicados procesados | Cero efectos duplicados | Backlog |
-| `FR-029-01` | 029 | FR | Exponer POST /api/v1/auth/recover y responder 202 siempre | Must | Pendiente |
-| `FR-029-02` | 029 | FR | Generar token de 32 bytes, almacenar solo su hash y caducarlo en 30 minutos | Must | Parcial |
-| `FR-029-03` | 029 | FR | Invalidar tokens anteriores del mismo usuario al emitir uno nuevo | Must | Pendiente |
-| `FR-029-04` | 029 | FR | Enviar el enlace por correo mediante Amazon SES | Must | Pendiente |
+| `FR-029-01` | 029 | FR | Exponer POST /api/v1/auth/recover y responder 202 siempre | Must | Implementado |
+| `FR-029-02` | 029 | FR | Generar token de 32 bytes, almacenar solo su hash y caducarlo en 30 minutos | Must | Implementado |
+| `FR-029-03` | 029 | FR | Invalidar tokens anteriores del mismo usuario al emitir uno nuevo | Must | Implementado |
+| `FR-029-04` | 029 | FR | Enviar el enlace por correo mediante Amazon SES con TLS 1.2 o superior | Must | Implementado |
 | `FR-029-05` | 029 | FR | Exponer POST /api/v1/auth/recover/confirm para fijar la nueva contraseña | Must | Implementado |
-| `FR-029-06` | 029 | FR | Rechazar tokens expirados, ya usados o inexistentes con 400 | Must | Pendiente |
-| `FR-029-07` | 029 | FR | Revocar todas las sesiones activas tras el cambio de contraseña | Must | Pendiente |
-| `NFR-029-01` | 029 | NFR | Latencia de solicitud | p95 < 700 ms | Pendiente |
-| `NFR-029-02` | 029 | NFR | Enumeración de cuentas | Cero diferencia de respuesta entre correo existente e inexistente | Pendiente |
-| `NFR-029-03` | 029 | NFR | Límite de solicitudes | 3 por correo y hora | Pendiente |
-| `FR-029-08` | 029 | FR | Alias `POST /auth/reset-password` de `/auth/recover/confirm` | Must | Implementado |
-| `FR-029-09` | 029 | FR | Retirar el alias cuando el móvil use la ruta canónica | Should | Pendiente |
-| `FR-029-10` | 029 | FR | HTTP hacia el servicio de correo solo para el host y el plazo de EX-004 | Must | Hecho |
-| `FR-029-11` | 029 | FR | Rotar la clave del servicio de correo cada 30 días mientras EX-004 esté vigente | Must | Pendiente |
-| `FR-029-12` | 029 | FR | Migrar el correo a un canal con TLS antes del 2026-12-20 y retirar EX-004 | Must | Pendiente |
-| `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado |
-| `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Parcial |
-| `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado |
-| `FR-030-04` | 030 | FR | Purgar los datos personales a los 30 días mediante proceso programado | Must | Parcial |
-| `FR-030-05` | 030 | FR | Anonimizar publicaciones y comentarios del usuario en lugar de conservarlos asociados | Must | Pendiente |
-| `FR-030-06` | 030 | FR | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must | Implementado |
-| `FR-030-07` | 030 | FR | Conservar la auditoría de moderación anonimizada durante 90 días | Must | Pendiente |
-| `FR-030-08` | 030 | FR | Borrar de inmediato intereses (054) e interacciones seudonimizadas (055) al eliminar la cuenta | Must | Implementado |
-| `NFR-030-01` | 030 | NFR | Efectividad del bloqueo | < 1 s desde la eliminación | Pendiente |
-| `NFR-030-02` | 030 | NFR | Purga | 100 % de cuentas marcadas, en ≤ 31 días | Pendiente |
-| `NFR-030-03` | 030 | NFR | Trazabilidad | Toda eliminación registrada sin PII | Pendiente |
+| `FR-029-06` | 029 | FR | Rechazar tokens expirados, ya usados o inexistentes con 400 | Must | Implementado |
+| `FR-029-07` | 029 | FR | Revocar todas las sesiones activas tras el cambio de contraseña | Must | Implementado |
+| `NFR-029-01` | 029 | NFR | Latencia de solicitud | p95 < 700 ms | Implementado |
+| `NFR-029-02` | 029 | NFR | No enumeración y redacción del correo en logs (`ISensitiveRequest`) | Cero diferencia de respuesta entre correo existente e inexistente; cero correos en registros | Implementado |
+| `NFR-029-03` | 029 | NFR | Límite de solicitudes de `/recover` | 3 por correo y hora, partición por hash SHA-256 del correo normalizado, `RateLimiting:Recover` (3/3600) | Implementado |
+| `FR-029-08` | 029 | FR | Alias histórico `POST /auth/reset-password` de `/auth/recover/confirm`, retirado por FR-029-09 | Must | Retirado (FR-029-09) |
+| `FR-029-09` | 029 | FR | Retirar el alias `/auth/reset-password`: ruta inexistente que devuelve 404; canónica `/auth/recover/confirm` | Must | Implementado |
+| `FR-029-10` | 029 | FR | Rechazar cualquier transporte de correo sin TLS 1.2 o superior (sin excepción HTTP; EX-004 retirada) | Must | Implementado |
+| `FR-029-11` | 029 | FR | Retirar la credencial Somee del código y la configuración; baja operativa externa documentada del parámetro SSM (sin rotación: se da de baja) | Must | Implementado |
+| `FR-029-12` | 029 | FR | Enviar el correo por Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must | Implementado |
+| `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado (060; `204` conservado) |
+| `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Implementado (060) |
+| `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado (060) |
+| `FR-030-04` | 030 | FR | Purgar los datos personales a los 30 días mediante proceso programado | Must | Implementado (060) |
+| `FR-030-05` | 030 | FR | Anonimizar publicaciones y comentarios del usuario en lugar de conservarlos asociados | Must | Implementado (061) |
+| `FR-030-06` | 030 | FR | Desactivar el comercio y sus ofertas activas al eliminar una cuenta comercial | Must | Implementado (061) |
+| `FR-030-07` | 030 | FR | Conservar la auditoría de moderación anonimizada durante 90 días | Must | Implementado (061) |
+| `FR-030-08` | 030 | FR | Borrar de inmediato intereses (054) e interacciones seudonimizadas (055) al eliminar la cuenta | Must | Implementado (T030-13) |
+| `NFR-030-01` | 030 | NFR | Efectividad del bloqueo | < 1 s desde la eliminación | Implementado (060) |
+| `NFR-030-02` | 030 | NFR | Purga | 100 % de cuentas marcadas, en ≤ 31 días | Implementado (060, reloj simulado) |
+| `NFR-030-03` | 030 | NFR | Trazabilidad | Toda eliminación registrada sin PII | Implementado (060/061) |
 | `FR-031-01` | 031 | FR | Actualizar los datos editables del comercio propio | Must | Pendiente |
 | `FR-031-02` | 031 | FR | Recalcular location y geohash cuando cambien las coordenadas | Must | Pendiente |
 | `FR-031-03` | 031 | FR | Validar categoría del catálogo y rangos de coordenadas | Must | Implementado |
@@ -271,7 +272,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
-| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Pendiente |
+| `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
 | `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
@@ -303,20 +304,21 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-036-10` | 036 | FR | Límite de tasa en `republish` | Should | Implementado |
 | `FR-037-01` | 037 | FR | Listar las ofertas del comercio autenticado, incluidas las inactivas | Must | Implementado |
 | `FR-037-02` | 037 | FR | Filtrar por estado de la oferta | Should | Implementado |
-| `FR-037-03` | 037 | FR | Incluir apartados activos, canjes y vistas por oferta | Must | Pendiente |
-| `FR-037-04` | 037 | FR | Aplicar pageSize 20 por defecto y 100 máximo | Must | Pendiente |
+| `FR-037-03` | 037 | FR | Incluir apartados activos, canjes y vistas por oferta | Must | Implementado |
+| `FR-037-04` | 037 | FR | Aplicar pageSize 20 por defecto y 100 máximo; valores fuera de rango devuelven 400 | Must | Implementado |
 | `FR-037-05` | 037 | FR | Ordenar por fecha de creación descendente | Must | Implementado |
 | `FR-037-06` | 037 | FR | Impedir ver ofertas de otros comercios | Must | Implementado |
-| `NFR-037-01` | 037 | NFR | Latencia del listado | p95 < 600 ms | Pendiente |
-| `NFR-037-02` | 037 | NFR | Costo del agregado | Sin recorrido completo por oferta | Pendiente |
-| `FR-038-01` | 038 | FR | Alternar el favorito del usuario autenticado sobre una oferta visible | Must | Pendiente |
-| `FR-038-02` | 038 | FR | Devolver el estado resultante y el conteo | Must | Pendiente |
-| `FR-038-03` | 038 | FR | Rechazar ofertas no visibles con 404 | Must | Pendiente |
-| `FR-038-04` | 038 | FR | Garantizar un solo favorito por usuario y oferta | Must | Pendiente |
-| `FR-038-05` | 038 | FR | Exponer la afinidad de categoría al ranking de recomendaciones | Should | Pendiente |
-| `FR-038-06` | 038 | FR | Limitar la operación a 120 alternancias por usuario y hora | Should | Pendiente |
-| `NFR-038-01` | 038 | NFR | Latencia de la operación | p95 < 300 ms | Pendiente |
-| `NFR-038-02` | 038 | NFR | Consistencia | Cero conteos negativos | Pendiente |
+| `NFR-037-01` | 037 | NFR | Latencia del listado | p95 < 600 ms | Implementado |
+| `NFR-037-02` | 037 | NFR | Costo del agregado | Sin recorrido completo por oferta: un conteo batch por página | Implementado |
+| `NFR-037-03` | 037 | NFR | Privacidad de métricas | Solo totales; sin PII, códigos ni hashes de apartado | Implementado |
+| `FR-038-01` | 038 | FR | Alternar el favorito del usuario autenticado sobre una oferta visible | Must | Implementado |
+| `FR-038-02` | 038 | FR | Devolver el estado resultante y el conteo | Must | Implementado |
+| `FR-038-03` | 038 | FR | Rechazar ofertas no visibles con 404 | Must | Implementado |
+| `FR-038-04` | 038 | FR | Garantizar un solo favorito por usuario y oferta | Must | Implementado |
+| `FR-038-05` | 038 | FR | Exponer la afinidad de categoría al ranking de la spec 042, invalidando `feed:affinity:{userId}` al alternar | Should | Implementado |
+| `FR-038-06` | 038 | FR | Limitar la operación a 120 alternancias por usuario y hora (`FavoritesPolicy`) | Should | Implementado |
+| `NFR-038-01` | 038 | NFR | Latencia de la operación | p95 < 300 ms | Implementado |
+| `NFR-038-02` | 038 | NFR | Consistencia | Cero conteos negativos | Implementado |
 | `FR-039-01` | 039 | FR | Alternar el me gusta del usuario autenticado sobre una publicación | Must | Pendiente |
 | `FR-039-02` | 039 | FR | Devolver el estado resultante y el conteo actualizado | Must | Pendiente |
 | `FR-039-03` | 039 | FR | Rechazar publicaciones no visibles con 404 | Must | Pendiente |
@@ -389,9 +391,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-044-04` | 044 | FR | Respetar pushEnabled y las categorías al despachar | Must | Implementado |
 | `FR-044-05` | 044 | FR | Aplicar valores por defecto cuando el usuario no tiene preferencias | Must | Implementado |
 | `FR-044-06` | 044 | FR | Devolver 200 con el estado resultante tras la actualización | Must | Implementado |
-| `FR-044-07` | 044 | FR | Guardar y retirar la última ubicación compartida para alertas | Must | Parcial |
+| `FR-044-07` | 044 | FR | Guardar y retirar la última ubicación compartida para alertas (integración móvil externa) | Must | Implementado |
 | `FR-044-08` | 044 | FR | Alertar sobre nuevas ofertas con texto aprobado dentro del radio del usuario | Must | Implementado |
-| `NFR-044-01` | 044 | NFR | Latencia de lectura | p95 < 250 ms | Implementado |
+| `NFR-044-01` | 044 | NFR | Latencia de lectura de preferencias | p95 < 250 ms medido con 20 solicitudes HTTP en `NotificationSettingsEndpointTests` | Implementado |
 | `NFR-044-02` | 044 | NFR | Respeto de preferencias | 100 % de envíos filtrados según configuración | Implementado |
 | `FR-045-01` | 045 | FR | Habilitar hospedaje dual en `Sensus.Api` con `AddAWSLambdaHosting(LambdaEventSource.HttpApi)` | Must | Implementado |
 | `FR-045-02` | 045 | FR | Crear el proyecto AWS CDK en C# dentro de `infra/` con `cdk.json` funcional | Must | Implementado |
@@ -465,15 +467,15 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-048-03` | 048 | FR | Registrar `ICacheService` en el contenedor de DI de `Sensus.Api/Program.cs` | Must | Implementado |
 | `FR-048-04` | 048 | FR | Cachear respuestas de `GET /offers/{id}` con TTL configurable | Must | Implementado |
 | `FR-048-05` | 048 | FR | Cachear respuestas de `GET /offers/nearby` con TTL configurable | Must | Implementado |
-| `FR-048-06` | 048 | FR | Cachear respuestas de `GET /feed/nearby` con TTL configurable | Must | Pendiente |
+| `FR-048-06` | 048 | FR | Cachear instantáneas de `GET /api/v1/feed/offers` con TTL configurable (`FeedRanking:SnapshotTtlMinutes`) | Must | Implementado |
 | `FR-048-07` | 048 | FR | Invalidar caché de oferta al crear, actualizar o eliminar una oferta | Must | Implementado |
-| `FR-048-08` | 048 | FR | Invalidar caché de feed al crear, actualizar o eliminar una publicación | Must | Pendiente |
+| `FR-048-08` | 048 | FR | Invalidar todas las instantáneas del feed de ofertas ante mutaciones de ofertas y publicaciones (prefijo `feed:offers:`) | Must | Implementado |
 | `FR-048-09` | 048 | FR | Invalidar caché de comercio al actualizar el perfil del comerciante | Must | Implementado |
 | `FR-048-10` | 048 | FR | Configurar TTL por entidad en `appsettings.json` (no hardcodeado) | Must | Implementado |
 | `FR-048-11` | 048 | FR | Devolver datos desde MongoDB si Redis no está disponible (falso graceful) | Must | Implementado |
 | `FR-048-12` | 048 | FR | Health check del caché integrado con `/health/ready` | Should | Implementado |
-| `NFR-048-01` | 048 | NFR | Latencia de lectura con caché | p95 < 300 ms | Pendiente |
-| `NFR-048-02` | 048 | NFR | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms | Pendiente |
+| `NFR-048-01` | 048 | NFR | Latencia de lectura con caché (instantánea del feed) | p95 < 300 ms medido con 20 solicitudes HTTP en `OfferFeedEndpointsTests` | Implementado |
+| `NFR-048-02` | 048 | NFR | Latencia de lectura sin caché (fallback MongoDB) | p95 < 500 ms medido con 20 solicitudes HTTP en `OfferFeedEndpointsTests` | Implementado |
 | `NFR-048-03` | 048 | NFR | TTL mínimo | Configurable, por entidad | Implementado |
 | `NFR-048-04` | 048 | NFR | Disponibilidad del servicio ante caída de Redis | 100 % (fallback a MongoDB) | Implementado |
 | `NFR-048-05` | 048 | NFR | Costo mensual | Dentro del Free Tier de AWS (ElastiCache o similar) | Implementado |
@@ -523,10 +525,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-053-01` | 053 | FR | Comercios activos dentro del radio, ordenados por cercanía | Must | Implementado |
 | `FR-053-02` | 053 | FR | Radio por defecto 2000 m; tope 2 km invitados y 50 km registrados | Must | Implementado |
 | `FR-053-03` | 053 | FR | Acceso para registrados e invitados | Must | Implementado |
-| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Pendiente |
-| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Pendiente |
-| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Pendiente |
-| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Pendiente |
+| `FR-053-04` | 053 | FR | Validar rango de lat y lng; 400 fuera de rango | Must | Implementado |
+| `FR-053-05` | 053 | FR | Paginación 20/100 con metadatos | Must | Implementado |
+| `FR-053-06` | 053 | FR | Límite de tasa read-heavy | Must | Implementado |
+| `FR-053-07` | 053 | FR | Parámetro radiusKm con radioMetros como alias temporal | Should | Implementado |
 | `NFR-053-01` | 053 | NFR | Rendimiento | Consulta sobre índice 2dsphere, sin recorrido completo | Implementado |
 | `NFR-053-02` | 053 | NFR | Privacidad | Solo datos públicos del comercio (ComercioDto) | Implementado |
 | `FR-054-01` | 054 | FR | Exponer `GET /api/v1/users/me/interests` | Must | Implementado |
@@ -573,7 +575,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-058-01` | 058 | FR | Exponer `GET /api/v1/community/friends-activity` solo para usuarios registrados con `limit` [1..100] | Must | Implementado |
 | `FR-058-02` | 058 | FR | Filtrar actividad exclusivamente por amigos aceptados y usuario autenticado | Must | Implementado |
 | `FR-058-03` | 058 | FR | Proyectar únicamente eventos `OfferLike`, `StoreReview` y `ReviewReply` ordenados por fecha descendente | Must | Implementado |
-| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Pendiente |
+| `FR-058-04` | 058 | FR | Migrar listado de actividad de amigos a `PagedResult` | Should | Implementado |
 | `NFR-058-01` | 058 | NFR | Privacidad entre amigos aceptados | 0 fugas de terceros/pendientes | Implementado |
 | `NFR-058-02` | 058 | NFR | Seguridad (`RegisteredUserPolicy` + `ReadHeavyPolicy`) | 100 % cumplimiento | Implementado |
 | `NFR-058-03` | 058 | NFR | Tolerancia a nulos en repositorios/ofertas archivadas | 0 errores 500 | Implementado |
@@ -585,5 +587,25 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-059-01` | 059 | NFR | Timeout explícito anti-ReDoS en expresiones regulares de `ProfanityFilter` | 0 vulnerabilidades S6444 | Implementado |
 | `NFR-059-02` | 059 | NFR | Cero rutas *fail-open* ante fallos de moderación externa | 100 % fail-closed | Implementado |
 | `NFR-059-03` | 059 | NFR | Pruebas unitarias y de integración sobre filtro, umbrales configurados y *fail-closed* | Cobertura >= 80 % | Implementado |
+| `FR-060-01` | 060 | FR | Marcar la cuenta como dada de baja con `DeletedAtUtc` y conservar la PII solo durante la retención configurada | Must | Implementado |
+| `FR-060-02` | 060 | FR | Rotar `SecurityStamp` en la baja y rechazar de inmediato los tokens emitidos con anterioridad | Must | Implementado |
+| `FR-060-03` | 060 | FR | Rechazar el inicio de sesión y cualquier operación autenticada de una cuenta dada de baja con error genérico, sin revelar si el correo existe | Must | Implementado |
+| `FR-060-04` | 060 | FR | Purgar el documento de usuario y la PII restante transcurrida la retención, mediante un proceso programado e idempotente | Must | Implementado |
+| `FR-060-05` | 060 | FR | Registrar la baja y la purga como eventos de auditoría de solo adición con actor, objetivo, acción, resultado, marca temporal y `correlation-id`, sin PII | Must | Implementado |
+| `FR-060-06` | 060 | FR | No purgar cuentas activas: el proceso selecciona únicamente usuarios con `DeletedAtUtc <= ahora - retención` | Must | Implementado |
+| `NFR-060-01` | 060 | NFR | Efectividad del bloqueo | < 1 s desde la confirmación; token rechazado y login 401 en la misma petición | Implementado |
+| `NFR-060-02` | 060 | NFR | Purga | 100 % de las cuentas marcadas purgadas en ≤ 31 días; reloj simulado y `cutoff = ahora - retención` | Implementado |
+| `NFR-060-03` | 060 | NFR | Configuración | Retención y frecuencia de purga en `AccountDeletion`, nunca hardcodeadas | Implementado |
+| `NFR-060-04` | 060 | NFR | Privacidad | Cero PII (correo, nombre, hash de contraseña, foto) en logs, respuestas y eventos de auditoría | Implementado |
+| `FR-061-01` | 061 | FR | Anonimizar las publicaciones del feed del usuario: `AuthorUserId = Guid.Empty`, nombre «Usuario» y foto nula, conservando contenido e imagen | Must | Implementado |
+| `FR-061-02` | 061 | FR | Anonimizar los comentarios del feed del usuario con el mismo criterio, conservando el texto | Must | Implementado |
+| `FR-061-03` | 061 | FR | Marcar como expirados todos los apartados activos del comercio del usuario antes de archivar sus ofertas | Must | Implementado |
+| `FR-061-04` | 061 | FR | Archivar las ofertas activas del comercio e invalidar su caché, sin cambiar sus identificadores | Must | Implementado |
+| `FR-061-05` | 061 | FR | Copiar la evidencia de moderación existente del usuario a una colección anonimizada con TTL de 90 días configurable | Must | Implementado |
+| `FR-061-06` | 061 | FR | Mantener todas las operaciones idempotentes: repetir la baja no duplica registros ni altera contenido ya anonimizado | Must | Implementado |
+| `NFR-061-01` | 061 | NFR | Anonimización completa | 100 % de publicaciones y comentarios sin `AuthorUserId` original, verificado por prueba de regresión | Implementado |
+| `NFR-061-02` | 061 | NFR | Apartados resueltos | 0 apartados `Active` del comercio tras la baja, verificado por prueba | Implementado |
+| `NFR-061-03` | 061 | NFR | Retención de auditoría | Evidencia anonimizada con `expiresAtUtc = ahora + 90 días`, configurable y sin PII | Implementado |
+| `NFR-061-04` | 061 | NFR | Sin regresión visual | Las ofertas archivadas conservan su `Id` y dejan de devolverse en consultas públicas | Implementado |
 
-Total: **527 requisitos** en 57 specs.
+Total: **602 requisitos** en 61 specs. La Spec 030 está cerrada como `Escindida`: sus requisitos se cubren mediante las specs 060 y 061, salvo `FR-030-08`, completado en la propia Spec 030 (T030-13).

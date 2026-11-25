@@ -111,6 +111,27 @@ public class LoginCommandHandlerTests
         result.Error.Message.Should().Be("Correo o contraseña incorrectos.");
     }
 
+    // Regresión FR-060-03 / CA-060-03: la cuenta dada de baja responde como credenciales inválidas.
+    [Fact]
+    public async Task Handle_Should_ReturnGenericUnauthorized_WhenAccountIsSoftDeleted()
+    {
+        var now = new DateTime(2026, 11, 23, 12, 0, 0, DateTimeKind.Utc);
+        var user = User.Create("Baja Logica", "baja@sensus.com", "hash", true, now.AddDays(-30)).Value;
+        user.MarkAsDeleted(now.AddDays(-1));
+
+        var command = new LoginCommand("baja@sensus.com", "CorrectPassword123!");
+        _userRepository.GetByEmailAsync(command.Correo, Arg.Any<CancellationToken>()).Returns(user);
+        _passwordHasher.VerifyPassword(command.Password, user.PasswordHash).Returns(true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Auth.InvalidCredentials");
+        result.Error.Type.Should().Be(Sensus.Domain.Common.ErrorType.Unauthorized);
+        _jwtTokenGenerator.DidNotReceive().GenerateToken(Arg.Any<User>());
+        await _userRepository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+    }
+
     [Fact]
     public async Task Handle_Should_ReturnForbidden_WhenUserIsDeactivated()
     {

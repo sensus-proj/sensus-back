@@ -3,8 +3,7 @@ info:
   title: "Sensus API — Spec 053 Comercios cercanos"
   version: 1.0.0
   description: >
-    Comercios activos dentro de un radio, ordenados por cercanía (SE-008). Retro-spec del comportamiento en
-    producción: hoy devuelve una lista sin paginar con un tope de 50 (brecha FR-053-05).
+    Comercios activos dentro de un radio, ordenados por cercanía (SE-008), con metadatos de paginación.
 servers:
   - url: https://localhost:5001
 paths:
@@ -25,19 +24,51 @@ paths:
         - name: radioMetros
           in: query
           required: false
-          description: Radio en metros. Por defecto 2000; tope de 2000 para invitados y 50000 para registrados
-          schema: { type: integer, minimum: 1 }
+          deprecated: true
+          description: Alias en metros. Si se indica también radiusKm, se usa radiusKm. Un valor no positivo usa el radio por defecto de 2000 m.
+          schema: { type: integer }
+        - name: radiusKm
+          in: query
+          required: false
+          description: Radio positivo en kilómetros. Sin radio se usan 2 km. El servidor aplica un máximo de 2 km para invitados y 50 km para registrados.
+          schema: { type: number, format: double, exclusiveMinimum: 0 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 2147483647, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
         '200':
-          description: Comercios activos ordenados por cercanía (máximo 50)
+          description: Página de comercios activos ordenados por cercanía
           content:
             application/json:
               schema:
-                type: array
-                maxItems: 50
-                items: { $ref: '#/components/schemas/Comercio' }
+                type: object
+                required: [items, totalCount, pageNumber, pageSize, totalPages, hasPreviousPage, hasNextPage]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: '#/components/schemas/Comercio' }
+                  totalCount: { type: integer, minimum: 0 }
+                  pageNumber: { type: integer, minimum: 1 }
+                  pageSize: { type: integer, minimum: 1, maximum: 100 }
+                  totalPages: { type: integer, minimum: 0 }
+                  hasPreviousPage: { type: boolean }
+                  hasNextPage: { type: boolean }
+        '400':
+          description: Coordenadas o radio inválidos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401':
           description: Sin token o token inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '429':
+          description: Límite de solicitudes excedido
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetails' }

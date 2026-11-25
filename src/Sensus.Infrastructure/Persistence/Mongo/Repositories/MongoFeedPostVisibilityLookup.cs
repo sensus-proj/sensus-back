@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Domain.Enums;
 
 namespace Sensus.Infrastructure.Persistence.Mongo.Repositories;
 
@@ -32,22 +33,25 @@ public sealed class MongoFeedPostVisibilityLookup : IFeedPostVisibilityLookup
             return new FeedPostLookupResult(Exists: false, IsVisible: false, AuthorUserId: null);
         }
 
-        bool isDeleted = doc.TryGetValue("isDeleted", out BsonValue deletedVal) && deletedVal.IsBoolean && deletedVal.AsBoolean;
-        string status = doc.TryGetValue("status", out BsonValue statusVal) && statusVal.IsString
-            ? statusVal.AsString.Trim()
-            : "Published";
-
-        bool statusBlocked = status.Equals("Hidden", StringComparison.OrdinalIgnoreCase)
-                             || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
-                             || status.Equals("Deleted", StringComparison.OrdinalIgnoreCase)
-                             || status.Equals("Pending", StringComparison.OrdinalIgnoreCase);
-
         Guid? authorId = TryReadGuid(doc, "authorUserId") ?? TryReadGuid(doc, "userId");
 
         return new FeedPostLookupResult(
             Exists: true,
-            IsVisible: !isDeleted && !statusBlocked,
+            IsVisible: IsVisible(doc),
             AuthorUserId: authorId);
+    }
+
+    /// <summary>
+    /// Lista de permitidos: solo publicaciones con veredicto favorable son visibles (FR-024-02).
+    /// </summary>
+    public static bool IsVisible(BsonDocument doc)
+    {
+        bool isDeleted = doc.TryGetValue("isDeleted", out BsonValue deletedVal) && deletedVal.IsBoolean && deletedVal.AsBoolean;
+        string status = doc.TryGetValue("status", out BsonValue statusVal) && statusVal.IsString
+            ? statusVal.AsString.Trim()
+            : FeedPostStatus.PendingModeration.ToString();
+
+        return !isDeleted && status.Equals(FeedPostStatus.Published.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     internal static Guid? TryReadGuid(BsonDocument doc, string fieldName)

@@ -5,26 +5,27 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Parcial |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado | Implementado |
+| Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ## Tareas
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T037-01 | Actualizar y validar el contrato OpenAPI del spec | Api | `FR-037-01` | — | Pendiente |
-| T037-02 | Implementar: GetMerchantOffersQuery y proyección con métricas | Application | `FR-037-01` | T037-01 | Parcial |
-| T037-03 | Implementar: Agregación por merchantId y conteo de claims/vistas | Infrastructure | `FR-037-01` | T037-02 | Pendiente |
-| T037-04 | Implementar: Endpoint GET /api/v1/merchants/my-offers | Api | `FR-037-01` | T037-03 | Completada |
-| T037-05 | Definir el DTO con métricas agregadas | Application | `FR-037-03` | T037-04 | Pendiente |
-| T037-06 | Optimizar la agregación con índices | Infrastructure | `FR-037-02` | T037-05 | Pendiente |
-| T037-07 | Probar el aislamiento entre comercios | Api | `FR-037-06` | T037-06 | Completada |
-| T037-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-037-01` | T037-07 | Pendiente |
-| T037-09 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-037-01` | T037-08 | Completada |
-| T037-10 | Registrar evidencias del Constitution Check | Docs | `FR-037-01` | T037-09 | Completada |
+| T037-01 | Contrato OpenAPI v2.0.0 con parámetros de paginación, esquema `MerchantOfferDto` y errores 400/401/403 | Api | `FR-037-01` | — | Hecho |
+| T037-02 | `GetMerchantOffersQuery` paginada, validador de borde y retorno `PagedResult<MerchantOfferDto>` | Application | `FR-037-01`, `FR-037-04` | T037-01 | Hecho |
+| T037-03 | Conteo batch de apartados y canjes con `Filter.In` y proyección mínima | Infrastructure | `FR-037-03`, `NFR-037-02` | T037-02 | Hecho |
+| T037-04 | Endpoint `GET /api/v1/merchants/my-offers` con paginación estándar y `ProblemDetails` | Api | `FR-037-02`, `FR-037-04` | T037-03 | Hecho |
+| T037-05 | DTO de inventario con `ActiveClaimsCount`, `RedemptionsCount` y `ViewsCount`; mapeo explícito | Application | `FR-037-03` | T037-04 | Hecho |
+| T037-06 | Índices `ix_offers_merchant_created`, `ix_offers_merchant_status_created` e `ix_offer_claims_offer_status` | Infrastructure | `FR-037-02`, `FR-037-05` | T037-05 | Hecho |
+| T037-07 | Aislamiento entre comercios verificado en unitarias e integración | Api | `FR-037-06` | T037-06 | Hecho |
+| T037-08 | Pruebas de integración: métricas, filtro, vacío, 400, 401, 403, aislamiento y latencia | Pruebas | `FR-037-01` | T037-07 | Hecho |
+| T037-09 | Actualización de `specs/README.md`, `specs/requirements.md`, `checklist.md` y `memory.md` | Docs | `FR-037-01` | T037-08 | Hecho |
+| T037-10 | Evidencias del Constitution Check y cierre de la pregunta de métricas | Docs | `FR-037-01` | T037-09 | Hecho |
 
 ## Notas de ejecución
 
-- Cada tarea se cierra actualizando `checklist.md` y `plan.md` si cambia el diseño.
-- Ninguna tarea se considera terminada sin pruebas verdes y cobertura dentro del umbral (P-V).
-- Los identificadores de requisito remiten a `spec.md` §4 y §5.
+- Cada tarea se cerró actualizando `checklist.md` y `plan.md` cuando cambió el diseño.
+- Las métricas son en tiempo real: vistas desde `Offer.ViewCount` y apartados desde un conteo batch por página.
+- Los totales se obtienen en la misma consulta paginada; no hay segundo recuento independiente.
+- Los requisitos remiten a `spec.md` §4 y §5.

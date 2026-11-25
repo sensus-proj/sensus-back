@@ -89,4 +89,23 @@ public sealed class FeedComment : BaseEntity
             normalizedText,
             utcTimestamp));
     }
+
+    /// <summary>
+    /// Anonimiza el autor conservando el texto ya moderado (Spec 061, FR-061-02).
+    /// Devuelve <c>false</c> si ya estaba anonimizado (idempotencia, FR-061-06).
+    /// </summary>
+    public bool Anonymize()
+    {
+        if (AuthorUserId == Guid.Empty &&
+            AuthorDisplayName == DefaultAuthorDisplayName &&
+            AuthorPhotoUrl is null)
+        {
+            return false;
+        }
+
+        AuthorUserId = Guid.Empty;
+        AuthorDisplayName = DefaultAuthorDisplayName;
+        AuthorPhotoUrl = null;
+        return true;
+    }
 }

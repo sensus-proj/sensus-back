@@ -1,6 +1,7 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Domain.Common;
 using Sensus.Domain.Policies;
 using Sensus.Domain.Repositories;
@@ -14,9 +15,12 @@ namespace Sensus.Application.Comercios.Queries.GetNearbyComercios;
 public sealed record GetNearbyComerciosQuery(
     double Latitud,
     double Longitud,
-    int? RadioMetros = null) : IRequest<Result<IReadOnlyList<ComercioDto>>>;
+    int? RadioMetros = null,
+    double? RadiusKm = null,
+    int Page = 1,
+    int PageSize = GetNearbyComerciosQueryValidator.DefaultPageSize) : IRequest<Result<PagedResult<ComercioDto>>>;
 
-public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyComerciosQuery, Result<IReadOnlyList<ComercioDto>>>
+public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyComerciosQuery, Result<PagedResult<ComercioDto>>>
 {
     private readonly IComercioRepository _comercioRepository;
     private readonly ICurrentUserService _currentUserService;
@@ -32,16 +36,20 @@ public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyCo
         _storeReviewRepository = storeReviewRepository;
     }
 
-    public async Task<Result<IReadOnlyList<ComercioDto>>> Handle(GetNearbyComerciosQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedResult<ComercioDto>>> Handle(GetNearbyComerciosQuery request, CancellationToken cancellationToken)
     {
         var isGuest = _currentUserService.IsGuest;
-        var requestedRadius = request.RadioMetros ?? GuestRadiusPolicy.DefaultRadiusMeters;
+        var requestedRadius = request.RadiusKm is double radiusKm
+            ? (int)Math.Ceiling(Math.Min(radiusKm * 1000, GuestRadiusPolicy.RegisteredMaxRadiusMeters))
+            : request.RadioMetros ?? GuestRadiusPolicy.DefaultRadiusMeters;
         var effectiveRadius = GuestRadiusPolicy.ResolveRadius(isGuest, requestedRadius);
 
-        var comercios = await _comercioRepository.GetNearbyAsync(
+        var (comercios, totalCount) = await _comercioRepository.GetNearbyAsync(
             request.Latitud,
             request.Longitud,
             effectiveRadius,
+            request.Page,
+            request.PageSize,
             cancellationToken);
 
         var dtos = comercios.Select(c => c.ToDto()).ToList();
@@ -59,6 +67,6 @@ public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyCo
                 .ToList();
         }
 
-        return Result.Success<IReadOnlyList<ComercioDto>>(dtos);
+        return Result.Success(new PagedResult<ComercioDto>(dtos, totalCount, request.Page, request.PageSize));
     }
 }

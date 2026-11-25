@@ -33,4 +33,12 @@ public sealed class InMemoryFeedCommentRepository : IFeedCommentRepository
 
     public Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default) =>
         Task.FromResult(_comments.Count(c => c.PostId == postId));
+
+    public Task<int> AnonymizeByAuthorAsync(
+        Guid authorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        int changed = _comments.Count(c => c.AuthorUserId == authorUserId && c.Anonymize());
+        return Task.FromResult(changed);
+    }
 }

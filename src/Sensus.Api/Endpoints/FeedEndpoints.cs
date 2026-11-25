@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Models;
 using Sensus.Application.Feed.Commands.CreateFeedComment;
+using Sensus.Application.Feed.Commands.CreateFeedPost;
+using Sensus.Application.Feed.Commands.DeleteFeedPost;
 using Sensus.Application.Feed.DTOs;
 using Sensus.Application.Feed.Queries.GetPostComments;
 using Sensus.Application.Offers.DTOs;
@@ -16,6 +18,9 @@ namespace Sensus.Api.Endpoints;
 /// </summary>
 public static class FeedEndpoints
 {
+    // Límite de la spec 022 (4,5 MB). El endpoint JSON admite imágenes ya moderadas por ese flujo.
+    private const long MaxFeedImageBytes = 4_500_000;
+
     public static IEndpointRouteBuilder MapFeedEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/feed")
@@ -72,6 +77,100 @@ public static class FeedEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 024: Crear publicación en el feed social.
+        // multipart/form-data permite moderar imagen y texto en la misma solicitud; JSON admite una URL ya moderada.
+        group.MapPost("/posts", async (
+            HttpContext http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            string content = string.Empty;
+            string? imageUrl = null;
+            byte[]? imageBytes = null;
+            string? imageContentType = null;
+
+            if (http.Request.HasFormContentType)
+            {
+                IFormCollection form = await http.Request.ReadFormAsync(ct);
+                content = form["content"].ToString();
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    content = form["text"].ToString();
+                }
+
+                IFormFile? image = form.Files.GetFile("image");
+                if (image is { Length: > 0 })
+                {
+                    // Lista de permitidos (AGENTS.md §8.1): solo formatos soportados por el storage.
+                    string normalizedContentType = (string.IsNullOrWhiteSpace(image.ContentType)
+                            ? "image/jpeg"
+                            : image.ContentType)
+                        .Trim()
+                        .ToLowerInvariant();
+
+                    if (normalizedContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+                    {
+                        return Result.Failure(Error.Validation(
+                            "FeedPost.UnsupportedImageType",
+                            "Formato de imagen no admitido. Use JPEG, PNG o WebP.")).ToHttpResult();
+                    }
+
+                    if (image.Length > MaxFeedImageBytes)
+                    {
+                        return Result.Failure(Error.PayloadTooLarge(
+                            "FeedPost.ImageTooLarge",
+                            "La imagen supera el límite de 4,5 MB.")).ToHttpResult();
+                    }
+
+                    using var buffer = new MemoryStream();
+                    await image.CopyToAsync(buffer, ct);
+                    imageBytes = buffer.ToArray();
+                    imageContentType = normalizedContentType;
+                }
+            }
+            else
+            {
+                CreateFeedPostBody? body = await http.Request.ReadFromJsonAsync<CreateFeedPostBody>(cancellationToken: ct);
+                content = body?.Content ?? body?.Text ?? string.Empty;
+                imageUrl = body?.ImageUrl;
+            }
+
+            Result<FeedPostDto> result = await sender.Send(
+                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType),
+                ct);
+
+            return result.ToCreatedAtResult($"/api/v1/feed/posts/{(result.IsSuccess ? result.Value.Id : string.Empty)}");
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("CreateFeedPost")
+        .WithSummary("Spec 024: Crea una publicación en el feed sujeta a moderación previa obligatoria fail-closed")
+        .Produces<FeedPostDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Spec 024: Eliminar publicación del feed
+        group.MapDelete("/posts/{id:guid}", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteFeedPostCommand(id), ct);
+            return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("DeleteFeedPost")
+        .WithSummary("Spec 024: Elimina una publicación del feed (solo autor original o administrador)")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 025: Comentarios moderados en publicaciones del feed
         group.MapPost("/posts/{id:guid}/comments", async (
             Guid id,
@@ -124,3 +223,5 @@ public static class FeedEndpoints
 }
 
 public sealed record CreateFeedCommentBody(string? Content = null, string? Text = null);
+
+public sealed record CreateFeedPostBody(string? Content = null, string? Text = null, string? ImageUrl = null);

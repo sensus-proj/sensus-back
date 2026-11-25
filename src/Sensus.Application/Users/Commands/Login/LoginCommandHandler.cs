@@ -41,6 +41,13 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<A
             return Result.Failure<AuthResponseDto>(invalidCredentialsError);
         }
 
+        // Spec 060 (FR-060-03): la cuenta dada de baja no puede iniciar sesión y se responde con el
+        // mismo error genérico que para un correo inexistente, sin revelar su existencia.
+        if (user.IsDeleted)
+        {
+            return Result.Failure<AuthResponseDto>(invalidCredentialsError);
+        }
+
         if (!user.Estatus)
         {
             return Result.Failure<AuthResponseDto>(

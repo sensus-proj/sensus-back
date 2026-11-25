@@ -26,6 +26,16 @@ public sealed class MongoSanctionRepository : ISanctionRepository
         return document?.ToDomain();
     }
 
+    public async Task<IReadOnlyList<Sanction>> GetAllByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        List<SanctionDocument> documents = await _context.Sanctions
+            .Find(Builders<SanctionDocument>.Filter.Eq(s => s.UserId, userId))
+            .ToListAsync(cancellationToken);
+        return documents.Select(d => d.ToDomain()).ToList();
+    }
+
     public async Task<Sanction?> GetByMediaIdAsync(Guid mediaId, CancellationToken cancellationToken = default)
     {
         SanctionDocument? document = await _context.Sanctions

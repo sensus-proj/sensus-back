@@ -23,8 +23,8 @@ public class GetNearbyComerciosQueryHandlerTests
     {
         // Arrange
         _currentUserService.IsGuest.Returns(true);
-        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio>());
+        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((Array.Empty<Comercio>(), 0));
 
         var query = new GetNearbyComerciosQuery(19.4326, -99.1332, RadioMetros: 5000);
 
@@ -33,7 +33,7 @@ public class GetNearbyComerciosQueryHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 2000, Arg.Any<CancellationToken>());
+        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 2000, 1, 20, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class GetNearbyComerciosQueryHandlerTests
     {
         // Arrange
         _currentUserService.IsGuest.Returns(false);
-        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 5000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio>());
+        _comercioRepository.GetNearbyAsync(19.4326, -99.1332, 5000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((Array.Empty<Comercio>(), 0));
 
         var query = new GetNearbyComerciosQuery(19.4326, -99.1332, RadioMetros: 5000);
 
@@ -51,7 +51,7 @@ public class GetNearbyComerciosQueryHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 5000, Arg.Any<CancellationToken>());
+        await _comercioRepository.Received(1).GetNearbyAsync(19.4326, -99.1332, 5000, 1, 20, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public class GetNearbyComerciosQueryHandlerTests
 
         var c1 = Comercio.Create(Guid.NewGuid(), "Comercio 1", "Calle 1", "06000", 19.43, -99.13).Value;
         var c2 = Comercio.Create(Guid.NewGuid(), "Comercio 2", "Calle 2", "06000", 19.44, -99.14).Value;
-        _comercioRepository.GetNearbyAsync(19.43, -99.13, 2000, Arg.Any<CancellationToken>())
-            .Returns(new List<Comercio> { c1, c2 });
+        _comercioRepository.GetNearbyAsync(19.43, -99.13, 2000, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((new List<Comercio> { c1, c2 }, 2));
 
         var dict = new Dictionary<Guid, (double AverageRating, int ReviewCount)>
         {
@@ -78,9 +78,9 @@ public class GetNearbyComerciosQueryHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
-        result.Value.First(x => x.Id == c1.Id).AverageRating.Should().Be(4.6);
-        result.Value.First(x => x.Id == c1.Id).ReviewCount.Should().Be(12);
-        result.Value.First(x => x.Id == c2.Id).ReviewCount.Should().Be(0);
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.Items.First(x => x.Id == c1.Id).AverageRating.Should().Be(4.6);
+        result.Value.Items.First(x => x.Id == c1.Id).ReviewCount.Should().Be(12);
+        result.Value.Items.First(x => x.Id == c2.Id).ReviewCount.Should().Be(0);
     }
 }

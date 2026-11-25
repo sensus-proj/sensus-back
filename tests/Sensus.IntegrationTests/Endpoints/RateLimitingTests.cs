@@ -21,103 +21,93 @@ public class RateLimitingTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task RateLimiter_WhenExceedingLimit_Returns429WithRetryAfterAndProblemDetails()
+    public async Task RateLimiter_WhenExceedingRecoverLimit_Returns429WithRetryAfterAndProblemDetails()
     {
-        // Arrange
-        var testIp = "198.51.100.42";
+        var email = "rl.user@sensus.com";
         var correlationId = "corr-rate-limit-test-429";
+        var user = User.Create("Rate Limit Test User", email, "hashed-password", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByEmailAsync(email, Arg.Any<CancellationToken>()).Returns(user);
 
-        var user = User.Create(
-            "Rate Limit Test User",
-            "rl.user@sensus.com",
-            "hashed-password",
-            true,
-            DateTime.UtcNow).Value;
+        var command = new RequestPasswordResetCommand(email);
 
-        _factory.UserRepository.GetByEmailAsync("rl.user@sensus.com", Arg.Any<CancellationToken>())
-            .Returns(user);
-
-        var command = new RequestPasswordResetCommand("rl.user@sensus.com");
-
-        // Act - Recover policy allows 5 requests per window (configured in RateLimitingSettings:Recover: 5 requests)
+        // NFR-029-03: 3 solicitudes por correo y hora; la cuarta debe ser rechazada.
         HttpResponseMessage? lastResponse = null;
-        for (var i = 0; i < 6; i++)
+        for (var i = 0; i < 4; i++)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
             {
                 Content = JsonContent.Create(command)
             };
-            request.Headers.Add("X-Forwarded-For", testIp);
+            request.Headers.Add("X-Forwarded-For", "198.51.100.42");
             request.Headers.Add("X-Correlation-Id", correlationId);
 
             lastResponse = await _client.SendAsync(request);
-            if (i < 5)
+            if (i < 3)
             {
                 lastResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
             }
         }
 
-        // Assert
         lastResponse.Should().NotBeNull();
         lastResponse!.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         lastResponse.Headers.Contains("Retry-After").Should().BeTrue();
 
-        var body = await lastResponse.Content.ReadAsStringAsync();
-        using var jsonDoc = JsonDocument.Parse(body);
+        using var jsonDoc = JsonDocument.Parse(await lastResponse.Content.ReadAsStringAsync());
         var root = jsonDoc.RootElement;
-
         root.GetProperty("status").GetInt32().Should().Be(429);
         root.GetProperty("title").GetString().Should().Be("Too Many Requests");
         root.GetProperty("correlationId").GetString().Should().Be(correlationId);
     }
 
     [Fact]
-    public async Task RateLimiter_WhenDifferentClientIp_HasSeparateQuotas()
+    public async Task RateLimiter_WhenDifferentEmail_HasSeparateQuotas()
     {
-        // Arrange
-        var ipA = "198.51.100.51";
-        var ipB = "198.51.100.52";
+        var emailA = "quota.a@sensus.com";
+        var emailB = "quota.b@sensus.com";
 
-        var user = User.Create(
-            "Separate Quota User",
-            "quota.user@sensus.com",
-            "hashed-password",
-            true,
-            DateTime.UtcNow).Value;
-
-        _factory.UserRepository.GetByEmailAsync("quota.user@sensus.com", Arg.Any<CancellationToken>())
-            .Returns(user);
-
-        var command = new RequestPasswordResetCommand("quota.user@sensus.com");
-
-        // Exhaust IP A
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 3; i++)
         {
-            using var reqA = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
-            {
-                Content = JsonContent.Create(command)
-            };
-            reqA.Headers.Add("X-Forwarded-For", ipA);
-            var resA = await _client.SendAsync(reqA);
-            resA.StatusCode.Should().Be(HttpStatusCode.Accepted);
+            var responseA = await _client.PostAsJsonAsync(
+                "/api/v1/auth/recover",
+                new RequestPasswordResetCommand(emailA));
+            responseA.StatusCode.Should().Be(HttpStatusCode.Accepted);
         }
 
-        // IP A 6th request is blocked
-        using var reqABlocked = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
-        {
-            Content = JsonContent.Create(command)
-        };
-        reqABlocked.Headers.Add("X-Forwarded-For", ipA);
-        var resABlocked = await _client.SendAsync(reqABlocked);
-        resABlocked.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        var blockedA = await _client.PostAsJsonAsync(
+            "/api/v1/auth/recover",
+            new RequestPasswordResetCommand(emailA));
+        blockedA.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
-        // IP B should still be allowed
-        using var reqB = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
+        var responseB = await _client.PostAsJsonAsync(
+            "/api/v1/auth/recover",
+            new RequestPasswordResetCommand(emailB));
+        responseB.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    [Fact]
+    public async Task RateLimiter_SameEmailFromDifferentIp_SharesQuota()
+    {
+        var email = "quota.shared.ip@sensus.com";
+
+        for (var i = 0; i < 3; i++)
         {
-            Content = JsonContent.Create(command)
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
+            {
+                Content = JsonContent.Create(new RequestPasswordResetCommand(email))
+            };
+            request.Headers.Add("X-Forwarded-For", i % 2 == 0 ? "198.51.100.61" : "198.51.100.62");
+
+            var response = await _client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        }
+
+        using var blockedRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/recover")
+        {
+            Content = JsonContent.Create(new RequestPasswordResetCommand(email))
         };
-        reqB.Headers.Add("X-Forwarded-For", ipB);
-        var resB = await _client.SendAsync(reqB);
-        resB.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        blockedRequest.Headers.Add("X-Forwarded-For", "198.51.100.63");
+
+        var blocked = await _client.SendAsync(blockedRequest);
+        blocked.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
     }
 }

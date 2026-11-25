@@ -4,8 +4,8 @@ using Sensus.Domain.Enums;
 namespace Sensus.Domain.Repositories;
 
 /// <summary>
-/// Repositorio de evidencia de moderación (Spec 021).
-/// Deliberadamente no expone actualización ni borrado: el registro es de solo adición (NFR-021-01).
+/// Repositorio de evidencia de moderación (Spec 021) y auditoría anonimizada tras baja de cuenta (Spec 061).
+/// Deliberadamente no expone actualización ni borrado: el registro es de solo adición (NFR-021-01, FR-061-05).
 /// </summary>
 public interface IModerationAuditRepository
 {
@@ -23,5 +23,13 @@ public interface IModerationAuditRepository
         DateTime? toUtc,
         int page,
         int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Inserta la entrada anonimizada si no existe otra con el mismo identificador determinista.
+    /// Devuelve <c>true</c> solo cuando se insertó una entrada nueva (idempotencia, FR-061-05, FR-061-06).
+    /// </summary>
+    Task<bool> AddIfNotExistsAsync(
+        ModerationAudit entry,
         CancellationToken cancellationToken = default);
 }

@@ -24,6 +24,61 @@ public sealed class NotificationMongoRepositoryTests : IAsyncLifetime
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
     [Fact]
+    public async Task OfferClaim_LastUnitAndActiveClaimAreUniqueUnderConcurrency()
+    {
+        var now = new DateTime(2026, 11, 22, 12, 0, 0, DateTimeKind.Utc);
+        var offers = new MongoOfferRepository(_context, NullLogger<MongoOfferRepository>.Instance);
+        var claims = new MongoOfferClaimRepository(_context, NullLogger<MongoOfferClaimRepository>.Instance);
+        var offer = Offer.Create(Guid.NewGuid(), "Última unidad", "Disponible para recoger",
+            100m, 10, 1, now.AddHours(-1), now.AddHours(1), nowUtc: now).Value;
+        await offers.AddAsync(offer);
+
+        var reservations = await Task.WhenAll(
+            offers.TryReserveStockAsync(offer.Id, now),
+            offers.TryReserveStockAsync(offer.Id, now));
+
+        Assert.Single(reservations, reserved => reserved);
+        Assert.Equal(0, (await offers.GetByIdAsync(offer.Id))!.Stock);
+
+        var userId = Guid.NewGuid();
+        var first = OfferClaim.Create(userId, offer.Id, offer.MerchantId, now).Value;
+        var second = OfferClaim.Create(userId, offer.Id, offer.MerchantId, now).Value;
+        Assert.True(first.AssignCodeHash(new string('a', 64)).IsSuccess);
+        Assert.True(second.AssignCodeHash(new string('b', 64)).IsSuccess);
+
+        var inserted = await Task.WhenAll(claims.TryAddAsync(first), claims.TryAddAsync(second));
+
+        Assert.Single(inserted, added => added);
+        Assert.Equal(1, await claims.GetActiveClaimCountAsync(offer.Id));
+    }
+
+    [Fact]
+    public async Task NearbyMerchants_ReturnsStablePagesAndCountsOnlyActiveMerchantsInsideRadius()
+    {
+        var repository = new MongoComercioRepository(_context, NullLogger<MongoComercioRepository>.Instance);
+        var nearest = Comercio.Create(Guid.NewGuid(), "Tienda Uno", "Calle Uno 1", "03100", 19.431, -99.133).Value;
+        var second = Comercio.Create(Guid.NewGuid(), "Tienda Dos", "Calle Dos 2", "03100", 19.435, -99.133).Value;
+        var inactive = Comercio.Create(Guid.NewGuid(), "Tienda Tres", "Calle Tres 3", "03100", 19.432, -99.133).Value;
+        var distant = Comercio.Create(Guid.NewGuid(), "Tienda Cuatro", "Calle Cuatro 4", "03100", 19.471, -99.133).Value;
+        inactive.Deactivate();
+        await repository.AddAsync(second);
+        await repository.AddAsync(inactive);
+        await repository.AddAsync(nearest);
+        await repository.AddAsync(distant);
+
+        var firstPage = await repository.GetNearbyAsync(19.432, -99.133, 2_000, 1, 1);
+        var secondPage = await repository.GetNearbyAsync(19.432, -99.133, 2_000, 2, 1);
+        var beyondLastPage = await repository.GetNearbyAsync(19.432, -99.133, 2_000, int.MaxValue, 100);
+
+        Assert.Equal(nearest.Id, Assert.Single(firstPage.Items).Id);
+        Assert.Equal(second.Id, Assert.Single(secondPage.Items).Id);
+        Assert.Empty(beyondLastPage.Items);
+        Assert.Equal(2, firstPage.TotalCount);
+        Assert.Equal(2, secondPage.TotalCount);
+        Assert.Equal(2, beyondLastPage.TotalCount);
+    }
+
+    [Fact]
     public async Task ReserveClaimPush_AllowsOneConcurrentAttemptAndDeclaresExpiry()
     {
         var store = new MongoClaimPushReceiptStore(_context);

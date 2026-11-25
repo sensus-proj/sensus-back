@@ -20,6 +20,7 @@ cambiarla se crea una nueva que la sustituya y se marca la anterior como `Sustit
 | [0013](0013-contadores-presupuesto-dynamodb.md) | Contadores atómicos de presupuesto y cuota de Sensi IA en Amazon DynamoDB | Aceptada | 2026-11-15 |
 | [0014](0014-redis-en-vpc-y-pausa-nocturna.md) | Redis (Valkey Serverless) en VPC y pausa nocturna de la infraestructura | Aceptada | 2026-11-19 |
 | [0015](0015-ranking-aprendido-mlnet.md) | Ranking aprendido del feed con Random Forest en ML.NET | Propuesta (diferida hasta tener datos) | 2026-11-20 |
+| [0015](0015-moderacion-publicaciones-solo-texto.md) | Moderación de publicaciones de solo texto | Aceptada | 2026-11-22 |
 
 ---
 

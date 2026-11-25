@@ -49,7 +49,8 @@ DynamoDB `PAY_PER_REQUEST` dentro del Free Tier permanente. Estimado: 0.00 USD/m
 
 - Unitarias de `AiBudgetGuard` con `IBudgetCounterStore` simulado (disponible, fallo, techo, cuota, alerta).
 - Pruebas de `DynamoDbBudgetCounterStore` con doble de `IAmazonDynamoDB`: forma de la solicitud, fallo, *timeout*, TTL vencido, sin configuración.
-- Pendiente: DynamoDB Local con Testcontainers (requiere Docker).
+- `T049-09`: ejecutar DynamoDB Local efímero con el Testcontainers existente, en un puerto local asignado dinámicamente. Crear una tabla de prueba con el esquema de producción y comprobar incrementos concurrentes, persistencia del TTL original y lectura a cero después del vencimiento. Sin recursos AWS adicionales ni cambios de permisos.
+- `T049-11`: comprobar la decisión, el registro de gasto y la cuota de `AiBudgetGuard` contra DynamoDB Local. Distinguir una clave ausente o vencida de un registro existente con importe o vencimiento inválidos. En el segundo caso, el acceso al modelo se bloquea. El reloj UTC compartido permite verificar los periodos sin depender de la fecha del equipo.
 - Verificación de IaC con `cdk synth`/`cdk diff`.
 
 ## 8. Constitution Check
@@ -60,7 +61,7 @@ DynamoDB `PAY_PER_REQUEST` dentro del Free Tier permanente. Estimado: 0.00 USD/m
 | II. Clean Architecture | PASS | Contrato en Application, SDK solo en Infrastructure |
 | III. CQRS y contratos | PASS | Sin cambios de API |
 | IV. Seguridad y privacidad | PASS | IAM mínimo, sin PII ni secretos, *fail-closed* |
-| V. Verificación automatizada | PASS CON OBSERVACIONES | Falta DynamoDB Local (T049-09) |
+| V. Verificación automatizada | PASS local | DynamoDB Local ejecutado con Testcontainers (T049-09) |
 | VI. Costo cero e IaC | PASS | Free Tier permanente, CDK, etiquetas |
 | VII. Rendimiento y observabilidad | PASS CON OBSERVACIONES | NFR-049-04 pendiente de prueba de carga |
 

@@ -5,27 +5,29 @@
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Retro-spec alineada a implementación |
 | Versión | 1.0.0 |
-| Constitution Check | FAIL (retro-spec con brecha registrada `FR-058-04`) |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Constitution Check | Paginación verificada en local. Escaneos de CI pendientes. |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
-`CommunityEndpoints.cs` mapea `GET /api/v1/community/friends-activity`, despachando `GetFriendsCommunityActivityQuery` mediante MediatR. El handler resuelve las amistades aceptadas del usuario actual, consulta de manera acotada los likes de ofertas (`IOfferLikeRepository.GetByUserIdsAsync`) y reseñas/respuestas recientes (`IStoreReviewRepository.GetRecentActivityByUserIdsAsync`), enriquece nombres de comercio/producto/autor evitando PII sensible y ordena cronológicamente de más reciente a más antiguo.
+`CommunityEndpoints.cs` mapea `GET /api/v1/community/friends-activity` con MediatR. El handler resuelve las amistades aceptadas del usuario actual y delega el conteo, página y proyección a `ICommunityActivityReader`.
 
 ## 2. Cambios por capa
 
+Para `FR-058-04` la API devuelve `PagedResult`. Application resuelve las amistades aceptadas y entrega al repositorio los IDs permitidos, más la cuenta autenticada. MongoDB une las tres fuentes con `$unionWith`, filtra autores y recursos visibles, y devuelve total y página con `$facet`. Las respuestas se ordenan por su propia fecha y se excluye el texto de la reseña original cuando su autor no es visible. Los índices por autor de reseña, autor de respuesta y autor del «Me gusta» evitan recorridos completos. La ficha y el contrato de salida contienen solo datos autorizados del evento. Costo incremental estimado de AWS de 0 USD.
+
 | Capa | Cambio |
 |---|---|
-| Domain | Métodos `GetByUserIdsAsync` en `IOfferLikeRepository` y `GetRecentActivityByUserIdsAsync` en `IStoreReviewRepository` |
-| Application | `GetFriendsCommunityActivityQuery`, `GetFriendsCommunityActivityQueryHandler`, `CommunityActivityItemDto` |
-| Infrastructure | Implementaciones de consulta en `MongoOfferLikeRepository` y `MongoStoreReviewRepository` |
+| Domain | Amistades aceptadas, likes, reseñas y respuestas |
+| Application | `GetFriendsCommunityActivityQuery`, validador, `ICommunityActivityReader` y `CommunityActivityItemDto` |
+| Infrastructure | Lectura consolidada en `MongoCommunityActivityReader` |
 | Api | `CommunityEndpoints.cs` mapeado en `Program.cs` |
-| Tests | `SocialHandlersTests`, `SocialEndpointsIntegrationTests`, `MongoSocialRepositoriesTests`, `CustomWebApplicationFactory` |
+| Tests | `CommunityEndpointsTests`, `MongoCommunityActivityTests`, `CustomWebApplicationFactory` |
 
 ## 3. Modelo de datos e índices
 
 - Reutiliza colecciones `friend_requests` (Spec 050), `offer_likes` (Spec 057) y `store_reviews` (Spec 056).
-- Consultas filtran por `$in` sobre `visibleActorIds` ordenado por `CreatedAtUtc desc` con `Limit(effectiveLimit)`.
+- Las tres ramas filtran por autor con índice, combinan resultados y ordenan por fecha descendente e ID de evento.
 
 ## 4. Seguridad
 
@@ -34,12 +36,12 @@
 | Amenaza | Categoría | Mitigación | Riesgo residual |
 |---|---|---|---|
 | Acceso de no amigos o invitados a actividad social | Divulgación / Elevación de privilegios | `RegisteredUserPolicy` + filtro estricto `FriendRequestStatus.Accepted` | Bajo |
-| Solicitud de `limit` abusivo (e.g. `1000000`) para causar DoS | Denegación de servicio | `Math.Clamp(request.Limit, 1, 100)` + `ReadHeavyPolicy` | Bajo |
+| Solicitud de tamaño de página abusivo | Denegación de servicio | Validación 1–100, índices por autor y `ReadHeavyPolicy` | Bajo |
 | Fuga de correo electrónico o dirección residencial en actividad | Divulgación de información | `CommunityActivityItemDto` solo incluye nombre, foto, título del objetivo, calificación y comentario | Bajo |
 
 ## 5. Observabilidad y rendimiento
 
-- Lecturas paralelizables o secuenciales acotadas a `effectiveLimit <= 100` entidades por tipo antes de proyectar.
+- Una agregación devuelve el total y hasta 100 eventos. La consulta de perfiles se limita a la página.
 
 ## 6. Costo AWS
 
@@ -47,8 +49,8 @@
 
 ## 7. Estrategia de pruebas
 
-- Unitarias (`Sensus.Application.UnitTests`): filtrado exclusivo de amigos aceptados + usuario propio, exclusión de desconocidos/pendientes y orden descendente.
-- Integración (`Sensus.IntegrationTests`): `GET /api/v1/community/friends-activity` (200 con amigos y likes/reseñas, 401 sin token, 403 invitado).
+- HTTP: identidad registrada, paginación inválida y exclusión de amistades pendientes.
+- MongoDB real: mezcla de likes, reseñas y respuestas, orden cronológico y exclusión de terceros y borradores.
 
 ## 8. Constitution Check
 
@@ -60,8 +62,8 @@
 | IV. Seguridad y moderación | PASS | `RegisteredUserPolicy`, `ReadHeavyPolicy`, solo amigos aceptados |
 | V. Cobertura y pruebas reales | PASS | Unitarias + integración real |
 | VI. Costo AWS | PASS | 0 USD |
-| VII. Paginación e índices | FAIL | Brecha `FR-058-04`: usa `limit` acotado `[1, 100]` en lugar de `PagedResult` |
-| VIII. DevSecOps / STRIDE | PASS | STRIDE evaluado y privacidad de red social verificada |
+| VII. Paginación e índices | PASS local | `PagedResult` y consulta indexada para las tres fuentes |
+| VIII. DevSecOps / STRIDE | Pendiente | STRIDE evaluado. Faltan escaneos bloqueantes de CI. |
 
 ## 9. Riesgos de implementación
 
@@ -72,5 +74,5 @@
 1. `T058-01` Documentar `CommunityEndpoints`, `GetFriendsCommunityActivityQuery` y `CommunityActivityItemDto`
 2. `T058-02` Publicar `contracts/openapi.yaml`
 3. `T058-03` Trazabilidad `FR-058-*` y guardas ante nulos de repositorios/ofertas eliminadas
-4. `T058-04` Pruebas de integración en `SocialEndpointsIntegrationTests` y `MongoSocialRepositoriesTests`
-5. `T058-05` Deuda futura: migrar respuesta a `PagedResult` (`FR-058-04`)
+4. `T058-04` Pruebas HTTP y MongoDB en `CommunityEndpointsTests` y `MongoCommunityActivityTests`
+5. `T058-05` Respuesta paginada con `PagedResult` (`FR-058-04`)
