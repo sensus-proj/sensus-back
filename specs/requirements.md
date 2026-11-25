@@ -227,6 +227,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-029-10` | 029 | FR | Rechazar cualquier transporte de correo sin TLS 1.2 o superior (sin excepción HTTP; EX-004 retirada) | Must | Implementado |
 | `FR-029-11` | 029 | FR | Retirar la credencial Somee del código y la configuración; baja operativa externa documentada del parámetro SSM (sin rotación: se da de baja) | Must | Implementado |
 | `FR-029-12` | 029 | FR | Enviar el correo por Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must | Implementado |
+| `FR-029-13` | 029 | FR | Permiso `ses:SendEmail` de la Lambda en IaC y parámetros SSM `SesEmailSettings/From` y `/Region` antes de desplegar | Must | Implementado |
 | `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado (060; `204` conservado) |
 | `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Implementado (060) |
 | `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado (060) |
