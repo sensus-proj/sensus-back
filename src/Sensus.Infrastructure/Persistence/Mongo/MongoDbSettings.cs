@@ -26,6 +26,7 @@ public sealed class MongoDbSettings
     public string OfferInteractionsCollectionName { get; set; } = "offer_interactions";
     public string FeedPostsCollectionName { get; set; } = "feed_posts";
     public string FeedCommentsCollectionName { get; set; } = "feed_comments";
+    public string FeedPostLikesCollectionName { get; set; } = "feed_post_likes";
     public string ContentReportsCollectionName { get; set; } = "content_reports";
     public string OfferStatusHistoryCollectionName { get; set; } = "offer_status_history";
     public string OfferFavoritesCollectionName { get; set; } = "offer_favorites";

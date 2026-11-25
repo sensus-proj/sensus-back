@@ -59,6 +59,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IFeedPostRepository FeedPostRepository { get; } = Substitute.For<IFeedPostRepository>();
     public IFeedCommentRepository FeedCommentRepository { get; } = Substitute.For<IFeedCommentRepository>();
     public IFeedPostVisibilityLookup FeedPostVisibilityLookup { get; } = Substitute.For<IFeedPostVisibilityLookup>();
+    public IFeedPostLikeRepository FeedPostLikeRepository { get; } = Substitute.For<IFeedPostLikeRepository>();
     public IContentReportRepository ContentReportRepository { get; } = Substitute.For<IContentReportRepository>();
     public IReportTargetService ReportTargetService { get; } = Substitute.For<IReportTargetService>();
     public IOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = Substitute.For<IOfferStatusHistoryRepository>();
@@ -268,6 +269,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IFeedPostVisibilityLookup>();
             services.AddSingleton(FeedPostVisibilityLookup);
+
+            // Me gusta en publicaciones (Spec 039)
+            services.RemoveAll<IFeedPostLikeRepository>();
+            services.AddSingleton(FeedPostLikeRepository);
 
             services.RemoveAll<IContentReportRepository>();
             services.AddSingleton(ContentReportRepository);

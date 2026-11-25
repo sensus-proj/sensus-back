@@ -166,6 +166,11 @@ public sealed class MongoDbContext
         _database?.GetCollection<OfferStatusHistoryDocument>(_settings.OfferStatusHistoryCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    /// <summary>Me gusta de publicaciones del feed (Spec 039).</summary>
+    public IMongoCollection<FeedPostLikeDocument> FeedPostLikes =>
+        _database?.GetCollection<FeedPostLikeDocument>(_settings.FeedPostLikesCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     public IMongoCollection<FeedPostDocument> FeedPosts =>
         _database?.GetCollection<FeedPostDocument>(_settings.FeedPostsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
@@ -709,6 +714,25 @@ public sealed class MongoDbContext
             FeedPosts.Indexes.CreateOne(new CreateIndexModel<FeedPostDocument>(
                 postStatusKeys,
                 new CreateIndexOptions { Name = "ix_feed_posts_status_created_at" }));
+
+            // Spec 026 (NFR-026-02): feed cercano. Filtro por estado y ubicación, orden por fecha descendente.
+            // El 2dsphere omite documentos sin ubicación (FR-026-05).
+            var postNearbyKeys = Builders<FeedPostDocument>.IndexKeys
+                .Ascending(p => p.Status)
+                .Geo2DSphere(p => p.Location)
+                .Descending(p => p.CreatedAtUtc);
+            FeedPosts.Indexes.CreateOne(new CreateIndexModel<FeedPostDocument>(
+                postNearbyKeys,
+                new CreateIndexOptions { Name = "ix_feed_posts_status_location_created_at" }));
+
+            // Spec 039 (FR-039-04): un solo me gusta por publicación y usuario. El prefijo postId
+            // también cubre el conteo por publicación (FR-039-02) sin recorrer la colección.
+            var postLikeKeys = Builders<FeedPostLikeDocument>.IndexKeys
+                .Ascending(l => l.PostId)
+                .Ascending(l => l.UserId);
+            FeedPostLikes.Indexes.CreateOne(new CreateIndexModel<FeedPostLikeDocument>(
+                postLikeKeys,
+                new CreateIndexOptions { Name = "ux_feed_post_likes_post_user", Unique = true }));
 
             // Spec 025: comentarios de publicaciones paginados cronológicamente
             var feedCommentKeys = Builders<FeedCommentDocument>.IndexKeys

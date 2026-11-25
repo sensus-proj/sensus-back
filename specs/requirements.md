@@ -187,14 +187,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-025-06` | 025 | FR | Ordenar los comentarios por fecha ascendente | Should | Implementado |
 | `NFR-025-01` | 025 | NFR | Latencia de listado | p95 < 400 ms | Implementado |
 | `NFR-025-02` | 025 | NFR | Paginación | 20 por defecto, 100 máximo | Implementado |
-| `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Pendiente |
-| `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Pendiente |
-| `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Pendiente |
-| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Pendiente |
-| `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Pendiente |
-| `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Pendiente |
-| `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente |
-| `NFR-026-02` | 026 | NFR | Índice | Compuesto por status + location + createdAt | Pendiente |
+| `FR-026-01` | 026 | FR | Listar publicaciones publicadas dentro del radio, en orden cronológico inverso | Must | Implementado |
+| `FR-026-02` | 026 | FR | Excluir contenido en cuarentena, rechazado o eliminado | Must | Implementado |
+| `FR-026-03` | 026 | FR | Aplicar paginación estándar | Must | Implementado |
+| `FR-026-04` | 026 | FR | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must | Implementado |
+| `FR-026-05` | 026 | FR | Excluir publicaciones sin ubicación del feed cercano | Must | Implementado |
+| `FR-026-06` | 026 | FR | Usar caché de corta duración para páginas recurrentes | Should | Implementado |
+| `NFR-026-01` | 026 | NFR | Latencia del feed | p95 < 300 ms con caché | Pendiente de prueba de carga |
+| `NFR-026-02` | 026 | NFR | Índice | Compuesto por status + location + createdAt | Implementado |
 | `FR-027-01` | 027 | FR | Registrar token de dispositivo con plataforma y deviceId | Must | Implementado |
 | `FR-027-02` | 027 | FR | Actualizar el token existente sin duplicar el dispositivo | Must | Implementado |
 | `FR-027-03` | 027 | FR | Despachar notificaciones mediante IPushDispatcher | Must | Parcial |
@@ -319,14 +319,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-038-06` | 038 | FR | Limitar la operación a 120 alternancias por usuario y hora (`FavoritesPolicy`) | Should | Implementado |
 | `NFR-038-01` | 038 | NFR | Latencia de la operación | p95 < 300 ms | Implementado |
 | `NFR-038-02` | 038 | NFR | Consistencia | Cero conteos negativos | Implementado |
-| `FR-039-01` | 039 | FR | Alternar el me gusta del usuario autenticado sobre una publicación | Must | Pendiente |
-| `FR-039-02` | 039 | FR | Devolver el estado resultante y el conteo actualizado | Must | Pendiente |
-| `FR-039-03` | 039 | FR | Rechazar publicaciones no visibles con 404 | Must | Pendiente |
-| `FR-039-04` | 039 | FR | Garantizar un solo registro por usuario y publicación | Must | Pendiente |
-| `FR-039-05` | 039 | FR | Mantener el conteo consistente ante peticiones repetidas | Must | Pendiente |
-| `FR-039-06` | 039 | FR | Limitar la operación a 60 alternancias por usuario y hora | Should | Pendiente |
-| `NFR-039-01` | 039 | NFR | Latencia de la operación | p95 < 300 ms | Pendiente |
-| `NFR-039-02` | 039 | NFR | Consistencia del conteo | Cero conteos negativos | Pendiente |
+| `FR-039-01` | 039 | FR | Alternar el me gusta del usuario autenticado sobre una publicación | Must | Implementado |
+| `FR-039-02` | 039 | FR | Devolver el estado resultante y el conteo actualizado | Must | Implementado |
+| `FR-039-03` | 039 | FR | Rechazar publicaciones no visibles con 404 | Must | Implementado |
+| `FR-039-04` | 039 | FR | Garantizar un solo registro por usuario y publicación | Must | Implementado |
+| `FR-039-05` | 039 | FR | Mantener el conteo consistente ante peticiones repetidas | Must | Implementado |
+| `FR-039-06` | 039 | FR | Limitar la operación a 60 alternancias por usuario y hora | Should | Implementado |
+| `NFR-039-01` | 039 | NFR | Latencia de la operación | p95 < 300 ms | Pendiente de prueba de carga |
+| `NFR-039-02` | 039 | NFR | Consistencia del conteo | Cero conteos negativos | Implementado |
 | `FR-040-01` | 040 | FR | Crear un reporte sobre una oferta, publicación o comentario existente | Must | Implementado |
 | `FR-040-02` | 040 | FR | Aceptar solo motivos tipificados: spam, ofensivo, fraude u otro | Must | Implementado |
 | `FR-040-03` | 040 | FR | Limitar los detalles a 500 caracteres | Must | Implementado |

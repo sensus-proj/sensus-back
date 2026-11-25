@@ -1,61 +1,121 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 026 Feed geolocalizado"
-  version: 1.0.0
-  description: "Contrato en revisión. La proyección de publicaciones está pendiente del contrato de lectura de la Spec 024."
+  version: 1.1.0
+  description: >-
+    Contrato implementado de la Spec 026. Incluye la ubicación opcional que el autor comparte al
+    crear la publicación (extensión compatible del contrato de la Spec 024).
 servers:
   - url: https://localhost:5001
 paths:
   /api/v1/feed/nearby:
     get:
+      operationId: GetNearbyFeed
       summary: Listar publicaciones cercanas en orden cronológico inverso
+      description: >-
+        Solo publicaciones con estado publicado, no eliminadas y con ubicación dentro del radio.
+        Orden por `createdAtUtc` descendente con `id` como desempate estable (CA-026-07).
+        Las páginas se guardan en caché con el TTL configurado `Redis:TtlByEntityMinutes:Feed`
+        y se invalidan al crear o eliminar una publicación (CA-026-06).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: lat
           in: query
           required: true
           description: Latitud del centro de búsqueda.
-          schema:
-            type: number
-            minimum: -90
-            maximum: 90
+          schema: { type: number, minimum: -90, maximum: 90 }
         - name: lng
           in: query
           required: true
           description: Longitud del centro de búsqueda.
-          schema:
-            type: number
-            minimum: -180
-            maximum: 180
+          schema: { type: number, minimum: -180, maximum: 180 }
         - name: radiusKm
           in: query
           description: Radio en kilómetros, con un máximo de 5 km inclusive.
-          schema:
-            type: number
-            exclusiveMinimum: 0
-            maximum: 5
+          schema: { type: number, exclusiveMinimum: 0, maximum: 5, default: 5 }
         - name: page
           in: query
           description: Número de página, empezando en 1.
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
+          schema: { type: integer, minimum: 1, default: 1 }
         - name: pageSize
           in: query
           description: Número de publicaciones por página.
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
-        '200': { description: Página de publicaciones visibles con ubicación dentro del radio. }
-        '400': { description: Coordenadas, radio o paginación inválidos. }
+        '200':
+          description: Página de publicaciones visibles con ubicación dentro del radio.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NearbyFeedPage' }
+        '400':
+          description: Coordenadas, radio o paginación ausentes, no numéricos o fuera de rango.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '401': { description: No autenticado }
+        '403': { description: Token de invitado; se requiere usuario registrado. }
+        '429': { description: Límite de solicitudes superado (política ReadHeavy). }
+  /api/v1/feed/posts:
+    post:
+      operationId: CreateFeedPost
+      summary: Crear publicación (Spec 024) con ubicación opcional para el feed cercano
+      description: >-
+        Extensión de la Spec 026: `latitude` y `longitude` son opcionales y van juntas. Sin ubicación,
+        la publicación no aparece en `/feed/nearby` (FR-026-05). En `multipart/form-data` se envían
+        como campos de texto con el mismo nombre. Las coordenadas no se devuelven en el feed.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string, minLength: 1, maxLength: 500 }
+                imageUrl: { type: string, format: uri }
+                latitude: { type: number, minimum: -90, maximum: 90 }
+                longitude: { type: number, minimum: -180, maximum: 180 }
+              dependentRequired:
+                latitude: [longitude]
+                longitude: [latitude]
+      responses:
+        '201': { description: Publicación creada. }
+        '400': { description: Contenido inválido o ubicación incompleta o fuera de rango. }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    NearbyFeedPost:
+      type: object
+      required: [id, authorUserId, authorDisplayName, content, createdAtUtc]
+      properties:
+        id: { type: string, format: uuid }
+        authorUserId: { type: string, format: uuid }
+        authorDisplayName: { type: string }
+        authorPhotoUrl: { type: [string, 'null'] }
+        content: { type: string }
+        imageUrl: { type: [string, 'null'] }
+        createdAtUtc: { type: string, format: date-time }
+    NearbyFeedPage:
+      type: object
+      required: [items, totalCount, pageNumber, pageSize, totalPages, hasPreviousPage, hasNextPage]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NearbyFeedPost' }
+        totalCount: { type: integer, minimum: 0 }
+        pageNumber: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        totalPages: { type: integer, minimum: 0 }
+        hasPreviousPage: { type: boolean }
+        hasNextPage: { type: boolean }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        correlationId: { type: string }

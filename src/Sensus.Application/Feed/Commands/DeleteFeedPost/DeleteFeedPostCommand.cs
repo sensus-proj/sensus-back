@@ -26,6 +26,7 @@ public sealed class DeleteFeedPostCommandHandler : IRequestHandler<DeleteFeedPos
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IMediaStorage? _mediaStorage;
+    private readonly ICacheService? _cacheService;
     private readonly ILogger<DeleteFeedPostCommandHandler> _logger;
 
     public DeleteFeedPostCommandHandler(
@@ -33,8 +34,10 @@ public sealed class DeleteFeedPostCommandHandler : IRequestHandler<DeleteFeedPos
         ICurrentUserService currentUserService,
         IDateTimeProvider dateTimeProvider,
         ILogger<DeleteFeedPostCommandHandler> logger,
-        IMediaStorage? mediaStorage = null)
+        IMediaStorage? mediaStorage = null,
+        ICacheService? cacheService = null)
     {
+        _cacheService = cacheService;
         _postRepository = postRepository;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
@@ -68,6 +71,12 @@ public sealed class DeleteFeedPostCommandHandler : IRequestHandler<DeleteFeedPos
         }
 
         await _postRepository.UpdateAsync(post, cancellationToken);
+
+        // Spec 026 (CA-026-06): la publicación eliminada sale de items y del total en la siguiente lectura.
+        if (_cacheService is not null)
+        {
+            await _cacheService.RemoveByPrefixAsync(FeedCacheKeys.NearbyPrefix, cancellationToken);
+        }
 
         if (!string.IsNullOrWhiteSpace(post.ImagePublicId))
         {

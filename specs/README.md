@@ -30,7 +30,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 023 | [Entrega de contenido por CDN](023-entrega-cdn/spec.md) | Multimedia | Nuevo | 4 | Implementado | 022 |
 | 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Parcial | 017, 022 |
 | 025 | [Comentarios del feed](025-comentarios/spec.md) | Contenido | Nuevo | 3 | Implementado | 017, 024, 010 |
-| 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 007, 010 |
+| 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Backend completado | 024, 007, 010 |
 | 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 013 |
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
 | 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Implementado | 001, 004, 013 |
@@ -43,7 +43,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 035 |
 | 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 033, 010 |
 | 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 032 |
-| 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Pendiente | 024, 013 |
+| 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Backend completado | 024, 013 |
 | 040 | [Reportes de contenido](040-reportes-contenido/spec.md) | Contenido | Nuevo | 3 | Implementado | 024, 025, 017, 018 |
 | 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 011, 013, 052 |
 | 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 013, 032, 033, 048, 052, 054, 055 |

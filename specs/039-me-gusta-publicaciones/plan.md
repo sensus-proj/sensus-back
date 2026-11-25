@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | En revisión. Falta el contrato de visibilidad de la Spec 024. |
+| Estado del plan | Implementado. Visibilidad tomada del contrato persistido de la Spec 024 (`IFeedPostVisibilityLookup`). |
 | Versión | 1.0.0 |
-| Constitution Check | Pendiente. Falta verificar la integración con la Spec 024 y el Principio VIII. |
+| Constitution Check | PASS salvo Principio VIII (escaneos de CI pendientes) |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
@@ -23,8 +23,10 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 
 ## 3. Modelo de datos e índices
 
-- post_likes con índice único postId + userId; posts.likeCount
-- Aplicar la intención `liked` de forma atómica. Incrementar o decrementar el contador solo cuando cambia la relación del usuario. Si el contador vive en el documento de la publicación, actualizar la relación, la visibilidad y el contador en la misma transacción, verificando el estado publicado al escribir.
+- Colección `feed_post_likes` (configurable en `MongoDbSettings:FeedPostLikesCollectionName`) con índice único `ux_feed_post_likes_post_user` sobre `postId + userId` (`FR-039-04`).
+- **Decisión de implementación (2026-11-25).** El conteo se deriva de los registros únicos con `countDocuments` sobre el prefijo `postId` del mismo índice; no se mantiene un contador desnormalizado en `feed_posts`. Así el conteo nunca es negativo ni se desincroniza ante fallos parciales, sin exigir transacciones multi-documento (que requieren replica set también en local). Ver `NFR-039-02`.
+- La intención `liked` se aplica de forma atómica: `liked=true` inserta y una inserción duplicada (petición repetida o concurrente) se resuelve como "ya existía"; `liked=false` elimina con `deleteOne`. Una misma intención solo produce una transición (`FR-039-05`, `CA-039-04`).
+- La visibilidad se verifica antes de escribir con `IFeedPostVisibilityLookup` (lista de permitidos: `status = Published` y `isDeleted = false`). Un me gusta que entre en carrera con una eliminación queda sobre una publicación no visible y no se expone.
 
 ## 4. Seguridad
 
@@ -37,7 +39,7 @@ Permitir que un usuario marque o desmarque su me gusta en una publicación visib
 | Manipulación | Validar UUID e intención booleana. Proteger el índice único y el contador mediante escritura atómica. |
 | Repudio | Registrar eventos de seguridad con correlación y sin contenido ni credenciales. |
 | Divulgación | Responder 404 uniforme cuando la publicación sea inexistente o no visible. |
-| Denegación de servicio | Limitar por usuario autenticado con un umbral configurable de 60 solicitudes por hora conforme a la Spec 013. |
+| Denegación de servicio | Limitar por usuario autenticado con un umbral configurable de 60 solicitudes por hora conforme a la Spec 013 (política `post-likes`, `RateLimiting:PostLikes`). El limitador se movió después de `UseAuthentication` en `Program.cs`: antes particionaba todas las políticas "por usuario" por IP. |
 
 ## 5. Observabilidad y rendimiento
 
@@ -65,7 +67,7 @@ Evaluación previa a la implementación.
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
-| VIII | Pendiente | STRIDE en §4. Pruebas de permisos y visibilidad y controles de CI por verificar. |
+| VIII | Pendiente | STRIDE en §4. Permisos (401/403), visibilidad (404) y límite (429) probados; faltan los escaneos bloqueantes de CI y la ejecución de las pruebas de MongoDB. |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 

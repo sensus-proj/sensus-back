@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
@@ -11,6 +12,8 @@ namespace Sensus.Infrastructure.Persistence.Mongo.Repositories;
 /// </summary>
 public sealed class MongoFeedPostRepository : IFeedPostRepository
 {
+    internal const string NearbyIndexName = "ix_feed_posts_status_location_created_at";
+
     private readonly MongoDbContext _context;
 
     public MongoFeedPostRepository(MongoDbContext context)
@@ -71,6 +74,56 @@ public sealed class MongoFeedPostRepository : IFeedPostRepository
             cancellationToken: cancellationToken);
 
         return (int)count;
+    }
+
+    public async Task<(IReadOnlyList<FeedPost> Items, int TotalCount)> GetPublishedNearbyPagedAsync(
+        double latitude,
+        double longitude,
+        double radiusMeters,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        int safePage = Math.Max(1, pageNumber);
+        int safeSize = Math.Max(1, pageSize);
+        const double EarthRadiusMeters = 6_371_000d;
+        double radiusRadians = Math.Max(1d, radiusMeters) / EarthRadiusMeters;
+
+        // Lista de permitidos: solo estado publicado explícito y no eliminado (FR-026-02).
+        // $geoWithin + $centerSphere usa el índice ix_feed_posts_status_location_created_at y excluye
+        // documentos sin campo location (FR-026-05).
+        var filter = new BsonDocument
+        {
+            { "status", FeedPostStatus.Published.ToString() },
+            { "isDeleted", false },
+            {
+                "location", new BsonDocument("$geoWithin", new BsonDocument(
+                    "$centerSphere",
+                    new BsonArray { new BsonArray { longitude, latitude }, radiusRadians }))
+            }
+        };
+
+        // CA-026-07: fecha descendente y _id como desempate estable entre páginas.
+        var sort = new BsonDocument { { "createdAtUtc", -1 }, { "_id", -1 } };
+
+        // NFR-026-02: se fija el índice declarado para no depender del planificador.
+        Task<List<FeedPostDocument>> pageTask = _context.FeedPosts
+            .Find(filter, new FindOptions { Hint = NearbyIndexName })
+            .Sort(sort)
+            .Skip((safePage - 1) * safeSize)
+            .Limit(safeSize)
+            .ToListAsync(cancellationToken);
+
+        Task<long> countTask = _context.FeedPosts.CountDocumentsAsync(
+            filter,
+            new CountOptions { Hint = NearbyIndexName },
+            cancellationToken);
+
+        await Task.WhenAll(pageTask, countTask);
+
+        IReadOnlyList<FeedPost> items = (await pageTask).Select(d => d.ToDomain()).ToList();
+        int total = (int)Math.Min(await countTask, int.MaxValue);
+        return (items, total);
     }
 
     public async Task<int> AnonymizeByAuthorAsync(

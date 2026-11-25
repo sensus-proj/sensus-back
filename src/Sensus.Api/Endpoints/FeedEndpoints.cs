@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
@@ -5,7 +7,9 @@ using Sensus.Application.Common.Models;
 using Sensus.Application.Feed.Commands.CreateFeedComment;
 using Sensus.Application.Feed.Commands.CreateFeedPost;
 using Sensus.Application.Feed.Commands.DeleteFeedPost;
+using Sensus.Application.Feed.Commands.SetFeedPostLike;
 using Sensus.Application.Feed.DTOs;
+using Sensus.Application.Feed.Queries.GetNearbyFeed;
 using Sensus.Application.Feed.Queries.GetPostComments;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Offers.Queries.GetOfferFeed;
@@ -77,6 +81,55 @@ public static class FeedEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        // Spec 026: Feed geolocalizado de publicaciones visibles, cronológico inverso.
+        // Los parámetros se reciben como texto para responder 400 uniforme (no 500) ante valores no numéricos.
+        group.MapGet("/nearby", async (
+            [FromQuery] string? lat,
+            [FromQuery] string? lng,
+            [FromQuery] string? radiusKm,
+            [FromQuery] string? page,
+            [FromQuery] string? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(lat) || string.IsNullOrWhiteSpace(lng))
+            {
+                return Result.Failure(Error.Validation(
+                    "NearbyFeed.CoordinatesRequired",
+                    "Las coordenadas lat y lng son obligatorias.")).ToHttpResult();
+            }
+
+            if (!TryParseOptionalCoordinate(lat, out double? latitude)
+                || !TryParseOptionalCoordinate(lng, out double? longitude)
+                || !TryParseOptionalCoordinate(radiusKm, out double? radius)
+                || !TryParseOptionalInt(page, out int? pageNumber)
+                || !TryParseOptionalInt(pageSize, out int? size))
+            {
+                return Result.Failure(Error.Validation(
+                    "NearbyFeed.InvalidParameters",
+                    "Las coordenadas, el radio y la paginación deben ser numéricos.")).ToHttpResult();
+            }
+
+            var query = new GetNearbyFeedQuery(
+                latitude!.Value,
+                longitude!.Value,
+                radius ?? NearbyFeedPolicy.MaxRadiusKm,
+                pageNumber ?? PaginationPolicy.DefaultPageNumber,
+                size ?? PaginationPolicy.DefaultPageSize);
+
+            var result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithName("GetNearbyFeed")
+        .WithSummary("Spec 026: Feed paginado de publicaciones visibles dentro de un radio de hasta 5 km, de la más reciente a la más antigua")
+        .Produces<PagedResult<NearbyFeedPostDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         // Spec 024: Crear publicación en el feed social.
         // multipart/form-data permite moderar imagen y texto en la misma solicitud; JSON admite una URL ya moderada.
         group.MapPost("/posts", async (
@@ -88,10 +141,22 @@ public static class FeedEndpoints
             string? imageUrl = null;
             byte[]? imageBytes = null;
             string? imageContentType = null;
+            double? latitude = null;
+            double? longitude = null;
 
             if (http.Request.HasFormContentType)
             {
                 IFormCollection form = await http.Request.ReadFormAsync(ct);
+
+                // Spec 026: ubicación opcional compartida explícitamente por el autor.
+                if (!TryParseOptionalCoordinate(form["latitude"].ToString(), out latitude)
+                    || !TryParseOptionalCoordinate(form["longitude"].ToString(), out longitude))
+                {
+                    return Result.Failure(Error.Validation(
+                        "FeedPost.InvalidLocation",
+                        "La latitud y la longitud deben ser números válidos.")).ToHttpResult();
+                }
+
                 content = form["content"].ToString();
                 if (string.IsNullOrWhiteSpace(content))
                 {
@@ -133,10 +198,12 @@ public static class FeedEndpoints
                 CreateFeedPostBody? body = await http.Request.ReadFromJsonAsync<CreateFeedPostBody>(cancellationToken: ct);
                 content = body?.Content ?? body?.Text ?? string.Empty;
                 imageUrl = body?.ImageUrl;
+                latitude = body?.Latitude;
+                longitude = body?.Longitude;
             }
 
             Result<FeedPostDto> result = await sender.Send(
-                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType),
+                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType, latitude, longitude),
                 ct);
 
             return result.ToCreatedAtResult($"/api/v1/feed/posts/{(result.IsSuccess ? result.Value.Id : string.Empty)}");
@@ -166,6 +233,46 @@ public static class FeedEndpoints
         .WithName("DeleteFeedPost")
         .WithSummary("Spec 024: Elimina una publicación del feed (solo autor original o administrador)")
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Spec 039: Me gusta en publicaciones con intención explícita (FR-039-01 a FR-039-06)
+        group.MapPost("/posts/{id:guid}/like", async (
+            Guid id,
+            HttpContext http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            // Lectura explícita: un cuerpo malformado o con tipo incorrecto responde 400 uniforme, nunca 500.
+            SetFeedPostLikeBody? body;
+            try
+            {
+                body = await http.Request.ReadFromJsonAsync<SetFeedPostLikeBody>(ct);
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+            {
+                body = null;
+            }
+
+            if (body?.Liked is not bool liked)
+            {
+                return Result.Failure(Error.Validation(
+                    "FeedPostLike.LikedRequired",
+                    "El campo liked es obligatorio y debe ser booleano.")).ToHttpResult();
+            }
+
+            var result = await sender.Send(new SetFeedPostLikeCommand(id, liked), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.PostLikesPolicy)
+        .Accepts<SetFeedPostLikeBody>("application/json")
+        .WithName("SetFeedPostLike")
+        .WithSummary("Spec 039: Establece el me gusta del usuario sobre una publicación visible y devuelve el conteo actualizado")
+        .Produces<FeedPostLikeStatusDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status404NotFound)
@@ -220,8 +327,50 @@ public static class FeedEndpoints
 
         return app;
     }
+
+    private static bool TryParseOptionalCoordinate(string? raw, out double? value)
+    {
+        value = null;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        if (double.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            && double.IsFinite(parsed))
+        {
+            value = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseOptionalInt(string? raw, out int? value)
+    {
+        value = null;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        if (int.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        {
+            value = parsed;
+            return true;
+        }
+
+        return false;
+    }
 }
+
+public sealed record SetFeedPostLikeBody(bool? Liked = null);
 
 public sealed record CreateFeedCommentBody(string? Content = null, string? Text = null);
 
-public sealed record CreateFeedPostBody(string? Content = null, string? Text = null, string? ImageUrl = null);
+public sealed record CreateFeedPostBody(
+    string? Content = null,
+    string? Text = null,
+    string? ImageUrl = null,
+    double? Latitude = null,
+    double? Longitude = null);

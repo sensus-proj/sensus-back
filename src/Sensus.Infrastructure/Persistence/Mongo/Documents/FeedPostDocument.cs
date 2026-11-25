@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver.GeoJsonObjectModel;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
 
@@ -48,6 +49,14 @@ public sealed class FeedPostDocument
     [BsonElement("deletedAtUtc")]
     public DateTime? DeletedAtUtc { get; set; }
 
+    /// <summary>
+    /// Punto GeoJSON [lng, lat] para el feed cercano (Spec 026). Se omite si el autor no compartió ubicación,
+    /// de modo que el índice 2dsphere no indexa la publicación (FR-026-05).
+    /// </summary>
+    [BsonElement("location")]
+    [BsonIgnoreIfNull]
+    public GeoJsonPoint<GeoJson2DGeographicCoordinates>? Location { get; set; }
+
     public FeedPost ToDomain()
     {
         Enum.TryParse(Status, ignoreCase: true, out FeedPostStatus postStatus);
@@ -64,7 +73,9 @@ public sealed class FeedPostDocument
             isDeleted: IsDeleted,
             createdAtUtc: CreatedAtUtc,
             updatedAtUtc: UpdatedAtUtc,
-            deletedAtUtc: DeletedAtUtc);
+            deletedAtUtc: DeletedAtUtc,
+            latitude: Location?.Coordinates.Latitude,
+            longitude: Location?.Coordinates.Longitude);
     }
 
     public static FeedPostDocument FromDomain(FeedPost post) =>
@@ -81,6 +92,10 @@ public sealed class FeedPostDocument
             IsDeleted = post.IsDeleted,
             CreatedAtUtc = post.CreatedAtUtc,
             UpdatedAtUtc = post.UpdatedAtUtc,
-            DeletedAtUtc = post.DeletedAtUtc
+            DeletedAtUtc = post.DeletedAtUtc,
+            Location = post.HasLocation
+                ? new GeoJsonPoint<GeoJson2DGeographicCoordinates>(
+                    new GeoJson2DGeographicCoordinates(post.Longitude!.Value, post.Latitude!.Value))
+                : null
         };
 }
