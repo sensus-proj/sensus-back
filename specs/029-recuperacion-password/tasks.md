@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Implementado |
+| Estado | Implementado (salida del sandbox de SES pendiente, T029-23) |
 | Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ## Tareas
@@ -33,6 +33,8 @@
 | T029-19 | `RequestPasswordResetCommand` implementa `ISensitiveRequest`; correo redactado en `LoggingBehavior` y `PerformanceBehavior` | Application | `NFR-029-02` | T029-03 | Hecho |
 | T029-20 | Retirada del alias en el contrato OpenAPI: sin ruta, 404 documentado y versión 2.0.0 | Docs | `FR-029-09` | T029-14 | Hecho |
 | T029-21 | Cierre de EX-004 y baja de la credencial Somee (retiro y documentación operativa) | Docs | `FR-029-11`, `FR-029-12` | T029-17 | Hecho |
+| T029-22 | Permiso `ses:SendEmail` del rol de la Lambda en `SensusInfraStack.cs` (`AllowSesSendTransactionalEmail`), restringido a identidades de la cuenta y región | Infra | `FR-029-13` | T029-21 | Hecho |
+| T029-23 | Operativo: identidad del remitente verificada en SES us-east-2, parámetros SSM `SesEmailSettings/From` y `/Region` creados (2026-11-25) y solicitud de acceso de producción de SES | Operación | `FR-029-13` | T029-22 | Parcial (falta salir del sandbox de SES) |
 
 ## Notas de ejecución
 

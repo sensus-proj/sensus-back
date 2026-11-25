@@ -9,7 +9,7 @@
 | Tipo | Nuevo |
 | Dueño | Backend / Arquitectura Sensus |
 | Dependencias | 002, 004, 007, 013, 017, 018, 030, 033, 041, 047, 048 |
-| Versión | 2.0.0 |
+| Versión | 2.1.0 |
 | Alineado a | `constitution.md` v2.1.0 · `AGENTS.md` v2.1.0 · [ADR 0012](../../docs/adr/0012-sensi-ia-agentico-mcp-router-evals.md) |
 
 ---
@@ -118,6 +118,7 @@ Esta especificación evoluciona la Spec 046 a una arquitectura agéntica de **7 
 | `FR-046-16` | Resolver credenciales del proveedor generativo únicamente desde AWS Secrets Manager o AWS Systems Manager Parameter Store según configuración del entorno (nunca en código, tests ni repositorio), enviar parámetros de no retención/no entrenamiento (`store: false`) en cada petición y operar bajo HTTPS TLS `≥ 1.2`. | Must |
 | `FR-046-17` | Versionar en el repositorio el manifiesto de *Evals* de Sensi IA (casos de precisión contra el Markdown, uso mínimo privilegio de herramientas y cálculo de presupuesto, apego a tono formal/empático, resistencia a *Prompt Injection*/*Jailbreak* y cumplimiento estricto de *Hard Rules* sin fuga de modelo ni PII) como artefacto consumido por la puerta bloqueante CI/CD definida en la Spec 047. | Must |
 | `FR-046-18` | Entregar en `offersCited` las ofertas que la respuesta menciona por título (máximo `OpenAiSettings:Sensi:MaxCitedOfferCards`, por defecto 5, sin repetir las del paquete recomendado) con datos completos leídos del repositorio y no del modelo: descripción, descuento, imagen, categoría, vigencia, stock, comercio y dirección, coordenadas y distancia al usuario cuando envía su ubicación. Si la lectura falla, la oferta viaja con sus datos básicos y el turno no se rompe | Must |
+| `FR-046-19` | Enviar en cada llamada al proveedor generativo una temperatura explícita y configurable (`OpenAiSettings:Sensi:Temperature`, rango `0.0`–`1.0`, por defecto `0.0`), nunca la predeterminada del proveedor, para que las respuestas sean estables y las *Evals* con modelo (Spec 047) midan el mismo comportamiento que producción | Must |
 
 ---
 
@@ -211,3 +212,4 @@ El contrato OpenAPI completo de esta especificación se encuentra en [contracts/
 | 2.0.0 | 2026-11-15 | Evolución agéntica en 7 capas (Identidad Drive, RAG Markdown `<contexto>`, MCP *in-process*/*Function Calling*, herencia JWT de *scopes*, *guardrails* duales + redacción PII, *Prompt Caching* + *Model Router* *sticky*, trazabilidad CloudWatch/MongoDB, endpoint `DELETE` y gate CI de *Evals* en Spec 047) alineada a `constitution.md` v1.5.0 y ADR 0012 | Antigravity |
 | 2.0.1 | 2026-11-15 | Alineación a `constitution.md` v2.0.0 (MAJOR); `NFR-046-08` separado en *Evals* deterministas (gate por PR) y con modelo (previas a release); TTL por defecto de `ai_trace_logs` en 30 días; estimación de costo por turno y nivel *reasoning* desactivado por defecto en `plan.md` | Equipo Sensus |
 | 2.0.2 | 2026-11-15 | Techo `EX-001` elevado a `5.00 USD/mes` con nivel *reasoning* habilitado y sub-techo de `3.00 USD`; claves de configuración propias de Sensi (`ModerationModel`, `FastModel`, `ReasoningModel`) independientes de la moderación de imágenes; alineación a `constitution.md` v2.1.0 | Equipo Sensus |
+| 2.1.0 | 2026-11-25 | `FR-046-19`: temperatura explícita y configurable en el gateway (por defecto `0.0`); el manifiesto de *Evals* declara `runs_per_prompt: 3` para la mediana de corridas de la Spec 047 | Equipo Sensus |

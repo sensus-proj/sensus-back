@@ -227,6 +227,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-029-10` | 029 | FR | Rechazar cualquier transporte de correo sin TLS 1.2 o superior (sin excepción HTTP; EX-004 retirada) | Must | Implementado |
 | `FR-029-11` | 029 | FR | Retirar la credencial Somee del código y la configuración; baja operativa externa documentada del parámetro SSM (sin rotación: se da de baja) | Must | Implementado |
 | `FR-029-12` | 029 | FR | Enviar el correo por Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must | Implementado |
+| `FR-029-13` | 029 | FR | Permiso `ses:SendEmail` de la Lambda en IaC y parámetros SSM `SesEmailSettings/From` y `/Region` antes de desplegar | Must | Implementado |
 | `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado (060; `204` conservado) |
 | `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Implementado (060) |
 | `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado (060) |
@@ -433,6 +434,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-046-16` | 046 | FR | Resolver API key desde Secrets Manager o SSM, enviar `store: false` y operar sobre TLS ≥ 1.2 | Must | Parcial |
 | `FR-046-17` | 046 | FR | Versionar manifiesto y suite de Evals de Sensi IA para la puerta bloqueante CI/CD (Spec 047) | Must | Parcial |
 | `FR-046-18` | 046 | FR | Entregar en `offersCited` las ofertas que la respuesta menciona por título (máximo `OpenAiSettings con datos completos leídos del repositorio, sin repetir las del paquete recomendado | Must | Implementado |
+| `FR-046-19` | 046 | FR | Enviar en cada turno una temperatura explícita y configurable (`OpenAiSettings:Sensi:Temperature`, 0.0–1.0, por defecto 0.0) | Must | Implementado |
 | `NFR-046-01` | 046 | NFR | Latencia de turno agéntico | p95 < 8 s; límite interno ≤ 25 s (< 29 s Lambda/API GW) | Parcial |
 | `NFR-046-02` | 046 | NFR | Costo mensual OpenAI Chat API (EX-001) | ≤ 5.00 USD/mes con alarma al 80 % (4.00 USD) y degradación al 100 % | Implementado |
 | `NFR-046-03` | 046 | NFR | Aprovechamiento de Prompt Caching | Bloque estático ≥ 1,024 tokens; ≥ 70 % de tokens cacheados en turno ≥ 2 | Parcial |
@@ -456,6 +458,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-13` | 047 | FR | Ejecutar Evals de Sensi IA en dos niveles: deterministas en `dotnet test` por PR y con modelo en job `ai-evals` manual o programado | Must | Implementado |
 | `FR-047-14` | 047 | FR | Bloquear la fusión si falla una Evals determinista y el despliegue a producción sin `ai-evals` en verde | Must | Implementado |
 | `FR-047-15` | 047 | FR | Publicar reporte sanitizado de métricas de Evals sin PII ni secretos en logs ni YAML (credenciales CI opcionales solo en GitHub Secrets) | Must | Implementado |
+| `FR-047-16` | 047 | FR | Calificar cada prompt de las Evals con modelo con la mediana de `runs_per_prompt` corridas (mayoría aprobada; fuga en cualquier corrida reprueba), sin cambiar umbrales | Must | Implementado |
+| `FR-047-17` | 047 | FR | Generar las respuestas de las Evals con la temperatura de producción (`OpenAiSettings:Sensi:Temperature`); juez a temperatura 0 | Must | Implementado |
+| `FR-047-18` | 047 | FR | Publicar el reporte de Evals en `deploy-serverless.yml` incluso cuando la puerta falla (`if: always()`) | Must | Implementado |
 | `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Implementado |
 | `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Implementado |
 | `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Implementado |

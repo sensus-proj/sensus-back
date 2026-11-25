@@ -60,9 +60,20 @@ jobs:
           node-version: 20
 
       - name: Verificar puerta bloqueante de Evals Sensi IA (FR-047-14)
-        run: node .github/scripts/run-ai-evals.mjs --mode all
+        run: node .github/scripts/run-ai-evals.mjs --mode all --output-dir artifacts/ai-evals
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      # FR-047-18: el reporte sanitizado (sin PII ni secretos) se publica también cuando la puerta falla,
+      # para ver qué prompt y qué corrida reprobaron.
+      - name: Publicar reporte sanitizado de Evals (FR-047-18)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ai-evals-report-deploy
+          path: artifacts/ai-evals
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Publicar Sensus.Api como binario bootstrap para Amazon Linux 2023 ARM64
         run: |

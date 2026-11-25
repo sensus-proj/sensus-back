@@ -122,7 +122,9 @@ public sealed class OpenAiChatGateway : IAiChatGateway
             ["model"] = request.Model,
             ["messages"] = messages,
             ["store"] = false, // REGLA CRÍTICA DE PRIVACIDAD
-            ["max_completion_tokens"] = _settings.Sensi.MaxCompletionTokens
+            ["max_completion_tokens"] = _settings.Sensi.MaxCompletionTokens,
+            // FR-046-19: temperatura explícita; nunca la predeterminada del proveedor.
+            ["temperature"] = _settings.Sensi.Temperature
         };
 
         if (tools.Count > 0)
