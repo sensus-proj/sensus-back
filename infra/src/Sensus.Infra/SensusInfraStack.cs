@@ -61,7 +61,7 @@ public sealed partial class SensusInfraStack : Stack
         {
             RoleName = $"sensus-api-lambda-role-{envName}",
             AssumedBy = new ServicePrincipal("lambda.amazonaws.com"),
-            Description = "Rol IAM de minimo privilegio para Sensus.Api Lambda (CloudWatch Logs + SSM Parameter Store)"
+            Description = "Rol IAM de minimo privilegio para Sensus.Api Lambda (CloudWatch Logs + SSM Parameter Store + SES)"
         });
 
         lambdaRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
@@ -90,6 +90,17 @@ public sealed partial class SensusInfraStack : Stack
             Effect = Effect.ALLOW,
             Actions = ["dynamodb:GetItem", "dynamodb:UpdateItem"],
             Resources = [budgetTable.TableArn]
+        }));
+
+        // Correo transaccional de recuperación de contraseña por Amazon SES (Spec 029, FR-029-13). Solo envío
+        // (SendEmail de la API v1 que usa AWSSDK.SimpleEmail), restringido a identidades verificadas de esta cuenta y
+        // región. El remitente vive en SSM (/sensus/<env>/SesEmailSettings/From) y no se versiona. Free Tier: 3,000/mes.
+        lambdaRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "AllowSesSendTransactionalEmail",
+            Effect = Effect.ALLOW,
+            Actions = ["ses:SendEmail"],
+            Resources = [$"arn:aws:ses:{Region}:{Account}:identity/*"]
         }));
 
         // Lectura de parámetros y secretos desde AWS Systems Manager (SSM) Parameter Store (100 % gratuito, 0 USD)

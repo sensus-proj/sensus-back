@@ -4,7 +4,7 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 2.0.0 |
+| Versión | 2.1.0 |
 | Constitution Check | PASS |
 | Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
@@ -56,9 +56,9 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 
 ## 6. Costo AWS
 
-- Amazon SES dentro del Free Tier (3.000 mensajes/mes desde Lambda). Sin recursos nuevos de pago y sin cambios en IaC.
+- Amazon SES dentro del Free Tier (3.000 mensajes/mes desde Lambda). Sin recursos nuevos de pago. **Corrección 2026-11-25 (`FR-029-13`):** sí requiere IaC: el rol de la Lambda necesita `ses:SendEmail` (`AllowSesSendTransactionalEmail` en `SensusInfraStack.cs`, restringido a `identity/*` de la cuenta y región); sin él todo envío falla con AccessDenied.
 - Paquete NuGet `AWSSDK.SimpleEmail` versión `4.0.100.25`, licencia Apache-2.0, sin costo de paquete; el costo es el del servicio SES dentro del free tier (3.000 mensajes/mes desde Lambda).
-- La configuración `SesEmailSettings` se lee desde SSM al arrancar; ningún despliegue crea ni modifica secretos.
+- La configuración `SesEmailSettings` se lee desde SSM al arrancar; ningún despliegue crea ni modifica secretos. **Precondición operativa (`FR-029-13`):** identidad del remitente verificada en SES y parámetros `/sensus/<entorno>/SesEmailSettings/From` y `/Region` creados por el responsable **antes** de desplegar. El 2026-11-25 el despliegue de `25c5ba2` sin `From` tumbó toda la API en producción (500 en todas las rutas por `OptionsValidationException`) hasta crear los parámetros. Mientras SES siga en sandbox solo entrega a destinatarios verificados; falta solicitar acceso de producción.
 
 ## 7. Estrategia de pruebas
 

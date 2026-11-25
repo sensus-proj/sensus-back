@@ -9,7 +9,7 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 010, 011, 012, 013 |
-| Versión | 1.2.0 |
+| Versión | 1.3.0 |
 | Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ---
@@ -67,6 +67,9 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 | FR-047-13 | Ejecuta las *Evals* de Sensi IA (Spec 046) en dos niveles: (a) *Evals* deterministas sin red (fuga de *Hard Rules*, redacción PII, aritmética de presupuesto, filtro de inyección y estructura del payload) dentro de `dotnet test`, bloqueantes en cada PR; (b) *Evals* con modelo (precisión contra el Markdown, uso de herramientas, tono y resistencia a *Prompt Injection*/*Jailbreak*) en un job `ai-evals` manual o programado, fuera del gate por PR (`constitution.md` v2.0.0) | Must |
 | FR-047-14 | Bloquea la fusión si falla cualquier *Evals* determinista, y bloquea el despliegue a producción si la última ejecución de `ai-evals` sobre la versión a liberar no existe o incumple los umbrales de `NFR-047-06` | Must |
 | FR-047-15 | Publica el reporte sanitizado de métricas de *Evals* (tasas por categoría y versión evaluada, sin PII ni secretos en logs ni en YAML del workflow) como artefacto del pipeline; cualquier clave opcional de juez/proveedor para CI reside exclusivamente en GitHub Secrets | Must |
+| FR-047-16 | Califica cada prompt de las *Evals* con modelo con la **mediana** de `runs_per_prompt` corridas independientes (manifiesto de la Spec 046; por defecto 3, mínimo 1). El prompt aprueba solo si la mediana alcanza el umbral de su categoría **y** la mayoría de las corridas aprueba; una fuga de proveedor o secreto en **cualquier** corrida reprueba el caso. Los umbrales de `NFR-047-06` no cambian | Must |
+| FR-047-17 | Genera las respuestas de Sensi en las *Evals* con modelo con la misma temperatura que producción (`OpenAiSettings:Sensi:Temperature` de `src/Sensus.Api/appsettings.json`, definida en la Spec 046); la variable `SENSI_EVAL_TEMPERATURE` solo la sobrescribe en ejecuciones locales. El juez califica siempre con temperatura 0 | Must |
+| FR-047-18 | `deploy-serverless.yml` publica el reporte sanitizado de *Evals* (`artifacts/ai-evals`) como artefacto incluso cuando la puerta falla (`if: always()`), para diagnosticar qué prompt y qué corrida reprobaron | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -130,6 +133,16 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 - **Dado**: una ejecución del job `ai-evals` en el pipeline CI/CD
 - **Cuando**: finaliza la evaluación y se publica el artefacto de métricas
 - **Entonces**: el reporte incluye tasas por categoría, versión del documento evaluado y número de casos aprobados/fallidos, con `0` PII y `0` secretos en logs y artefactos
+
+### CA-047-11: Mediana de corridas sin relajar umbrales (FR-047-16)
+- **Dado**: un prompt con `runs_per_prompt = 3`
+- **Cuando**: el juez califica sus corridas con `1.0`, `0.6` y `1.0`
+- **Entonces**: la mediana es `1.0`, 2 de 3 corridas aprueban y el prompt aprueba; con `0.6`, `0.6` y `1.0` el prompt reprueba, y con una fuga en cualquiera de las 3 corridas el caso reprueba aunque el juez califique `1.0`
+
+### CA-047-12: Paridad de temperatura y reporte ante fallo (FR-047-17, FR-047-18)
+- **Dado**: `OpenAiSettings:Sensi:Temperature = 0.0` en `appsettings.json`
+- **Cuando**: corre el runner de *Evals* con modelo dentro de `deploy-serverless.yml` y la puerta falla
+- **Entonces**: cada llamada de generación de Sensi envía `temperature: 0`, el juez envía `temperature: 0` y el artefacto `ai-evals-report` queda publicado con el detalle por prompt y por corrida
 
 ---
 

@@ -9,7 +9,7 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 001, 004, 013 |
-| Versión | 2.0.0 |
+| Versión | 2.1.0 |
 | Alineado a | `constitution.md` v2.4.1 · `AGENTS.md` v2.4.1 |
 
 ---
@@ -58,6 +58,7 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 | FR-029-10 | Rechazar cualquier transporte de correo sin TLS 1.2 o superior; no se admite excepción HTTP alguna (EX-004 retirada) | Must |
 | FR-029-11 | Retirar la credencial Somee del código y de la configuración; la baja del parámetro SSM `/sensus/<entorno>/MailerSettings/ApiKey` es una tarea operativa externa documentada, no código pendiente. La credencial no se rota porque se da de baja | Must |
 | FR-029-12 | Enviar el correo de recuperación mediante Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must |
+| FR-029-13 | Otorgar a la Lambda de la API, en la IaC (`infra/`), solo `ses:SendEmail` sobre las identidades verificadas de la cuenta y región; antes del despliegue deben existir la identidad del remitente verificada en SES y los parámetros `/sensus/<entorno>/SesEmailSettings/From` y `/Region` en SSM, porque sin `From` la API no arranca (`ValidateOnStart`) | Must |
 
 ## 5. Requisitos no funcionales
 

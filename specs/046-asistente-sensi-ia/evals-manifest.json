@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "2.0.0",
+  "version": "2.1.0",
+  "runs_per_prompt": 3,
   "name": "sensi-ia-evals-manifest",
   "description": "Manifiesto y batería versionada de Evals deterministas y con modelo para Sensi IA (FR-046-17, NFR-046-05, NFR-046-08, NFR-047-06).",
   "deterministic_evals": [

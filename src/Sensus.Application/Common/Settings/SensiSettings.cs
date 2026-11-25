@@ -36,6 +36,13 @@ public sealed class SensiSettings
     [Range(10, 2000)]
     public int MaxCompletionTokens { get; set; } = 500;
 
+    /// <summary>
+    /// Temperatura enviada al proveedor en cada turno (FR-046-19). Las Evals con modelo leen este mismo valor
+    /// de appsettings.json (FR-047-17) para medir el comportamiento de producción.
+    /// </summary>
+    [Range(0.0, 1.0, ErrorMessage = "La temperatura de Sensi debe estar entre 0.0 y 1.0.")]
+    public double Temperature { get; set; } = 0.0;
+
     [Range(1, 20)]
     public int MaxTurnsHistory { get; set; } = 6;
 

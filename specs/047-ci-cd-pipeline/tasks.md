@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Completado (`T047-01`..`T047-16` completadas) |
+| Estado | Completado (`T047-01`..`T047-20` completadas) |
 | Alineado a | `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0 |
 
 ## Tareas
@@ -28,6 +28,10 @@
 | T047-14 | Definir runner de *Evals* automatizados de Sensi IA (precisión Markdown, herramientas MCP, tono, inyecciones, redacción PII y *Hard Rules*) y script de evaluación de umbrales (`NFR-047-06`) | Tests / CI | `FR-047-13`, `FR-047-14`, `NFR-047-06` | T047-13 | Completada |
 | T047-15 | Agregar job `ai-evals` (`workflow_dispatch` y `schedule`) que ejecuta las *Evals* con modelo y publica reporte sanitizado sin PII ni secretos; las *Evals* deterministas corren en `dotnet test` | CI | `FR-047-13`, `FR-047-15`, `NFR-047-05` | T047-14 | Completada |
 | T047-16 | Validar que una *Evals* determinista fallida bloquea el merge y que `deploy-serverless.yml` no despliega sin una ejecución de `ai-evals` en verde | CI / Docs | `FR-047-14`, `NFR-047-05`, `NFR-047-06` | T047-15 | Completada |
+| T047-17 | Calificar cada prompt con la mediana de `runs_per_prompt` corridas (mayoría aprobada, fuga en cualquier corrida reprueba) y declarar `runs_per_prompt: 3` en el manifiesto | Tests / CI | `FR-047-16` | T047-16 | Completada (`aggregatePromptRuns`, `runs_per_prompt: 3`) |
+| T047-18 | Leer la temperatura de generación de `OpenAiSettings:Sensi:Temperature` y fijar el juez en 0 | Tests / CI | `FR-047-17` | T047-17 | Completada (`resolveGenerationTemperature`) |
+| T047-19 | Publicar `artifacts/ai-evals` con `if: always()` en `deploy-serverless.yml` | CI | `FR-047-18` | — | Completada (paso `Publicar reporte sanitizado de Evals (FR-047-18)`) |
+| T047-20 | Cubrir `FR-047-16` y `FR-047-17` en `run-ai-evals.test.mjs` con servidor OpenAI simulado (mediana, mayoría, fuga en una corrida, temperatura enviada) | Tests | `FR-047-16`, `FR-047-17` | T047-18 | Completada (pruebas 8 a 13, 13/13 en verde) |
 
 ## Notas de ejecución
 
