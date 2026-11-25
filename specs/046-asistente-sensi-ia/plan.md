@@ -141,6 +141,7 @@ HTTP Request (JWT Bearer)
      | Turnos típicos que caben en 5.00 USD | ≈ 5,000 | ≈ 300 |
 
    - **Decisión derivada**: con el techo de `5.00 USD/mes` el nivel *reasoning* queda **habilitado** (`OpenAiSettings:ReasoningTierEnabled = true`) con un sub-techo configurable de `3.00 USD/mes` (`OpenAiSettings:ReasoningMonthlyBudgetUsd`): al alcanzarlo, el router asigna *fast* a las conversaciones nuevas durante el resto del mes, de modo que el nivel *reasoning* nunca agote el presupuesto de *fast* (al menos ≈ 2,000 turnos *fast* garantizados). Las *Evals* con modelo usan solo *fast* (≈ 60 casos ≈ 0.06 USD por ejecución) y cuentan dentro del mismo techo, con un máximo configurable de `4` ejecuciones al mes.
+   - **Temperatura explícita (`FR-046-19`)**: `OpenAiChatGateway` envía `temperature = OpenAiSettings:Sensi:Temperature` (`[Range(0.0, 1.0)]`, por defecto `0.0`) en cada llamada. Antes no se fijaba y el proveedor aplicaba la suya, lo que hacía las respuestas menos estables y distintas de lo que medían las *Evals* (que corrían a `0.2`). El runner de *Evals* lee el mismo valor de `appsettings.json` (`FR-047-17`). Sin impacto en costo.
    - Costo adicional AWS estimado: **0.00 USD/mes** (reutiliza Lambda, API Gateway, MongoDB Atlas M0, Redis existente de Spec 048, SSM Parameter Store y CloudWatch Logs dentro de Free Tier).
 
 ---
@@ -153,7 +154,7 @@ HTTP Request (JWT Bearer)
 | **Integración (MongoDB + MCP + Auth + Guardrails)** | `tests/Sensus.IntegrationTests` | CRUD completo (`POST`/`GET`/`DELETE`), rechazo `401`/`403` para `Invitado` y `Consumidor` sobre tool comercial, índices TTL de `ai_trace_logs`, cascada al borrar conversación y al eliminar cuenta (Spec 030), dobles HTTP para OpenAI (timeout, 5xx, respuesta malformada, falla fail-closed de moderación, degradación determinista) |
 | **Arquitectura** | `tests/Sensus.ArchitectureTests` | Sin referencias de `Domain`/`Application` hacia `Infrastructure` o SDKs externos |
 | ***Evals* deterministas** | `dotnet test`, bloqueantes por PR (Spec 047) | Sin red: `HardRuleLeakDetector`, redactor de PII, filtro de inyección, recálculo `SUM(precio_oferta) <= presupuesto` y estructura de dos bloques del payload; umbral `100 %` |
-| ***Evals* con modelo** | Job manual o programado previo a release (Spec 047) | Proveedor real con `OPENAI_API_KEY` de GitHub Secrets y solo el modelo *fast*: precisión sobre Markdown (envíos/pagos/QR), tono, invocación de herramientas y resistencia a *Prompt Injection*/*Jailbreak*; umbrales de `NFR-046-08`. Fuera de la suite de pruebas por `constitution.md` v2.0.0 |
+| ***Evals* con modelo** | Job manual o programado previo a release (Spec 047) | Proveedor real con `OPENAI_API_KEY` de GitHub Secrets y solo el modelo *fast*: precisión sobre Markdown (envíos/pagos/QR), tono, invocación de herramientas y resistencia a *Prompt Injection*/*Jailbreak*; umbrales de `NFR-046-08`, cada prompt calificado con la mediana de `runs_per_prompt` corridas (`FR-047-16`). Fuera de la suite de pruebas por `constitution.md` v2.0.0 |
 
 ---
 

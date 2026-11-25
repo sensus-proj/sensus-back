@@ -91,4 +91,32 @@ public sealed class SensiSettingsValidatorTests
         result.Failed.Should().BeTrue();
         result.FailureMessage.Should().Contain("TotalBudgetCapUsd debe estar entre 0.1 y 100.0 USD");
     }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    [InlineData(double.NaN)]
+    public void Validate_WhenTemperatureOutOfRange_ReturnsFailure(double temperature)
+    {
+        // FR-046-19: la temperatura de Sensi solo admite valores entre 0.0 y 1.0.
+        var settings = new SensiSettings { Temperature = temperature };
+
+        var result = _validator.Validate(null, settings);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Temperature debe estar entre 0.0 y 1.0");
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.5)]
+    [InlineData(1.0)]
+    public void Validate_WhenTemperatureInRange_ReturnsSuccess(double temperature)
+    {
+        var settings = new SensiSettings { Temperature = temperature };
+
+        var result = _validator.Validate(null, settings);
+
+        result.Succeeded.Should().BeTrue();
+    }
 }

@@ -35,11 +35,18 @@ public sealed class OpenAiChatGatewayTests
     private static (OpenAiChatGateway Gateway, CapturingHandler Handler) CreateGateway(
         HttpStatusCode status,
         string body,
-        string apiKey = "test-key")
+        string apiKey = "test-key",
+        double? temperature = null)
     {
         var handler = new CapturingHandler(status, body);
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.openai.test/v1/") };
-        var settings = Options.Create(new OpenAiSettings { ApiKey = apiKey });
+        var openAiSettings = new OpenAiSettings { ApiKey = apiKey };
+        if (temperature.HasValue)
+        {
+            openAiSettings.Sensi.Temperature = temperature.Value;
+        }
+
+        var settings = Options.Create(openAiSettings);
         return (new OpenAiChatGateway(client, settings, NullLogger<OpenAiChatGateway>.Instance), handler);
     }
 
@@ -104,6 +111,32 @@ public sealed class OpenAiChatGatewayTests
         root.GetProperty("tools").EnumerateArray()
             .Select(t => t.GetProperty("function").GetProperty("name").GetString())
             .Should().Equal("get_my_claims", "search_offers");
+    }
+
+    [Fact]
+    public async Task CompleteTurnAsync_ShouldSendDefaultTemperatureZero_WhenNotConfigured()
+    {
+        // FR-046-19: la temperatura siempre viaja explícita; sin configuración es 0.0.
+        var (gateway, handler) = CreateGateway(HttpStatusCode.OK, "{\"choices\":[]}");
+
+        await gateway.CompleteTurnAsync(BuildRequest(withTools: false));
+
+        using JsonDocument payload = JsonDocument.Parse(handler.RequestBody!);
+        payload.RootElement.GetProperty("temperature").GetDouble().Should().Be(0.0);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.4)]
+    [InlineData(1.0)]
+    public async Task CompleteTurnAsync_ShouldSendConfiguredTemperature(double temperature)
+    {
+        var (gateway, handler) = CreateGateway(HttpStatusCode.OK, "{\"choices\":[]}", temperature: temperature);
+
+        await gateway.CompleteTurnAsync(BuildRequest(withTools: false));
+
+        using JsonDocument payload = JsonDocument.Parse(handler.RequestBody!);
+        payload.RootElement.GetProperty("temperature").GetDouble().Should().Be(temperature);
     }
 
     [Fact]

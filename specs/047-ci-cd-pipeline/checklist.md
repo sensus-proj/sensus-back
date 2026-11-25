@@ -24,6 +24,9 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] Los secretos `SNYK_TOKEN` y `SONAR_TOKEN` se leen de `${{ secrets.* }}`
 - [x] `stryker-config.json` existe en la raíz del repositorio
 - [x] *Evals* deterministas de Sensi IA en `dotnet test` bloqueando el merge, y job `ai-evals` con modelo bloqueando el despliegue a producción (`FR-047-13`..`FR-047-15`, `NFR-047-06`)
+- [x] Cada prompt de las *Evals* con modelo se califica con la mediana de 3 corridas, exige mayoría aprobada y reprueba ante una fuga en cualquier corrida, sin cambiar umbrales (`FR-047-16`, `CA-047-11`)
+- [x] La generación usa la temperatura de producción leída de `appsettings.json` y el juez usa 0 (`FR-047-17`, `CA-047-12`)
+- [x] `deploy-serverless.yml` publica el reporte de *Evals* con `if: always()` (`FR-047-18`, `CA-047-12`)
 
 ## C. Antes de entregar (Definition of Done)
 
@@ -51,3 +54,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | 2026-11-15 | Equipo Sensus | Corrección | *Evals* separadas: deterministas en `dotnet test` (bloquean el PR) y `ai-evals` con modelo (bloquea el despliegue a producción), conforme a la excepción de `constitution.md` v2.0.0. |
 | 2026-11-17 | Antigravity | PASS (v1.2.0) | Implementadas tareas T047-14, T047-15 y T047-16: runner sanitizado `run-ai-evals.mjs`, workflow `.github/workflows/ai-evals.yml`, gate en `ci.yml` y candado previo al despliegue en `deploy-serverless.yml`. Evals deterministas 100%, reporte de artefacto sin PII ni secretos. Spec 047 al 100% implementada. |
 | 2026-11-19 | Antigravity | PASS (`FR-047-05`, `CA-047-05`) | Restringido el job `sonarcloud` en `.github/workflows/ci.yml` a `pull_request` (hacia `develop` y `main`) y `push` a `main` por límite del plan gratuito de SonarQube Cloud (HTTP 403 en ramas no principales fuera de PR, P-VI 0 USD). Retirado `/d:sonar.verbose=true` y corregida la captura del código de salida en `Finalizar análisis SonarCloud` para publicar el resumen en `$GITHUB_STEP_SUMMARY` incluso ante fallo. |
+| 2026-11-25 | Claude | PASS (v1.3.0, `FR-047-16`..`FR-047-18`) | Dos despliegues a `main` bloqueados por variación del modelo con 0 fugas (MDL-003 96.7 % y luego MDL-001 93.3 %, un solo prompt bajo el umbral). `run-ai-evals.mjs`: mediana de `runs_per_prompt = 3` corridas en paralelo con mayoría aprobada y fuga en cualquier corrida = reprobado; temperatura de generación desde `OpenAiSettings:Sensi:Temperature` (0.0), juez a 0; detalle por prompt y por corrida en el Markdown. `deploy-serverless.yml`: artefacto `ai-evals-report-deploy` con `if: always()`. `node --test run-ai-evals.test.mjs` 13/13 (6 nuevas), modo determinista PASSED, `check-specs` OK, build `-warnaserror` sin advertencias, 1174 unitarias y 5 de arquitectura en verde, `dotnet format` limpio. Umbrales de `NFR-047-06` sin cambios. Pendiente: confirmar en el próximo despliegue real a `main`. |

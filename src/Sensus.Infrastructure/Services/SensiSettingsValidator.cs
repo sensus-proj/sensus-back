@@ -39,6 +39,11 @@ public sealed class SensiSettingsValidator : IValidateOptions<SensiSettings>
             failures.Add("OpenAiSettings:Sensi:AlertThresholdRatio debe estar entre 0.01 y 1.0.");
         }
 
+        if (double.IsNaN(options.Temperature) || options.Temperature < 0.0 || options.Temperature > 1.0)
+        {
+            failures.Add("OpenAiSettings:Sensi:Temperature debe estar entre 0.0 y 1.0.");
+        }
+
         if (options.DailyMessageLimitPerUser <= 0)
         {
             failures.Add("OpenAiSettings:Sensi:DailyMessageLimitPerUser debe ser mayor a 0.");
