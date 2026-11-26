@@ -115,7 +115,7 @@ jobs:
       - name: Generar SBOM CycloneDX del despliegue (FR-047-20)
         run: |
           dotnet tool install --global CycloneDX --version 6.3.2
-          dotnet CycloneDX sensus-back.sln -j -o artifacts/sbom -fn bom.json
+          dotnet CycloneDX sensus-back.sln -F Json -o artifacts/sbom -fn bom.json
 
       - name: Publicar SBOM de despliegue
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
