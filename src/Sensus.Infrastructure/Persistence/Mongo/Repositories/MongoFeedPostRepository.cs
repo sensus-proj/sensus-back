@@ -144,4 +144,18 @@ public sealed class MongoFeedPostRepository : IFeedPostRepository
         var result = await _context.FeedPosts.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
         return (int)Math.Min(result.ModifiedCount, int.MaxValue);
     }
+
+    public async Task<int> PurgeQuarantinedBeforeAsync(
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default)
+    {
+        DateTime normalizedCutoff = DateTime.SpecifyKind(cutoffUtc, DateTimeKind.Utc);
+        string quarantinedStatus = FeedPostStatus.Quarantined.ToString();
+
+        DeleteResult result = await _context.FeedPosts.DeleteManyAsync(
+            p => p.Status == quarantinedStatus && !p.IsDeleted && p.CreatedAtUtc < normalizedCutoff,
+            cancellationToken);
+
+        return (int)Math.Min(result.DeletedCount, int.MaxValue);
+    }
 }

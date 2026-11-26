@@ -175,6 +175,11 @@ public sealed class MongoDbContext
         _database?.GetCollection<FeedPostDocument>(_settings.FeedPostsCollectionName)
         ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
 
+    /// <summary>Refresh tokens rotatorios por familia con TTL en ExpiresAtUtc (Spec 002 / G-06).</summary>
+    public IMongoCollection<RefreshTokenDocument> RefreshTokens =>
+        _database?.GetCollection<RefreshTokenDocument>(_settings.RefreshTokensCollectionName)
+        ?? throw new InvalidOperationException("La conexión a MongoDB Atlas no está configurada. Configure 'MongoDbSettings:ConnectionString'.");
+
     /// <summary>Evidencia inmutable de moderación (Spec 021) y copia anonimizada tras baja de cuenta (Spec 061). Solo inserción.</summary>
     public IMongoCollection<ModerationAuditDocument> ModerationAudit =>
         _database?.GetCollection<ModerationAuditDocument>(_settings.ModerationAuditCollectionName)
@@ -326,6 +331,20 @@ public sealed class MongoDbContext
             var ttlIndexKeys = Builders<PasswordResetTokenDocument>.IndexKeys.Ascending(t => t.ExpiresAtUtc);
             var ttlOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.Zero };
             tokensCollection.Indexes.CreateOne(new CreateIndexModel<PasswordResetTokenDocument>(ttlIndexKeys, ttlOptions));
+
+            // Spec 002 / G-06: refresh tokens rotatorios (hash único, familia, usuario y TTL automático).
+            RefreshTokens.Indexes.CreateOne(new CreateIndexModel<RefreshTokenDocument>(
+                Builders<RefreshTokenDocument>.IndexKeys.Ascending(t => t.TokenHash),
+                new CreateIndexOptions { Name = "ux_refresh_tokens_token_hash", Unique = true }));
+            RefreshTokens.Indexes.CreateOne(new CreateIndexModel<RefreshTokenDocument>(
+                Builders<RefreshTokenDocument>.IndexKeys.Ascending(t => t.FamilyId),
+                new CreateIndexOptions { Name = "ix_refresh_tokens_family_id" }));
+            RefreshTokens.Indexes.CreateOne(new CreateIndexModel<RefreshTokenDocument>(
+                Builders<RefreshTokenDocument>.IndexKeys.Ascending(t => t.UserId).Ascending(t => t.RevokedAtUtc),
+                new CreateIndexOptions { Name = "ix_refresh_tokens_user_id" }));
+            RefreshTokens.Indexes.CreateOne(new CreateIndexModel<RefreshTokenDocument>(
+                Builders<RefreshTokenDocument>.IndexKeys.Ascending(t => t.ExpiresAtUtc),
+                new CreateIndexOptions { Name = "ttl_refresh_tokens_expires_at", ExpireAfter = TimeSpan.Zero }));
         }
         catch (Exception ex)
         {
@@ -359,6 +378,15 @@ public sealed class MongoDbContext
                 merchantStatusCreatedKeys,
                 new CreateIndexOptions { Name = "ix_offers_merchant_status_created" }));
 
+            // Índice cubierto para conteo de ofertas activas por comercio (Spec 034, FR-034-05).
+            var merchantStatusEndsAtKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.MerchantId)
+                .Ascending(o => o.Status)
+                .Ascending(o => o.EndsAt);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                merchantStatusEndsAtKeys,
+                new CreateIndexOptions { Name = "ix_offers_merchant_status_ends_at" }));
+
             // Índice compuesto (Status, EndsAt) para control de vigencia y expiración eficiente (SE-022 a SE-025, NFR-007-02)
             var statusEndsAtKeys = Builders<OfferDocument>.IndexKeys
                 .Ascending(o => o.Status)
@@ -387,6 +415,14 @@ public sealed class MongoDbContext
             offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
                 alternativesKeys,
                 new CreateIndexOptions { Name = "ix_offers_category_status_price" }));
+
+            // Índice compuesto (Status, NextModerationRetryAtUtc) para re-moderación diferida de ofertas (Spec 034, FR-034-07).
+            var pendingModerationKeys = Builders<OfferDocument>.IndexKeys
+                .Ascending(o => o.Status)
+                .Ascending(o => o.NextModerationRetryAtUtc);
+            offersCollection.Indexes.CreateOne(new CreateIndexModel<OfferDocument>(
+                pendingModerationKeys,
+                new CreateIndexOptions { Name = "ix_offers_pending_moderation_retry" }));
         }
         catch (Exception ex)
         {

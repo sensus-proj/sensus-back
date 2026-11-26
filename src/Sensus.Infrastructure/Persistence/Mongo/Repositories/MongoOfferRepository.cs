@@ -224,6 +224,23 @@ public sealed class MongoOfferRepository : IOfferRepository
     }
 
     /// <summary>
+    /// Cuenta las ofertas publicadas y vigentes de un comercio usando el índice compuesto
+    /// <c>ix_offers_merchant_status_ends_at</c> (Spec 034, FR-034-05).
+    /// </summary>
+    public async Task<long> CountActiveByMerchantAsync(
+        Guid merchantId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<OfferDocument>.Filter.And(
+            Builders<OfferDocument>.Filter.Eq(o => o.MerchantId, merchantId),
+            Builders<OfferDocument>.Filter.Eq(o => o.Status, OfferStatus.Published.ToString()),
+            Builders<OfferDocument>.Filter.Gt(o => o.EndsAt, nowUtc));
+
+        return await _context.Offers.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
     /// Devuelve unidades al inventario tras expirar o no completar un apartado (FR-033-05).
     /// </summary>
     public async Task<bool> ReturnStockAsync(
@@ -957,6 +974,31 @@ public sealed class MongoOfferRepository : IOfferRepository
         }).ToList();
 
         return new OfferAlternativesLookupResult(true, candidates);
+    }
+
+    public async Task<IReadOnlyList<Offer>> GetPendingModerationDueAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken = default)
+    {
+        DateTime normalizedNow = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        int safeBatch = Math.Clamp(batchSize, 1, 100);
+        string pendingStatus = OfferStatus.PendingModeration.ToString();
+
+        var filterBuilder = Builders<OfferDocument>.Filter;
+        FilterDefinition<OfferDocument> filter = filterBuilder.And(
+            filterBuilder.Eq(o => o.Status, pendingStatus),
+            filterBuilder.Or(
+                filterBuilder.Eq(o => o.NextModerationRetryAtUtc, null),
+                filterBuilder.Lte(o => o.NextModerationRetryAtUtc, normalizedNow)));
+
+        List<OfferDocument> docs = await _context.Offers
+            .Find(filter, new FindOptions { Hint = "ix_offers_pending_moderation_retry" })
+            .SortBy(o => o.NextModerationRetryAtUtc)
+            .Limit(safeBatch)
+            .ToListAsync(cancellationToken);
+
+        return docs.Select(d => d.ToDomain()).ToList();
     }
 
     private static BsonDocument LookupMerchantStage(string comerciosCollection) =>

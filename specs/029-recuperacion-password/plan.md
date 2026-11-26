@@ -37,14 +37,16 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 - `SesEmailSettings` (`From`, `Region`, `ConfigurationSetName`, `Simulate`) se resuelve desde SSM bajo `/sensus/<entorno>/`. Base: `Simulate=false` y `From` vacío (resolución en producción); Development: `Simulate=true`. Sin secretos en el repositorio.
 - La credencial Somee se retira del código y de la configuración; su baja en `/sensus/<entorno>/MailerSettings/ApiKey` es operación externa documentada. No se rota porque se da de baja.
 - Límite `recover`: 3 solicitudes por correo y hora, particionado por hash SHA-256 del correo normalizado, con 429 y `Retry-After`. Cuotas independientes por correo.
-- **Modelo de amenazas (STRIDE) del flujo de recuperación**
+- **Modelo de amenazas (STRIDE — Principio VIII) del flujo de recuperación**
 
-| Amenaza | Vector | Mitigación | Riesgo residual |
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
 |---|---|---|---|
-| *Spoofing* del correo | Solicitud haciéndose pasar por el titular o suplantación del remitente | Titularidad verificada por el buzón, respuesta 202 neutra, `From` fijo resuelto desde SSM e identidad verificada en SES | Bajo |
-| *Tampering* del token | Alteración del enlace o del token en tránsito o en la petición | Token de 32 bytes del que solo se guarda el hash, TLS 1.2+ de extremo a extremo, un solo uso, invalidación de tokens previos y 400 ante token inválido | Bajo |
-| *Information disclosure* por logs | Correo o token filtrado en trazas o métricas | `ISensitiveRequest`, redacción en `LoggingBehavior` y `PerformanceBehavior`, hash SHA-256 como clave de partición y ausencia de PII en CloudWatch | Muy bajo |
-| *DoS* por solicitudes | Inundación de `/recover` para agotar correo o capacidad | `RateLimiting:Recover` de 3 por correo y hora con hash SHA-256, 429 con `Retry-After`, alerta por volumen y *throttling* de API Gateway como control compensatorio | Medio-bajo |
+| **S — Spoofing** | Solicitud haciéndose pasar por el titular o suplantación del remitente | Titularidad verificada en buzón, respuesta `202` neutra, `From` fijo desde SSM e identidad SES verificada (`RequestPasswordResetCommandHandler.cs`, `PasswordResetEndpointTests.cs`) | Bajo |
+| **T — Tampering** | Alteración o reutilización de token de recuperación en tránsito o confirmación | Token de 32 bytes almacenado solo como hash SHA-256, TTL 30 min, un solo uso e invalidación de previos (`PasswordResetToken.cs`, `ResetPasswordCommandHandler.cs`, `RecoverConfirmEndpointTests.cs`) | Bajo |
+| **R — Repudiation** | Disputas sobre solicitudes o restablecimientos ejecutados | Trazas estructuradas con `CorrelationId` y rotación automática de `SecurityStamp` tras confirmar (`SesEmailSender.cs`, `SesEmailSenderTests.cs`) | Bajo |
+| **I — Information Disclosure** | Enumeración de correos o fuga de token/correo en trazas | `ISensitiveRequest` en `RequestPasswordResetCommand`, respuesta `202` idéntica exista o no el correo y hash SHA-256 en partición (`PasswordResetEndpointTests.cs`) | Muy bajo |
+| **D — Denial of Service** | Inundación de `/recover` para agotar cuota SES o saturar el servicio | `RateLimiting:Recover` (3/h por hash de correo, `429` + `Retry-After`) en `AuthEndpoints.cs`, TLS 1.2+ con SES (`RateLimitingTests.cs`) | Medio-bajo |
+| **E — Elevation of Privilege** | Uso del alias antiguo `/auth/reset-password` o persistencia de sesiones viejas tras cambio | Alias antiguo retirado (`404`, `RecoverConfirmEndpointTests.cs`) y rotación de `SecurityStamp` invalida todos los JWT previos | Bajo |
 
 - **Principio VIII (DevSecOps de nivel fintech):** ASVS 5.0 nivel 3 en autenticación y recuperación, NIST SP 800-63B para el ciclo de vida de la credencial, validación con lista de permitidos y límites de tamaño, errores uniformes `ProblemDetails` sin enumeración, auditoría y logs sin PII con `correlation-id`, secretos en SSM, *fail-closed* ante fallo del envío y escaneos bloqueantes (SAST, SCA, secretos, IaC, DAST y SBOM) en el pipeline.
 
@@ -59,6 +61,8 @@ Permitir que un usuario que olvidó su contraseña solicite un enlace de recuper
 - Amazon SES dentro del Free Tier (3.000 mensajes/mes desde Lambda). Sin recursos nuevos de pago. **Corrección 2026-11-25 (`FR-029-13`):** sí requiere IaC: el rol de la Lambda necesita `ses:SendEmail` (`AllowSesSendTransactionalEmail` en `SensusInfraStack.cs`, restringido a `identity/*` de la cuenta y región); sin él todo envío falla con AccessDenied.
 - Paquete NuGet `AWSSDK.SimpleEmail` versión `4.0.100.25`, licencia Apache-2.0, sin costo de paquete; el costo es el del servicio SES dentro del free tier (3.000 mensajes/mes desde Lambda).
 - La configuración `SesEmailSettings` se lee desde SSM al arrancar; ningún despliegue crea ni modifica secretos. **Precondición operativa (`FR-029-13`):** identidad del remitente verificada en SES y parámetros `/sensus/<entorno>/SesEmailSettings/From` y `/Region` creados por el responsable **antes** de desplegar. El 2026-11-25 el despliegue de `25c5ba2` sin `From` tumbó toda la API en producción (500 en todas las rutas por `OptionsValidationException`) hasta crear los parámetros. Mientras SES siga en sandbox solo entrega a destinatarios verificados; falta solicitar acceso de producción.
+
+- **Monitoreo SES (FR-029-14, T029-24)**: `SensusInfraStack.Email.cs` define `CfnConfigurationSet` (`sensus-transactional-<env>`) con `CloudWatchDestination` para eventos `BOUNCE`, `COMPLAINT`, `REJECT` y `DELIVERY` (sin correos en claro), alarma CloudWatch (`sensus-ses-bounces-complaints-<env>`, octava dentro de las 10 gratuitas) conectada al tema SNS existente y permiso `ses:SendEmail` sobre el ARN del configuration set en `SensusInfraStack.cs`. `SesEmailSender.cs` ya envía `ConfigurationSetName` cuando no está vacío (`SesEmailSenderTests.SendEmailAsync_ShouldConfigureSetAndRegion_WhenProvided`). Tras desplegar CDK, configurar `/sensus/<entorno>/SesEmailSettings/ConfigurationSetName` = `sensus-transactional-<env>`.
 
 ## 7. Estrategia de pruebas
 

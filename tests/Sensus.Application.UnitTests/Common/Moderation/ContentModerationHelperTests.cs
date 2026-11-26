@@ -64,8 +64,9 @@ public sealed class ContentModerationHelperTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_WhenModerationServiceIsNull_ReturnsApproved()
+    public async Task EvaluateAsync_WhenModerationServiceIsNullAndTextIsNotEmpty_ReturnsQuarantineFailClosed()
     {
+        // Ref: FR-017-09 - moderación fail-closed cuando no hay servicio configurado
         ModerationEvaluation result = await ContentModerationHelper.EvaluateAsync(
             null,
             "Texto limpio y normal",
@@ -74,9 +75,90 @@ public sealed class ContentModerationHelperTests
             "Mensaje por defecto",
             CancellationToken.None);
 
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be(ContentModerationHelper.QuarantineDecision);
+        result.Verdict.Should().Be(ModerationVerdict.Quarantined);
+        result.Message.Should().Be("La moderación no está disponible; el contenido no fue publicado.");
+        result.RejectionError.Should().NotBeNull();
+        result.RejectionError!.Code.Should().Be("Error.Code.ModerationUnavailable");
+        result.RejectionError.Type.Should().Be(ErrorType.Failure);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task EvaluateAsync_WhenModerationServiceIsNullAndTextIsEmpty_ReturnsApproved(string? text)
+    {
+        ModerationEvaluation result = await ContentModerationHelper.EvaluateAsync(
+            null,
+            text,
+            "test_context",
+            "Error.Code",
+            "Mensaje por defecto",
+            CancellationToken.None);
+
         result.IsApproved.Should().BeTrue();
         result.Decision.Should().Be(ContentModerationHelper.ApprovedDecision);
         result.Verdict.Should().Be(ModerationVerdict.Approved);
+        result.RejectionError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenModerationServiceThrows_ReturnsQuarantineFailClosed()
+    {
+        _moderationService.ModerateContentTextAsync("Texto válido", "test_context", Arg.Any<CancellationToken>())
+            .Returns<TextModerationResult>(_ => throw new HttpRequestException("OpenAI timeout"));
+
+        ModerationEvaluation result = await ContentModerationHelper.EvaluateAsync(
+            _moderationService,
+            "Texto válido",
+            "test_context",
+            "Error.Code",
+            "Mensaje por defecto",
+            CancellationToken.None);
+
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be(ContentModerationHelper.QuarantineDecision);
+        result.Verdict.Should().Be(ModerationVerdict.Quarantined);
+        result.RejectionError.Should().NotBeNull();
+        result.RejectionError!.Code.Should().Be("Error.Code.ModerationUnavailable");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenModerationServiceReturnsNull_ReturnsQuarantineFailClosed()
+    {
+        _moderationService.ModerateContentTextAsync("Texto válido", "test_context", Arg.Any<CancellationToken>())
+            .Returns((TextModerationResult)null!);
+
+        ModerationEvaluation result = await ContentModerationHelper.EvaluateAsync(
+            _moderationService,
+            "Texto válido",
+            "test_context",
+            "Error.Code",
+            "Mensaje por defecto",
+            CancellationToken.None);
+
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be(ContentModerationHelper.QuarantineDecision);
+        result.Verdict.Should().Be(ModerationVerdict.Quarantined);
+        result.RejectionError.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task EnsureApprovedAsync_WhenModerationServiceIsNull_ReturnsFailure()
+    {
+        Result result = await ContentModerationHelper.EnsureApprovedAsync(
+            null,
+            "Texto limpio y normal",
+            "context",
+            "Error.Code",
+            "Error message",
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Error.Code.ModerationUnavailable");
+        result.Error.Type.Should().Be(ErrorType.Failure);
     }
 
     [Fact]

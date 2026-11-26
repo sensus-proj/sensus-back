@@ -16,6 +16,7 @@ Emitir logs en JSON con identificador de correlación y sin datos personales.
 
 | Capa | Cambio |
 |---|---|
+| Application | Marcador `ISensitiveRequest` en comandos/consultas con contenido libre, bytes, códigos, firmas o PII/ubicación; `LoggingBehavior` y `PerformanceBehavior` omiten `{@Request}` |
 | Api | Middleware de correlación y logging |
 | Infraestructura | Configuración de logging por entorno |
 
@@ -52,8 +53,9 @@ Evaluación previa a la implementación.
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
 | V | PASS | Estrategia de pruebas definida en §7 |
-| VI | PASS | Costo estimado declarado en §6 |
+| VI | PASS | Costo estimado declarado en §6 (0 USD adicionales para `FR-014-05`) |
 | VII | PASS | observabilidad medible |
+| VIII | PASS | Principio VIII regla 7 (sin PII ni contenido en logs) verificada por `LoggingBehaviorTests` y `RequestsWithSensitivePayload_ShouldImplementISensitiveRequest` |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 
@@ -70,3 +72,4 @@ Evaluación previa a la implementación.
 5. `T014-05` Implementar las pruebas de integración del flujo completo
 6. `T014-06` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 7. `T014-07` Registrar evidencias del Constitution Check
+8. `T014-08` Marcar todos los comandos y consultas con contenido sensible o PII con `ISensitiveRequest` y blindar con regla de arquitectura (`FR-014-05`)

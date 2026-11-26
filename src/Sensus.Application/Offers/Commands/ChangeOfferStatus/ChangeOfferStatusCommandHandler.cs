@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -19,6 +21,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
     private readonly ILogger<ChangeOfferStatusCommandHandler> _logger;
     private readonly ICacheService? _cacheService;
     private readonly IOfferStatusHistoryRepository? _statusHistoryRepository;
+    private readonly IOptions<OfferLimitSettings>? _limitSettings;
 
     public ChangeOfferStatusCommandHandler(
         IOfferRepository offerRepository,
@@ -28,7 +31,8 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         IDateTimeProvider dateTimeProvider,
         ILogger<ChangeOfferStatusCommandHandler> logger,
         ICacheService? cacheService = null,
-        IOfferStatusHistoryRepository? statusHistoryRepository = null)
+        IOfferStatusHistoryRepository? statusHistoryRepository = null,
+        IOptions<OfferLimitSettings>? limitSettings = null)
     {
         _offerRepository = offerRepository;
         _offerClaimRepository = offerClaimRepository;
@@ -38,6 +42,7 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
         _logger = logger;
         _cacheService = cacheService;
         _statusHistoryRepository = statusHistoryRepository;
+        _limitSettings = limitSettings;
     }
 
     public async Task<Result<OfferDto>> Handle(ChangeOfferStatusCommand request, CancellationToken cancellationToken)
@@ -86,6 +91,17 @@ public sealed class ChangeOfferStatusCommandHandler : IRequestHandler<ChangeOffe
 
             case OfferStatus.Published:
                 transitionResult = offer.Resume(now);
+                if (transitionResult.IsSuccess && previousStatus != OfferStatus.Published)
+                {
+                    int maxActive = _limitSettings?.Value.MaxActivePerMerchant ?? OfferLimitSettings.DefaultMaxActivePerMerchant;
+                    long activeCount = await _offerRepository.CountActiveByMerchantAsync(comercio.Id, now, cancellationToken);
+                    if (activeCount >= maxActive)
+                    {
+                        return Result.Failure<OfferDto>(Error.Conflict(
+                            "Offer.ActiveLimitReached",
+                            $"El comercio alcanzó el límite máximo de {maxActive} ofertas activas simultáneas."));
+                    }
+                }
                 break;
 
             case OfferStatus.Archived:

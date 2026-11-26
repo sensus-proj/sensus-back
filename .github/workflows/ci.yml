@@ -315,10 +315,28 @@ jobs:
       - name: Test de arquitectura
         run: dotnet test tests/Sensus.ArchitectureTests --configuration Release
 
+      - name: Generar SBOM CycloneDX (FR-047-20)
+        run: |
+          dotnet tool install --global CycloneDX --version 6.3.2
+          dotnet CycloneDX sensus-back.sln -j -o artifacts/sbom -fn bom.json
+
+      - name: Publicar artefacto SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-ci-cyclonedx
+          path: artifacts/sbom/bom.json
+          retention-days: 30
+
   iac:
     name: Infraestructura como código
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    # GitHub no admite el contexto `secrets` en `if:` de un paso; se expone solo un booleano a nivel de job.
+    env:
+      HAS_IAC_ROLE: ${{ secrets.AWS_IAC_ROLE_ARN != '' }}
 
     steps:
       - name: Checkout
@@ -344,19 +362,33 @@ jobs:
         if: steps.check_infra.outputs.exists == 'true'
         run: npm install -g --ignore-scripts aws-cdk@2.1148.0
 
-      - name: cdk synth
+      - name: cdk synth (incluye cdk-nag AwsSolutionsChecks)
         if: steps.check_infra.outputs.exists == 'true'
         working-directory: infra
         run: cdk synth --quiet
 
+      - name: Autenticar en AWS con OIDC para cdk diff (FR-045-20)
+        if: steps.check_infra.outputs.exists == 'true' && github.event_name == 'pull_request' && env.HAS_IAC_ROLE == 'true'
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_IAC_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-2' }}
+
       - name: cdk diff
         if: steps.check_infra.outputs.exists == 'true' && github.event_name == 'pull_request'
         working-directory: infra
-        run: if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then cdk diff; else echo "Credenciales AWS pendientes en GitHub Secrets; sintaxis verificada con cdk synth."; fi
+        run: |
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            cdk diff
+          elif [ -n "$AWS_SESSION_TOKEN" ]; then
+            cdk diff
+          else
+            echo "Credenciales OIDC/AWS pendientes (AWS_IAC_ROLE_ARN); sintaxis y cdk-nag verificados con cdk synth."
+          fi
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
 
   sdd:
     name: Trazabilidad SDD

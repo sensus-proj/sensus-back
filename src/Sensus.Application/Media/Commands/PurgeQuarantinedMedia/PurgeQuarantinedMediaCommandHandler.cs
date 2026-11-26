@@ -19,19 +19,22 @@ public sealed class PurgeQuarantinedMediaCommandHandler
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<PurgeQuarantinedMediaCommandHandler> _logger;
     private readonly ICdnCacheInvalidator _cdnCacheInvalidator;
+    private readonly IFeedPostRepository? _feedPostRepository;
 
     public PurgeQuarantinedMediaCommandHandler(
         IMediaAssetRepository mediaAssetRepository,
         IMediaStorage mediaStorage,
         IDateTimeProvider dateTimeProvider,
         ILogger<PurgeQuarantinedMediaCommandHandler> logger,
-        ICdnCacheInvalidator cdnCacheInvalidator)
+        ICdnCacheInvalidator cdnCacheInvalidator,
+        IFeedPostRepository? feedPostRepository = null)
     {
         _mediaAssetRepository = mediaAssetRepository;
         _mediaStorage = mediaStorage;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
         _cdnCacheInvalidator = cdnCacheInvalidator;
+        _feedPostRepository = feedPostRepository;
     }
 
     public async Task<Result<PurgeQuarantinedMediaResultDto>> Handle(
@@ -87,8 +90,14 @@ public sealed class PurgeQuarantinedMediaCommandHandler
             purged++;
         }
 
+        if (_feedPostRepository is not null)
+        {
+            int purgedPosts = await _feedPostRepository.PurgeQuarantinedBeforeAsync(now - retention, cancellationToken);
+            purged += purgedPosts;
+        }
+
         _logger.LogInformation(
-            "Purga de cuarentena: {Purged} activos descartados y {Failed} pendientes de reintento (retención {Days} días).",
+            "Purga de cuarentena: {Purged} elementos descartados y {Failed} pendientes de reintento (retención {Days} días).",
             purged,
             failed,
             request.RetentionDays);

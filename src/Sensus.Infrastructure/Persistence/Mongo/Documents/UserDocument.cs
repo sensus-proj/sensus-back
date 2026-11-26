@@ -59,6 +59,10 @@ public sealed class UserDocument
     [BsonElement("suspensionEndsAtUtc")]
     public DateTime? SuspensionEndsAtUtc { get; set; }
 
+    /// <summary>Estado de segundo factor TOTP (Spec 062).</summary>
+    [BsonElement("mfa")]
+    public UserMfaDocument? Mfa { get; set; }
+
     public static UserDocument FromDomain(User user)
     {
         return new UserDocument
@@ -77,7 +81,20 @@ public sealed class UserDocument
             DeletedAtUtc = user.DeletedAtUtc,
             Roles = user.Roles.ToList(),
             SuspensionSanctionId = user.Suspension?.SanctionId,
-            SuspensionEndsAtUtc = user.Suspension?.EndsAtUtc
+            SuspensionEndsAtUtc = user.Suspension?.EndsAtUtc,
+            Mfa = user.Mfa is null
+                ? null
+                : new UserMfaDocument
+                {
+                    IsEnabled = user.Mfa.IsEnabled,
+                    IsPendingConfirmation = user.Mfa.IsPendingConfirmation,
+                    EncryptedSecret = user.Mfa.EncryptedSecret,
+                    RecoveryCodeHashes = user.Mfa.RecoveryCodeHashes.ToList(),
+                    FailedAttempts = user.Mfa.FailedAttempts,
+                    LockedUntilUtc = user.Mfa.LockedUntilUtc,
+                    EnrolledAtUtc = user.Mfa.EnrolledAtUtc,
+                    LastVerifiedTimeStep = user.Mfa.LastVerifiedTimeStep
+                }
         };
     }
 
@@ -129,7 +146,47 @@ public sealed class UserDocument
                 SuspensionEndsAtUtc is { } end ? DateTime.SpecifyKind(end, DateTimeKind.Utc) : null);
         }
 
+        if (Mfa is not null)
+        {
+            user.RestoreMfa(new UserMfaState(
+                Mfa.IsEnabled,
+                Mfa.IsPendingConfirmation,
+                Mfa.EncryptedSecret,
+                Mfa.RecoveryCodeHashes,
+                Mfa.FailedAttempts,
+                Mfa.LockedUntilUtc is { } locked ? DateTime.SpecifyKind(locked, DateTimeKind.Utc) : null,
+                Mfa.EnrolledAtUtc is { } enrolled ? DateTime.SpecifyKind(enrolled, DateTimeKind.Utc) : null,
+                Mfa.LastVerifiedTimeStep));
+        }
+
         user.ClearDomainEvents();
         return user;
     }
+}
+
+public sealed class UserMfaDocument
+{
+    [BsonElement("isEnabled")]
+    public bool IsEnabled { get; set; }
+
+    [BsonElement("isPendingConfirmation")]
+    public bool IsPendingConfirmation { get; set; }
+
+    [BsonElement("encryptedSecret")]
+    public string EncryptedSecret { get; set; } = string.Empty;
+
+    [BsonElement("recoveryCodeHashes")]
+    public List<string> RecoveryCodeHashes { get; set; } = [];
+
+    [BsonElement("failedAttempts")]
+    public int FailedAttempts { get; set; }
+
+    [BsonElement("lockedUntilUtc")]
+    public DateTime? LockedUntilUtc { get; set; }
+
+    [BsonElement("enrolledAtUtc")]
+    public DateTime? EnrolledAtUtc { get; set; }
+
+    [BsonElement("lastVerifiedTimeStep")]
+    public long? LastVerifiedTimeStep { get; set; }
 }

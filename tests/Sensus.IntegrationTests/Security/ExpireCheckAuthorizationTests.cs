@@ -110,7 +110,11 @@ public sealed class ExpireCheckAuthorizationTests : IClassFixture<CustomWebAppli
         }
 
         _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
-        var (token, _) = _factory.Services.GetRequiredService<IJwtTokenGenerator>().GenerateToken(user);
+        var jwtGen = _factory.Services.GetRequiredService<IJwtTokenGenerator>();
+        var clock = _factory.Services.GetRequiredService<IDateTimeProvider>();
+        var (token, _) = role == RoleType.Administrador
+            ? jwtGen.GenerateAdminStepUpToken(user, clock.UtcNow)
+            : jwtGen.GenerateToken(user);
         return token;
     }
 }

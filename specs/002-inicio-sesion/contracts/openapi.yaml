@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 002 Inicio de sesión"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 002. Completar esquemas antes de implementar."
+  version: 1.1.0
+  description: "Contrato de POST /api/v1/auth/login, POST /api/v1/auth/refresh (rotación con detección de reuso, G-06) y GET /api/v1/auth/me."
 servers:
   - url: https://localhost:5001
 paths:
@@ -13,6 +13,25 @@ paths:
       responses:
         '200': { description: OK }
         '400': { description: Solicitud inválida }
+  /api/v1/auth/refresh:
+    post:
+      summary: "Rota el refresh token y emite un nuevo JWT de corta vigencia (<= 15 min)"
+      operationId: refreshSessionToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, maxLength: 512 }
+      responses:
+        '200': { description: Par de tokens renovado }
+        '400': { description: Solicitud inválida }
+        '401': { description: Refresh token inválido, expirado o reutilizado (familia revocada) }
+        '429': { description: Límite de tasa excedido }
   /api/v1/auth/me:
     get:
       summary: Identidad de la sesión actual, leída de los claims del JWT

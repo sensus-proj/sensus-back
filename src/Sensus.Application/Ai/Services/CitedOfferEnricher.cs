@@ -83,7 +83,7 @@ public sealed class CitedOfferEnricher : ICitedOfferEnricher
         try
         {
             var offer = await _offerRepository.GetByIdAsync(offerId, cancellationToken);
-            if (offer is null || offer.Status == OfferStatus.Draft)
+            if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.PendingModeration or OfferStatus.Rejected)
             {
                 return cited;
             }

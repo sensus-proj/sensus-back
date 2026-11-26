@@ -14,12 +14,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-001-01` | 001 | NFR | Latencia de registro | p95 < 800 ms | Implementado |
 | `NFR-001-02` | 001 | NFR | Errores 5xx en registro | < 0.5 % | Implementado |
 | `FR-002-01` | 002 | FR | Autenticar con correo y contraseña | Must | Implementado |
-| `FR-002-02` | 002 | FR | Emitir JWT con sub, email, name, roles, jti y exp de 60 minutos | Must | Implementado |
+| `FR-002-02` | 002 | FR | Emitir JWT con sub, email, name, roles, jti y exp máximo de 15 minutos más refresh token rotatorio (`G-06`) | Must | Implementado |
 | `FR-002-03` | 002 | FR | Responder 401 con mensaje genérico ante credenciales inválidas | Must | Implementado |
 | `FR-002-04` | 002 | FR | Actualizar la fecha de último acceso | Should | Implementado |
 | `FR-002-05` | 002 | FR | Rechazar cuentas suspendidas o eliminadas | Must | Implementado |
 | `NFR-002-01` | 002 | NFR | Latencia de login | p95 < 600 ms | Implementado |
-| `NFR-002-02` | 002 | NFR | Vigencia del token | 60 minutos, configurable por entorno | Implementado |
+| `NFR-002-02` | 002 | NFR | Vigencia del token | ≤ 15 minutos (access) y refresh rotatorio 30 días, configurable por entorno | Implementado |
 | `FR-002-06` | 002 | FR | Consultar la identidad de la sesión actual (`GET /auth/me`) desde los claims del JWT | Must | Implementado |
 | `FR-002-07` | 002 | FR | Responder `/auth/me` con un DTO explícito y prueba de mapeo | Should | Pendiente |
 | `FR-003-01` | 003 | FR | Devolver el perfil del usuario autenticado | Must | Implementado |
@@ -86,6 +86,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-011-02` | 011 | FR | Documentar todos los endpoints con esquemas y códigos de respuesta | Must | Implementado |
 | `FR-011-03` | 011 | FR | Validar el documento en CI y fallar ante cambios incompatibles | Must | Implementado |
 | `FR-011-04` | 011 | FR | Versionar el contrato junto con la API | Should | Implementado |
+| `FR-011-05` | 011 | FR | Swagger UI y OpenAPI solo en Development; 404 en producción (G-15) | Must | Implementado |
 | `NFR-011-01` | 011 | NFR | Cobertura del contrato | 100 % de endpoints publicados | Implementado |
 | `FR-012-01` | 012 | FR | Definir orígenes permitidos por configuración y entorno | Must | Implementado |
 | `FR-012-02` | 012 | FR | Prohibir AllowAnyOrigin fuera de desarrollo | Must | Implementado |
@@ -103,6 +104,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-014-02` | 014 | FR | Aceptar o generar correlation-id por petición | Must | Implementado |
 | `FR-014-03` | 014 | FR | Excluir PII, tokens y contenido moderado | Must | Pendiente |
 | `FR-014-04` | 014 | FR | Registrar método, ruta, estado y duración | Should | Pendiente |
+| `FR-014-05` | 014 | FR | Exigir `ISensitiveRequest` y redactar carga útil de comandos/consultas MediatR con contenido de usuario o PII | Must | Implementado |
 | `NFR-014-01` | 014 | NFR | Campos obligatorios | timestamp, level, correlationId, message | Pendiente |
 | `NFR-014-02` | 014 | NFR | Sobrecarga | < 5 ms | Pendiente |
 | `FR-015-01` | 015 | FR | Publicar métricas de latencia, errores y throttling | Must | Implementado |
@@ -121,7 +123,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-05` | 017 | FR | Registrar veredicto, categorías, puntajes y acción adoptada | Must | Parcial |
 | `FR-017-06` | 017 | FR | Moderar toda imagen de oferta antes de exponerla públicamente | Must | Parcial |
 | `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
-| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Parcial |
+| `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Implementado |
+| `FR-017-09` | 017 | FR | Devolver cuarentena/rechazo (fail-closed) cuando el servicio de moderación de texto es nulo, falla o responde nulo | Must | Implementado |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
 | `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
@@ -171,12 +174,14 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-023-01` | 023 | NFR | Latencia de entrega | p95 < 200 ms en caché | Implementado |
 | `NFR-023-02` | 023 | NFR | Coste | Dentro del plan gratuito de Cloudinary (25 créditos) | Implementado |
 | `FR-024-01` | 024 | FR | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must | Implementado |
-| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Parcial |
+| `FR-024-02` | 024 | FR | Moderar texto solo o junto a la imagen cuando exista, publicar tras veredicto favorable y enviar a cuarentena ante fallos | Must | Implementado |
 | `FR-024-03` | 024 | FR | Registrar autor, fechas y estado | Must | Implementado |
-| `FR-024-04` | 024 | FR | Resolver la moderación de forma síncrona: 201 con la publicación aprobada, 400 ante rechazo o indisponibilidad del moderador | Must | Implementado |
+| `FR-024-04` | 024 | FR | Resolver la moderación de forma síncrona: 201 tras aprobación, 202 en cuarentena ante indisponibilidad y 400 ante rechazo explícito | Must | Implementado |
 | `FR-024-05` | 024 | FR | Permitir al autor eliminar su propia publicación | Must | Implementado |
 | `FR-024-06` | 024 | FR | Permitir a un administrador eliminar cualquier publicación | Should | Implementado |
 | `FR-024-07` | 024 | FR | Excluir del feed las publicaciones eliminadas de inmediato | Must | Implementado |
+| `FR-024-08` | 024 | FR | Rechazar `imageUrl` externa en JSON y aceptar solo `mediaAssetId` aprobado propiedad del autor | Must | Implementado |
+| `FR-024-09` | 024 | FR | Persistir publicación en cuarentena (`202 Accepted`, sin subir imagen) con auditoría `FeedPost` ante fallo de moderación y purgar a 30 días; fallar cerrado si falla la auditoría al publicar | Must | Implementado |
 | `NFR-024-01` | 024 | NFR | Latencia percibida | p95 < 1 s hasta aceptar la solicitud | Implementado |
 | `NFR-024-02` | 024 | NFR | Consistencia | Sin publicaciones sin veredicto | Implementado |
 | `FR-025-01` | 025 | FR | Crear comentario en una publicación existente y visible | Must | Implementado |
@@ -228,6 +233,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-029-11` | 029 | FR | Retirar la credencial Somee del código y la configuración; baja operativa externa documentada del parámetro SSM (sin rotación: se da de baja) | Must | Implementado |
 | `FR-029-12` | 029 | FR | Enviar el correo por Amazon SES (`AWSSDK.SimpleEmail`) con TLS 1.2 o superior y cerrar EX-004 | Must | Implementado |
 | `FR-029-13` | 029 | FR | Permiso `ses:SendEmail` de la Lambda en IaC y parámetros SSM `SesEmailSettings/From` y `/Region` antes de desplegar | Must | Implementado |
+| `FR-029-14` | 029 | FR | *Configuration set* SES `sensus-transactional-<env>` publicando rebotes/quejas/rechazos a CloudWatch y alarma SNS sin correos en claro | Must | Implementado en IaC (pendiente `ConfigurationSetName` en SSM tras desplegar) |
 | `FR-030-01` | 030 | FR | Exponer DELETE /api/v1/users/account con confirmación explícita y contraseña | Must | Implementado (060; `204` conservado) |
 | `FR-030-02` | 030 | FR | Marcar la cuenta como deleted y revocar todas sus sesiones de inmediato | Must | Implementado (060) |
 | `FR-030-03` | 030 | FR | Impedir el login y cualquier operación autenticada tras la eliminación | Must | Implementado (060) |
@@ -274,9 +280,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
 | `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
 | `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
-| `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Pendiente |
+| `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Implementado (`Offers:MaxActivePerMerchant=20`, `T034-18`) |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
-| `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Pendiente |
+| `FR-034-07` | 034 | FR | Devolver 202 cuando la moderación quede pendiente | Should | Implementado |
 | `FR-034-08` | 034 | FR | Exigir para publicar una categoría del catálogo de producto `OfferCategory` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets` y `Pharmacy`); un valor ausente o fuera del catálogo responde `400`. Un borrador (`FR-034-04`) puede guardarse sin categoría | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
 | `FR-034-09` | 034 | FR | Normalizar una sola vez las ofertas existentes: los nombres en español que enviaba el móvil se convierten al código (Abarrotes → `Grocery`, Limpieza y Hogar → `CleaningHome`, Perecederos → `Perishables`, Lácteos → `Dairy`, Comida → `Food`, Panadería → `Bakery`, Bebidas → `Beverages`, Mascotas → `Pets`, Farmacia → `Pharmacy`); los valores no reconocibles quedan nulos y se cuentan en la evidencia de la migración | Must | Implementado |
 | `NFR-034-01` | 034 | NFR | Latencia de creación | p95 < 1 s sin moderación | Pendiente |
@@ -413,6 +419,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-045-15` | 045 | FR | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must | Implementado |
 | `FR-045-16` | 045 | FR | Prueba de humo tras `cdk deploy` (`/health/live`, `/health/ready` 200 y ruta protegida 401), omitida en pausa nocturna | Must | Implementado |
 | `FR-045-17` | 045 | FR | Conservar el paquete previo y restaurarlo automáticamente si falla la prueba de humo; job en rojo | Must | Implementado |
+| `FR-045-18` | 045 | FR | Acciones de los workflows de despliegue fijadas por SHA y `GITHUB_TOKEN` con `contents: read` | Must | Implementado |
+| `FR-045-19` | 045 | FR | Job de despliegue a producción usa environment `production` con aprobación manual de revisor en GitHub | Must | Implementado en YAML (falta crear environment en GitHub) |
+| `FR-045-20` | 045 | FR | Autenticación OIDC de GitHub hacia AWS con roles de mínimo privilegio, retirando llaves de acceso de larga duración | Must | Implementado en CDK/workflows (pendiente `cdk deploy` y secreto `AWS_DEPLOY_ROLE_ARN`) |
 | `NFR-045-01` | 045 | NFR | Costo mensual de infraestructura en AWS | 0.00 USD (Free Tier) | Implementado |
 | `NFR-045-02` | 045 | NFR | Tiempo de síntesis (`cdk synth`) en CI | < 60 segundos | Implementado |
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |
@@ -463,6 +472,9 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-047-16` | 047 | FR | Calificar cada prompt de las Evals con modelo con la mediana de `runs_per_prompt` corridas (mayoría aprobada; fuga en cualquier corrida reprueba), sin cambiar umbrales | Must | Implementado |
 | `FR-047-17` | 047 | FR | Generar las respuestas de las Evals con la temperatura de producción (`OpenAiSettings:Sensi:Temperature`); juez a temperatura 0 | Must | Implementado |
 | `FR-047-18` | 047 | FR | Publicar el reporte de Evals en `deploy-serverless.yml` incluso cuando la puerta falla (`if: always()`) | Must | Implementado |
+| `FR-047-19` | 047 | FR | Escaneo estático bloqueante de IaC en `infra/` con `Cdklabs.CdkNag` (`AwsSolutionsChecks`) | Must | Implementado |
+| `FR-047-20` | 047 | FR | Generación de SBOM CycloneDX en `ci.yml` y `deploy-serverless.yml` con atestación SLSA 2 sobre binario Lambda | Must | Implementado en workflows |
+| `FR-047-21` | 047 | FR | Escaneo DAST pasivo (OWASP ZAP baseline) diurno y manual en `.github/workflows/dast-zap.yml` con `.zap/rules.tsv` | Must | Preparado en workflows (pendiente ejecución diurna) |
 | `NFR-047-01` | 047 | NFR | Tiempo total del pipeline | < 10 minutos | Implementado |
 | `NFR-047-02` | 047 | NFR | Cobertura de pruebas | ≥ 80 % líneas en Domain y Application | Implementado |
 | `NFR-047-03` | 047 | NFR | Vulnerabilidades críticas/altas en dependencias | 0 | Implementado |
@@ -614,5 +626,12 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-061-02` | 061 | NFR | Apartados resueltos | 0 apartados `Active` del comercio tras la baja, verificado por prueba | Implementado |
 | `NFR-061-03` | 061 | NFR | Retención de auditoría | Evidencia anonimizada con `expiresAtUtc = ahora + 90 días`, configurable y sin PII | Implementado |
 | `NFR-061-04` | 061 | NFR | Sin regresión visual | Las ofertas archivadas conservan su `Id` y dejan de devolverse en consultas públicas | Implementado |
+| `FR-062-01` | 062 | FR | Implementar TOTP RFC 6238 con `HMACSHA1` nativo de .NET (6 dígitos, ventana ±1 paso de 30 s) y URI `otpauth://totp/`, validado contra vectores oficiales del RFC 6238 sin paquetes de terceros | Must | Implementado |
+| `FR-062-02` | 062 | FR | Cifrar el secreto TOTP en reposo con AES-256-GCM usando `Mfa:EncryptionKey` (SSM) y almacenar 8 códigos de recuperación de un solo uso únicamente con hash SHA-256; fallar cerrado si falta la clave de cifrado | Must | Implementado |
+| `FR-062-03` | 062 | FR | Exponer `POST /api/v1/auth/mfa/enroll` (solo `Administrador`) y `POST /api/v1/auth/mfa/verify` para activar el enrolamiento, validar TOTP o código de recuperación y emitir JWT con claims `amr=mfa` y `mfa_at` | Must | Implementado |
+| `FR-062-04` | 062 | FR | Emitir un desafío intermedio en `POST /api/v1/auth/login` (`requiresMfa=true`, `mfaChallengeToken` de corta vigencia sin permisos operativos) cuando una cuenta `Administrador` tenga 2FA activo | Must | Implementado |
+| `FR-062-05` | 062 | FR | Exigir `amr=mfa` con recencia ≤ `Mfa:StepUpWindowMinutes` (15 min) en todas las rutas con política `AdminOnly`, aplicar bloqueo temporal tras intentos fallidos y auditar eventos MFA en colección de solo adición | Must | Implementado |
+| `NFR-062-01` | 062 | NFR | Resistencia a fuerza bruta | Bloqueo temporal tras 5 intentos fallidos consecutivos (15 min) + rate limiting estricto | Implementado |
+| `NFR-062-02` | 062 | NFR | Protección de secretos | Secreto en texto claro visible únicamente una vez al enrolar; cero secretos ni códigos en logs | Implementado |
 
-Total: **602 requisitos** en 61 specs. La Spec 030 está cerrada como `Escindida`: sus requisitos se cubren mediante las specs 060 y 061, salvo `FR-030-08`, completado en la propia Spec 030 (T030-13).
+Total: **609 requisitos** en 62 specs. La Spec 030 está cerrada como `Escindida`: sus requisitos se cubren mediante las specs 060 y 061, salvo `FR-030-08`, completado en la propia Spec 030 (T030-13).

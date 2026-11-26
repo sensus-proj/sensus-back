@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Common;
 
 namespace Sensus.Application.Comercios.Commands.RegisterComercio;
@@ -14,4 +15,4 @@ public sealed record RegisterComercioCommand(
     string? Categoria = null,
     double? Latitud = null,
     double? Longitud = null,
-    string? FotoFachadaUrl = null) : IRequest<Result<RegisterComercioResponseDto>>;
+    string? FotoFachadaUrl = null) : IRequest<Result<RegisterComercioResponseDto>>, ISensitiveRequest;

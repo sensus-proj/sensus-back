@@ -1,4 +1,5 @@
 using Amazon.CDK;
+using Cdklabs.CdkNag;
 
 namespace Sensus.Infra;
 
@@ -29,6 +30,9 @@ internal static class Program
         Tags.Of(stack).Add("project", "sensus");
         Tags.Of(stack).Add("environment", envName);
         Tags.Of(stack).Add("owner", "sensus-team");
+
+        // Escaneo estático bloqueante de IaC (Spec 047, FR-047-19, G-03)
+        Validations.Of(app).AddPlugins(new AwsSolutionsChecks(app, new NagPackProps { Verbose = true }));
 
         app.Synth();
     }

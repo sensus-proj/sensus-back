@@ -4,9 +4,9 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Constitution Check | Abierto. Falta resolver la cuarentena previa a publicación. |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -37,6 +37,17 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 - El comercio proviene del token
 - Moderación previa obligatoria
 - Sin publicar imágenes antes del veredicto
+
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Creación de ofertas suplantando a otro comercio | El comercio se resuelve desde `ICurrentUserService.UserId` del JWT verificado (`CreateOfferCommandHandler.cs`, `CreateOfferEndpointsTests.cs`) | Bajo |
+| **T — Tampering** | Manipulación de precio final, descuento > 90 % o enlace de imagen no moderada | Precio final calculado en `Offer.Create` (`OfferTests.cs`); `HasApprovedImageAsync` valida dueño y huella `ModeratedTextFingerprint`; texto re-moderado en `ContentModerationHelper.cs` | Medio (cuarentena de imagen sigue abierta por `FR-034-03`) |
+| **R — Repudiation** | Publicación, rechazo o cuarentena sin evidencia de decisión | Registro `ModerationAuditRecorder` con veredicto, acción y `CorrelationId` (`CreateOfferCommandHandler.cs`) | Bajo |
+| **I — Information Disclosure** | Exposición pública de borradores (`saveAsDraft=true`) o texto sensible en logs | Filtro `Status != Draft` en detalle/cercanas (`CreateOfferEndpointsTests.cs`) y `CreateOfferCommand : ISensitiveRequest` en logs (`ArchitectureTests.cs`) | Bajo |
+| **D — Denial of Service** | Creación masiva de ofertas activas por un comercio | Límite configurable `Offers:MaxActivePerMerchant=20` (`OfferLimitSettings.cs`, `ix_offers_merchant_status_ends_at`, `MongoOfferActiveCountIntegrationTests.cs`) con respuesta `409 Conflict` | Bajo (+1 transitorio posible ante ráfaga concurrente exacta) |
+| **E — Elevation of Privilege** | Uso del endpoint por usuario consumidor o invitado, o bypass de moderación en borrador | Política `MerchantOnlyPolicy` en `OfferEndpoints.cs` (`401`/`403`) y aislamiento de transición desde `Draft` en `ChangeOfferStatusCommandHandler.cs` | Bajo |
 
 ## 5. Observabilidad y rendimiento
 
@@ -106,3 +117,18 @@ La cuarentena por fallo del proveedor debe resolverse antes de activar este dise
 - Redacción propuesta. Permitir retención temporal de imágenes de ofertas pendientes de veredicto en una colección privada de MongoDB, sin URL ni acceso de clientes, con expiración por TTL y máximo efectivo conforme a la spec 019. Mantener Cloudinary como destino de las imágenes aprobadas. Excluir expresamente el contenido prohibido de persistir según §2.3. Mantener cerrado el acceso a contenido inconcluso, rechazado o expirado.
 - Impacto. Actualizar 017, 019, 034 y 044 antes de implementar. El flujo de ofertas puede recibir la imagen en la propia solicitud de publicación y las ediciones de contenido quedan sujetas a una nueva evidencia. Las rutas ajenas al flujo de ofertas quedan fuera de este cambio. Verificar capacidad de MongoDB Free Tier, tamaño máximo por documento, acceso interno, TTL, costo y eliminación antes de aprobar el plan de implementación.
 - Criterio de verificación. Con timeout o respuesta inválida, cero escrituras en Cloudinary, oferta no visible, imagen inaccesible a clientes y registro de cuarentena con vencimiento. Con aprobación conjunta válida, se habilita la imagen y se puede programar la alerta de la versión aprobada.
+
+### Diseño de T034-18 — Límite configurable de ofertas activas por comercio (`FR-034-05`)
+
+- **Configuración (`OfferLimitSettings`)**: sección `"Offers"` (`MaxActivePerMerchant`, por defecto `20`, rango `[1, 1000]` validado con `ValidateDataAnnotations().ValidateOnStart()`).
+- **Índice compuesto e implementación**: `ix_offers_merchant_status_ends_at` (`{ MerchantId: 1, Status: 1, EndsAt: 1 }`) en `offers` permite ejecutar `CountDocumentsAsync` sobre ofertas con `Status == "Published"` y `EndsAt > nowUtc` mediante `IXSCAN` acotado por comercio (`MongoOfferRepository.CountActiveByMerchantAsync`). Los estados `Draft`, `Paused`, `Expired`, `Archived` y `Published` con `EndsAt <= nowUtc` quedan excluidos del conteo.
+- **Puntos de control**: `CreateOfferCommandHandler` (solo cuando `!SaveAsDraft`, después de `Offer.Create` y antes de moderar/persistir), `ChangeOfferStatusCommandHandler` (al reanudar de no-`Published` a `Published`) y `RepublishOfferCommandHandler` (antes de moderar/persistir). Si `activeCount >= maxActive`, devuelven `Error.Conflict("Offer.ActiveLimitReached", ...)` -> `409 Conflict`.
+- **Decisión provisional del ejecutor — revisar con Rodrigo**: Ante dos publicaciones simultáneas del mismo comercio en el límite (p. ej. 19 -> 20), la verificación previa por conteo sin transacción distribuida acepta un sobrepaso transitorio mínimo (máximo +1 por ventana de milisegundos). Alternativa descartada: contador atómico en colección aparte o transacciones multi-documento en M0 (overhead innecesario en Atlas Free Tier M0 y riesgo de deriva si expiran ofertas por tiempo sin decrementar el contador). Si se requiere límite estricto bajo concurrencia extrema, migrar en spec posterior a documento de cuota con lease temporal.
+- **Costo AWS/Atlas**: Cero adicional (índice pequeño sobre colección existente dentro de M0 Free Tier).
+
+### Diseño de T034-19 — Moderación pendiente `202 Accepted` y re-moderación diferida (`FR-034-07`)
+
+- **Flujo `CreateOfferCommandHandler` + `OfferEndpoints`**: Si `!SaveAsDraft` y `ContentModerationHelper.EvaluateAsync` devuelve `Quarantined` (indisponibilidad/timeout), la oferta pasa a `OfferStatus.PendingModeration` con `NextModerationRetryAtUtc = now + RetryDelaySeconds`, se registra auditoría `best-effort` (`Quarantined`), se omite caché pública y `INearbyOfferNotifier`, y el endpoint responde `202 Accepted` con cabecera `Location`.
+- **Ocultamiento público (`GetOfferDetailQueryHandler` y consumidores)**: `PendingModeration` y `Rejected` quedan ocultos (`404 NotFound`) en el detalle público y excluidos de cercanía, búsqueda, feed, favoritos, likes, vistas, compartir y citas IA. Únicamente el propietario autenticado del comercio puede consultar su propia oferta `PendingModeration` (sin escribirla en caché pública Redis) o verla en `/api/v1/merchants/my-offers`.
+- **Re-moderación (`ProcessPendingOfferModerationCommand` + `OfferModerationRetryBackgroundService`)**: Consulta lotes mediante el índice `ix_offers_pending_moderation_retry` (`Status`, `NextModerationRetryAtUtc`). Si se aprueba, registra auditoría `System` *fail-closed*, cambia a `Published` (o `Expired`), invalida caché y dispara `INearbyOfferNotifier`; si se rechaza o agota `Moderation:OfferRetry:MaxAttempts` (5), pasa a `Rejected`.
+- **Decisión provisional del ejecutor — revisar con Rodrigo**: Al agotar `MaxAttempts` (5 intentos) la oferta pasa *fail-closed* a `OfferStatus.Rejected` en lugar de permanecer en `PendingModeration` indefinidamente o auto-publicarse, y el detalle `PendingModeration` es visible para el propietario sin caché además del inventario privado. Alternativa descartada: ocultarlo también al propietario en `GET /offers/{id}` o mantener cola infinita.

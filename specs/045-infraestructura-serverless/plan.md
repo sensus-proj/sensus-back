@@ -108,4 +108,20 @@ Evaluación previa y posterior a la implementación.
 
 - **Empaquetado .NET 10 para Lambda**: Dado que AWS Lambda utiliza `provided.al2023` para `.NET 10`, el comando de publicación debe generar el binario ejecutable llamado `bootstrap` (mediante `<AssemblyName>bootstrap</AssemblyName>` al publicar para Lambda o empaquetado con `dotnet lambda package`). El stack permite apuntar al directorio de artefactos publicados o a un placeholder válido durante `cdk synth` en CI.
 
+### 2.2 Aprobación de despliegue y autenticación OIDC (`FR-045-19`, `FR-045-20`, B1–B2)
+
+- **Environment `production` (`FR-045-19`)**: `.github/workflows/deploy-serverless.yml` asigna `environment: { name: production, url: https://zqqdwovx81.execute-api.us-east-2.amazonaws.com }`. En GitHub Settings → Environments → `production`, el responsable configura revisores obligatorios y rama permitida `main`.
+- **Roles OIDC (`FR-045-20`, `SensusInfraStack.GitHubOidc.cs`)**:
+  - `sensus-github-deploy-<env>`: asumible únicamente con audiencia `sts.amazonaws.com` y `sub` en `repo:sensus-proj/sensus-back:environment:production` o `repo:sensus-proj/sensus-back:ref:refs/heads/main`.
+    - Permisos mínimos justificados: `sts:AssumeRole` sobre `cdk-hnb659fds-*-<cuenta>-us-east-2` (despliegue CDK bootstrap), `s3:GetObject`/`PutObject`/`ListBucket` acotados a `rollback/*` (respaldo automático `FR-045-17`), `lambda:GetFunction`/`GetFunctionConcurrency`/`UpdateFunctionCode` sobre `sensus-api-<env>` (smoke check y rollback), `cloudformation:DescribeStacks` sobre `SensusBackendStack-<env>` (leer `ApiGatewayUrl`) y `sts:GetCallerIdentity`.
+  - `sensus-github-iac-readonly-<env>`: asumible por PR/ramas para `cdk diff` en `ci.yml` con `ReadOnlyAccess` + `AssumeRole` sobre `cdk-hnb659fds-lookup-role-<cuenta>-us-east-2`.
+- **Modelo de amenazas (STRIDE) del flujo OIDC**:
+  - *Spoofing*: `StringEquals aud == sts.amazonaws.com` + `StringLike sub` restringido a `repo:sensus-proj/sensus-back:environment:production` / `refs/heads/main` evita acceso desde forks o ramas arbitrarias.
+  - *Tampering / Elevation*: `MaxSessionDuration = 1h`; el rol de `ci.yml` (`iac`) es exclusivamente de solo lectura; el despliegue exige aprobación humana en `production`.
+  - *Information Disclosure*: los ARNs de salida (`GitHubDeployRoleArn`, `GitHubIacReadOnlyRoleArn`) no se imprimen en `$GITHUB_STEP_SUMMARY`.
+  - *Repudiation / DoS*: eventos auditados en CloudTrail con `RoleSessionName` de GitHub Actions y concurrencia `cancel-in-progress: false`.
+- **Transición segura**: los workflows usan OIDC automáticamente cuando existe `secrets.AWS_DEPLOY_ROLE_ARN` (o `AWS_IAC_ROLE_ARN`), conservando un fallback temporal a llaves mientras se despliegan los roles y se crean los secretos; la rama temporal con llaves se retira tras el primer despliegue OIDC exitoso.
+- **Decisión provisional del ejecutor — revisar con Rodrigo**: Como las credenciales AWS locales estaban expiradas (`aws login` necesario), no pudo consultarse `aws iam list-open-id-connect-providers`. Se soportó por defecto la creación del `OpenIdConnectProvider` y un contexto opcional `-c existingGithubOidcProviderArn=arn:...` para importarlo con `FromOpenIdConnectProviderArn` si ya existiera uno en la cuenta (alternativa descartada: crear incondicionalmente o importar a ciegas un ARN no verificado).
+- **Costo AWS**: **0.00 USD** (IAM OIDC y roles sin costo).
+
 ---

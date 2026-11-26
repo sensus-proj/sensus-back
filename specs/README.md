@@ -66,6 +66,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Implementado (retro-spec) | 017, 018, 046, 056 |
 | 060 | [Baja lógica de cuenta y purga diferida](060-baja-logica-cuenta-purga-diferida/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 004, 020 |
 | 061 | [Anonimización de contenido y cierre comercial](061-anonimizacion-contenido-cierre-comercial/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 020, 024, 025, 030, 033 |
+| 062 | [Segundo factor TOTP para Administrador](062-segundo-factor-administrador/spec.md) | Autenticación | Nuevo | 6 | En progreso | 002, 004, 020, 021 |
 
 ## Estados
 

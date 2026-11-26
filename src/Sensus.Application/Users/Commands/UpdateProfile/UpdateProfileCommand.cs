@@ -1,4 +1,5 @@
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
 
@@ -9,4 +10,4 @@ namespace Sensus.Application.Users.Commands.UpdateProfile;
 /// </summary>
 public sealed record UpdateProfileCommand(
     string NombreCompleto,
-    string? FotoPerfilUrl) : IRequest<Result<UserDto>>;
+    string? FotoPerfilUrl) : IRequest<Result<UserDto>>, ISensitiveRequest;

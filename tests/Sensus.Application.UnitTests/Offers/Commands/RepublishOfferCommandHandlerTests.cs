@@ -19,6 +19,7 @@ public class RepublishOfferCommandHandlerTests
     private readonly ILogger<RepublishOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
     private readonly RepublishOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -35,6 +36,8 @@ public class RepublishOfferCommandHandlerTests
 
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
@@ -46,7 +49,8 @@ public class RepublishOfferCommandHandlerTests
             _dateTimeProvider,
             _logger,
             _auditRecorder,
-            _cacheService);
+            _cacheService,
+            textModerationService: _textModerationService);
     }
 
     [Fact]
@@ -205,6 +209,43 @@ public class RepublishOfferCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Offer.CannotRepublishActive");
+        await _offerRepository.DidNotReceive().UpdateAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnConflict_WhenRepublishingAtActiveLimit()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            comercio.Id,
+            "Oferta expirada",
+            "Desc",
+            100m,
+            20,
+            80m,
+            0,
+            _now.AddDays(-5),
+            _now.AddDays(-1),
+            OfferStatus.Expired,
+            null,
+            null,
+            null,
+            _now.AddDays(-5));
+
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Offer?>(offer));
+        _offerRepository.CountActiveByMerchantAsync(comercio.Id, _now, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(20L));
+
+        var command = new RepublishOfferCommand(offer.Id, _now.AddHours(1), _now.AddDays(3), 10);
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ActiveLimitReached");
         await _offerRepository.DidNotReceive().UpdateAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
     }
 }

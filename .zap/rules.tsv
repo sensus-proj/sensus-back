@@ -1,0 +1,8 @@
+# Reglas de ajuste para OWASP ZAP API Baseline Scan (pasivo, Spec 047 FR-047-21, G-02).
+# Formato: <rule-id>\t<WARN|IGNORE|FAIL>\t<justificacion>
+# 10096: Timestamp Disclosure (Unix) en headers o respuestas JSON controladas
+10096	IGNORE	Marcas de tiempo ISO/epoch esperadas en DTOs y timestamps de salud.
+# 10049: Storable and Cacheable Content (rutas publicas con Cache-Control explicitamente acotado)
+10049	WARN	Revisar encabezados Cache-Control en rutas publicas sin datos de usuario.
+# 90033: Loosely Scoped Cookie (Sensus usa Bearer JWT stateless sin cookies de sesion)
+90033	IGNORE	API stateless autenticada exclusivamente por Authorization Bearer JWT.

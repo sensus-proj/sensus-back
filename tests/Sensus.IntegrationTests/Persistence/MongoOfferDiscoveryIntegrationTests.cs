@@ -15,52 +15,76 @@ using Testcontainers.MongoDb;
 
 namespace Sensus.IntegrationTests.Persistence;
 
-/// <summary>
-/// Pruebas reales contra MongoDB (usa <c>MONGO_CONNECTION_STRING</c> si está configurada o Testcontainers)
-/// para verificar índices españoles, prefijos normalizados, visibilidad y alternativas comparables (Specs 041 y 043).
-/// </summary>
-public sealed class MongoOfferDiscoveryIntegrationTests : IAsyncLifetime
+public sealed class MongoOfferDiscoveryContainerFixture : IAsyncLifetime
 {
-    private const double RefLat = 19.432608;
-    private const double RefLng = -99.133209;
-    private static readonly DateTime Now = new(2026, 11, 20, 12, 0, 0, DateTimeKind.Utc);
-
     private readonly string? _envConn = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING");
-    private readonly string _databaseName = $"sensus_discovery_{Guid.NewGuid():N}";
     private MongoDbContainer? _container;
-    private string _connectionString = string.Empty;
-    private MongoDbContext _context = null!;
-    private MongoOfferRepository _repository = null!;
+
+    public string ConnectionString { get; private set; } = string.Empty;
 
     public async Task InitializeAsync()
     {
         if (!string.IsNullOrWhiteSpace(_envConn))
         {
-            _connectionString = _envConn;
-        }
-        else
-        {
-            _container = new MongoDbBuilder("mongo:7.0").Build();
-            await _container.StartAsync();
-            _connectionString = _container.GetConnectionString();
+            ConnectionString = _envConn;
+            return;
         }
 
-        _context = new MongoDbContext(
-            Options.Create(new MongoDbSettings { ConnectionString = _connectionString, DatabaseName = _databaseName }),
-            NullLogger<MongoDbContext>.Instance);
-        _repository = new MongoOfferRepository(_context, NullLogger<MongoOfferRepository>.Instance);
+        for (int attempt = 1; attempt <= 2; attempt++)
+        {
+            var candidate = new MongoDbBuilder("mongo:7.0").Build();
+            try
+            {
+                await candidate.StartAsync();
+                _container = candidate;
+                ConnectionString = _container.GetConnectionString();
+                return;
+            }
+            catch when (attempt < 2)
+            {
+                await candidate.DisposeAsync();
+            }
+        }
     }
 
     public async Task DisposeAsync()
     {
-        if (!string.IsNullOrWhiteSpace(_envConn))
-        {
-            await new MongoClient(_connectionString).DropDatabaseAsync(_databaseName);
-        }
-
         if (_container is not null)
         {
             await _container.DisposeAsync();
+        }
+    }
+}
+
+/// <summary>
+/// Pruebas reales contra MongoDB (usa <c>MONGO_CONNECTION_STRING</c> si está configurada o Testcontainers)
+/// para verificar índices españoles, prefijos normalizados, visibilidad y alternativas comparables (Specs 041 y 043).
+/// </summary>
+public sealed class MongoOfferDiscoveryIntegrationTests(MongoOfferDiscoveryContainerFixture fixture)
+    : IClassFixture<MongoOfferDiscoveryContainerFixture>, IAsyncLifetime
+{
+    private const double RefLat = 19.432608;
+    private const double RefLng = -99.133209;
+    private static readonly DateTime Now = new(2026, 11, 20, 12, 0, 0, DateTimeKind.Utc);
+
+    private readonly string _databaseName = $"sensus_discovery_{Guid.NewGuid():N}";
+    private MongoDbContext _context = null!;
+    private MongoOfferRepository _repository = null!;
+
+    public Task InitializeAsync()
+    {
+        _context = new MongoDbContext(
+            Options.Create(new MongoDbSettings { ConnectionString = fixture.ConnectionString, DatabaseName = _databaseName }),
+            NullLogger<MongoDbContext>.Instance);
+        _repository = new MongoOfferRepository(_context, NullLogger<MongoOfferRepository>.Instance);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(fixture.ConnectionString))
+        {
+            await new MongoClient(fixture.ConnectionString).DropDatabaseAsync(_databaseName);
         }
     }
 

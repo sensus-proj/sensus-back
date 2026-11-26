@@ -19,6 +19,7 @@
 | T011-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-011-01` | T011-04 | Completada (`OpenApiContractTests`) |
 | T011-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-011-01` | T011-05 | Completada |
 | T011-07 | Registrar evidencias del Constitution Check | Docs | `FR-011-01` | T011-06 | Completada |
+| T011-08 | Extraer `HostingSecurityPolicy` (docs solo en Development; sembrado de Administrador en Development o Lambda; HSTS fuera de Development, incluida Lambda; redirección HTTPS fuera de Development y Lambda) y probarlo | Api | `FR-011-05` | T011-07 | Completada (`CorsAndHttpsSecurityTests`) |
 
 ## Notas de ejecución
 

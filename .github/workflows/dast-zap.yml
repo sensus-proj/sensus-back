@@ -1,0 +1,64 @@
+name: DAST - OWASP ZAP Baseline
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Lunes 11:00 AM America/Mexico_City (17:00 UTC) cuando la Lambda no está en pausa nocturna (Spec 051).
+    - cron: "0 17 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-zap
+  cancel-in-progress: false
+
+jobs:
+  zap-api-baseline:
+    name: OWASP ZAP API Scan pasivo (FR-047-21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+
+      - name: Generar documento OpenAPI localmente sin exponer Swagger en producción
+        run: |
+          dotnet build src/Sensus.Api/Sensus.Api.csproj --configuration Release
+          ASPNETCORE_ENVIRONMENT=Development \
+          ASPNETCORE_URLS=http://127.0.0.1:5099 \
+          JwtSettings__Secret="zap-ephemeral-openapi-extraction-key-not-used-in-prod-32bytes" \
+          JwtSettings__Issuer="SensusApi" \
+          JwtSettings__Audience="SensusApp" \
+          ConnectionStrings__MongoDb="mongodb://localhost:27017" \
+          MongoDb__ConnectionString="mongodb://localhost:27017" \
+          SesEmailSettings__Simulate=true \
+          nohup dotnet run --project src/Sensus.Api/Sensus.Api.csproj --configuration Release --no-build > /tmp/sensus-openapi.log 2>&1 &
+          API_PID=$!
+          trap "kill $API_PID 2>/dev/null || true" EXIT
+          for i in $(seq 1 30); do
+            if curl -sSf http://127.0.0.1:5099/openapi/v1.json -o openapi-v1.json; then
+              echo "OpenAPI v1 descargado en artifacts."
+              break
+            fi
+            sleep 1
+          done
+          jq '.servers = [{"url": "https://zqqdwovx81.execute-api.us-east-2.amazonaws.com"}]' openapi-v1.json > openapi-zap.json
+          test -s openapi-zap.json
+
+      - name: Ejecutar OWASP ZAP API Baseline Scan (solo pasivo)
+        uses: zaproxy/action-api-scan@77dfa9a647bb0f583e39d4df8531634d6ddd8df4 # v0.9.0
+        with:
+          target: openapi-zap.json
+          format: openapi
+          rules_file_name: .zap/rules.tsv
+          allow_issue_writing: false
+          fail_action: true
+          cmd_options: "-S -O https://zqqdwovx81.execute-api.us-east-2.amazonaws.com"
+          artifact_name: zap-api-baseline-report

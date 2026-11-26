@@ -67,6 +67,9 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 | FR-045-15 | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must |
 | FR-045-16 | Después de `cdk deploy`, ejecutar una prueba de humo contra la URL desplegada (`ApiGatewayUrl` de `cdk-outputs.json`): `/health/live` y `/health/ready` deben responder `200` y una ruta protegida sin token (`/api/v1/offers/nearby`) debe responder `401`, con reintentos acotados para tolerar el arranque en frío. Si la Lambda está en la pausa nocturna (concurrencia reservada `0`, Spec 051), la prueba se omite con un aviso en el resumen del job | Must |
 | FR-045-17 | Antes de `cdk deploy`, conservar el paquete de código que está en producción en el bucket de *assets* de CDK; si la prueba de humo falla, restaurar ese paquete en la Lambda, repetir la prueba y dejar el job en rojo en cualquier caso, con el resultado del rollback en el resumen. En el primer despliegue (sin función previa) no hay rollback y el job solo falla | Must |
+| FR-045-18 | Fijar por SHA completo toda acción de terceros en los workflows de despliegue (`deploy-serverless.yml` y el heredado `deploy.yml`) y declarar `permissions: contents: read` para el `GITHUB_TOKEN`, igual que en `ci.yml` (SLSA 2, cadena de suministro) | Must |
+| FR-045-19 | El job de despliegue a producción usa el *environment* de GitHub `production`, que exige aprobación manual de un revisor antes de ejecutarse (`deploy-serverless.yml`) | Must |
+| FR-045-20 | CI/CD se autentica en AWS con OIDC de GitHub y roles de mínimo privilegio (`sensus-github-deploy-<env>` y `sensus-github-iac-readonly-<env>`); elimina llaves de acceso de larga duración tras la transición segura | Must |
 
 ## 5. Requisitos no funcionales
 

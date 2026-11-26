@@ -1,4 +1,5 @@
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 
@@ -18,4 +19,4 @@ public sealed record UpdateOfferCommand(
     DateTime EndsAt,
     string? ImageUrl,
     int ExpectedVersion,
-    string? Category = null) : IRequest<Result<OfferDto>>;
+    string? Category = null) : IRequest<Result<OfferDto>>, ISensitiveRequest;

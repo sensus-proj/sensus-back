@@ -32,6 +32,9 @@
 | T047-18 | Leer la temperatura de generación de `OpenAiSettings:Sensi:Temperature` y fijar el juez en 0 | Tests / CI | `FR-047-17` | T047-17 | Completada (`resolveGenerationTemperature`) |
 | T047-19 | Publicar `artifacts/ai-evals` con `if: always()` en `deploy-serverless.yml` | CI | `FR-047-18` | — | Completada (paso `Publicar reporte sanitizado de Evals (FR-047-18)`) |
 | T047-20 | Cubrir `FR-047-16` y `FR-047-17` en `run-ai-evals.test.mjs` con servidor OpenAI simulado (mediana, mayoría, fuga en una corrida, temperatura enviada) | Tests | `FR-047-16`, `FR-047-17` | T047-18 | Completada (pruebas 8 a 13, 13/13 en verde) |
+| T047-21 | Integrar `Cdklabs.CdkNag` (`AwsSolutionsChecks`) en `infra/` con reconocimientos justificados (`G-03`) | IaC / Seguridad | `FR-047-19` | T047-20 | Completada en código (verificada localmente por `app.Synth()`, pendiente primer `cdk synth` de CI) |
+| T047-22 | Generar artefacto SBOM CycloneDX (`6.3.2`) en `ci.yml` y `deploy-serverless.yml` y atestación SLSA 2 (`G-04`) | CI / Seguridad | `FR-047-20` | T047-20 | Completada en workflows (pendiente verificación de artefactos en primera corrida CI/CD) |
+| T047-23 | Workflow DAST pasivo `.github/workflows/dast-zap.yml` y `.zap/rules.tsv` (`G-02`) usando OpenAPI generado localmente | CI / Seguridad | `FR-047-21` | T047-20 | Completada en código (pendiente primera ejecución diurna tras PR) |
 
 ## Notas de ejecución
 

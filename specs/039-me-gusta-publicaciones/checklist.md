@@ -16,13 +16,13 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] Un usuario solo puede dar un me gusta por publicación. Índice único `ux_feed_post_likes_post_user`.
 - [x] El conteo nunca es negativo. Se deriva de registros únicos y se acota con `FeedPostLike.ClampCount`.
-- [ ] La operación es consistente entre dispositivos. Prueba de concurrencia `Likes_ParallelLikesFromSameUser_LeaveOneRecordAndCountNPlusOne` escrita; falta ejecutarla con Docker o en CI.
+- [x] La operación es consistente entre dispositivos. Prueba de concurrencia `Likes_ParallelLikesFromSameUser_LeaveOneRecordAndCountNPlusOne` verificada contra MongoDB 7.0 real (`Testcontainers`).
 - [x] Solo se reacciona a contenido visible. 404 uniforme probado en unitarias e integración.
 
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde (5/5)
-- [ ] Pruebas unitarias y de integración añadidas y en verde. Unitarias y de endpoint en verde; las de persistencia con Testcontainers no se ejecutaron por falta de Docker local.
+- [x] Pruebas unitarias y de integración añadidas y en verde (incluidas las pruebas de persistencia con Testcontainers contra MongoDB 7.0 real).
 - [x] Cobertura ≥ 80 % en Domain y Application (Domain 90,9 %, Application 89,2 % con pruebas unitarias)
 - [x] Contrato OpenAPI actualizado (`contracts/openapi.yaml` v1.1.0)
 - [x] IaC actualizada y `cdk diff` revisado si aplica. No aplica: sin recursos AWS nuevos.
@@ -36,7 +36,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
 - [x] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — Pendiente de ejecutar las pruebas de persistencia en CI
+- [x] **V. Verificación automatizada** — PASS (`MongoFeedSocialIntegrationTests` ejecutadas y en verde contra MongoDB 7.0 real)
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS. `NFR-039-01` (p95 < 300 ms) pendiente de prueba de carga.
 - [ ] **VIII. DevSecOps de nivel fintech** — STRIDE en `plan.md` §4; faltan los escaneos bloqueantes de CI
@@ -50,7 +50,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Tareas | [`tasks.md`](tasks.md) | ☑ |
 | Pruebas unitarias | `tests/Sensus.Application.UnitTests/Feed/FeedPostLikesTests.cs` | ☑ |
 | Pruebas de integración (endpoint) | `tests/Sensus.IntegrationTests/Feed/FeedPostLikeEndpointsTests.cs` | ☑ |
-| Pruebas de integración (MongoDB) | `tests/Sensus.IntegrationTests/Persistence/MongoFeedSocialIntegrationTests.cs` | ☐ |
+| Pruebas de integración (MongoDB) | `tests/Sensus.IntegrationTests/Persistence/MongoFeedSocialIntegrationTests.cs` | ☑ |
 | Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
@@ -58,3 +58,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-25 | Rocio Cruz | Backend completado | Build `-warnaserror` sin advertencias. Unitarias 1174/1174, arquitectura 5/5, E2E 3/3. Integración 643/677: las 34 fallas son `DockerUnavailableException` (Testcontainers), incluidas 3 de esta spec. `dotnet format --verify-no-changes` limpio. El limitador se movió después de `UseAuthentication` para particionar por usuario. |
+| 2026-11-26 | Ejecutor nocturno (D1) | `T039-09` cerrada | `MongoFeedSocialIntegrationTests` ejecutadas con Docker/Testcontainers contra MongoDB 7.0 real en verde (unicidad, idempotencia y concurrencia `CA-039-04`). |

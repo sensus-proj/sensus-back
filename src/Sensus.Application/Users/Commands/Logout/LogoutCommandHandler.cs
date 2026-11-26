@@ -14,15 +14,21 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result
     private readonly IUserRepository _userRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IRefreshTokenRepository? _refreshTokenRepository;
+    private readonly IDateTimeProvider? _dateTimeProvider;
 
     public LogoutCommandHandler(
         IUserRepository userRepository,
         ICurrentUserService currentUserService,
-        IDeviceRepository deviceRepository)
+        IDeviceRepository deviceRepository,
+        IRefreshTokenRepository? refreshTokenRepository = null,
+        IDateTimeProvider? dateTimeProvider = null)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
         _deviceRepository = deviceRepository;
+        _refreshTokenRepository = refreshTokenRepository;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
@@ -56,6 +62,15 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result
 
         user.RotateSecurityStamp();
         await _userRepository.UpdateAsync(user, cancellationToken);
+
+        if (_refreshTokenRepository is not null)
+        {
+            await _refreshTokenRepository.RevokeAllByUserAsync(
+                userId,
+                _dateTimeProvider?.UtcNow ?? DateTime.UtcNow,
+                "logout",
+                cancellationToken);
+        }
 
         return Result.Success();
     }

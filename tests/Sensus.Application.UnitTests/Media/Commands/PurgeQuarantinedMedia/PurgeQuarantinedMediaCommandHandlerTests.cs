@@ -89,4 +89,27 @@ public sealed class PurgeQuarantinedMediaCommandHandlerTests
         result.Value.PurgedCount.Should().Be(0);
         await _storage.DidNotReceive().DeleteImageAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_WhenExpiredQuarantinedFeedPostsExist_ShouldPurgeFeedPostsAndIncludeCount()
+    {
+        var feedPostRepo = Substitute.For<IFeedPostRepository>();
+        feedPostRepo.PurgeQuarantinedBeforeAsync(Now.AddDays(-30), Arg.Any<CancellationToken>()).Returns(3);
+        _repository.GetQuarantinedCreatedBeforeAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MediaAsset>());
+
+        var handler = new PurgeQuarantinedMediaCommandHandler(
+            _repository,
+            _storage,
+            _clock,
+            Substitute.For<ILogger<PurgeQuarantinedMediaCommandHandler>>(),
+            _cdnCacheInvalidator,
+            feedPostRepo);
+
+        var result = await handler.Handle(new PurgeQuarantinedMediaCommand(30), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.PurgedCount.Should().Be(3);
+        await feedPostRepo.Received(1).PurgeQuarantinedBeforeAsync(Now.AddDays(-30), Arg.Any<CancellationToken>());
+    }
 }

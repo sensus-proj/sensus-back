@@ -21,7 +21,7 @@ public sealed record GetNearbyOffersQuery(
     string? Category = null,
     int Page = 1,
     int PageSize = GetNearbyOffersQueryValidator.DefaultPageSize)
-    : IRequest<Result<PagedResult<NearbyOfferDto>>>;
+    : IRequest<Result<PagedResult<NearbyOfferDto>>>, ISensitiveRequest;
 
 public sealed class GetNearbyOffersQueryHandler
     : IRequestHandler<GetNearbyOffersQuery, Result<PagedResult<NearbyOfferDto>>>

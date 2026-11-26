@@ -85,6 +85,8 @@ public sealed class UploadMediaCommandHandlerTests
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 11, 13, 10, 0, 0, DateTimeKind.Utc));
         _mediaAssetRepository.CountByUserAndDateAsync(_userId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(0);
+        _moderationService.ModerateImageBytesAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(true, "Imagen aprobada.", [], "Approved"));
         _mediaStorage.UploadImageAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure<MediaUploadResult>(Error.Failure("Media.UploadFailed", "Error de subida")));
         var command = new UploadMediaCommand(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg");
@@ -146,9 +148,11 @@ public sealed class UploadMediaCommandHandlerTests
         result.Value.Status.Should().Be("Quarantined");
         result.Value.ModerationDecision.Should().Be("Quarantine");
         result.Value.SecureUrl.Should().BeNull();
+        await _mediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _mediaStorage.DidNotReceive().DeleteImageAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _mediaAssetRepository.Received(1).AddAsync(
-            Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Quarantined && a.SecureUrl != null),
+            Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Quarantined && a.SecureUrl == null),
             Arg.Any<CancellationToken>());
     }
 
@@ -160,8 +164,6 @@ public sealed class UploadMediaCommandHandlerTests
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 11, 13, 10, 0, 0, DateTimeKind.Utc));
         _mediaAssetRepository.CountByUserAndDateAsync(_userId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(0);
-        _mediaStorage.UploadImageAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success(new MediaUploadResult("public-id-123", "https://cloudinary.com/img.jpg")));
         _moderationService.ModerateImageBytesAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new ImageModerationResult(false, "Rechazado por políticas.", ["weapons"], "Rejected"));
         var command = new UploadMediaCommand(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg");
@@ -174,10 +176,30 @@ public sealed class UploadMediaCommandHandlerTests
         result.Value.Status.Should().Be("Rejected");
         result.Value.ModerationDecision.Should().Be("Rejected");
         result.Value.SecureUrl.Should().BeNull();
-        await _mediaStorage.Received(1).DeleteImageAsync("public-id-123", Arg.Any<CancellationToken>());
+        await _mediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _mediaAssetRepository.Received(1).AddAsync(
             Arg.Is<MediaAsset>(a => a.Status == MediaAssetStatus.Rejected && a.SecureUrl == null),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenModerationThrowsTimeout_ShouldQuarantineWithoutCallingStorage()
+    {
+        _currentUser.UserId.Returns(_userId.ToString());
+        _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 11, 13, 10, 0, 0, DateTimeKind.Utc));
+        _mediaAssetRepository.CountByUserAndDateAsync(_userId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+        _moderationService.ModerateImageBytesAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ImageModerationResult>(new TimeoutException("OpenAI timeout")));
+
+        var result = await _handler.Handle(new UploadMediaCommand([0xFF, 0xD8, 0xFF], "image/jpeg"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be("Quarantined");
+        result.Value.SecureUrl.Should().BeNull();
+        await _mediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

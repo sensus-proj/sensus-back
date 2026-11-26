@@ -4,7 +4,7 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 2.1.0 |
+| Versión | 2.2.0 |
 | Constitution Check | PASS |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
@@ -33,7 +33,7 @@ Permitir crear y eliminar publicaciones en el feed social con texto (1 a 500 car
 | Amenaza (STRIDE) | Mitigación implementada |
 |---|---|
 | **S**poofing | El autor de la publicación se extrae exclusivamente del JWT (`sub`/`UserId` verificado en servidor), nunca del cuerpo del payload. |
-| **T**ampering | Moderación previa *fail-closed* y síncrona con `gpt-4o-mini` y la política de Sensus antes de persistir o subir a Cloudinary: enviar solo texto si no hay imagen y ambas modalidades juntas en la misma solicitud cuando haya imagen. Ante rechazo, fallo, timeout, cuota agotada o respuesta inválida, queda en cuarentena / se rechaza sin subir la imagen ni publicar el post. La visibilidad posterior usa lista de permitidos (`Published` y `!isDeleted`). |
+| **T**ampering | Moderación previa *fail-closed* y síncrona con `gpt-4o-mini` y la política de Sensus antes de persistir o subir a Cloudinary: enviar solo texto si no hay imagen y ambas modalidades juntas en la misma solicitud cuando haya imagen. En JSON se rechaza cualquier `imageUrl` externa arbitraria (400 `FeedPost.ExternalImageUrlNotAllowed`); solo se permite `mediaAssetId` (con alias compatible `mediaId` — decisión provisional del ejecutor: aceptar alias aditivo `mediaId` además de `mediaAssetId`, verificado dueño y estado `Approved` en `IMediaAssetRepository`; alternativa descartada: romper clientes con `mediaId`). Ante rechazo, fallo, timeout, cuota agotada o respuesta inválida, queda en cuarentena / se rechaza sin subir la imagen ni publicar el post. La visibilidad posterior usa lista de permitidos (`Published` y `!isDeleted`). Costo adicional: 0 USD. |
 | **R**epudiation | Auditoría inmutable de autor, fecha de creación (`createdAtUtc`) y estado de moderación. |
 | **I**nformation Disclosure | ProblemDetails estándar RFC 7807/7231 sin filtrar nombres de colecciones ni trazas internas. Los posts eliminados o en cuarentena devuelven 404 o no aparecen en consultas. |
 | **D**enial of Service | Rate limiting aplicado en `POST` (`SensitiveWritePolicy`), tamaño máximo de texto fijado en 500 caracteres y límite de 4,5 MB para la imagen (`413`). |
@@ -92,3 +92,10 @@ Evaluación alineada a `constitution.md` v2.4.0.
 6. `T024-06` Implementar: Pruebas unitarias de dominio y casos de uso en Application.UnitTests
 7. `T024-07` Implementar: Pruebas de integración de endpoints y persistencia en IntegrationTests
 8. `T024-08` Actualizar `checklist.md`, `tasks.md`, `specs/README.md` y `memory.md`
+9. `T024-09` Cuarentena real y auditoría de publicaciones (`FR-024-02`, ver bloque C)
+10. `T024-10` Rechazar `imageUrl` externa en JSON y validar `mediaAssetId` en `IMediaAssetRepository` (`FR-024-08`), más actualización de DTO en app móvil (`FeedDtos.kt`)
+11. `T024-11` Persistir `FeedPostStatus.Quarantined` (`202 Accepted`) sin subir imagen ante indisponibilidad del moderador, auditar con `ModerationTargetType.FeedPost` y purgar cuarentena vencida a los 30 días (`FR-024-09`)
+
+### Decisión provisional del ejecutor — revisar con Rodrigo
+
+- **Auditoría obligatoria al publicar (`IModerationAuditRecorder`)**: En `CreateFeedPostCommandHandler`, el parámetro `auditRecorder` se mantiene opcional en el constructor (`= null`) por compatibilidad de firmas, pero publicar (`FeedPostStatus.Published`) falla cerrado (`ModerationAudit.Unavailable`) si `_auditRecorder is null` o `RecordAsync` falla, ejecutando la auditoría antes de subir `ImageBytes` a Cloudinary para no dejar activos huérfanos en caso de fallo de auditoría (en lugar de omitir la auditoría si `auditRecorder` fuese nulo o subir primero la imagen).

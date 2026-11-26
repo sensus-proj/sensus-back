@@ -85,6 +85,13 @@ public sealed class OfferDocument
     [BsonElement("lastModifiedAtUtc")]
     public DateTime? LastModifiedAtUtc { get; set; }
 
+    [BsonElement("moderationRetryCount")]
+    public int ModerationRetryCount { get; set; }
+
+    [BsonElement("nextModerationRetryAtUtc")]
+    [BsonIgnoreIfNull]
+    public DateTime? NextModerationRetryAtUtc { get; set; }
+
     public Offer ToDomain()
     {
         var status = Enum.TryParse<OfferStatus>(Status, true, out var parsedStatus)
@@ -110,7 +117,9 @@ public sealed class OfferDocument
             LastModifiedAtUtc,
             ViewCount,
             Version,
-            Category);
+            Category,
+            ModerationRetryCount,
+            NextModerationRetryAtUtc);
     }
 
     public static OfferDocument FromDomain(Offer offer)
@@ -144,7 +153,9 @@ public sealed class OfferDocument
             Version = offer.Version,
             Ubicacion = geoPoint,
             CreatedAtUtc = offer.CreatedAtUtc,
-            LastModifiedAtUtc = offer.LastModifiedAtUtc
+            LastModifiedAtUtc = offer.LastModifiedAtUtc,
+            ModerationRetryCount = offer.ModerationRetryCount,
+            NextModerationRetryAtUtc = offer.NextModerationRetryAtUtc
         };
     }
 }

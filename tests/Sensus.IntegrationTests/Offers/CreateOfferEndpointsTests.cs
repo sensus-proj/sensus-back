@@ -112,6 +112,69 @@ public sealed class CreateOfferEndpointsTests(CustomWebApplicationFactory factor
         await notifier.DidNotReceiveWithAnyArgs().NotifyAsync(default!, default, default);
     }
 
+    [Fact]
+    public async Task CreateOffer_ReturnsConflict_WhenMerchantHas20ActiveOffers()
+    {
+        factory.FakeClock.Set(Now);
+        var (token, userId) = CreateUserToken(true);
+        var merchant = Comercio.Create(userId, "Tienda Límite", "Calle Dos 2", "03100", 19.43, -99.13).Value;
+        factory.ComercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(merchant);
+        factory.OfferRepository.CountActiveByMerchantAsync(merchant.Id, Now, Arg.Any<CancellationToken>()).Returns(20L);
+
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await client.PostAsJsonAsync("/api/v1/offers", ValidOffer);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateOffer_Returns202AcceptedAndHidesPublicly_WhenModerationUnavailable()
+    {
+        factory.FakeClock.Set(Now);
+        var (merchantToken, userId) = CreateUserToken(true);
+        var (otherToken, _) = CreateUserToken(false);
+        var merchant = Comercio.Create(userId, "Tienda Pendiente", "Calle Tres 3", "03100", 19.43, -99.13).Value;
+        factory.ComercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(merchant);
+        factory.ComercioRepository.GetByIdAsync(merchant.Id, Arg.Any<CancellationToken>()).Returns(merchant);
+
+        var notifier = Substitute.For<INearbyOfferNotifier>();
+        var unavailableModeration = Substitute.For<ITextModerationService>();
+        unavailableModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<TextModerationResult>(new HttpRequestException("OpenAI timeout")));
+
+        using var pendingFactory = factory.WithWebHostBuilder(builder => builder.ConfigureServices((_, services) =>
+        {
+            services.Replace(ServiceDescriptor.Singleton(notifier));
+            services.Replace(ServiceDescriptor.Singleton(unavailableModeration));
+        }));
+        using var client = pendingFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", merchantToken);
+
+        using var response = await client.PostAsJsonAsync("/api/v1/offers", ValidOffer);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<OfferDto>();
+        Assert.NotNull(dto);
+        Assert.Equal(OfferStatus.PendingModeration.ToString(), dto.Status);
+        Assert.Equal($"/api/v1/offers/{dto.Id}", response.Headers.Location?.OriginalString);
+
+        Offer saved = Assert.Single(
+            factory.OfferRepository.ReceivedCalls()
+                .Where(c => c.GetMethodInfo().Name == "AddAsync")
+                .Select(c => (Offer)c.GetArguments()[0]!),
+            o => o.Id == dto.Id);
+        factory.OfferRepository.GetByIdAsync(saved.Id, Arg.Any<CancellationToken>()).Returns(saved);
+
+        // Otro usuario recibe 404 en el detalle público
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+        using var publicDetail = await client.GetAsync($"/api/v1/offers/{dto.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, publicDetail.StatusCode);
+
+        await notifier.DidNotReceiveWithAnyArgs().NotifyAsync(default!, default, default);
+    }
+
     private (string Token, Guid UserId) CreateUserToken(bool merchant)
     {
         var user = User.Create("Persona de prueba", $"offer-{Guid.NewGuid():N}@example.test", "hash", true, Now).Value;

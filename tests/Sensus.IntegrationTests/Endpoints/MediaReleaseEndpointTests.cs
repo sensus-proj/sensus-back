@@ -133,7 +133,10 @@ public class MediaReleaseEndpointTests : IClassFixture<CustomWebApplicationFacto
         _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
 
         var tokenGenerator = _factory.Services.GetRequiredService<IJwtTokenGenerator>();
-        var (token, _) = tokenGenerator.GenerateToken(user);
+        var clock = _factory.Services.GetRequiredService<IDateTimeProvider>();
+        var (token, _) = role == RoleType.Administrador
+            ? tokenGenerator.GenerateAdminStepUpToken(user, clock.UtcNow)
+            : tokenGenerator.GenerateToken(user);
         return token;
     }
 

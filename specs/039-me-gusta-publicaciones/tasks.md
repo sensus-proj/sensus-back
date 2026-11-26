@@ -20,7 +20,7 @@
 | T039-06 | Modelar la unicidad del me gusta | Domain | `FR-039-04` | T039-05 | Completada |
 | T039-07 | Implementar el índice único y el contador atómico | Infrastructure | `FR-039-05` | T039-06 | Completada. Inserción duplicada concurrente resuelta como "ya existía". |
 | T039-08 | Probar la alternancia y el 404 | Api | `FR-039-03` | T039-07 | Completada. `FeedPostLikeEndpointsTests` (200, 400, 401, 403, 404, 429). |
-| T039-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-039-01` | T039-08 | Parcial. Escritas en `MongoFeedSocialIntegrationTests` (unicidad, idempotencia, concurrencia `CA-039-04`); pendientes de ejecutar con Docker o en CI. |
+| T039-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-039-01` | T039-08 | Completada. `MongoFeedSocialIntegrationTests` (unicidad, idempotencia, concurrencia `CA-039-04`) ejecutadas y en verde contra MongoDB 7.0 real con Testcontainers. |
 | T039-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-039-01` | T039-09 | Completada |
 | T039-11 | Registrar evidencias del Constitution Check | Docs | `FR-039-01` | T039-10 | Parcial. Principio VIII pendiente de los escaneos bloqueantes de CI. |
 

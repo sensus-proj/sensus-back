@@ -9,7 +9,7 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 017, 022 |
-| Versión | 2.1.0 |
+| Versión | 2.2.0 |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
@@ -24,7 +24,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 
 - Alta de publicación con texto o con texto e imagen en la misma solicitud
 - Moderación previa obligatoria y síncrona de texto e imagen (*fail-closed*)
-- Carga de imagen por `multipart/form-data` (campo `image`, formatos permitidos JPEG/PNG/WebP, límite 4,5 MB) o referencia ya moderada por JSON (`imageUrl`)
+- Carga de imagen por `multipart/form-data` (campo `image`, formatos permitidos JPEG/PNG/WebP, límite 4,5 MB) o referencia por JSON (`mediaAssetId`) a un activo multimedia previamente aprobado y propiedad del autor (`imageUrl` arbitraria rechazada con 400)
 - Borrado por el autor o un administrador, con purga de la imagen mediante `IMediaStorage`
 - Estado de la publicación y visibilidad mediante lista de permitidos
 
@@ -46,10 +46,12 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 | FR-024-01 | Crear publicación con texto de 1 a 500 caracteres e imagen opcional | Must |
 | FR-024-02 | Moderar el texto solo si la publicación carece de imagen, o moderar juntos imagen y texto si la incluye. Publicar únicamente tras un veredicto favorable y enviar a cuarentena ante fallo, timeout, cuota agotada o respuesta inválida. | Must |
 | FR-024-03 | Registrar autor, fechas y estado | Must |
-| FR-024-04 | Resolver la moderación de forma síncrona: 201 con la publicación aprobada, 400 ante rechazo o indisponibilidad del moderador | Must |
+| FR-024-04 | Resolver la moderación de forma síncrona: 201 tras aprobación, 202 en cuarentena ante indisponibilidad y 400 ante rechazo explícito | Must |
 | FR-024-05 | Permitir al autor eliminar su propia publicación | Must |
 | FR-024-06 | Permitir a un administrador eliminar cualquier publicación | Should |
 | FR-024-07 | Excluir del feed las publicaciones eliminadas de inmediato | Must |
+| FR-024-08 | En JSON no se acepta `imageUrl` arbitraria: solo `mediaAssetId` de un `MediaAsset` aprobado y propiedad del autor; cualquier otra URL responde 400 | Must |
+| FR-024-09 | Ante indisponibilidad o timeout del moderador de texto o imagen, persistir la publicación en estado `Quarantined` (sin subir imagen a Cloudinary), registrar auditoría en Spec 021 y responder `202 Accepted` con purga a 30 días; fallar cerrado si falla la auditoría al publicar | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -106,6 +108,24 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 - **Cuando** POST /api/v1/feed/posts y después DELETE /api/v1/feed/posts/{id}
 - **Entonces** 201 con `imageUrl` de Cloudinary y `ImagePublicId` persistido; el borrado invoca `IMediaStorage.DeleteImageAsync` con ese identificador
 
+### CA-024-08 — Rechazo de `imageUrl` externa en JSON
+
+- **Dado** una solicitud JSON a `POST /api/v1/feed/posts` que envía `imageUrl` arbitraria
+- **Cuando** se valida y procesa la publicación
+- **Entonces** responde 400 sin persistir ninguna publicación ni almacenar multimedia
+
+### CA-024-09 — Publicación JSON con `mediaAssetId` validado
+
+- **Dado** un `mediaAssetId` enviado en JSON a `POST /api/v1/feed/posts`
+- **Cuando** el activo está `Approved` y pertenece al autor autenticado
+- **Entonces** responde 201 con su `SecureUrl` e `ImagePublicId`; si pertenece a otro usuario, no está aprobado o no existe, responde 400 `FeedPost.MediaNotApproved`
+
+### CA-024-10 — Cuarentena persistida ante indisponibilidad del moderador
+
+- **Dado** un moderador de texto o imagen no disponible, en timeout o con decisión `Quarantine`
+- **Cuando** un usuario autenticado envía `POST /api/v1/feed/posts` (solo texto o multipart con imagen)
+- **Entonces** la API responde `202 Accepted` con `status=Quarantined` y `imageUrl=null`, no invoca `IMediaStorage.UploadImageAsync`, excluye el post del feed cercano/público, registra auditoría `ModerationTargetType.FeedPost` y la purga de retención elimina posts en cuarentena mayores a 30 días (`FR-024-09`)
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización | Contenido | Respuestas |
@@ -129,13 +149,13 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 
 ## 10. Decisiones tomadas
 
-- **Moderación síncrona** (2026-11-23): se descarta el flujo `202 PendingModeration` porque CA-024-01 exige una publicación visible en la misma petición. `FR-024-04` pasa a 201/400 y toda indisponibilidad del moderador se resuelve *fail-closed*.
+- **Moderación síncrona** (2026-11-23 / 2026-11-26): ante veredicto favorable se responde `201` visible de inmediato; ante rechazo explícito se responde `400` sin persistir; ante indisponibilidad o timeout del moderador se persiste `Quarantined` sin subir imagen y se responde `202 Accepted` (*fail-closed*, `FR-024-04`, `FR-024-09`).
 - **Borrado lógico con purga inmediata** (2026-11-23): `ImagePublicId` se persiste en el documento y se usa para eliminar la imagen al borrar. Un fallo de purga se registra, no revierte el borrado.
 - **Visibilidad por lista de permitidos** (2026-11-23): solo `Published` y `!isDeleted` son visibles; cualquier otro estado (incluidos `PendingModeration` y `Quarantined`) se bloquea por defecto.
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`
+- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`, `FR-024-08`, `FR-024-09`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

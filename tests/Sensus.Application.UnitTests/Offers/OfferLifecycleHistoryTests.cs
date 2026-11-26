@@ -79,6 +79,9 @@ public sealed class OfferLifecycleHistoryTests
         var auditRecorder = Substitute.For<IModerationAuditRecorder>();
         auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        var textModeration = Substitute.For<ITextModerationService>();
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         var handler = new RepublishOfferCommandHandler(
             offerRepo,
@@ -87,7 +90,8 @@ public sealed class OfferLifecycleHistoryTests
             clock,
             NullLogger<RepublishOfferCommandHandler>.Instance,
             auditRecorder,
-            statusHistoryRepository: historyRepo);
+            statusHistoryRepository: historyRepo,
+            textModerationService: textModeration);
 
         var result = await handler.Handle(new RepublishOfferCommand(offer.Id, Now, Now.AddDays(2), 15), CancellationToken.None);
 

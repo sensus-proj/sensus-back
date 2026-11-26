@@ -30,6 +30,17 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 - El identificador proviene del token, nunca del cuerpo
 - Sin datos sensibles en la respuesta
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Acceso o edición del perfil de otro usuario manipulando un ID en cuerpo/ruta | `UserEndpoints.cs` deriva el titular exclusivamente de `ICurrentUserService.UserId` (JWT verificado); probado en `ProfileEndpointsTests.cs` | Bajo |
+| **T — Tampering** | Intento de modificar correo, roles o `SecurityStamp` vía `PUT /profile` | `UpdateProfileCommand` e invariantes de `User` limitan cambios a nombre y foto aprobada (`UpdateProfileCommandValidatorTests.cs`, `UpdateProfileCommandHandlerTests.cs`) | Bajo |
+| **R — Repudiation** | Negación de cambios realizados al perfil | `CorrelationId` en trazas y `UpdateProfileCommand : ISensitiveRequest` redactando nombre/URL en logs (`LoggingBehaviorTests.cs`) | Bajo |
+| **I — Information Disclosure** | Exposición de campos internos (`PasswordHash`, `SecurityStamp`, PII en logs) | Proyección estricta a `UserDto` sin exponer entidad `User`, más redacción `ISensitiveRequest` en logs (`ProfileEndpointsTests.cs`) | Bajo |
+| **D — Denial of Service** | Consultas o actualizaciones repetidas de perfil para saturar MongoDB | Caché con TTL explícito por usuario (`GetProfileQuery`, `RedisCacheServiceTests.cs`) y límites de longitud en `UpdateProfileCommandValidator.cs` | Bajo |
+| **E — Elevation of Privilege** | Uso del endpoint por usuario anónimo o sesión `Invitado` | Política `RegisteredUserPolicy` en `UserEndpoints.cs` (`401` sin JWT, `403` con `Invitado`, probado en `ProfileEndpointsTests.cs`) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de consultas, actualizaciones y errores 401/403

@@ -809,19 +809,19 @@ vencida es una violación bloqueante (§4.5).
 | ID | Brecha | Regla | Ámbito | Remediación | Fecha objetivo | Estado |
 |---|---|---|---|---|---|---|
 | G-01 | Secretos (JWT, Mongo, Cloudinary, OpenAI, correo) inyectados como variables de entorno de Lambda | 5 | Backend | Migrar a SSM *SecureString* (gratuito) y leerlos en tiempo de arranque | 2026-12-18 | Cerrada en código el 2026-11-19 (Spec 045, FR-045-11); queda cargar los parámetros en `/sensus/prod/` |
-| G-02 | Sin DAST | 8 | Backend | ZAP *baseline* contra el entorno de pruebas desplegado | 2027-01-15 | Abierta |
-| G-03 | Sin escaneo de IaC | 8 | Backend | `cdk-nag` o Checkov bloqueante en CI | 2026-12-11 | Abierta |
-| G-04 | Sin SBOM ni procedencia de artefactos | 8 | Backend y móvil | CycloneDX y atestación en CI | 2026-12-18 | Abierta |
-| G-05 | Sin segundo factor para `Administrador` ni auditoría de solo adición generalizada | 4, 6 | Backend | *Step-up* en acciones privilegiadas; colección de auditoría de solo adición (Spec 021) | 2027-01-29 | Abierta |
-| G-06 | Vigencia de tokens de acceso y rotación de *refresh tokens* sin verificar contra la regla 4 | 4 | Backend | Revisar `JwtSettings`, acortar a ≤ 15 min y añadir *refresh* rotatorio | 2026-12-18 | Abierta |
+| G-02 | Sin DAST | 8 | Backend | ZAP *baseline* contra el entorno de pruebas desplegado | 2027-01-15 | Cerrada en código el 2026-11-26 (`.github/workflows/dast-zap.yml` + `.zap/rules.tsv`; pendiente ejecución diurna tras PR) |
+| G-03 | Sin escaneo de IaC | 8 | Backend | `cdk-nag` o Checkov bloqueante en CI | 2026-12-11 | Cerrada en código el 2026-11-26 (`Cdklabs.CdkNag` 3.1.0 `AwsSolutionsChecks` en verde en síntesis local; pendiente primer `cdk synth` en CI) |
+| G-04 | Sin SBOM ni procedencia de artefactos | 8 | Backend y móvil | CycloneDX y atestación en CI | 2026-12-18 | Parcial (backend cerrado en workflows `ci.yml`/`deploy-serverless.yml` con CycloneDX 6.3.2 + `attest-build-provenance`; pendiente móvil y verificar artefactos en CI) |
+| G-05 | Sin segundo factor para `Administrador` ni auditoría de solo adición generalizada | 4, 6 | Backend | *Step-up* en acciones privilegiadas; colección de auditoría de solo adición (Spec 021) | 2027-01-29 | Cerrada en código el 2026-11-26 (`T062-01`..`T062-05`: TOTP RFC 6238 `HMACSHA1` sin `Otp.NET`, AES-256-GCM con `Mfa:EncryptionKey`, recovery codes SHA-256 de un solo uso y *step-up* `amr=mfa` + `mfa_at` en `AdminOnlyPolicy`; pendiente configurar `/sensus/prod/Mfa/EncryptionKey` en SSM antes de enrolar admin en producción) |
+| G-06 | Vigencia de tokens de acceso y rotación de *refresh tokens* sin verificar contra la regla 4 | 4 | Backend | Revisar `JwtSettings`, acortar a ≤ 15 min y añadir *refresh* rotatorio | 2026-12-18 | Cerrada en código el 2026-11-26 (`T002-10`: `JwtSettings:ExpiryMinutes=15`, `RefreshToken` rotatorio con detección de reuso y `TokenRefreshAuthenticator` en móvil `movil_Rodrigo`) |
 | G-07 | Sin fijación de certificados (*pinning*) | 10 | Móvil | `CertificatePinner` con pin de respaldo | 2026-12-18 | Abierta |
 | G-08 | Sin verificación de integridad (Play Integrity) ni detección de dispositivo comprometido | 10 | Móvil | Integrar Play Integrity y política de degradación | 2027-01-15 | Abierta |
 | G-09 | Sin `FLAG_SECURE` ni biometría en acciones sensibles | 10 | Móvil | Pantallas de código QR, canje y cuenta | 2027-01-15 | Abierta |
 | G-10 | Sin AWS WAF (supera el nivel gratuito) | 13 | Backend | Control compensatorio: *throttling* de API Gateway y límites de tasa; solicitar aprobación de costo para WAF | 2026-12-11 | Abierta |
-| G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Abierta |
+| G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Cerrada el 2026-11-26 (matrices STRIDE completas S/T/R/I/D/E en 001–004, 029, 030/060/061, 033 y 034) |
 | G-12 | Clave de API de Figma en `mcp_config.json` local del móvil (ignorado por Git) | 5 | Móvil | Rotar la clave y moverla a variable de entorno del usuario | 2026-11-23 | Abierta |
 | G-14 | La caché Valkey Serverless no usa autenticación de usuarios (RBAC o IAM); el aislamiento depende del grupo de seguridad y de TLS | 2, 5 | Backend | Habilitar autenticación IAM de ElastiCache y generar el token en `RedisCacheService` | 2027-01-29 | Abierta |
-| G-15 | Swagger UI y el documento OpenAPI están públicos en producción (`Program.cs`), lo que expone la superficie completa de la API | 3 | Backend | Restringir a Development o protegerlos con `AdminOnly` | 2026-12-11 | Abierta |
+| G-15 | Swagger UI y el documento OpenAPI están públicos en producción (`Program.cs`), lo que expone la superficie completa de la API | 3 | Backend | Restringir a Development o protegerlos con `AdminOnly` | 2026-12-11 | Cerrada en código el 2026-11-26 (Spec 011, `FR-011-05`; pendiente verificar en producción) |
 | G-13 | Pruebas de carga ausentes para los `NFR` de latencia | V, VII | Backend | k6 o similar contra entorno de pruebas | 2027-01-15 | Abierta |
 
 ---

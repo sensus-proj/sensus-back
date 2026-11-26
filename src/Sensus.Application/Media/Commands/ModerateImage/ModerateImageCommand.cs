@@ -1,4 +1,5 @@
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Media.DTOs;
 using Sensus.Domain.Common;
 
@@ -10,4 +11,4 @@ namespace Sensus.Application.Media.Commands.ModerateImage;
 public sealed record ModerateImageCommand(
     string ImageBase64,
     string? ContentType = "image/jpeg",
-    string? TextContext = null) : IRequest<Result<ModerateImageResponseDto>>;
+    string? TextContext = null) : IRequest<Result<ModerateImageResponseDto>>, ISensitiveRequest;

@@ -42,15 +42,25 @@ public static class OfferEndpoints
                 return result.ToHttpResult();
             }
 
+            if (string.Equals(
+                result.Value.Status,
+                Sensus.Domain.Enums.OfferStatus.PendingModeration.ToString(),
+                StringComparison.Ordinal))
+            {
+                return Results.Accepted($"/api/v1/offers/{result.Value.Id}", result.Value);
+            }
+
             return Results.Created($"/api/v1/offers/{result.Value.Id}", result.Value);
         })
         .RequireAuthorization(SecurityExtensions.MerchantOnlyPolicy)
         .WithName("CreateOffer")
         .WithSummary("SE-022: Crea una nueva oferta estableciendo fecha y hora de vencimiento automática")
         .Produces<OfferDto>(StatusCodes.Status201Created)
+        .Produces<OfferDto>(StatusCodes.Status202Accepted)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict);
 
         // Spec 035: Edición de una oferta existente con control de concurrencia optimista
         offersGroup.MapPut("/{id:guid}", async (

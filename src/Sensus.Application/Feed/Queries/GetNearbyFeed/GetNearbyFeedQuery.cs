@@ -18,7 +18,7 @@ public sealed record GetNearbyFeedQuery(
     double Longitude,
     double RadiusKm = NearbyFeedPolicy.MaxRadiusKm,
     int Page = PaginationPolicy.DefaultPageNumber,
-    int PageSize = PaginationPolicy.DefaultPageSize) : IRequest<Result<PagedResult<NearbyFeedPostDto>>>;
+    int PageSize = PaginationPolicy.DefaultPageSize) : IRequest<Result<PagedResult<NearbyFeedPostDto>>>, ISensitiveRequest;
 
 /// <summary>
 /// Reglas del feed cercano fijadas por la spec 026.

@@ -34,14 +34,14 @@ Sustituir el borrado físico inmediato por un estado de baja lógica. `User` y `
 
 Nivel ASVS 5.0 3 en autenticación, sesiones y eliminación de cuenta.
 
-| Amenaza | Categoría | Mitigación | Riesgo residual |
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
 |---|---|---|---|
-| Token robado sigue vigente tras la baja | Spoofing / Sesiones | Rotación de `SecurityStamp` + rechazo explícito de `IsDeleted` en `OnTokenValidated` | Bajo (el token se rechaza en la primera petición) |
-| Enumeración de cuentas por el login | Information disclosure | Mismo `Auth.InvalidCredentials` para correo inexistente y cuenta dada de baja | Bajo |
-| Baja no autorizada | Elevation of privilege | `RegisteredUserPolicy` + reautenticación con contraseña + `SensitiveWritePolicy` | Bajo |
-| PII en logs o auditoría | Information disclosure | Solo `UserId`, resultado y `correlation-id`; nunca correo, nombre, hash ni foto | Bajo |
-| Purga de cuentas activas por error de filtro | Tampering / Disponibilidad | `cutoff` calculado con reloj inyectado y filtro `deletedAtUtc <= cutoff` en la base de datos; prueba de cuenta activa intacta | Bajo |
-| Reintentos concurrentes | Denial of service | Eliminación por `_id`, idempotente; auditoría emitida solo cuando el borrado afectó a un documento | Bajo |
+| **S — Spoofing** | Token robado sigue vigente tras la baja | Rotación de `SecurityStamp` + rechazo explícito de `IsDeleted` en `OnTokenValidated` (`DeleteAccountCommandHandler.cs`, `Program.cs`, `DeleteAccountEndpointTests.cs`) | Bajo (el token se rechaza en la primera petición) |
+| **T — Tampering** | Purga de cuentas activas por error de filtro o reloj | `cutoff` calculado con reloj inyectado y filtro `deletedAtUtc <= cutoff` (`PurgeDeletedAccountsCommandHandler.cs`) | Bajo |
+| **R — Repudiation** | Disputas sobre solicitud o ejecución de purga diferida | Auditoría `SecurityAudit AccountDeletionRequested` y `SecurityAudit DeletedAccountPurged` con `UserId`, resultado y `CorrelationId` sin PII (`DeleteAccountCommandHandler.cs`) | Bajo |
+| **I — Information Disclosure** | Enumeración de cuentas dadas de baja o PII en logs/auditoría | Mismo error `Auth.InvalidCredentials` en `LoginCommandHandler.cs`; logs solo con `UserId` y `CorrelationId`, nunca correo, nombre, hash ni foto (`DeleteAccountEndpointTests.cs`) | Bajo |
+| **D — Denial of Service** | Reintentos concurrentes de baja o purga pesada sin índice | Eliminación idempotente por `_id`, política `SensitiveWritePolicy` e índice `ix_users_deleted_at` (`MongoDbContext.cs`) | Bajo |
+| **E — Elevation of Privilege** | Baja no autorizada o ejecutada por sesión `Invitado` | `RegisteredUserPolicy` + reautenticación con contraseña + `SensitiveWritePolicy` (`UserEndpoints.cs`, `DeleteAccountEndpointTests.cs`) | Bajo |
 
 ## 5. Observabilidad y rendimiento
 

@@ -305,4 +305,41 @@ public class ChangeOfferStatusCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Offer.CannotTransitionFromArchived");
     }
+
+    [Fact]
+    public async Task Handle_ShouldReturnConflict_WhenResumingToPublishedAtActiveLimit()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio", "Calle 1", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            comercio.Id,
+            "Oferta pausada",
+            "Desc",
+            100m,
+            10,
+            90m,
+            10,
+            _now,
+            _now.AddDays(2),
+            OfferStatus.Paused,
+            null,
+            null,
+            null,
+            _now);
+
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Offer?>(offer));
+        _offerRepository.CountActiveByMerchantAsync(comercio.Id, _now, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(20L));
+
+        var command = new ChangeOfferStatusCommand(offer.Id, "Published");
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ActiveLimitReached");
+        await _offerRepository.DidNotReceive().UpdateAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
 }

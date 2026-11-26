@@ -9,8 +9,8 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -44,6 +44,7 @@ Emitir logs en JSON con identificador de correlación y sin datos personales.
 | FR-014-02 | Aceptar o generar correlation-id por petición | Must |
 | FR-014-03 | Excluir PII, tokens y contenido moderado | Must |
 | FR-014-04 | Registrar método, ruta, estado y duración | Should |
+| FR-014-05 | Toda solicitud MediatR que transporte contenido de usuario (texto libre, imágenes/bytes, prompts, razones, firmas/códigos o datos personales/ubicación) implementa `ISensitiveRequest` y se registra sin su carga útil | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -72,6 +73,12 @@ Emitir logs en JSON con identificador de correlación y sin datos personales.
 - **Cuando** se registra
 - **Entonces** los datos aparecen enmascarados o ausentes
 
+### CA-014-04 — Redacción automática de solicitudes MediatR sensibles
+
+- **Dado** cualquier comando o consulta con carga útil de usuario o ubicación (`SendAiMessageCommand`, `CreateStoreReviewCommand`, `ReplyStoreReviewCommand`, `UpdateMerchantProfileCommand`, `RegisterComercioCommand`, `CreateFeedCommentCommand`, `CreateFeedPostCommand`, `UploadMediaCommand`, `ModerateImageCommand`, `CreateOfferCommand`, `UpdateOfferCommand`, `CreateContentReportCommand`, `UpdateProfileCommand`, `SendFriendRequestCommand`, `CreateManualSanctionCommand`, `RevertSanctionCommand`, `RedeemClaimCommand`, `GetMediaDeliveryQuery`, `GetNearbyOffersQuery`, `GetNearbyComerciosQuery`, `GetNearbyFeedQuery` y las solicitudes previamente marcadas)
+- **Cuando** atraviesa `LoggingBehavior` o `PerformanceBehavior`
+- **Entonces** la solicitud se registra redactada (`[DATOS REDACTADOS POR SEGURIDAD]` o `[REDACTED]`) sin exponer el contenido en mensaje ni propiedades estructuradas, y la prueba de arquitectura falla si un nuevo `IRequest<>` sensible omite `ISensitiveRequest`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -94,7 +101,7 @@ Emitir logs en JSON con identificador de correlación y sin datos personales.
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-014-01`, `FR-014-02`, `FR-014-03`, `FR-014-04`
+- Requisitos de este spec: `FR-014-01`, `FR-014-02`, `FR-014-03`, `FR-014-04`, `FR-014-05`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

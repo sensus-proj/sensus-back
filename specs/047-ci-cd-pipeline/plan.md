@@ -86,4 +86,16 @@ Evaluación previa a la implementación.
 - Snyk y SonarCloud requieren secrets configurados en el repositorio de GitHub antes de que el pipeline pase.
 - `dotnet-stryker` como herramienta global puede tardar en instalarse en el primer run.
 
+### B4 y B5 — Escaneo estático de IaC (`cdk-nag`), SBOM/SLSA 2 y DAST pasivo (`FR-047-19`..`FR-047-21`)
+
+- **Dependencia `Cdklabs.CdkNag` `3.1.0`** (`Sensus.Infra.csproj`, licencia Apache-2.0, costo 0 USD): elegida por compatibilidad con `Amazon.CDK.Lib 2.275.0` y actualización requerida `Constructs 10.5.1` (misma licencia Apache-2.0, sin costo). Registrada en `infra/src/Sensus.Infra/Program.cs` mediante `Validations.Of(app).AddPlugins(new AwsSolutionsChecks(app, new NagPackProps { Verbose = true }))`.
+- **Reconocimientos (`Validations.Of(...).Acknowledge`) justificados por arquitectura Free Tier / proxy**:
+  - `SensusApiLambdaRole`: `AwsSolutions-IAM4` (`AWSLambdaVPCAccessExecutionRole` necesario por VPC/Valkey) y `AwsSolutions-IAM5` (subruta SSM `/sensus/<env>/*`, streams de logs, SES `identity/*` y ENIs VPC).
+  - `SensusBudgetTable`: `AwsSolutions-DDB3` (contadores mensuales con TTL, PITR omitido para conservar costo 0 USD).
+  - `SensusAlarmTopic`: `AwsSolutions-SNS2`/`SNS3` (sin PII; política acotada por `aws:SourceAccount` / `aws:SourceArn` a `budgets.amazonaws.com`).
+  - `SensusDefaultStage` (`AwsSolutions-APIG1` sin logs de acceso de APIGW por tope 5 GB CloudWatch) y `SensusDefaultRoute` (`AwsSolutions-APIG4` autenticación delegada en JWT Bearer de `Sensus.Api`).
+  - `SensusVpc` (`AwsSolutions-VPC7` Flow Logs omitidos por costo cero), `SensusNightSwitchRole` y `SensusNightSwitchSchedulerRole` (`AwsSolutions-IAM5` acotado a tags/LogGroup/Lambda propios), `SensusGitHubDeployRole` (`IAM5` para roles bootstrap CDK, prefijo `rollback/*` y `sts:GetCallerIdentity`), `SensusGitHubIacReadOnlyRole` (`IAM4` `ReadOnlyAccess` de solo lectura). `SensusNightSwitchFunction` actualizado a `PYTHON_3_14` para resolver `AwsSolutions-L1` sin supresión.
+- **SBOM y procedencia (`FR-047-20`)**: `CycloneDX 6.3.2` genera `bom.json` en `ci.yml` (`quality`) y en `deploy-serverless.yml` antes de `cdk deploy`; `actions/attest-build-provenance@4d10147...` (`v4.2.2`) atesta `infra/publish/bootstrap`.
+- **DAST pasivo (`FR-047-21`)**: `.github/workflows/dast-zap.yml` + `.zap/rules.tsv` (programado lunes 11:00 `America/Mexico_City`, manual `workflow_dispatch`). Extrae `/openapi/v1.json` ejecutando brevemente `Sensus.Api` en memoria durante el job (evitando exponer Swagger en producción ni versionar un documento desfasado) y ejecuta `zaproxy/action-api-scan@77dfa9a...` (`v0.9.0`) en modo pasivo (`-S`) contra la API de producción.
+
 ---

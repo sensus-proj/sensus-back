@@ -1,4 +1,5 @@
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Domain.Common;
 
@@ -17,4 +18,4 @@ public sealed record CreateOfferCommand(
     DateTime EndsAt,
     string? ImageUrl = null,
     string? Category = null,
-    bool SaveAsDraft = false) : IRequest<Result<OfferDto>>;
+    bool SaveAsDraft = false) : IRequest<Result<OfferDto>>, ISensitiveRequest;
