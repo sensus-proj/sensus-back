@@ -222,4 +222,33 @@ public class InMemoryOfferRepository : IOfferRepository
 
         return Task.FromResult<(IReadOnlyList<Offer> Items, int TotalCount)>((paged, total));
     }
+
+    public Task<long> CountActiveByMerchantAsync(
+        Guid merchantId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        long count = _offers.Values.LongCount(o =>
+            o.MerchantId == merchantId &&
+            o.Status == OfferStatus.Published &&
+            o.EndsAt > nowUtc);
+
+        return Task.FromResult(count);
+    }
+
+    public Task<IReadOnlyList<Offer>> GetPendingModerationDueAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken = default)
+    {
+        DateTime normalizedNow = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        IReadOnlyList<Offer> due = _offers.Values
+            .Where(o => o.Status == OfferStatus.PendingModeration
+                && (!o.NextModerationRetryAtUtc.HasValue || o.NextModerationRetryAtUtc.Value <= normalizedNow))
+            .OrderBy(o => o.NextModerationRetryAtUtc ?? DateTime.MinValue)
+            .Take(Math.Clamp(batchSize, 1, 100))
+            .ToList();
+
+        return Task.FromResult(due);
+    }
 }

@@ -36,6 +36,17 @@ Las pruebas de MongoDB usan `Testcontainers.MongoDb` 4.16.0 (licencia MIT, costo
 - Canje restringido al comercio propietario
 - Sin datos personales en el QR
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Falsificación de código QR para canjear sin haber apartado la oferta | Firma HMAC-SHA256 verificable sin secreto en repo (`HmacClaimCodeService.cs`, `HmacClaimCodeServiceTests.cs`) y verificación de hash en servidor | Bajo |
+| **T — Tampering** | Doble canje de un mismo apartado o venta de stock inexistente en paralelo | Reserva atómica con stock/vigencia en MongoDB (`MongoOfferRepository.TryReserveStockAsync`) y máquina de estados en `OfferClaim.cs` (`OfferClaimTests.cs`, `RedeemClaimCommandHandlerTests.cs`) | Bajo |
+| **R — Repudiation** | Disputa sobre si el consumidor apartó o el comercio canjeó un código | Persistencia de estado/marcas de tiempo en `offer_claims`, logs con `CorrelationId` y registro de push único (`ClaimOfferCommandHandlerTests.cs`) | Bajo |
+| **I — Information Disclosure** | Exposición de datos personales en el payload QR o logs del push | El QR contiene únicamente código firmado opaco; solo se guarda el hash del código y sin PII en payloads (`OfferClaimDtos.cs`, `ClaimPushNotifierTests.cs`) | Bajo |
+| **D — Denial of Service** | Apartados simultáneos múltiples del mismo usuario para bloquear inventario o agotar stock | Índice único compuesto `(UserId, OfferId, Status)` en `offer_claims`, caducidad automática (`ExpireClaimsJob`) y pruebas en `OfferClaimEndpointsTests.cs` | Bajo |
+| **E — Elevation of Privilege** | Canje por consumidor, invitado o comercio distinto del emisor de la oferta | Política `MerchantOnlyPolicy` en `OfferEndpoints.cs` + verificación `offer.MerchantId == comercio.Id` en `RedeemClaimCommandHandler.cs` (`OfferClaimEndpointsTests.cs`) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de apartados, canjes y expiraciones

@@ -26,14 +26,19 @@ public sealed class JwtSettingsValidator : IValidateOptions<JwtSettings>
             return ValidateOptionsResult.Fail("JwtSettings:Audience es obligatorio.");
         }
 
-        if (options.ExpiryMinutes <= 0)
+        if (options.ExpiryMinutes is < 1 or > 15)
         {
-            return ValidateOptionsResult.Fail("JwtSettings:ExpiryMinutes debe ser mayor a 0.");
+            return ValidateOptionsResult.Fail("JwtSettings:ExpiryMinutes debe estar entre 1 y 15 minutos.");
         }
 
         if (options.GuestExpiryMinutes is < 1 or > 15)
         {
             return ValidateOptionsResult.Fail("JwtSettings:GuestExpiryMinutes debe estar entre 1 y 15 minutos.");
+        }
+
+        if (options.RefreshTokenDays is < 1 or > 90)
+        {
+            return ValidateOptionsResult.Fail("JwtSettings:RefreshTokenDays debe estar entre 1 y 90 días.");
         }
 
         return ValidateOptionsResult.Success;

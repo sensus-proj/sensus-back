@@ -4,7 +4,7 @@
 |---|---|
 | ID | 010 |
 | Slug | `paginacion-estandar` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 0 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

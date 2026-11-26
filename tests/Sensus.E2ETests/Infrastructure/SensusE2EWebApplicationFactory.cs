@@ -17,6 +17,7 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryComercioRepository ComercioRepository { get; } = new();
     public InMemoryOfferRepository OfferRepository { get; } = new();
     public InMemoryPasswordResetTokenRepository PasswordResetTokenRepository { get; } = new();
+    public InMemoryRefreshTokenRepository RefreshTokenRepository { get; } = new();
     public FakeProfileImageStorage FakeImageStorage { get; } = new();
     public FakeDateTimeProvider FakeClock { get; } = new();
     public FakeGeocodingService FakeGeocoding { get; } = new();
@@ -62,6 +63,9 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPasswordResetTokenRepository>();
             services.AddSingleton<IPasswordResetTokenRepository>(PasswordResetTokenRepository);
 
+            services.RemoveAll<IRefreshTokenRepository>();
+            services.AddSingleton<IRefreshTokenRepository>(RefreshTokenRepository);
+
             services.RemoveAll<IProfileImageStorage>();
             services.AddSingleton<IProfileImageStorage>(FakeImageStorage);
 
@@ -99,6 +103,16 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
             {
                 settings.ActiveKeyVersion = 1;
                 settings.HmacKeys[1] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            });
+
+            services.Configure<MfaSettings>(settings =>
+            {
+                settings.EncryptionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                settings.Issuer = "Sensus";
+                settings.StepUpWindowMinutes = 15;
+                settings.ChallengeExpiryMinutes = 5;
+                settings.MaxFailedAttempts = 5;
+                settings.LockoutMinutes = 15;
             });
             services.RemoveAll<IOfferLikeRepository>();
             services.AddSingleton<IOfferLikeRepository>(OfferLikeRepository);

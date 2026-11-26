@@ -73,8 +73,7 @@ public sealed class ToggleOfferFavoriteCommandHandler : IRequestHandler<ToggleOf
         DateTime nowUtc = _dateTimeProvider.UtcNow;
 
         if (offer is null
-            || offer.Status == OfferStatus.Archived
-            || offer.Status == OfferStatus.Expired
+            || offer.Status is OfferStatus.Draft or OfferStatus.Archived or OfferStatus.Expired or OfferStatus.PendingModeration or OfferStatus.Rejected
             || offer.EndsAt <= nowUtc)
         {
             return Result.Failure<FavoriteToggleResultDto>(

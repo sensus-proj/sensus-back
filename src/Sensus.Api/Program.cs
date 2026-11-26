@@ -215,6 +215,18 @@ builder.Services.AddAuthentication(options =>
             var path = context.HttpContext.Request.Path.Value ?? string.Empty;
             var isLogoutPath = path.EndsWith("/auth/logout", StringComparison.OrdinalIgnoreCase);
 
+            // Spec 062 (FR-062-04): un token de desafío MFA solo es válido contra POST /api/v1/auth/mfa/verify.
+            var tokenUse = userPrincipal.FindFirstValue(JwtTokenGenerator.TokenUseClaimType);
+            if (string.Equals(tokenUse, JwtTokenGenerator.MfaChallengeTokenUse, StringComparison.OrdinalIgnoreCase))
+            {
+                var isMfaVerifyPath = path.EndsWith("/auth/mfa/verify", StringComparison.OrdinalIgnoreCase);
+                if (!isMfaVerifyPath)
+                {
+                    context.Fail("Token de desafío MFA restringido exclusivamente a /auth/mfa/verify.");
+                    return;
+                }
+            }
+
             if (!isLogoutPath && tokenSecurityStamp is not null && !string.Equals(tokenSecurityStamp, user.SecurityStamp, StringComparison.Ordinal))
             {
                 context.Fail("La sesión ha sido revocada o la contraseña fue restablecida.");
@@ -270,6 +282,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAppAuthorizationPolicies();
 builder.Services.AddSecurityRateLimiting(builder.Configuration);
 builder.Services.AddHostedService<OfferExpirationBackgroundService>();
+builder.Services.AddHostedService<OfferModerationRetryBackgroundService>();
 builder.Services.AddHostedService<OfferClaimExpirationBackgroundService>();
 builder.Services.AddHostedService<QuarantineRetentionBackgroundService>();
 builder.Services.AddHostedService<DeletedAccountPurgeBackgroundService>();
@@ -349,7 +362,8 @@ app.UseExceptionHandler();
 app.UseSecurityHeaders();
 app.UseCors(SensusCorsPolicy);
 
-if (app.Environment.IsDevelopment() || isLambdaRuntime)
+// FR-011-05 (G-15): Swagger UI y el documento OpenAPI solo en Development.
+if (HostingSecurityPolicy.ExposeApiDocs(app.Environment))
 {
     app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
     app.UseSwaggerUI(c =>
@@ -357,7 +371,10 @@ if (app.Environment.IsDevelopment() || isLambdaRuntime)
         c.SwaggerEndpoint("/openapi/v1.json", "Sensus API v1");
         c.RoutePrefix = "swagger";
     });
+}
 
+if (HostingSecurityPolicy.SeedAdministrator(app.Environment, isLambdaRuntime))
+{
     // Sembrado del usuario Administrador (si se configuran variables de entorno)
     using var scope = app.Services.CreateScope();
     var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
@@ -365,9 +382,15 @@ if (app.Environment.IsDevelopment() || isLambdaRuntime)
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     await AdminUserSeeder.SeedAdminUserAsync(userRepository, passwordHasher, app.Configuration, logger);
 }
-else
+
+// Antes, en Lambda se entraba a la rama de Swagger y producción nunca aplicaba HSTS.
+if (HostingSecurityPolicy.UseHsts(app.Environment))
 {
     app.UseHsts();
+}
+
+if (HostingSecurityPolicy.UseHttpsRedirection(app.Environment, isLambdaRuntime))
+{
     app.UseHttpsRedirection();
 }
 

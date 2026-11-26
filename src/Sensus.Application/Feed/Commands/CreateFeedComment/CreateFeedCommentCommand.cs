@@ -11,7 +11,7 @@ using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Feed.Commands.CreateFeedComment;
 
-public sealed record CreateFeedCommentCommand(Guid PostId, string Text) : IRequest<Result<FeedCommentDto>>;
+public sealed record CreateFeedCommentCommand(Guid PostId, string Text) : IRequest<Result<FeedCommentDto>>, ISensitiveRequest;
 
 public sealed class CreateFeedCommentCommandValidator : AbstractValidator<CreateFeedCommentCommand>
 {

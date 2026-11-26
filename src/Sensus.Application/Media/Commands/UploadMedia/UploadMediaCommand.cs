@@ -12,4 +12,4 @@ namespace Sensus.Application.Media.Commands.UploadMedia;
 public sealed record UploadMediaCommand(
     byte[] ImageBytes,
     string ContentType,
-    string? TextContext = null) : IRequest<Result<UploadMediaResponseDto>>;
+    string? TextContext = null) : IRequest<Result<UploadMediaResponseDto>>, ISensitiveRequest;

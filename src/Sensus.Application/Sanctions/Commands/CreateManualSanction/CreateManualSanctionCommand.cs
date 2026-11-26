@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Sanctions.Common;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -10,7 +11,7 @@ namespace Sensus.Application.Sanctions.Commands.CreateManualSanction;
 /// FR-020-07: un administrador aplica una sanción manual. <see cref="DurationHours"/> nulo implica baneo permanente.
 /// </summary>
 public sealed record CreateManualSanctionCommand(Guid UserId, string Reason, int? DurationHours)
-    : IRequest<Result<SanctionDto>>;
+    : IRequest<Result<SanctionDto>>, ISensitiveRequest;
 
 public sealed class CreateManualSanctionCommandValidator : AbstractValidator<CreateManualSanctionCommand>
 {

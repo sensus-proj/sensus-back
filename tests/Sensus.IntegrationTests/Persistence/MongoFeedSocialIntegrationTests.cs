@@ -10,54 +10,78 @@ using Testcontainers.MongoDb;
 
 namespace Sensus.IntegrationTests.Persistence;
 
-/// <summary>
-/// Pruebas contra MongoDB real (usa <c>MONGO_CONNECTION_STRING</c> si está configurada o Testcontainers)
-/// para la Spec 039 (unicidad y concurrencia de me gusta) y la Spec 026 (feed cercano: filtro, orden e índice).
-/// </summary>
-public sealed class MongoFeedSocialIntegrationTests : IAsyncLifetime
+public sealed class MongoFeedSocialContainerFixture : IAsyncLifetime
 {
-    private const double Lat = -12.05;
-    private const double Lng = -77.04;
-    private static readonly DateTime Now = new(2026, 11, 25, 12, 0, 0, DateTimeKind.Utc);
-
     private readonly string? _envConn = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING");
-    private readonly string _databaseName = $"sensus_feed_social_{Guid.NewGuid():N}";
     private MongoDbContainer? _container;
-    private string _connectionString = string.Empty;
-    private MongoDbContext _context = null!;
-    private MongoFeedPostRepository _posts = null!;
-    private MongoFeedPostLikeRepository _likes = null!;
+
+    public string ConnectionString { get; private set; } = string.Empty;
 
     public async Task InitializeAsync()
     {
         if (!string.IsNullOrWhiteSpace(_envConn))
         {
-            _connectionString = _envConn;
-        }
-        else
-        {
-            _container = new MongoDbBuilder("mongo:7.0").Build();
-            await _container.StartAsync();
-            _connectionString = _container.GetConnectionString();
+            ConnectionString = _envConn;
+            return;
         }
 
-        _context = new MongoDbContext(
-            Options.Create(new MongoDbSettings { ConnectionString = _connectionString, DatabaseName = _databaseName }),
-            NullLogger<MongoDbContext>.Instance);
-        _posts = new MongoFeedPostRepository(_context);
-        _likes = new MongoFeedPostLikeRepository(_context);
+        for (int attempt = 1; attempt <= 2; attempt++)
+        {
+            var candidate = new MongoDbBuilder("mongo:7.0").Build();
+            try
+            {
+                await candidate.StartAsync();
+                _container = candidate;
+                ConnectionString = _container.GetConnectionString();
+                return;
+            }
+            catch when (attempt < 2)
+            {
+                await candidate.DisposeAsync();
+            }
+        }
     }
 
     public async Task DisposeAsync()
     {
-        if (!string.IsNullOrWhiteSpace(_envConn))
-        {
-            await new MongoClient(_connectionString).DropDatabaseAsync(_databaseName);
-        }
-
         if (_container is not null)
         {
             await _container.DisposeAsync();
+        }
+    }
+}
+
+/// <summary>
+/// Pruebas contra MongoDB real (usa <c>MONGO_CONNECTION_STRING</c> si está configurada o Testcontainers)
+/// para la Spec 039 (unicidad y concurrencia de me gusta) y la Spec 026 (feed cercano: filtro, orden e índice).
+/// </summary>
+public sealed class MongoFeedSocialIntegrationTests(MongoFeedSocialContainerFixture fixture)
+    : IClassFixture<MongoFeedSocialContainerFixture>, IAsyncLifetime
+{
+    private const double Lat = -12.05;
+    private const double Lng = -77.04;
+    private static readonly DateTime Now = new(2026, 11, 25, 12, 0, 0, DateTimeKind.Utc);
+
+    private readonly string _databaseName = $"sensus_feed_social_{Guid.NewGuid():N}";
+    private MongoDbContext _context = null!;
+    private MongoFeedPostRepository _posts = null!;
+    private MongoFeedPostLikeRepository _likes = null!;
+
+    public Task InitializeAsync()
+    {
+        _context = new MongoDbContext(
+            Options.Create(new MongoDbSettings { ConnectionString = fixture.ConnectionString, DatabaseName = _databaseName }),
+            NullLogger<MongoDbContext>.Instance);
+        _posts = new MongoFeedPostRepository(_context);
+        _likes = new MongoFeedPostLikeRepository(_context);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(fixture.ConnectionString))
+        {
+            await new MongoClient(fixture.ConnectionString).DropDatabaseAsync(_databaseName);
         }
     }
 
@@ -219,5 +243,27 @@ public sealed class MongoFeedSocialIntegrationTests : IAsyncLifetime
         FeedPost post = FeedPost.Create(Guid.NewGuid(), "Autor", content, null, createdAt, latitude: lat, longitude: lng).Value;
         await _posts.AddAsync(post);
         return post;
+    }
+
+    [Fact]
+    public async Task PurgeQuarantinedBeforeAsync_DeletesOnlyExpiredQuarantinedPosts()
+    {
+        FeedPost expiredQuarantined = FeedPost.Create(
+            Guid.NewGuid(), "Autor", "Cuarentena vencida", null, Now.AddDays(-35), status: Sensus.Domain.Enums.FeedPostStatus.Quarantined).Value;
+        FeedPost recentQuarantined = FeedPost.Create(
+            Guid.NewGuid(), "Autor", "Cuarentena reciente", null, Now.AddDays(-5), status: Sensus.Domain.Enums.FeedPostStatus.Quarantined).Value;
+        FeedPost oldPublished = FeedPost.Create(
+            Guid.NewGuid(), "Autor", "Publicada antigua", null, Now.AddDays(-60), status: Sensus.Domain.Enums.FeedPostStatus.Published).Value;
+
+        await _posts.AddAsync(expiredQuarantined);
+        await _posts.AddAsync(recentQuarantined);
+        await _posts.AddAsync(oldPublished);
+
+        int purged = await _posts.PurgeQuarantinedBeforeAsync(Now.AddDays(-30));
+
+        purged.Should().Be(1);
+        (await _posts.GetByIdAsync(expiredQuarantined.Id)).Should().BeNull();
+        (await _posts.GetByIdAsync(recentQuarantined.Id)).Should().NotBeNull();
+        (await _posts.GetByIdAsync(oldPublished.Id)).Should().NotBeNull();
     }
 }

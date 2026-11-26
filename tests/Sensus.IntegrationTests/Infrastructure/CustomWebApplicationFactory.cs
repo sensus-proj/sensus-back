@@ -28,6 +28,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public IOfferClaimRepository OfferClaimRepository { get; } = Substitute.For<IOfferClaimRepository>();
     public IOfferViewRepository OfferViewRepository { get; } = Substitute.For<IOfferViewRepository>();
     public IPasswordResetTokenRepository PasswordResetTokenRepository { get; } = Substitute.For<IPasswordResetTokenRepository>();
+    public InMemoryRefreshTokenRepository RefreshTokenRepository { get; } = new();
     public FakeProfileImageStorage FakeImageStorage { get; } = new();
     public FakeDateTimeProvider FakeClock { get; } = new();
     public FakeGeocodingService FakeGeocoding { get; } = new();
@@ -113,8 +114,21 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.Configure<ClaimCodeSettings>(settings =>
                 settings.Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
 
+            services.Configure<MfaSettings>(settings =>
+            {
+                settings.EncryptionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                settings.Issuer = "Sensus";
+                settings.StepUpWindowMinutes = 15;
+                settings.ChallengeExpiryMinutes = 5;
+                settings.MaxFailedAttempts = 5;
+                settings.LockoutMinutes = 15;
+            });
+
             services.RemoveAll<IPasswordResetTokenRepository>();
             services.AddSingleton(PasswordResetTokenRepository);
+
+            services.RemoveAll<IRefreshTokenRepository>();
+            services.AddSingleton<IRefreshTokenRepository>(RefreshTokenRepository);
 
             services.RemoveAll<IProfileImageStorage>();
             services.AddSingleton<IProfileImageStorage>(FakeImageStorage);

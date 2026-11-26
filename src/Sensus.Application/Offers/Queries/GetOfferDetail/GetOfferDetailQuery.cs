@@ -53,7 +53,7 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
         if (detail is null)
         {
             Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-            if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived)
+            if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived or OfferStatus.Rejected)
             {
                 return Result.Failure<OfferDetailDto>(NotFound());
             }
@@ -62,6 +62,17 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
             if (comercio is null || !comercio.Activo)
             {
                 return Result.Failure<OfferDetailDto>(NotFound());
+            }
+
+            if (offer.Status == OfferStatus.PendingModeration)
+            {
+                bool isOwner = !string.IsNullOrWhiteSpace(_currentUserService.UserId)
+                    && Guid.TryParse(_currentUserService.UserId, out Guid requesterId)
+                    && requesterId == comercio.UsuarioId;
+                if (!isOwner)
+                {
+                    return Result.Failure<OfferDetailDto>(NotFound());
+                }
             }
 
             detail = new OfferDetailDto(
@@ -87,7 +98,7 @@ public sealed class GetOfferDetailQueryHandler : IRequestHandler<GetOfferDetailQ
                 offer.CreatedAtUtc,
                 offer.LastModifiedAtUtc);
 
-            if (_cacheService is not null)
+            if (_cacheService is not null && offer.Status != OfferStatus.PendingModeration)
             {
                 await _cacheService.SetForEntityAsync(cacheKey, detail, OfferCacheKeys.EntityName, cancellationToken);
             }

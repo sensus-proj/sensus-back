@@ -120,4 +120,47 @@ public class ArchitectureTests
                 "Ninguna clase de Endpoints debe instanciar directamente 'new ProblemDetails'; use ResultExtensions.ToHttpResult() o ToProblemDetails()");
         }
     }
+
+    [Fact]
+    public void RequestsWithSensitivePayload_ShouldImplementISensitiveRequest()
+    {
+        // Spec 014 (FR-014-05): Toda solicitud MediatR con texto libre, bytes, credenciales o PII implementa ISensitiveRequest.
+        var assembly = typeof(Sensus.Application.DependencyInjection).Assembly;
+        var sensitivePropNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Content", "Text", "TextContext", "Comment", "Message", "Prompt",
+            "Description", "Title", "Email", "Correo", "Phone", "Telefono",
+            "Address", "Direccion", "NombreCompleto", "NombreComercial",
+            "CodigoPostal", "Password", "NuevaPassword", "Token", "Signature",
+            "ImageBase64", "ImageUrl", "FotoPerfilUrl", "FotoFachadaUrl",
+            "Reason", "Details", "InviteCode", "Code",
+            "Latitude", "Latitud", "Lat", "Longitude", "Longitud", "Lng"
+        };
+
+        var requestTypes = assembly.GetTypes()
+            .Where(t => !t.IsAbstract && !t.IsInterface && t.GetInterfaces()
+                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(MediatR.IRequest<>)))
+            .ToList();
+
+        var violations = new List<string>();
+        foreach (var type in requestTypes)
+        {
+            if (typeof(Sensus.Application.Common.Interfaces.ISensitiveRequest).IsAssignableFrom(type))
+            {
+                continue;
+            }
+
+            var props = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var triggeringProp = props.FirstOrDefault(p =>
+                p.PropertyType == typeof(byte[]) || sensitivePropNames.Contains(p.Name));
+
+            if (triggeringProp is not null)
+            {
+                violations.Add($"{type.Name} (propiedad: {triggeringProp.Name})");
+            }
+        }
+
+        violations.Should().BeEmpty(
+            "Todo IRequest que transporte texto libre, bytes/imágenes, credenciales o PII/ubicación debe implementar ISensitiveRequest (FR-014-05)");
+    }
 }

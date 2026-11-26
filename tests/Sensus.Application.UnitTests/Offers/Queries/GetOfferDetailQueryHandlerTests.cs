@@ -95,6 +95,49 @@ public class GetOfferDetailQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldHidePendingModerationFromNonOwner_AndExposeToOwnerWithoutCaching()
+    {
+        Offer offer = Offer.Create(
+            Guid.NewGuid(), "Pendiente", "Descripción válida", 100m, 20, 5, Now.AddHours(1), Now.AddDays(2), nowUtc: Now).Value;
+        offer.MarkPendingModeration(Now, Now.AddMinutes(1));
+        Comercio comercio = Comercio.Create(Guid.NewGuid(), "Tienda", "Calle 1", "03100", 19.4, -99.1).Value;
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
+        _comercioRepository.GetByIdAsync(offer.MerchantId, Arg.Any<CancellationToken>()).Returns(comercio);
+
+        // Otro usuario autenticado recibe NotFound
+        var nonOwnerResult = await _handler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+        nonOwnerResult.IsFailure.Should().BeTrue();
+        nonOwnerResult.Error.Code.Should().Be("Offer.NotFound");
+
+        // El dueño del comercio puede consultar su oferta pendiente, sin cachear en público
+        var cache = Substitute.For<ICacheService>();
+        var ownerCurrentUser = Substitute.For<ICurrentUserService>();
+        ownerCurrentUser.UserId.Returns(comercio.UsuarioId.ToString());
+        var ownerHandler = new GetOfferDetailQueryHandler(
+            _offerRepository, _comercioRepository, _offerClaimRepository, ownerCurrentUser, cache);
+
+        var ownerResult = await ownerHandler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+        ownerResult.IsSuccess.Should().BeTrue();
+        ownerResult.Value.Status.Should().Be(OfferStatus.PendingModeration.ToString());
+        await cache.DidNotReceiveWithAnyArgs().SetForEntityAsync<object>(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnNotFound_WhenOfferIsRejected()
+    {
+        Offer offer = Offer.Create(
+            Guid.NewGuid(), "Rechazada", "Descripción válida", 100m, 20, 5, Now.AddHours(1), Now.AddDays(2), nowUtc: Now).Value;
+        offer.MarkPendingModeration(Now, Now.AddMinutes(1));
+        offer.RejectFromModeration(Now.AddMinutes(1));
+        _offerRepository.GetByIdAsync(offer.Id, Arg.Any<CancellationToken>()).Returns(offer);
+
+        var result = await _handler.Handle(new GetOfferDetailQuery(offer.Id), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.NotFound");
+    }
+
+    [Fact]
     public async Task Handle_ShouldReturnNotFound_WhenOfferDoesNotExist()
     {
         // Arrange

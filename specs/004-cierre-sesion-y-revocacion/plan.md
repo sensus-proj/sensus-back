@@ -31,6 +31,17 @@ Permitir cerrar sesión de forma efectiva, invalidando el token del usuario ante
 - No registrar tokens en logs
 - Caché con TTL alineado a la expiración
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Reutilización de un JWT tras ejecutar `POST /api/v1/auth/logout` | `LogoutCommandHandler.cs` rota `SecurityStamp` y `Program.cs` (`OnTokenValidated`) rechaza cualquier token cuyo stamp no coincida (`SecurityPipelineTests.cs`) | Bajo |
+| **T — Tampering** | Envío de `deviceId` ajeno o manipulado para desvincular dispositivos de otro usuario | Desactivación condicional filtrada por `userId` propietario + `deviceId` (`LogoutCommandHandler.cs`, `MongoDeviceRepositoryTests.cs`) | Bajo |
+| **R — Repudiation** | Registro inconsistente o ausencia de evidencia al cerrar sesión | Evento estructurado con `CorrelationId` y código de resultado sin token ni PII (`LogoutCommandHandlerTests.cs`) | Bajo |
+| **I — Information Disclosure** | Fuga del token Bearer en logs o cuerpo de respuesta al cerrar sesión | Respuesta `204 NoContent` vacía (`AuthEndpoints.cs`); logs nunca imprimen cabecera `Authorization` ni JWT | Bajo |
+| **D — Denial of Service** | Doble envío o ráfaga de cierres de sesión | `LogoutCommandHandler.cs` es idempotente y actualiza en un documento por `_id` sin recorrer colecciones | Bajo |
+| **E — Elevation of Privilege** | Conservación de sesión privilegiada tras revocación | Revocación invalida todos los roles del token simultáneamente al rotar `SecurityStamp` en servidor (`SecurityPipelineTests.cs`) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de logouts y de tokens rechazados

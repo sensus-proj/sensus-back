@@ -24,6 +24,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
     private readonly INearbyOfferNotifier? _nearbyOfferNotifier;
     private readonly IMediaAssetRepository? _mediaAssets;
     private readonly IOptions<OfferCategorySettings>? _categorySettings;
+    private readonly IOptions<OfferLimitSettings>? _limitSettings;
+    private readonly IOptions<OfferModerationRetrySettings>? _moderationRetrySettings;
     private readonly ITextModerationService? _textModerationService;
     private readonly IModerationAuditRecorder _auditRecorder;
 
@@ -38,7 +40,9 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         INearbyOfferNotifier? nearbyOfferNotifier = null,
         IOptions<OfferCategorySettings>? categorySettings = null,
         ITextModerationService? textModerationService = null,
-        IMediaAssetRepository? mediaAssets = null)
+        IMediaAssetRepository? mediaAssets = null,
+        IOptions<OfferLimitSettings>? limitSettings = null,
+        IOptions<OfferModerationRetrySettings>? moderationRetrySettings = null)
     {
         _offerRepository = offerRepository;
         _comercioRepository = comercioRepository;
@@ -49,6 +53,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         _cacheService = cacheService;
         _nearbyOfferNotifier = nearbyOfferNotifier;
         _categorySettings = categorySettings;
+        _limitSettings = limitSettings;
+        _moderationRetrySettings = moderationRetrySettings;
         _textModerationService = textModerationService;
         _mediaAssets = mediaAssets;
     }
@@ -66,6 +72,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado para publicar ofertas."));
         }
 
+        DateTime now = _dateTimeProvider.UtcNow;
         bool requireStrictCategory = _categorySettings?.Value.RequireStrictValidation ?? false;
 
         Result<Offer> offerResult = Offer.Create(
@@ -80,7 +87,7 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
             request.ImageUrl,
             comercio.Latitud,
             comercio.Longitud,
-            _dateTimeProvider.UtcNow,
+            now,
             request.Category,
             requireValidCategory: requireStrictCategory,
             saveAsDraft: request.SaveAsDraft);
@@ -91,6 +98,18 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         Offer offer = offerResult.Value;
+
+        if (!request.SaveAsDraft)
+        {
+            int maxActive = _limitSettings?.Value.MaxActivePerMerchant ?? OfferLimitSettings.DefaultMaxActivePerMerchant;
+            long activeCount = await _offerRepository.CountActiveByMerchantAsync(comercio.Id, now, cancellationToken);
+            if (activeCount >= maxActive)
+            {
+                return Result.Failure<OfferDto>(Error.Conflict(
+                    "Offer.ActiveLimitReached",
+                    $"El comercio alcanzó el límite máximo de {maxActive} ofertas activas simultáneas."));
+            }
+        }
 
         if (!request.SaveAsDraft && !string.IsNullOrWhiteSpace(offer.ImageUrl)
             && (_mediaAssets is null || !await _mediaAssets.HasApprovedImageAsync(
@@ -121,6 +140,28 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         if (!evaluation.IsApproved)
         {
             await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+
+            // Spec 034 (FR-034-07): si el moderador no está disponible/timeout (Quarantine),
+            // la oferta queda privada en PendingModeration (202 Accepted) sin avisos públicos hasta aprobarse.
+            if (!request.SaveAsDraft && evaluation.Verdict == ModerationVerdict.Quarantined)
+            {
+                int retryDelaySeconds = _moderationRetrySettings?.Value.RetryDelaySeconds
+                    ?? OfferModerationRetrySettings.DefaultRetryDelaySeconds;
+                Result pendingResult = offer.MarkPendingModeration(now, now.AddSeconds(retryDelaySeconds));
+                if (pendingResult.IsFailure)
+                {
+                    return Result.Failure<OfferDto>(pendingResult.Error);
+                }
+
+                await _offerRepository.AddAsync(offer, cancellationToken);
+
+                _logger.LogWarning(
+                    "Oferta {OfferId} del comercio {ComercioId} quedó en PendingModeration por indisponibilidad del moderador.",
+                    offer.Id,
+                    comercio.Id);
+
+                return Result.Success(offer.ToDto());
+            }
 
             return Result.Failure<OfferDto>(
                 evaluation.RejectionError

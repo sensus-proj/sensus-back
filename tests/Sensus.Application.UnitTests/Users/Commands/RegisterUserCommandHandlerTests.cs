@@ -15,6 +15,7 @@ public class RegisterUserCommandHandlerTests
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
     private readonly RegisterUserCommandHandler _handler;
 
     public RegisterUserCommandHandlerTests()
@@ -26,6 +27,8 @@ public class RegisterUserCommandHandlerTests
 
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc));
 
@@ -34,7 +37,8 @@ public class RegisterUserCommandHandlerTests
             _passwordHasher,
             _jwtTokenGenerator,
             _dateTimeProvider,
-            _auditRecorder);
+            _auditRecorder,
+            textModerationService: _textModerationService);
     }
 
     [Fact]

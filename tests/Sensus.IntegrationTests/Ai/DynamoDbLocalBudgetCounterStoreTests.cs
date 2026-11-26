@@ -15,7 +15,7 @@ namespace Sensus.IntegrationTests.Ai;
 public sealed class DynamoDbLocalBudgetCounterStoreTests : IAsyncLifetime, IDisposable
 {
     private const int DynamoDbPort = 8000;
-    private const string TableName = "sensus-sensi-budget-test";
+    private readonly string _tableName = $"sensus-sensi-budget-{Guid.NewGuid():N}";
     private readonly IContainer _container = new ContainerBuilder("amazon/dynamodb-local:2.6.1")
         .WithCommand("-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb")
         .WithPortBinding(DynamoDbPort, true)
@@ -33,18 +33,40 @@ public sealed class DynamoDbLocalBudgetCounterStoreTests : IAsyncLifetime, IDisp
         {
             ServiceURL = endpoint.Uri.AbsoluteUri,
             AuthenticationRegion = "us-east-1",
-            Timeout = TimeSpan.FromSeconds(5)
+            Timeout = TimeSpan.FromSeconds(15),
+            MaxErrorRetry = 2
         });
 
-        await _client.CreateTableAsync(new CreateTableRequest
+        for (int attempt = 1; attempt <= 5; attempt++)
         {
-            TableName = TableName,
-            BillingMode = BillingMode.PAY_PER_REQUEST,
-            AttributeDefinitions = [new AttributeDefinition("pk", ScalarAttributeType.S)],
-            KeySchema = [new KeySchemaElement("pk", KeyType.HASH)]
-        });
+            try
+            {
+                await _client.ListTablesAsync();
+                break;
+            }
+            catch when (attempt < 5)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500));
+            }
+        }
+
+        try
+        {
+            await _client.CreateTableAsync(new CreateTableRequest
+            {
+                TableName = _tableName,
+                BillingMode = BillingMode.PAY_PER_REQUEST,
+                AttributeDefinitions = [new AttributeDefinition("pk", ScalarAttributeType.S)],
+                KeySchema = [new KeySchemaElement("pk", KeyType.HASH)]
+            });
+        }
+        catch (ResourceInUseException)
+        {
+            // Retry HTTP tras timeout puede haber creado la tabla única en el mismo contenedor.
+        }
+
         _store = new DynamoDbBudgetCounterStore(_client,
-            Options.Create(new AiBudgetStoreSettings { TableName = TableName }),
+            Options.Create(new AiBudgetStoreSettings { TableName = _tableName }),
             NullLogger<DynamoDbBudgetCounterStore>.Instance, _clock);
     }
 
@@ -94,7 +116,7 @@ public sealed class DynamoDbLocalBudgetCounterStoreTests : IAsyncLifetime, IDisp
         Assert.False(await guard.CanExecuteTurnAsync(secondUser, 2.01m));
         Assert.True(await guard.CanExecuteTurnAsync(secondUser, 2m));
 
-        await _client!.PutItemAsync(TableName, new Dictionary<string, AttributeValue>
+        await _client!.PutItemAsync(_tableName, new Dictionary<string, AttributeValue>
         {
             ["pk"] = new() { S = $"daily:{secondUser}:20261122" }
         });

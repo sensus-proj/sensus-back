@@ -17,7 +17,7 @@ namespace Sensus.Application.Comercios.Commands.CreateStoreReview;
 public sealed record CreateStoreReviewCommand(
     Guid MerchantId,
     int Rating,
-    string Comment) : IRequest<Result<StoreReviewsSummaryDto>>;
+    string Comment) : IRequest<Result<StoreReviewsSummaryDto>>, ISensitiveRequest;
 
 public sealed class CreateStoreReviewCommandHandler
     : IRequestHandler<CreateStoreReviewCommand, Result<StoreReviewsSummaryDto>>

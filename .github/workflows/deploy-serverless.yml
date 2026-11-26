@@ -16,6 +16,12 @@ on:
           - prod
           - dev
 
+# Mínimo privilegio + OIDC y atestación SLSA 2 (FR-045-18, FR-045-20, FR-047-20).
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
 concurrency:
   group: deploy-serverless-${{ github.ref }}
   cancel-in-progress: false
@@ -26,21 +32,42 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success') }}
     timeout-minutes: 15
+    # FR-045-19: exige aprobación manual configurada en el environment `production` de GitHub.
+    environment:
+      name: production
+      url: https://zqqdwovx81.execute-api.us-east-2.amazonaws.com
 
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}
       # Correo de alarmas y presupuesto como SECRETO (FR-045-12): GitHub lo enmascara como *** en los logs. Una variable
       # se imprimiría en claro en cada paso, y el repositorio es público. Los secretos de la API viven en SSM.
       ALERTS_EMAIL: ${{ secrets.ALERTS_EMAIL }}
+      ENV_NAME: ${{ inputs.environment || 'prod' }}
+      # GitHub no admite el contexto `secrets` en `if:` de un paso; se expone solo un booleano.
+      HAS_DEPLOY_ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      # FR-045-20: OIDC prioritario sin llaves largas; fallback temporal solo mientras se carga AWS_DEPLOY_ROLE_ARN.
+      - name: Autenticar en AWS con OIDC (FR-045-20)
+        if: ${{ env.HAS_DEPLOY_ROLE == 'true' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-2' }}
+
+      - name: Autenticar en AWS con llaves de transición (retirar al configurar AWS_DEPLOY_ROLE_ARN)
+        if: ${{ env.HAS_DEPLOY_ROLE != 'true' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-2' }}
 
       - name: Verificar correo de alertas (FR-045-15)
         run: |
@@ -50,12 +77,12 @@ jobs:
           fi
 
       - name: Configurar .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
@@ -85,6 +112,23 @@ jobs:
           mv infra/publish/Sensus.Api infra/publish/bootstrap
           chmod +x infra/publish/bootstrap
 
+      - name: Generar SBOM CycloneDX del despliegue (FR-047-20)
+        run: |
+          dotnet tool install --global CycloneDX --version 6.3.2
+          dotnet CycloneDX sensus-back.sln -F Json -o artifacts/sbom -fn bom.json
+
+      - name: Publicar SBOM de despliegue
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-deploy-cyclonedx
+          path: artifacts/sbom/bom.json
+          retention-days: 30
+
+      - name: Atestar procedencia del binario Lambda (SLSA 2, FR-047-20)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: infra/publish/bootstrap
+
       - name: Compilar proyecto AWS CDK (Sensus.Infra)
         run: dotnet build infra/src/Sensus.Infra/Sensus.Infra.csproj --configuration Release -warnaserror
 
@@ -100,6 +144,34 @@ jobs:
         # --quiet: no imprimir la plantilla en el log (FR-045-13); contiene el correo, el ID de cuenta y los orígenes CORS.
         run: cdk synth --quiet --context environment=${{ inputs.environment || 'prod' }} --context budgetEmail="$ALERTS_EMAIL"
 
+      # FR-045-17: el paquete en producción (~55 MB, sobre el límite de 50 MB de carga directa) se copia al bucket de
+      # assets de CDK para poder restaurarlo si la prueba de humo falla. La URL temporal del paquete nunca se imprime.
+      - name: Conservar el paquete en producción para rollback (FR-045-17)
+        id: previous
+        run: |
+          FN="sensus-api-${ENV_NAME}"
+          if ! SHA=$(aws lambda get-function --function-name "$FN" --query 'Configuration.CodeSha256' --output text 2>/dev/null); then
+            echo "::notice::La función ${FN} todavía no existe; este despliegue no tendrá rollback automático."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          echo "::add-mask::${ACCOUNT}"
+          BUCKET="cdk-hnb659fds-assets-${ACCOUNT}-${AWS_REGION}"
+          KEY="rollback/${FN}/$(printf '%s' "$SHA" | tr '/+' '_-' | tr -d '=').zip"
+          LOCATION=$(aws lambda get-function --function-name "$FN" --query 'Code.Location' --output text)
+          curl -sSf --max-time 300 -o "$RUNNER_TEMP/previous.zip" "$LOCATION"
+          aws s3 cp "$RUNNER_TEMP/previous.zip" "s3://${BUCKET}/${KEY}" --only-show-errors
+          rm -f "$RUNNER_TEMP/previous.zip"
+          {
+            echo "available=true"
+            echo "function=${FN}"
+            echo "sha=${SHA}"
+            echo "bucket=${BUCKET}"
+            echo "key=${KEY}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Paquete previo conservado (CodeSha256 ${SHA})."
+
       - name: Desplegar stack en AWS (cdk deploy)
         working-directory: infra
         run: |
@@ -107,9 +179,55 @@ jobs:
             --context environment=${{ inputs.environment || 'prod' }} \
             --context budgetEmail="$ALERTS_EMAIL" \
             --outputs-file cdk-outputs.json
+          # Solo la URL pública: cdk-outputs.json incluye ARNs con el ID de cuenta y el resumen del job es público.
           if [ -f cdk-outputs.json ]; then
-            echo "### 🚀 Sensus Serverless Desplegado en AWS" >> "$GITHUB_STEP_SUMMARY"
-            echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            API_URL=$(jq -r --arg stack "SensusBackendStack-${ENV_NAME}" '.[$stack].ApiGatewayUrl // "n/d"' cdk-outputs.json)
+            echo "### 🚀 Sensus Serverless desplegado en AWS" >> "$GITHUB_STEP_SUMMARY"
+            echo "- API: ${API_URL}" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # FR-045-16: CloudFormation no invoca la Lambda, así que un despliegue puede terminar en verde con la API caída
+      # (incidente del 2026-11-25). De noche (Spec 051) la concurrencia reservada es 0 y la prueba se omite.
+      - name: Prueba de humo posterior al despliegue (FR-045-16)
+        id: smoke
+        run: |
+          FN="sensus-api-${ENV_NAME}"
+          RESERVED=$(aws lambda get-function-concurrency --function-name "$FN" --query 'ReservedConcurrentExecutions' --output text)
+          if [ "$RESERVED" = "0" ]; then
+            echo "::warning::La Lambda está en pausa nocturna (concurrencia 0); se omite la prueba de humo. Verifica /health después de las 07:00."
+            echo "### Prueba de humo omitida: pausa nocturna (Spec 051)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          URL=$(jq -r --arg stack "SensusBackendStack-${ENV_NAME}" '.[$stack].ApiGatewayUrl // empty' infra/cdk-outputs.json)
+          if [ -z "$URL" ]; then
+            echo "::error::No se encontró ApiGatewayUrl en infra/cdk-outputs.json."
+            exit 1
+          fi
+          node .github/scripts/post-deploy-smoke.mjs --base-url "$URL"
+
+      # FR-045-17: solo si la prueba de humo falló y existe paquete previo. El job queda en rojo en cualquier caso.
+      - name: Rollback automático del código (FR-045-17)
+        if: failure() && steps.smoke.outcome == 'failure' && steps.previous.outputs.available == 'true'
+        env:
+          FN: ${{ steps.previous.outputs.function }}
+          PREVIOUS_SHA: ${{ steps.previous.outputs.sha }}
+          ROLLBACK_BUCKET: ${{ steps.previous.outputs.bucket }}
+          ROLLBACK_KEY: ${{ steps.previous.outputs.key }}
+        run: |
+          echo "::error::La prueba de humo falló; se restaura el código previo (CodeSha256 ${PREVIOUS_SHA})."
+          aws lambda update-function-code --function-name "$FN" \
+            --s3-bucket "$ROLLBACK_BUCKET" --s3-key "$ROLLBACK_KEY" --query 'LastUpdateStatus' --output text
+          aws lambda wait function-updated --function-name "$FN"
+          CURRENT_SHA=$(aws lambda get-function --function-name "$FN" --query 'Configuration.CodeSha256' --output text)
+          if [ "$CURRENT_SHA" != "$PREVIOUS_SHA" ]; then
+            echo "::error::El rollback no dejó el CodeSha256 esperado."
+            echo "### Rollback FALLIDO: CodeSha256 distinto al previo" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          URL=$(jq -r --arg stack "SensusBackendStack-${ENV_NAME}" '.[$stack].ApiGatewayUrl // empty' infra/cdk-outputs.json)
+          if [ -n "$URL" ] && node .github/scripts/post-deploy-smoke.mjs --base-url "$URL"; then
+            echo "### Rollback aplicado: la API volvió a responder con el código previo. Corrige el cambio antes de volver a desplegar." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Rollback aplicado, pero la API sigue fallando: la causa no está en el código (revisa SSM, IAM o red)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1

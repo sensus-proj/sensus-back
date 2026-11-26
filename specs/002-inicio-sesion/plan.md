@@ -31,6 +31,17 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 - Registro de intentos fallidos sin PII
 - Límite de tasa más estricto que el resto de la API
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Suplantación por fuerza bruta o reutilización de tokens filtrados | Verificación BCrypt (`PasswordHasher.cs`), validación de firma/emisor/audiencia/expiración (`JwtTokenGenerator.cs`, `JwtSettingsValidatorTests.cs`) y rotación de `SecurityStamp` | Medio-bajo (brecha `G-06` abierta para expiración corta y *refresh*) |
+| **T — Tampering** | Alteración de claims del JWT (rol, `sub`, expiración) | Firma simétrica HMAC-SHA256 validada en `Program.cs` (`JwtSettingsValidator.cs`); rechazo si secreto es débil o ausente en `Production` | Bajo |
+| **R — Repudiation** | Negación de intentos de inicio de sesión fallidos o exitosos | Logs estructurados con `CorrelationId` sin exponer credenciales ni PII (`LoginCommandHandler.cs`, `LoginCommandHandlerTests.cs`) | Bajo |
+| **I — Information Disclosure** | Enumeración de cuentas existentes/eliminadas o fuga de credenciales en logs | Mismo código `Auth.InvalidCredentials` para usuario inexistente, contraseña inválida o cuenta eliminada (`LoginCommandHandler.cs`, `DeleteAccountEndpointTests.cs`) | Bajo |
+| **D — Denial of Service** | Ráfagas de login para saturar BCrypt o bloquear cuentas | Rate limiting `AuthStrictPolicy` por IP/solicitud en `AuthEndpoints.cs` (`RateLimitingTests.cs`) y validación de entrada antes del cómputo | Medio-bajo |
+| **E — Elevation of Privilege** | Acceso con cuenta suspendida o dada de baja (`Deleted`) | Verificación explícita de estado de usuario y `SecurityStamp` en `LoginCommandHandler.cs` y en `OnTokenValidated` (`Program.cs`, `SecurityPipelineTests.cs`) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de logins exitosos y fallidos

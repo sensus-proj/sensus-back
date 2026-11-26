@@ -24,7 +24,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] Pruebas unitarias y de integración añadidas y en verde
 - [x] Cobertura ≥ 90 % en Domain y Application
 - [x] Contrato OpenAPI actualizado (v1.1.0)
-- [ ] IaC actualizada y `cdk diff` revisado (N/A — sin cambios en CDK IaC; almacenamiento en MongoDB Atlas Free Tier con índices gestionados por la aplicación)
+- [x] IaC actualizada y `cdk diff` revisado (N/A — sin cambios en CDK IaC; almacenamiento en MongoDB Atlas Free Tier con índices gestionados por la aplicación)
 - [x] Logs con correlation-id y sin PII
 - [x] Revisión de seguridad: sin secretos, autorización verificada
 - [x] Constitution Check en PASS o brecha registrada
@@ -56,3 +56,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-22 | Antigravity | Aprobado | Implementación append-only completada de punta a punta con pruebas y cobertura > 90% |
+| 2026-11-26 | Claude | CERRADA | Casilla de IaC marcada como no aplicable (sin cambios en CDK; colección MongoDB con índices de la aplicación). Checklist sin casillas abiertas. |

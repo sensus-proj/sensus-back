@@ -150,4 +150,22 @@ public interface IOfferRepository
         DateTime nowUtc,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(OfferAlternativesLookupResult.NotFoundOrUnavailable());
+
+    /// <summary>
+    /// Cuenta las ofertas publicadas y vigentes (<c>EndsAt &gt; nowUtc</c>) de un comercio (FR-034-05).
+    /// </summary>
+    Task<long> CountActiveByMerchantAsync(
+        Guid merchantId,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(0L);
+
+    /// <summary>
+    /// Obtiene ofertas en <c>PendingModeration</c> elegibles para reintento (Spec 034, FR-034-07).
+    /// </summary>
+    Task<IReadOnlyList<Offer>> GetPendingModerationDueAsync(
+        DateTime nowUtc,
+        int batchSize,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Offer>>(Array.Empty<Offer>());
 }

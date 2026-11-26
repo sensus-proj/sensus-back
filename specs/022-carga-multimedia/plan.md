@@ -78,3 +78,14 @@ Evaluación previa a la implementación.
 9. `T022-09` Implementar las pruebas de integración del flujo completo
 10. `T022-10` Actualizar `specs/README.md`, `requirements.md` y el checklist del spec
 11. `T022-11` Registrar evidencias del Constitution Check
+
+### Remediación H2 (2026-11-26) — Moderación previa a Cloudinary y `type=authenticated`
+
+- **Orden estricto**: `UploadMediaCommandHandler` ejecuta `IImageModerationService.ModerateImageBytesAsync` (con tratamiento *fail-closed* a `Quarantined` ante excepción/nulo) **antes** de `IMediaStorage.UploadImageAsync`. Los activos rechazados o en cuarentena guardan `SecureUrl = null` y **no** suben bytes a Cloudinary (`T022-12`).
+- **Entrega autenticada**: `CloudinaryMediaStorage.UploadImageAsync` firma e incluye `type=authenticated` (orden alfabético SHA-256) y `DeleteImageAsync` destruye con `type=authenticated` para que Cloudinary no genere URLs públicas anónimas.
+- **Móvil (`movil_Rodrigo`)**: Eliminado el fallback a subida directa sin moderar en `MediaRepositoryImpl.kt` y migrado `RetrofitProfileRepository.uploadProfilePhoto` a `POST /api/v1/media/upload` (vía `SensusContainer.kt`), evitando también llamadas al endpoint retirado `/api/v1/media/moderate`.
+- **Plan de migración de activos públicos preexistentes en Cloudinary (pendiente autorización de Rodrigo)**:
+  1. Listar los recursos con `type=upload` en prefijos `sensus/media/` y `sensus/profiles/` mediante Cloudinary Admin API (`GET /resources/image/upload?prefix=sensus/`).
+  2. Ejecutar un script administrativo único autorizado por Rodrigo que invoque `explicit` / `rename` de Cloudinary Admin API (`to_type=authenticated`) y actualice `secureUrl` / `publicId` en MongoDB (`media_assets`, `feed_posts`, `offers`, `usuarios`) para servirlos solo por `GET /api/v1/media/{id}/delivery` o URL firmada.
+  3. Desactivar permisos de subida sin autenticación o `type=upload` en el upload preset de Cloudinary desde consola tras verificar compatibilidad móvil publicada.
+- **Decisión provisional del ejecutor — revisar con Rodrigo**: Se conserva el endpoint legado `POST /api/v1/users/photo-signature` sin eliminar (para no romper clientes antiguos ni `ProfileEndpointsTests`), mientras la app móvil actualizada en `movil_Rodrigo` ya migra al flujo moderado `POST /api/v1/media/upload`. Alternativa descartada: devolver `410 Gone` de inmediato antes de desplegar la app móvil.

@@ -1,6 +1,9 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Common.Moderation;
+using Sensus.Application.Common.Settings;
+using Sensus.Application.Users.Common;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
 using Sensus.Domain.Entities;
@@ -21,6 +24,8 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ITextModerationService? _textModerationService;
     private readonly IModerationAuditRecorder _auditRecorder;
+    private readonly IRefreshTokenRepository? _refreshTokenRepository;
+    private readonly IOptions<RefreshTokenSettings>? _refreshTokenSettings;
 
     public RegisterUserCommandHandler(
         IUserRepository userRepository,
@@ -28,7 +33,9 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
         IJwtTokenGenerator jwtTokenGenerator,
         IDateTimeProvider dateTimeProvider,
         IModerationAuditRecorder auditRecorder,
-        ITextModerationService? textModerationService = null)
+        ITextModerationService? textModerationService = null,
+        IRefreshTokenRepository? refreshTokenRepository = null,
+        IOptions<RefreshTokenSettings>? refreshTokenSettings = null)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -36,6 +43,8 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
         _dateTimeProvider = dateTimeProvider;
         _auditRecorder = auditRecorder;
         _textModerationService = textModerationService;
+        _refreshTokenRepository = refreshTokenRepository;
+        _refreshTokenSettings = refreshTokenSettings;
     }
 
     public async Task<Result<AuthResponseDto>> Handle(
@@ -100,12 +109,21 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
         await _userRepository.AddAsync(user, cancellationToken);
 
         var (token, expiresAt) = _jwtTokenGenerator.GenerateToken(user);
+        int refreshDays = _refreshTokenSettings?.Value.RefreshTokenDays ?? RefreshTokenSettings.DefaultRefreshTokenDays;
+        var (refreshToken, refreshExpiresAt, _) = await RefreshTokenIssuer.IssueAsync(
+            _refreshTokenRepository,
+            user.Id,
+            now,
+            refreshDays,
+            cancellationToken: cancellationToken);
 
         var response = new AuthResponseDto(
             token,
             "Bearer",
             expiresAt,
-            user.ToDto());
+            user.ToDto(),
+            refreshToken,
+            refreshExpiresAt);
 
         return Result.Success(response);
     }

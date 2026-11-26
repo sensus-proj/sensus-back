@@ -16,18 +16,22 @@ public class UpdateMerchantProfileCommandHandlerTests
     private readonly ICurrentUserService _currentUserService = Substitute.For<ICurrentUserService>();
     private readonly IGeocodingService _geocodingService = Substitute.For<IGeocodingService>();
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
     private readonly UpdateMerchantProfileCommandHandler _handler;
 
     public UpdateMerchantProfileCommandHandlerTests()
     {
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _handler = new UpdateMerchantProfileCommandHandler(
             _comercioRepository,
             _currentUserService,
             _geocodingService,
-            _auditRecorder);
+            _auditRecorder,
+            textModerationService: _textModerationService);
     }
 
     [Fact]
@@ -218,7 +222,8 @@ public class UpdateMerchantProfileCommandHandlerTests
             _geocodingService,
             _auditRecorder,
             cacheService,
-            offerRepository);
+            offerRepository,
+            textModerationService: _textModerationService);
 
         var userId = Guid.NewGuid();
         _currentUserService.UserId.Returns(userId.ToString());

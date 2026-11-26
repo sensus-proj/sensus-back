@@ -13,7 +13,7 @@ namespace Sensus.Application.Comercios.Commands.ReplyStoreReview;
 /// Agrega una respuesta moderada a una reseña existente de un comercio (Spec 021, B3).
 /// Ref: FR-021-01 - auditoría obligatoria de cada decisión de moderación (fail-closed).
 /// </summary>
-public sealed record ReplyStoreReviewCommand(Guid ReviewId, string Comment) : IRequest<Result<StoreReviewDto>>;
+public sealed record ReplyStoreReviewCommand(Guid ReviewId, string Comment) : IRequest<Result<StoreReviewDto>>, ISensitiveRequest;
 
 public sealed class ReplyStoreReviewCommandHandler
     : IRequestHandler<ReplyStoreReviewCommand, Result<StoreReviewDto>>

@@ -54,4 +54,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-26 | Antigravity | T002-10 completada (`G-06`) | `JwtSettings:ExpiryMinutes` restringido a `[1, 15]` (default `15`), `RefreshToken` rotatorio con índice único `ux_refresh_tokens_token_hash` + TTL `ttl_refresh_tokens_expires_at`, endpoint `POST /api/v1/auth/refresh` con detección de reuso (revoca familia + `SecurityStamp`), revocación en `LogoutCommandHandler` y `TokenRefreshAuthenticator` + `SecurePreferences` en móvil `movil_Rodrigo`. Verificado en integración (`22/22`) y Testcontainers MongoDB. |

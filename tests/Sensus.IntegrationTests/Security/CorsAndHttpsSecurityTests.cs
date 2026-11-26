@@ -92,6 +92,57 @@ public sealed class CorsAndHttpsSecurityTests : IClassFixture<CustomWebApplicati
         response.Headers.Contains("Strict-Transport-Security").Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("/openapi/v1.json")]
+    [InlineData("/swagger/index.html")]
+    public async Task ProductionEnvironment_DoesNotExposeApiDocs(string path)
+    {
+        // FR-011-05 (G-15): la superficie de la API no se publica fuera de Development.
+        using var prodFactory = new ProductionSecurityWebApplicationFactory();
+        using var client = prodFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
+
+        var response = await client.GetAsync(path);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData("Development", false, true, true, false, false)]
+    [InlineData("Development", true, true, true, false, false)]
+    [InlineData("Production", false, false, false, true, true)]
+    [InlineData("Production", true, false, true, true, false)]
+    public void HostingSecurityPolicy_ResolvesPipelineByEnvironmentAndLambda(
+        string environmentName,
+        bool isLambdaRuntime,
+        bool exposeDocs,
+        bool seedAdmin,
+        bool useHsts,
+        bool useHttpsRedirection)
+    {
+        // Regresión: en Lambda (Production) antes se publicaba Swagger y no se aplicaba HSTS.
+        var environment = new StubHostEnvironment(environmentName);
+
+        Sensus.Api.Extensions.HostingSecurityPolicy.ExposeApiDocs(environment).Should().Be(exposeDocs);
+        Sensus.Api.Extensions.HostingSecurityPolicy.SeedAdministrator(environment, isLambdaRuntime).Should().Be(seedAdmin);
+        Sensus.Api.Extensions.HostingSecurityPolicy.UseHsts(environment).Should().Be(useHsts);
+        Sensus.Api.Extensions.HostingSecurityPolicy.UseHttpsRedirection(environment, isLambdaRuntime).Should().Be(useHttpsRedirection);
+    }
+
+    private sealed class StubHostEnvironment(string environmentName) : Microsoft.Extensions.Hosting.IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+
+        public string ApplicationName { get; set; } = "Sensus.Api";
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
+            new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+
     private sealed class ProductionSecurityWebApplicationFactory : CustomWebApplicationFactory
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)

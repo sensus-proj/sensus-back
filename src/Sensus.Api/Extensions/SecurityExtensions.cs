@@ -27,6 +27,8 @@ public static class SecurityExtensions
     public const string RegisteredUserPolicy = "RegisteredUser";
     public const string MerchantOnlyPolicy = "MerchantOnly";
     public const string GuestOrRegisteredPolicy = "GuestOrRegistered";
+    public const string AdminBasePolicy = "AdminBase";
+    public const string MfaVerifyPolicy = "MfaVerify";
     public const string AdminOnlyPolicy = "AdminOnly";
 
     public static IServiceCollection AddSecurityRateLimiting(this IServiceCollection services, IConfiguration? configuration = null)
@@ -295,7 +297,7 @@ public static class SecurityExtensions
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireAssertion(ctx =>
-                    !ctx.User.IsInRole(RoleType.Invitado));
+                    !ctx.User.IsInRole(RoleType.Invitado) && !IsMfaChallengeToken(ctx.User));
             });
 
             options.AddPolicy(MerchantOnlyPolicy, policy =>
@@ -303,25 +305,99 @@ public static class SecurityExtensions
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(RoleType.Comerciante);
                 policy.RequireAssertion(ctx =>
-                    !ctx.User.IsInRole(RoleType.Invitado));
+                    !ctx.User.IsInRole(RoleType.Invitado) && !IsMfaChallengeToken(ctx.User));
             });
 
             options.AddPolicy(GuestOrRegisteredPolicy, policy =>
             {
                 policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx => !IsMfaChallengeToken(ctx.User));
             });
 
-            // FR-019-04: acciones de moderación manual reservadas al rol Administrador.
+            // Spec 062: habilita el primer enrolamiento de Administrador antes de contar con amr=mfa.
+            options.AddPolicy(AdminBasePolicy, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(RoleType.Administrador);
+                policy.RequireAssertion(ctx =>
+                    !ctx.User.IsInRole(RoleType.Invitado) && !IsMfaChallengeToken(ctx.User));
+            });
+
+            // Spec 062: verificación TOTP admite sesión Admin existente o token intermedio mfa_challenge.
+            options.AddPolicy(MfaVerifyPolicy, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    !ctx.User.IsInRole(RoleType.Invitado) &&
+                    (ctx.User.IsInRole(RoleType.Administrador) || IsMfaChallengeToken(ctx.User)));
+            });
+
+            // FR-019-04 & FR-062-05: acciones administrativas reservadas a Administrador con step-up amr=mfa vigente.
             options.AddPolicy(AdminOnlyPolicy, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(RoleType.Administrador);
                 policy.RequireAssertion(ctx =>
-                    !ctx.User.IsInRole(RoleType.Invitado));
+                    !ctx.User.IsInRole(RoleType.Invitado) &&
+                    !IsMfaChallengeToken(ctx.User) &&
+                    HasRecentAdminMfaStepUp(ctx));
             });
         });
 
         return services;
+    }
+
+    private static bool IsMfaChallengeToken(System.Security.Claims.ClaimsPrincipal user) =>
+        user.HasClaim(c =>
+            string.Equals(c.Type, Sensus.Infrastructure.Authentication.JwtTokenGenerator.TokenUseClaimType, StringComparison.Ordinal) &&
+            string.Equals(c.Value, Sensus.Infrastructure.Authentication.JwtTokenGenerator.MfaChallengeTokenUse, StringComparison.Ordinal));
+
+    private const string MappedAmrClaimType = "http://schemas.microsoft.com/claims/authnmethodsreferences";
+
+    private static bool HasRecentAdminMfaStepUp(Microsoft.AspNetCore.Authorization.AuthorizationHandlerContext ctx)
+    {
+        var hasAmrMfa = ctx.User.HasClaim(c =>
+            (string.Equals(c.Type, Sensus.Infrastructure.Authentication.JwtTokenGenerator.AmrClaimType, StringComparison.Ordinal) ||
+             string.Equals(c.Type, MappedAmrClaimType, StringComparison.Ordinal) ||
+             string.Equals(c.Type, System.Security.Claims.ClaimTypes.AuthenticationMethod, StringComparison.Ordinal)) &&
+            string.Equals(c.Value, "mfa", StringComparison.Ordinal));
+
+        if (!hasAmrMfa)
+        {
+            return false;
+        }
+
+        var mfaAtRaw = ctx.User.FindFirst(Sensus.Infrastructure.Authentication.JwtTokenGenerator.MfaVerifiedAtClaimType)?.Value;
+        if (!long.TryParse(mfaAtRaw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out long mfaAtUnix))
+        {
+            return false;
+        }
+
+        DateTime verifiedAtUtc = DateTimeOffset.FromUnixTimeSeconds(mfaAtUnix).UtcDateTime;
+        DateTime nowUtc = DateTime.UtcNow;
+        int windowMinutes = 15;
+
+        if (ctx.Resource is HttpContext httpContext)
+        {
+            var clock = httpContext.RequestServices.GetService<Sensus.Application.Common.Interfaces.IDateTimeProvider>();
+            if (clock is not null)
+            {
+                nowUtc = clock.UtcNow;
+            }
+
+            var mfaOptions = httpContext.RequestServices.GetService<Microsoft.Extensions.Options.IOptions<Sensus.Application.Common.Settings.MfaSettings>>();
+            if (mfaOptions?.Value.StepUpWindowMinutes is > 0)
+            {
+                windowMinutes = mfaOptions.Value.StepUpWindowMinutes;
+            }
+        }
+
+        if (verifiedAtUtc > nowUtc.AddMinutes(1))
+        {
+            return false;
+        }
+
+        return (nowUtc - verifiedAtUtc) <= TimeSpan.FromMinutes(windowMinutes);
     }
 
     public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app)

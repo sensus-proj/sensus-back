@@ -57,9 +57,10 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
         {
             long timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string folder = $"sensus/media/{ownerId}";
+            const string deliveryType = "authenticated";
 
-            // Cadena canónica para firma en orden alfabético
-            string toSign = $"folder={folder}&timestamp={timestampSeconds}{_settings.ApiSecret}";
+            // Cadena canónica para firma en orden alfabético (incluye type=authenticated, H2).
+            string toSign = $"folder={folder}&timestamp={timestampSeconds}&type={deliveryType}{_settings.ApiSecret}";
             byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
             string signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
@@ -70,6 +71,7 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
             content.Add(new StringContent(_settings.ApiKey), "api_key");
             content.Add(new StringContent(timestampSeconds.ToString(CultureInfo.InvariantCulture)), "timestamp");
             content.Add(new StringContent(folder), "folder");
+            content.Add(new StringContent(deliveryType), "type");
             content.Add(new StringContent(signature), "signature");
 
             string uploadUrl = $"https://api.cloudinary.com/v1_1/{_settings.CloudName}/image/upload";
@@ -130,7 +132,8 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
         try
         {
             long timestampSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string toSign = $"public_id={publicId}&timestamp={timestampSeconds}{_settings.ApiSecret}";
+            const string deliveryType = "authenticated";
+            string toSign = $"public_id={publicId}&timestamp={timestampSeconds}&type={deliveryType}{_settings.ApiSecret}";
             byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(toSign));
             string signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
@@ -139,6 +142,7 @@ public sealed class CloudinaryMediaStorage : IMediaStorage
                 ["public_id"] = publicId,
                 ["api_key"] = _settings.ApiKey,
                 ["timestamp"] = timestampSeconds.ToString(CultureInfo.InvariantCulture),
+                ["type"] = deliveryType,
                 ["signature"] = signature
             });
 

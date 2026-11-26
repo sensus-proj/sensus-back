@@ -34,12 +34,32 @@ public class JwtSettingsValidatorTests
             Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
             Issuer = "SensusApi",
             Audience = "SensusApp",
-            ExpiryMinutes = 1440
+            ExpiryMinutes = 15
         };
 
         var result = _validator.Validate(null, settings);
 
         result.Succeeded.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(16)]
+    [InlineData(1440)]
+    public void Validate_ShouldFail_WhenExpiryMinutesOutOfAllowedRange(int expiryMinutes)
+    {
+        var settings = new JwtSettings
+        {
+            Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
+            Issuer = "SensusApi",
+            Audience = "SensusApp",
+            ExpiryMinutes = expiryMinutes
+        };
+
+        var result = _validator.Validate(null, settings);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("ExpiryMinutes");
     }
 
     [Theory]
@@ -52,7 +72,7 @@ public class JwtSettingsValidatorTests
             Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
             Issuer = "SensusApi",
             Audience = "SensusApp",
-            ExpiryMinutes = 1440,
+            ExpiryMinutes = 15,
             GuestExpiryMinutes = guestMinutes
         };
 

@@ -14,10 +14,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## B. Específicos de este spec
 
-- [ ] El flujo de publicación de la 024 persiste la cuarentena ante fallos. El adaptador ya valida el veredicto y devuelve cuarentena con respuestas malformadas o timeout (`CA-017-06`).
+- [x] El flujo de publicación de la 024 persiste la cuarentena ante fallos (`202 Accepted`, `Quarantined` sin subida a Cloudinary y purga a 30 días). El adaptador ya valida el veredicto y devuelve cuarentena con respuestas malformadas o timeout (`CA-017-06`).
 
 - [x] Imagen y texto viajan en la misma solicitud
-- [ ] Ningún camino permite publicar sin veredicto
+- [x] Ningún camino permite publicar sin veredicto (moderación y auditoría *fail-closed* antes de publicar)
 - [x] El timeout está probado
 - [x] La clave no está en el repositorio
 - [x] No existe endpoint público de moderación
@@ -63,3 +63,5 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | 2026-11-22 | Codex | Parcial | `OpenAiImageModerationServiceTests` verifica la solicitud de solo texto a `gpt-4o-mini`, el resultado estructurado y el comportamiento fail-closed. `MediaEndpointsTests` verifica que la ruta independiente no existe. Pendientes la integración de publicación, la cuarentena de imágenes de ofertas y la auditoría completa. |
 | 2026-11-22 | Codex | T017-14 verificada | El adaptador de compatibilidad envía a cuarentena veredictos sin campos requeridos, puntajes fuera de rango y resultados contradictorios. Cinco casos de regresión. |
 | 2026-11-22 | Codex | Parcial | El registro append-only de multimedia y reseñas conserva veredicto, categorías, puntajes, política o umbral, acción y correlación. La consulta de administración queda en 021. Falta conectar la publicación de la Spec 024. |
+| 2026-11-26 | Antigravity | T017-15 completada (`FR-017-09`) | `ContentModerationHelper.EvaluateAsync` y `EnsureApprovedAsync` convertidos a *fail-closed* (`Quarantine`, `Error.Failure("<errorCode>.ModerationUnavailable")`) ante `ITextModerationService` nulo, excepción o retorno nulo. `ContentModerationHelperTests` (5 casos nuevos en rojo → verde) + ajuste de 8 archivos de pruebas unitarias para inyectar doble aprobador explícito; `dotnet test tests/Sensus.Application.UnitTests` → **1,180/1,180 pasadas (0 fallos)**. |
+| 2026-11-26 | Antigravity | Integración Spec 024 completada (`FR-017-08`) | `CreateFeedPostCommandHandler` conectado con `IModerationAuditRecorder` (`ModerationTargetType.FeedPost`) y cuarentena persistida sin subida a Cloudinary (`202 Accepted`) para texto solo y texto con imagen; purga automática a 30 días en `PurgeQuarantinedMediaCommandHandler`. |

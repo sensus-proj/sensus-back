@@ -55,3 +55,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-15 | Antigravity | PASS | Implementado `CorrelationIdMiddleware`, `CorrelationIdAccessor`, inyección en `ProblemDetails` y logging con scope `CorrelationId`. Pruebas en `CorrelationIdMiddlewareTests.cs`. |
+| 2026-11-26 | Antigravity | T014-08 completada (`FR-014-05`) | Añadido `ISensitiveRequest` a 21 comandos/consultas con carga libre, bytes, códigos, firmas o ubicación/PII; verificado `PerformanceBehavior` (`[REDACTED]`). `LoggingBehaviorTests` **4/4 pasadas** (sin fugas en mensaje ni propiedades estructuradas) y `ArchitectureTests` **6/6 pasadas** (regla automática `RequestsWithSensitivePayload_ShouldImplementISensitiveRequest`). |

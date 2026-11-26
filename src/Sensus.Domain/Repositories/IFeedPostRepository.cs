@@ -41,4 +41,11 @@ public interface IFeedPostRepository
         Guid authorUserId,
         DateTime updatedAtUtc,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Purga las publicaciones en cuarentena creadas antes de <paramref name="cutoffUtc"/> (Spec 024 / retención 30 días).
+    /// </summary>
+    Task<int> PurgeQuarantinedBeforeAsync(
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default);
 }

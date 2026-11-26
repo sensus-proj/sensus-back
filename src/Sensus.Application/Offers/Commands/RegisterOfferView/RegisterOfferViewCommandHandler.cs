@@ -41,7 +41,7 @@ public sealed class RegisterOfferViewCommandHandler : IRequestHandler<RegisterOf
         }
 
         Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived)
+        if (offer is null || offer.Status is OfferStatus.Draft or OfferStatus.Archived or OfferStatus.PendingModeration or OfferStatus.Rejected)
         {
             return Result.Failure(
                 Error.NotFound("Offer.NotFound", "La oferta solicitada no existe o no está disponible."));

@@ -9,8 +9,8 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 005, 017, 022 |
-| Versión | 1.0.0 |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Versión | 1.1.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -71,9 +71,9 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 
 ### CA-034-02
 
-- **Dado** imagen pendiente de moderación
-- **Cuando** POST /api/v1/offers
-- **Entonces** 202 y oferta oculta hasta el veredicto
+- **Dado** moderación pendiente o moderador de texto temporalmente no disponible (`timeout`/error transitorio)
+- **Cuando** `POST /api/v1/offers` (`saveAsDraft=false`)
+- **Entonces** la API responde `202 Accepted` con `status=PendingModeration` y cabecera `Location`, la oferta queda oculta al público general (`404` para no propietarios, sin cercanía ni notificaciones) hasta aprobarse en re-moderación diferida y ser notificada únicamente al publicarse (`FR-034-07`)
 
 ### CA-034-03
 
@@ -89,9 +89,9 @@ Permitir que un comerciante publique una oferta con precio, descuento, stock, vi
 
 ### CA-034-05
 
-- **Dado** comercio con 20 ofertas activas
-- **Cuando** se intenta crear otra
-- **Entonces** 409
+- **Dado** un comercio con `Offers:MaxActivePerMerchant` (20 por defecto) ofertas en estado `Published` con `EndsAt > nowUtc` (excluye `Draft`, `Paused`, `Expired`, `Archived` y `Published` vencidas)
+- **Cuando** intenta crear una oferta publicada (`saveAsDraft=false`), reanudar una oferta pausada a `Published` o republicar una oferta vencida
+- **Entonces** el servidor responde `409 Conflict` (`ProblemDetails` con código `Offer.ActiveLimitReached`); con 19 activas o al crear un borrador (`saveAsDraft=true`) con 20 activas permite crear con `201 Created` (`FR-034-05`)
 
 ### CA-034-06 — Categoría obligatoria
 

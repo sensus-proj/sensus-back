@@ -70,6 +70,9 @@ El backend Sensus requiere un pipeline de integración continua y despliegue con
 | FR-047-16 | Califica cada prompt de las *Evals* con modelo con la **mediana** de `runs_per_prompt` corridas independientes (manifiesto de la Spec 046; por defecto 3, mínimo 1). El prompt aprueba solo si la mediana alcanza el umbral de su categoría **y** la mayoría de las corridas aprueba; una fuga de proveedor o secreto en **cualquier** corrida reprueba el caso. Los umbrales de `NFR-047-06` no cambian | Must |
 | FR-047-17 | Genera las respuestas de Sensi en las *Evals* con modelo con la misma temperatura que producción (`OpenAiSettings:Sensi:Temperature` de `src/Sensus.Api/appsettings.json`, definida en la Spec 046); la variable `SENSI_EVAL_TEMPERATURE` solo la sobrescribe en ejecuciones locales. El juez califica siempre con temperatura 0 | Must |
 | FR-047-18 | `deploy-serverless.yml` publica el reporte sanitizado de *Evals* (`artifacts/ai-evals`) como artefacto incluso cuando la puerta falla (`if: always()`), para diagnosticar qué prompt y qué corrida reprobaron | Must |
+| FR-047-19 | Escaneo estático bloqueante de IaC en `infra/` con `Cdklabs.CdkNag` (`AwsSolutionsChecks`) durante la síntesis de CDK | Must |
+| FR-047-20 | Generación de SBOM CycloneDX (`bom.json`) en `ci.yml` y `deploy-serverless.yml` y atestación SLSA 2 de procedencia sobre el binario publicado para Lambda | Must |
+| FR-047-21 | Escaneo DAST pasivo (OWASP ZAP API Baseline) manual y programado en horario diurno (`America/Mexico_City`) contra el API desplegado con reglas `.zap/rules.tsv` y reporte como artefacto | Must |
 
 ## 5. Requisitos no funcionales
 

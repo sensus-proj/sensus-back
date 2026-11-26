@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Ai.DTOs;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Common;
 
 namespace Sensus.Application.Ai.Commands.SendMessage;
@@ -10,4 +11,4 @@ public sealed record SendAiMessageCommand(
     string? ScreenContext = null,
     double? Latitude = null,
     double? Longitude = null,
-    double? RadiusKm = null) : IRequest<Result<AiTurnResponseDto>>;
+    double? RadiusKm = null) : IRequest<Result<AiTurnResponseDto>>, ISensitiveRequest;

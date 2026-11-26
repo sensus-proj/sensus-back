@@ -9,4 +9,10 @@ public interface IJwtTokenGenerator
 {
     (string Token, DateTime ExpiresAtUtc) GenerateToken(User user);
     (string Token, DateTime ExpiresAtUtc) GenerateGuestToken(Guid? guestId = null, int? expiryMinutes = null);
+
+    (string Token, DateTime ExpiresAtUtc) GenerateAdminStepUpToken(User user, DateTime mfaVerifiedAtUtc) =>
+        GenerateToken(user);
+
+    (string Token, DateTime ExpiresAtUtc) GenerateMfaChallengeToken(User user) =>
+        GenerateToken(user);
 }

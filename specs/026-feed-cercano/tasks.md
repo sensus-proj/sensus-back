@@ -19,7 +19,7 @@
 | T026-05 | Crear índice geoespacial y de estado | Infrastructure | `FR-026-01` | T026-04 | Completada. `ix_feed_posts_status_location_created_at`. |
 | T026-06 | Implementar caché con TTL e invalidación | Application | `FR-026-06` | T026-05 | Completada. TTL `Redis:TtlByEntityMinutes:Feed`; invalidación por prefijo al crear y eliminar. |
 | T026-07 | Validar radio y paginación | Api | `FR-026-04` | T026-06 | Completada. Radio 0 < r ≤ 5 km, coordenadas finitas y en rango, página ≥ 1, tamaño 1–100. |
-| T026-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-026-01` | T026-07 | Parcial. `NearbyFeedEndpointsTests` en verde; `MongoFeedSocialIntegrationTests` (filtro, radio, desempate, plan de ejecución) escritas y pendientes de ejecutar con Docker o en CI. |
+| T026-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-026-01` | T026-07 | Completada. `NearbyFeedEndpointsTests` y `MongoFeedSocialIntegrationTests` (filtro, radio, desempate, plan `2dsphere`) en verde contra MongoDB 7.0 real. |
 | T026-09 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-026-01` | T026-08 | Completada |
 | T026-10 | Registrar evidencias del Constitution Check | Docs | `FR-026-01` | T026-09 | Parcial. Principio VIII pendiente de los escaneos bloqueantes de CI. |
 

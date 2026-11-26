@@ -80,4 +80,54 @@ public sealed class CloudinaryMediaStorageTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Media.InvalidResponse");
     }
+
+    [Fact]
+    public async Task UploadImageAsync_SendsAuthenticatedTypeAndSignsTypeParameter()
+    {
+        Dictionary<string, string> capturedFields = new(StringComparer.Ordinal);
+        Guid ownerId = Guid.NewGuid();
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            public_id = $"sensus/media/{ownerId}/sample",
+            secure_url = $"https://res.cloudinary.com/demo-cloud/image/authenticated/v1/sensus/media/{ownerId}/sample.jpg"
+        });
+
+        var handler = new DelegatingMockHandler(request =>
+        {
+            if (request.Content is MultipartFormDataContent multipart)
+            {
+                foreach (HttpContent part in multipart)
+                {
+                    string? name = part.Headers.ContentDisposition?.Name?.Trim('"');
+                    if (!string.IsNullOrWhiteSpace(name) && name != "file")
+                    {
+                        capturedFields[name] = part.ReadAsStringAsync().GetAwaiter().GetResult();
+                    }
+                }
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+            };
+        });
+
+        var options = Options.Create(new CloudinarySettings
+        {
+            CloudName = "demo-cloud",
+            ApiKey = "demo-key",
+            ApiSecret = "demo-secret"
+        });
+        var storage = new CloudinaryMediaStorage(new HttpClient(handler), options, _logger);
+
+        var result = await storage.UploadImageAsync([0xFF, 0xD8, 0xFF], "image/jpeg", ownerId);
+
+        result.IsSuccess.Should().BeTrue();
+        capturedFields.Should().ContainKey("type").WhoseValue.Should().Be("authenticated");
+        string expectedToSign =
+            $"folder=sensus/media/{ownerId}&timestamp={capturedFields["timestamp"]}&type=authenticateddemo-secret";
+        string expectedSig = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(expectedToSign))).ToLowerInvariant();
+        capturedFields["signature"].Should().Be(expectedSig);
+    }
 }

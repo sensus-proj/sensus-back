@@ -48,7 +48,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Plan | [`plan.md`](plan.md) | ☑ |
 | Tareas | [`tasks.md`](tasks.md) | ☑ |
 | Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☑ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☑ |
 | Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
@@ -56,3 +56,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | — | — | — | — |
+| 2026-11-26 | Antigravity | T022-12 completada (H2) | `UploadMediaCommandHandler` modera bytes antes de `IMediaStorage.UploadImageAsync` (sin subida en `Quarantined`/`Rejected`), `CloudinaryMediaStorage` firma y sube con `type=authenticated`, `MediaEndpoints.UploadMedia` aplica `SensitiveWritePolicy`, móvil `movil_Rodrigo` (`MediaRepositoryImpl.kt`, `RetrofitRepositories.kt`, `SensusContainer.kt`) usa `/api/v1/media/upload` sin fallback directo a Cloudinary; plan de migración de activos públicos documentado en `plan.md`. |
