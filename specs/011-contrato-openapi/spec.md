@@ -4,7 +4,7 @@
 |---|---|
 | ID | 011 |
 | Slug | `contrato-openapi` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 0 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |

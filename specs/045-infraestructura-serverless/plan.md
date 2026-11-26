@@ -4,7 +4,7 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado (Implementado) |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Constitution Check | PASS |
 | Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
@@ -23,6 +23,21 @@ Implementar la infraestructura serverless del backend Sensus utilizando **AWS CD
 | Infrastructure | Sin cambios |
 | Api | Paquete `Amazon.Lambda.AspNetCoreServer.Hosting` y registro `builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi)` en `Program.cs` |
 | IaC (`infra/`) | Proyecto independiente `infra/src/Sensus.Infra/Sensus.Infra.csproj`, `SensusInfraStack.cs`, `Program.cs` y configuración `infra/cdk.json` |
+
+### 2.1 Prueba de humo y rollback tras desplegar (v1.1.0, `FR-045-16`, `FR-045-17`)
+
+**Motivo.** El 2026-11-25 el despliegue de `25c5ba2` terminó en verde mientras la API respondía 500 en todas las rutas: la Lambda fallaba al arrancar (`OptionsValidationException` por un parámetro ausente en SSM) y CloudFormation no invoca la función, así que nada lo detectó. La caída duró hasta que se probó a mano.
+
+**Flujo en `deploy-serverless.yml`:**
+
+1. *Capturar versión en producción*: `aws lambda get-function` obtiene `CodeSha256` y la URL temporal del paquete actual; se descarga y se copia a `s3://cdk-hnb659fds-assets-<cuenta>-<región>/rollback/sensus-api-<entorno>/<sha>.zip`. El paquete pesa unos 55 MB, por encima del límite de 50 MB de carga directa, por eso pasa por S3. Si la función no existe, se marca que no hay rollback.
+2. `cdk deploy` sin cambios.
+3. *Prueba de humo*: si la concurrencia reservada es `0` (pausa nocturna, Spec 051) se omite con aviso. Si no, `node .github/scripts/post-deploy-smoke.mjs --base-url <ApiGatewayUrl>` comprueba `/health/live` → 200, `/health/ready` → 200 y `/api/v1/offers/nearby` sin token → 401; hasta 6 intentos con 10 s de espera y 10 s de tiempo límite por solicitud. Solo registra rutas y códigos, nunca cuerpos.
+4. *Rollback* (solo si falló la prueba y hay paquete previo): `aws lambda update-function-code --s3-bucket … --s3-key …`, `aws lambda wait function-updated`, verificación de `CodeSha256` y nueva prueba de humo. El job termina en rojo siempre que la primera prueba falle.
+
+**Alcance del rollback.** Restaura solo el código de la Lambda. Si la causa es de infraestructura (variables, IAM, red), la segunda prueba seguirá fallando y el resumen lo indica. El siguiente `cdk deploy` vuelve a alinear la función con la plantilla, porque CloudFormation reaplica su propio paquete.
+
+**Seguridad y costo.** Usa las credenciales del job de despliegue; no agrega secretos. Los paquetes de rollback ocupan menos de 60 MB cada uno en el bucket de *assets* (dentro de los 5 GB gratuitos de S3); conviene una regla de expiración en el bucket de *bootstrap*, que no gestiona este stack. Costo: 0 USD.
 
 ## 3. Modelo de datos e índices
 

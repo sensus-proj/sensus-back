@@ -4,7 +4,7 @@
 |---|---|
 | ID | 052 |
 | Slug | `sesion-invitado` |
-| Estado | Parcial (retro-spec) |
+| Estado | Implementado (retro-spec) |
 | Ola | 1 |
 | Tipo | Retro-spec |
 | Dueño | Por asignar |
@@ -46,7 +46,7 @@ frente a la constitución v2.4.0.
 | FR-052-03 | Limitar el radio de búsqueda del invitado a 2 km en el servidor, aunque el cliente pida más | Must | Implementado |
 | FR-052-04 | Negar al invitado las operaciones reservadas a usuarios registrados (políticas `RegisteredUser`, `MerchantOnly` y `AdminOnly`) | Must | Implementado |
 | FR-052-05 | Aplicar el límite de tasa `auth-strict` (10 solicitudes por 60 s por cliente) | Must | Implementado |
-| FR-052-06 | Externalizar la vigencia del token de invitado a configuración (hoy 120 min fijos en `JwtTokenGenerator`) y alinearla al Principio VIII, regla 4 (≤ 15 min con renovación) | Must | Pendiente |
+| FR-052-06 | Externalizar la vigencia del token de invitado a configuración (antes 120 min fijos en `JwtTokenGenerator`; hoy `JwtSettings:GuestExpiryMinutes`, 15 min) y alinearla al Principio VIII, regla 4 (≤ 15 min con renovación) | Must | Implementado |
 
 ## 5. Requisitos no funcionales
 

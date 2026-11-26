@@ -9,7 +9,7 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 012, 014, 015, 016 |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
 ---
@@ -65,6 +65,8 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 | FR-045-13 | Mantener el correo de alertas fuera de los logs de CI y de los identificadores de recursos: la síntesis no imprime la plantilla y la suscripción usa un identificador fijo | Must |
 | FR-045-14 | Notificar el presupuesto a través del tema SNS de alarmas, de modo que cambiar el correo de alertas no reemplace el presupuesto ni rompa el despliegue | Must |
 | FR-045-15 | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must |
+| FR-045-16 | Después de `cdk deploy`, ejecutar una prueba de humo contra la URL desplegada (`ApiGatewayUrl` de `cdk-outputs.json`): `/health/live` y `/health/ready` deben responder `200` y una ruta protegida sin token (`/api/v1/offers/nearby`) debe responder `401`, con reintentos acotados para tolerar el arranque en frío. Si la Lambda está en la pausa nocturna (concurrencia reservada `0`, Spec 051), la prueba se omite con un aviso en el resumen del job | Must |
+| FR-045-17 | Antes de `cdk deploy`, conservar el paquete de código que está en producción en el bucket de *assets* de CDK; si la prueba de humo falla, restaurar ese paquete en la Lambda, repetir la prueba y dejar el job en rojo en cualquier caso, con el resultado del rollback en el resumen. En el primer despliegue (sin función previa) no hay rollback y el job solo falla | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -112,6 +114,21 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 - **Dado**: `ALERTS_EMAIL` vacío o ausente
 - **Cuando**: corre el workflow de despliegue
 - **Entonces**: el job falla antes de `cdk deploy` con un mensaje que indica configurar el secreto
+
+### CA-045-08: Prueba de humo tras desplegar (FR-045-16)
+- **Dado**: un despliegue que termina en `UPDATE_COMPLETE` pero cuya API no arranca (por ejemplo, falta un parámetro obligatorio en SSM)
+- **Cuando**: corre la prueba de humo
+- **Entonces**: `/health/live` no responde `200` tras los reintentos y el job falla; de día nunca se reporta un despliegue en verde con la API caída
+
+### CA-045-09: Rollback automático del código (FR-045-17)
+- **Dado**: la prueba de humo fallida y un paquete previo conservado
+- **Cuando**: se ejecuta el rollback
+- **Entonces**: la Lambda vuelve al `CodeSha256` previo, la prueba de humo se repite y su resultado queda en el resumen; el job termina en rojo para que el equipo corrija
+
+### CA-045-10: Despliegue durante la pausa nocturna (FR-045-16)
+- **Dado**: la Lambda con concurrencia reservada `0` (22:30–07:00)
+- **Cuando**: termina `cdk deploy`
+- **Entonces**: la prueba de humo se omite con un aviso visible y no se ejecuta rollback
 
 ## 7. Contratos
 

@@ -27,6 +27,9 @@
 | T045-13 | Leer `ALERTS_EMAIL` como secreto, `cdk synth --quiet` y suscripción SNS con identificador fijo | IaC | `FR-045-12`, `FR-045-13` | T045-12 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
 | T045-14 | Presupuesto notificado por el tema SNS (con su política) y renombrado a `-v2` | IaC | `FR-045-14` | T045-13 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
 | T045-15 | Fallar el despliegue si `ALERTS_EMAIL` está vacío y quitar el correo de relleno del CDK | IaC | `FR-045-15` | T045-13 | Hecho (CA-045-05 a 07 se verifican en el despliegue) |
+| T045-16 | Script `post-deploy-smoke.mjs` (reintentos, códigos esperados, solo HTTPS salvo modo local de pruebas, sin cuerpos en logs) y sus pruebas con servidor simulado | CI | `FR-045-16` | T045-15 | Hecho (`post-deploy-smoke.test.mjs` 8/8) |
+| T045-17 | Paso de prueba de humo en `deploy-serverless.yml` con detección de pausa nocturna | CI | `FR-045-16` | T045-16 | Hecho |
+| T045-18 | Conservar el paquete previo en el bucket de *assets* de CDK, restaurarlo si falla la prueba de humo y repetirla | CI | `FR-045-17` | T045-17 | Hecho (verificación real pendiente del próximo despliegue) |
 
 ## Notas de ejecución
 

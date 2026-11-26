@@ -61,7 +61,7 @@ jobs:
 
       - name: Puerta bloqueante de Evals deterministas de Sensi IA (FR-047-13, NFR-047-06)
         run: |
-          node --test .github/scripts/run-ai-evals.test.mjs
+          node --test .github/scripts/run-ai-evals.test.mjs .github/scripts/post-deploy-smoke.test.mjs
           node .github/scripts/run-ai-evals.mjs --mode deterministic
 
       - name: Publicar resultados de pruebas

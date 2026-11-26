@@ -34,3 +34,4 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 |---|---|---|---|
 | 2026-11-19 | Rodrigo Sánchez (con asistente) | Retro-spec creada | Comportamiento leído del código en producción; brecha de vigencia registrada |
 | 2026-11-21 | Beto (Sprint 5) | CERRADA | `GuestExpiryMinutes = 15` movido a configuración con validación `[1..15]` y verificado en pruebas. |
+| 2026-11-26 | Claude | CERRADA | `FR-052-06` marcado Implementado en `spec.md` (estaba Pendiente pese al cierre del 2026-11-21): `JwtSettings.GuestExpiryMinutes = 15`, `JwtSettingsValidator` admite solo 1..15 y `JwtTokenGenerator` lo aplica; `GuestSessionEndpointsTests` verifica 2000 m y TTL ≤ 15 min. `FR-052-03` verificado en código (`NearbyOffersRadiusPolicy` recorta al invitado con `Math.Min(requested, 2)`, `NearbyOffersRadiusPolicyTests`) y en producción el 2026-11-25: invitado con `radiusKm=10` → 200 con radio efectivo de 2 km. |

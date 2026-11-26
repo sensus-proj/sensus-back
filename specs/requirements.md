@@ -411,6 +411,8 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-045-13` | 045 | FR | Mantener el correo de alertas fuera de los logs de CI y de los identificadores de recursos: la síntesis no imprime la plantilla y la suscripción usa un identificador fijo | Must | Implementado |
 | `FR-045-14` | 045 | FR | Notificar el presupuesto a través del tema SNS de alarmas, de modo que cambiar el correo de alertas no reemplace el presupuesto ni rompa el despliegue | Must | Implementado |
 | `FR-045-15` | 045 | FR | Detener el despliegue con un error claro si `ALERTS_EMAIL` está vacío, en lugar de usar un correo de relleno | Must | Implementado |
+| `FR-045-16` | 045 | FR | Prueba de humo tras `cdk deploy` (`/health/live`, `/health/ready` 200 y ruta protegida 401), omitida en pausa nocturna | Must | Implementado |
+| `FR-045-17` | 045 | FR | Conservar el paquete previo y restaurarlo automáticamente si falla la prueba de humo; job en rojo | Must | Implementado |
 | `NFR-045-01` | 045 | NFR | Costo mensual de infraestructura en AWS | 0.00 USD (Free Tier) | Implementado |
 | `NFR-045-02` | 045 | NFR | Tiempo de síntesis (`cdk synth`) en CI | < 60 segundos | Implementado |
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |

@@ -52,3 +52,4 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-21 | Beto (Sprint 5) | IMPLEMENTADO | Fuente única OpenAPI (`/openapi/v1.json`) servida por Swagger / Swagger UI con esquema Bearer JWT y validada en `OpenApiContractTests`. |
+| 2026-11-26 | Claude | CERRADA | Estado de `spec.md` alineado a `tasks.md` (todas completadas) y al checklist sin casillas abiertas. Evidencia: `OpenApiContractTests` en `tests/Sensus.IntegrationTests/Contracts` y documento único `/openapi/v1.json` con esquema Bearer JWT. |
