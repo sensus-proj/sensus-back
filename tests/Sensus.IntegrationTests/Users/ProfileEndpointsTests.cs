@@ -85,9 +85,13 @@ public class ProfileEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 
         var token = CreateTokenForUser(user);
 
+        var photoUrl = "https://res.cloudinary.com/sensus/image/upload/v12345/avatar.jpg";
+        _factory.MediaAssetRepository.IsApprovedOwnedUrlAsync(user.Id, photoUrl, Arg.Any<CancellationToken>())
+            .Returns(true);
+
         var command = new UpdateProfileCommand(
             "Updated Name",
-            "https://res.cloudinary.com/sensus/image/upload/v12345/avatar.jpg");
+            photoUrl);
 
         using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/profile")
         {
@@ -174,7 +178,7 @@ public class ProfileEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task PhotoSignature_ShouldReturnSignature_WhenAuthorized()
+    public async Task PhotoSignature_ShouldReturnGone_EvenWhenAuthorized()
     {
         // Arrange
         var user = User.Create(
@@ -195,11 +199,40 @@ public class ProfileEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sigResponse = await response.Content.ReadFromJsonAsync<CloudinarySignatureResponse>();
-        sigResponse.Should().NotBeNull();
-        sigResponse!.Signature.Should().NotBeNullOrWhiteSpace();
-        sigResponse.Folder.Should().Contain(user.Id.ToString());
+        // Assert: Spec 003 / 022 A2 — ruta heredada retirada con 410 Gone
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Media.SignatureRetired");
+    }
+
+    [Fact]
+    public async Task PhotoSignature_ShouldReturnUnauthorized_WhenUnauthenticated()
+    {
+        var response = await _client.PostAsync("/api/v1/users/photo-signature", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_ShouldReturnBadRequest_WhenUrlIsUnmoderatedOrForeign()
+    {
+        var user = User.Create("User Unmoderated", $"unmod.{Guid.NewGuid():N}@sensus.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        var token = CreateTokenForUser(user);
+
+        var command = new UpdateProfileCommand(
+            "User Unmoderated",
+            "https://res.cloudinary.com/sensus/image/upload/v12345/foreign-or-unmoderated.jpg");
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/profile")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Profile.PhotoNotModerated");
     }
 }

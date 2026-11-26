@@ -21,23 +21,24 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-002-01` | 002 | NFR | Latencia de login | p95 < 600 ms | Implementado |
 | `NFR-002-02` | 002 | NFR | Vigencia del token | ≤ 15 minutos (access) y refresh rotatorio 30 días, configurable por entorno | Implementado |
 | `FR-002-06` | 002 | FR | Consultar la identidad de la sesión actual (`GET /auth/me`) desde los claims del JWT | Must | Implementado |
-| `FR-002-07` | 002 | FR | Responder `/auth/me` con un DTO explícito y prueba de mapeo | Should | Pendiente |
+| `FR-002-07` | 002 | FR | Responder `/auth/me` con un DTO explícito y prueba de mapeo | Should | Implementado |
 | `FR-003-01` | 003 | FR | Devolver el perfil del usuario autenticado | Must | Implementado |
 | `FR-003-02` | 003 | FR | Excluir passwordHash y datos sensibles de la respuesta | Must | Implementado |
 | `FR-003-03` | 003 | FR | Responder 401 sin token o con token inválido | Must | Implementado |
 | `FR-003-04` | 003 | FR | Actualizar nombre completo y avatar del propio usuario | Must | Implementado |
 | `FR-003-05` | 003 | FR | Rechazar cambios de correo o roles desde este endpoint | Must | Implementado |
-| `FR-003-06` | 003 | FR | Aceptar solo avatares subidos por el propio usuario y aprobados | Must | Parcial (sin moderación ni validación estricta de la URL; T003-09 y T003-10) |
+| `FR-003-06` | 003 | FR | Aceptar solo avatares HTTPS exactos en `res.cloudinary.com/<CloudName>/` subidos por el propio usuario y aprobados | Must | Implementado |
 | `NFR-003-01` | 003 | NFR | Latencia de consulta | p95 < 300 ms | Implementado |
 | `NFR-003-02` | 003 | NFR | Latencia de actualización | p95 < 500 ms | Implementado |
-| `FR-003-07` | 003 | FR | Emitir firma de subida a Cloudinary limitada a `sensus/profiles/{userId}` | Must | Implementado |
-| `FR-003-08` | 003 | FR | Moderar la foto de perfil antes de publicarla o guardarla | Must | Pendiente |
-| `FR-003-09` | 003 | FR | Límite de tasa en la emisión de firmas | Should | Pendiente |
+| `FR-003-07` | 003 | FR | Endpoint heredado `POST /api/v1/users/photo-signature` retirado con `410 Gone` (`Media.SignatureRetired`) | Must | Implementado |
+| `FR-003-08` | 003 | FR | Moderar la foto de perfil mediante carga previa en Spec 022 antes de guardarla en el perfil | Must | Implementado |
+| `FR-003-09` | 003 | FR | Límite de tasa (`sensitive-write`) aplicado al endpoint retirado y a la carga de multimedia | Should | Implementado |
+| `FR-003-10` | 003 | FR | Aceptar `fotoPerfilUrl` únicamente si coincide exactamente con la `SecureUrl` de un `MediaAsset` `Approved` propiedad del usuario autenticado (`400 Profile.PhotoNotModerated`) | Must | Implementado |
 | `FR-004-01` | 004 | FR | Exponer POST /api/v1/auth/logout autenticado | Must | Implementado |
 | `FR-004-02` | 004 | FR | Registrar el jti revocado con TTL igual a la expiración del token | Must | Parcial |
 | `FR-004-03` | 004 | FR | Rechazar cualquier petición con token revocado | Must | Implementado |
 | `FR-004-04` | 004 | FR | Responder 204 aunque el token ya estuviera revocado | Should | Implementado |
-| `FR-004-05` | 004 | FR | Desactivar el registro push del dispositivo que se identifica al cerrar sesión | Must | Pendiente de verificación |
+| `FR-004-05` | 004 | FR | Desactivar el registro push del dispositivo que se identifica al cerrar sesión | Must | Implementado |
 | `NFR-004-01` | 004 | NFR | Efectividad de la revocación | < 1 s desde el logout | Pendiente |
 | `NFR-004-02` | 004 | NFR | Sobrecarga por petición | < 50 ms | Pendiente |
 | `FR-005-01` | 005 | FR | Activar el rol comercial sobre la cuenta autenticada | Must | Implementado |
@@ -125,8 +126,10 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-017-07` | 017 | FR | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must | Implementado |
 | `FR-017-08` | 017 | FR | Moderar publicaciones de solo texto de la Spec 024 con la política de Sensus y cuarentena ante fallos | Must | Implementado |
 | `FR-017-09` | 017 | FR | Devolver cuarentena/rechazo (fail-closed) cuando el servicio de moderación de texto es nulo, falla o responde nulo | Must | Implementado |
+| `FR-017-10` | 017 | FR | Reintentar una vez de forma acotada ante fallo transitorio de red o HTTP 429/5xx sin reintentar JSON malformado ni timeout | Must | Implementado |
 | `NFR-017-01` | 017 | NFR | Latencia de moderación | p95 < 3 s | Pendiente |
-| `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Pendiente |
+| `NFR-017-02` | 017 | NFR | Disponibilidad del flujo | Fail-closed al 100 % | Implementado |
+| `NFR-017-03` | 017 | NFR | Presupuesto temporal con reintentos | ≤ 20 s validado al arrancar (`OpenAiSettingsValidator`) | Implementado |
 | `FR-018-01` | 018 | FR | Definir banda baja, intermedia y alta por categoría | Must | Implementado |
 | `FR-018-02` | 018 | FR | Externalizar los umbrales en configuración | Must | Implementado |
 | `FR-018-03` | 018 | FR | Registrar qué umbral se aplicó en cada decisión | Must | Implementado |
@@ -164,6 +167,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-022-05` | 022 | FR | Registrar propietario, estado y public_id de Cloudinary | Must | Implementado |
 | `FR-022-06` | 022 | FR | Moderar la imagen antes de permitir su uso público | Must | Implementado |
 | `FR-022-07` | 022 | FR | Limitar la carga a 20 archivos por usuario y día | Should | Implementado |
+| `FR-022-08` | 022 | FR | Retirar el camino heredado de firma directa sin moderación (`410 Gone` en `/api/v1/users/photo-signature`) | Must | Implementado |
 | `NFR-022-01` | 022 | NFR | Tamaño máximo por archivo | 4,5 MB | Implementado |
 | `NFR-022-02` | 022 | NFR | Latencia de carga | p95 < 2 s para 1 MB | Implementado |
 | `NFR-022-03` | 022 | NFR | Coste de almacenamiento | Dentro del Free Tier de Cloudinary (25 créditos) | Implementado |
@@ -182,6 +186,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-024-07` | 024 | FR | Excluir del feed las publicaciones eliminadas de inmediato | Must | Implementado |
 | `FR-024-08` | 024 | FR | Rechazar `imageUrl` externa en JSON y aceptar solo `mediaAssetId` aprobado propiedad del autor | Must | Implementado |
 | `FR-024-09` | 024 | FR | Persistir publicación en cuarentena (`202 Accepted`, sin subir imagen) con auditoría `FeedPost` ante fallo de moderación y purgar a 30 días; fallar cerrado si falla la auditoría al publicar | Must | Implementado |
+| `FR-024-10` | 024 | FR | Retirar el alias `mediaId` en el cuerpo JSON de `POST /api/v1/feed/posts` respondiendo `400 Bad Request` (`Feed.MediaIdRetired`) | Must | Implementado |
 | `NFR-024-01` | 024 | NFR | Latencia percibida | p95 < 1 s hasta aceptar la solicitud | Implementado |
 | `NFR-024-02` | 024 | NFR | Consistencia | Sin publicaciones sin veredicto | Implementado |
 | `FR-025-01` | 025 | FR | Crear comentario en una publicación existente y visible | Must | Implementado |
@@ -248,11 +253,11 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-031-01` | 031 | FR | Actualizar los datos editables del comercio propio | Must | Pendiente |
 | `FR-031-02` | 031 | FR | Recalcular location y geohash cuando cambien las coordenadas | Must | Pendiente |
 | `FR-031-03` | 031 | FR | Validar categoría del catálogo y rangos de coordenadas | Must | Implementado |
-| `FR-031-04` | 031 | FR | Rechazar la edición sobre comercios ajenos con 403 | Must | Pendiente |
-| `FR-031-05` | 031 | FR | Registrar quién cambió qué y cuándo | Should | Pendiente |
-| `FR-031-06` | 031 | FR | Mantener las ofertas publicadas sin cambios de identificador | Must | Pendiente |
-| `NFR-031-01` | 031 | NFR | Latencia de actualización | p95 < 600 ms | Pendiente |
-| `NFR-031-02` | 031 | NFR | Consistencia espacial | 100 % de comercios con location válida | Pendiente |
+| `FR-031-04` | 031 | FR | Rechazar la edición sobre comercios ajenos con 403 | Must | Implementado |
+| `FR-031-05` | 031 | FR | Registrar quién cambió qué y cuándo | Should | Implementado |
+| `FR-031-06` | 031 | FR | Mantener las ofertas publicadas sin cambios de identificador | Must | Implementado |
+| `NFR-031-01` | 031 | NFR | Latencia de actualización | p95 < 600 ms | Pendiente de carga |
+| `NFR-031-02` | 031 | NFR | Consistencia espacial | 100 % de comercios con location válida | Implementado |
 | `FR-032-01` | 032 | FR | Devolver el detalle de una oferta visible con comercio, vigencia, stock y precio | Must | Implementado |
 | `FR-032-02` | 032 | FR | Responder 404 si la oferta no existe o no es visible | Must | Implementado |
 | `FR-032-03` | 032 | FR | Registrar una vista por usuario, oferta y día | Must | Implementado |
@@ -278,7 +283,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-033-12` | 033 | FR | Restringir `claims/expire-check` a administrador, con límite de tasa | Must | Implementado |
 | `FR-034-01` | 034 | FR | Crear una oferta asociada al comercio del token | Must | Implementado |
 | `FR-034-02` | 034 | FR | Validar precio, descuento entre 1 y 90 %, stock ≥ 1 y vigencia coherente | Must | Implementado |
-| `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Parcial |
+| `FR-034-03` | 034 | FR | Moderar texto e imágenes antes de publicar | Must | Implementado |
 | `FR-034-04` | 034 | FR | Permitir guardar como Draft sin moderación y sin visibilidad pública | Must | Implementado |
 | `FR-034-05` | 034 | FR | Limitar a 20 ofertas activas por comercio | Should | Implementado (`Offers:MaxActivePerMerchant=20`, `T034-18`) |
 | `FR-034-06` | 034 | FR | Calcular y persistir el precio final a partir del descuento | Must | Implementado |
@@ -286,7 +291,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-034-08` | 034 | FR | Exigir para publicar una categoría del catálogo de producto `OfferCategory` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets` y `Pharmacy`); un valor ausente o fuera del catálogo responde `400`. Un borrador (`FR-034-04`) puede guardarse sin categoría | Must | Implementado (`OfferCategory:RequireStrictValidation=false` por defecto hasta publicar móvil T15.15) |
 | `FR-034-09` | 034 | FR | Normalizar una sola vez las ofertas existentes: los nombres en español que enviaba el móvil se convierten al código (Abarrotes → `Grocery`, Limpieza y Hogar → `CleaningHome`, Perecederos → `Perishables`, Lácteos → `Dairy`, Comida → `Food`, Panadería → `Bakery`, Bebidas → `Beverages`, Mascotas → `Pets`, Farmacia → `Pharmacy`); los valores no reconocibles quedan nulos y se cuentan en la evidencia de la migración | Must | Implementado |
 | `NFR-034-01` | 034 | NFR | Latencia de creación | p95 < 1 s sin moderación | Pendiente |
-| `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Pendiente |
+| `NFR-034-02` | 034 | NFR | Publicaciones sin veredicto | Cero | Implementado |
 | `FR-035-01` | 035 | FR | Actualizar los campos editables de una oferta propia | Must | Implementado |
 | `FR-035-02` | 035 | FR | Rechazar la edición de ofertas de otro comercio con 403 | Must | Implementado |
 | `FR-035-03` | 035 | FR | Re-moderar cuando cambie el texto o las imágenes | Must | Implementado |
@@ -422,6 +427,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-045-18` | 045 | FR | Acciones de los workflows de despliegue fijadas por SHA y `GITHUB_TOKEN` con `contents: read` | Must | Implementado |
 | `FR-045-19` | 045 | FR | Job de despliegue a producción usa environment `production` con aprobación manual de revisor en GitHub | Must | Implementado en YAML (falta crear environment en GitHub) |
 | `FR-045-20` | 045 | FR | Autenticación OIDC de GitHub hacia AWS con roles de mínimo privilegio, retirando llaves de acceso de larga duración | Must | Implementado en CDK/workflows (pendiente `cdk deploy` y secreto `AWS_DEPLOY_ROLE_ARN`) |
+| `FR-045-21` | 045 | FR | Configurar *throttling* por defecto (50 req/s, ráfaga 100, contexto CDK) en el stage `$default` del HTTP API (control compensatorio G-10) | Must | Implementado |
 | `NFR-045-01` | 045 | NFR | Costo mensual de infraestructura en AWS | 0.00 USD (Free Tier) | Implementado |
 | `NFR-045-02` | 045 | NFR | Tiempo de síntesis (`cdk synth`) en CI | < 60 segundos | Implementado |
 | `NFR-045-03` | 045 | NFR | Retención de logs en CloudWatch | 7 días (< 5 GB) | Implementado |
@@ -634,4 +640,4 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `NFR-062-01` | 062 | NFR | Resistencia a fuerza bruta | Bloqueo temporal tras 5 intentos fallidos consecutivos (15 min) + rate limiting estricto | Implementado |
 | `NFR-062-02` | 062 | NFR | Protección de secretos | Secreto en texto claro visible únicamente una vez al enrolar; cero secretos ni códigos en logs | Implementado |
 
-Total: **609 requisitos** en 62 specs. La Spec 030 está cerrada como `Escindida`: sus requisitos se cubren mediante las specs 060 y 061, salvo `FR-030-08`, completado en la propia Spec 030 (T030-13).
+Total: **635 requisitos** en 62 specs. La Spec 030 está cerrada como `Escindida`: sus requisitos se cubren mediante las specs 060 y 061, salvo `FR-030-08`, completado en la propia Spec 030 (T030-13).

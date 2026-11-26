@@ -584,4 +584,122 @@ public sealed class OpenAiImageModerationServiceTests
         result.Message.Should().Be("Objeto sospechoso similar a réplica.");
         result.FlaggedCategories.Should().Contain("weapons");
     }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenTransient503Then200_RetriesOnceAndReturnsApproved()
+    {
+        var chatContent = JsonSerializer.Serialize(new
+        {
+            decision = "Approved",
+            flagged_categories = Array.Empty<string>(),
+            category_scores = new Dictionary<string, double> { ["weapons"] = 0.0 }
+        });
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[] { new { message = new { content = chatContent } } }
+        });
+
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return calls == 1
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("busy", Encoding.UTF8, "text/plain") }
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json") };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini", TimeoutSeconds = 8 });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Pan dulce");
+
+        calls.Should().Be(2);
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenTransient429WithRetryAfterThen200_RetriesOnceAndReturnsApproved()
+    {
+        var chatContent = JsonSerializer.Serialize(new
+        {
+            decision = "Approved",
+            flagged_categories = Array.Empty<string>(),
+            category_scores = new Dictionary<string, double> { ["weapons"] = 0.0 }
+        });
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[] { new { message = new { content = chatContent } } }
+        });
+
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            if (calls == 1)
+            {
+                var tooMany = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+                tooMany.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromMilliseconds(50));
+                return tooMany;
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json") };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini", TimeoutSeconds = 8 });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Pan dulce");
+
+        calls.Should().Be(2);
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenTransient503Twice_RetriesOnceAndReturnsQuarantine()
+    {
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini", TimeoutSeconds = 8 });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Pan dulce");
+
+        calls.Should().Be(2);
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
+
+    [Fact]
+    public async Task ModerateImageBytesAsync_WhenMalformedJson_ReturnsQuarantineWithoutRetry()
+    {
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{invalid-json", Encoding.UTF8, "application/json")
+            };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var options = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini", TimeoutSeconds = 8 });
+        var service = new OpenAiImageModerationService(httpClient, options, _logger);
+
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Pan dulce");
+
+        calls.Should().Be(1);
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
 }

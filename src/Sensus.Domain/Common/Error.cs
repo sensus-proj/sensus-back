@@ -26,4 +26,5 @@ public sealed record Error(
     // Ref: FR-021-01 - fallo de persistencia de evidencia de moderación (fail-closed).
     public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
     public static Error PayloadTooLarge(string code, string message) => new(code, message, ErrorType.PayloadTooLarge);
+    public static Error Gone(string code, string message) => new(code, message, ErrorType.Gone);
 }

@@ -124,4 +124,9 @@ Evaluación previa y posterior a la implementación.
 - **Decisión provisional del ejecutor — revisar con Rodrigo**: Como las credenciales AWS locales estaban expiradas (`aws login` necesario), no pudo consultarse `aws iam list-open-id-connect-providers`. Se soportó por defecto la creación del `OpenIdConnectProvider` y un contexto opcional `-c existingGithubOidcProviderArn=arn:...` para importarlo con `FromOpenIdConnectProviderArn` si ya existiera uno en la cuenta (alternativa descartada: crear incondicionalmente o importar a ciegas un ARN no verificado).
 - **Costo AWS**: **0.00 USD** (IAM OIDC y roles sin costo).
 
+### 2.3 Límite de tasa en API Gateway Stage (`FR-045-21`, G-10 compensatorio)
+
+- **Diseño**: `SensusDefaultStage` (`$default` en `SensusInfraStack.cs`) define `DefaultRouteSettings.ThrottlingRateLimit` (contexto `apiThrottleRate`, defecto **50 req/s**) y `ThrottlingBurstLimit` (contexto `apiThrottleBurst`, defecto **100**).
+- **Razonamiento**: para 2 usuarios de prueba y carga baja esperada, 50 req/s (ráfaga 100) queda muy por encima del uso normal sin causar falsos 429 y, al mismo tiempo, acota picos o abuso antes de invocar la Lambda para no agotar el Free Tier mensual. Este control compensatorio de borde complementa —sin reemplazar— los límites por usuario autenticado y por política de la Spec 013. Costo adicional: **0.00 USD**.
+
 ---

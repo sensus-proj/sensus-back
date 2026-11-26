@@ -6,11 +6,11 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 017 está aprobada y sin preguntas bloqueantes
+- [x] La spec 017 está aprobada y sin preguntas bloqueantes
 - [x] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 009, 022
+- [x] Las dependencias están resueltas: 009, 022
 - [x] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
@@ -18,7 +18,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] Imagen y texto viajan en la misma solicitud
 - [x] Ningún camino permite publicar sin veredicto (moderación y auditoría *fail-closed* antes de publicar)
-- [x] El timeout está probado
+- [x] El timeout, reintento único acotado (`FR-017-10`) y presupuesto ≤ 20 s (`NFR-017-03`) están probados
 - [x] La clave no está en el repositorio
 - [x] No existe endpoint público de moderación
 
@@ -26,10 +26,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] Código en la capa correcta y test de arquitectura en verde
 - [x] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
+- [x] Cobertura ≥ 80 % en Domain y Application (validada en suite de cierre §6)
+- [x] Contrato OpenAPI actualizado (no aplica: `FR-017-07` sin endpoint público)
+- [x] IaC actualizada y `cdk diff` revisado si aplica (no aplica en Spec 017)
+- [x] Logs con correlation-id y sin PII ni contenido moderado
 - [x] Revisión de seguridad: sin secretos, autorización verificada
 - [x] Constitution Check en PASS o brecha registrada
 
@@ -38,21 +38,22 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — La ruta independiente responde 404 (FR-017-07)
-- [ ] **IV. Seguridad y privacidad** — La creación de ofertas con imagen verifica un activo aprobado y su contexto. Sigue abierta la cuarentena previa al almacenamiento en Cloudinary y la integración con la 024.
-- [x] **V. Verificación automatizada** — PASS
-- [x] **VI. Costo cero e IaC** — PASS
-- [x] **VII. Rendimiento y observabilidad** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS (`UploadMediaCommandHandler` modera antes de Cloudinary, `CreateOfferCommandHandler`/`UpdateProfileCommandHandler` exigen `MediaAsset` aprobado del propietario, `CreateFeedPostCommandHandler` conecta auditoría y cuarentena sin subida)
+- [x] **V. Verificación automatizada** — PASS (`OpenAiTextModerationServiceTests`, `OpenAiImageModerationServiceTests` y `OpenAiSettingsValidatorTests`: 61/61 en verde)
+- [x] **VI. Costo cero e IaC** — PASS (`EX-002`)
+- [x] **VII. Rendimiento y observabilidad** — PASS (`OpenAiSettingsValidator`, presupuesto ≤ 20 s validado al arrancar)
+- [x] **VIII. Nivel fintech y ciclo seguro** — PASS (matriz STRIDE en `plan.md` §4, validación estricta y CI verde `4a00d24`)
 
 ## E. Evidencia
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` (`ContentModerationHelperTests`, `CreateOfferCommandHandlerTests`, `UploadMediaCommandHandlerTests`) | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/Services/` (`OpenAiTextModerationServiceTests`, `OpenAiImageModerationServiceTests`, `OpenAiSettingsValidatorTests`: 61/61) | ☑ |
+| Contrato OpenAPI | No aplica (`FR-017-07`, sin endpoint público) | ☑ |
 
 ## F. Registro
 
@@ -65,3 +66,4 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | 2026-11-22 | Codex | Parcial | El registro append-only de multimedia y reseñas conserva veredicto, categorías, puntajes, política o umbral, acción y correlación. La consulta de administración queda en 021. Falta conectar la publicación de la Spec 024. |
 | 2026-11-26 | Antigravity | T017-15 completada (`FR-017-09`) | `ContentModerationHelper.EvaluateAsync` y `EnsureApprovedAsync` convertidos a *fail-closed* (`Quarantine`, `Error.Failure("<errorCode>.ModerationUnavailable")`) ante `ITextModerationService` nulo, excepción o retorno nulo. `ContentModerationHelperTests` (5 casos nuevos en rojo → verde) + ajuste de 8 archivos de pruebas unitarias para inyectar doble aprobador explícito; `dotnet test tests/Sensus.Application.UnitTests` → **1,180/1,180 pasadas (0 fallos)**. |
 | 2026-11-26 | Antigravity | Integración Spec 024 completada (`FR-017-08`) | `CreateFeedPostCommandHandler` conectado con `IModerationAuditRecorder` (`ModerationTargetType.FeedPost`) y cuarentena persistida sin subida a Cloudinary (`202 Accepted`) para texto solo y texto con imagen; purga automática a 30 días en `PurgeQuarantinedMediaCommandHandler`. |
+| 2026-11-26 | Antigravity (Bloque A4) | Completado (`T017-03`, `T017-04`, `T017-08`, `T017-16`) | Reintento acotado ante fallos transitorios (`ModerationHttpRetryHelper`) y validador al arranque (`OpenAiSettingsValidator` con techo 20 s y `appsettings.json` `TimeoutSeconds=8`). Rojo→verde confirmado (5 fallos→61/61 en verde en `OpenAiTextModerationServiceTests` + `OpenAiImageModerationServiceTests` + `OpenAiSettingsValidatorTests`). Verificado por grep el encadenamiento en ofertas, feed, reseñas y carga previa a Cloudinary (`UploadMediaCommandHandler`). |

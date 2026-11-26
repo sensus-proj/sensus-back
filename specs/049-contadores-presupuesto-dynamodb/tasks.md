@@ -21,7 +21,7 @@
 | T049-07 | Pruebas unitarias de `AiBudgetGuard` | Tests | FR-049-03 | T049-04 | Hecha |
 | T049-08 | Pruebas de `DynamoDbBudgetCounterStore` con doble del SDK | Tests | FR-049-02, FR-049-07 | T049-03 | Hecha |
 | T049-09 | Pruebas con DynamoDB Local (CI / Testcontainers) | Tests | FR-049-02, FR-049-07 | T049-08 | Completada |
-| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (stack/tabla desplegados por CI; pendiente prueba en vivo de un turno Sensi) |
+| T049-10 | `cdk synth`/`cdk diff` y verificación posterior al despliegue | infra | FR-049-04 | T049-06 | Parcial (acción del usuario: ejecutar `cdk diff` y turno real de Sensi validando incremento en DynamoDB; ver plan cierre §5.Z-8 y §5.Z-11) |
 | T049-11 | Verificar el guardián de cuota contra DynamoDB Local y bloquear contadores inválidos | Infrastructure / Pruebas | FR-049-03, FR-049-07 | T049-09 | Verificada en DynamoDB Local |
 
 ## Notas de ejecución

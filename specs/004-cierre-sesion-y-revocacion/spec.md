@@ -94,7 +94,7 @@ Permitir cerrar sesión de forma efectiva, invalidando el token del usuario ante
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-004-01`, `FR-004-02`, `FR-004-03`, `FR-004-04`
+- Requisitos de este spec: `FR-004-01`, `FR-004-02`, `FR-004-03`, `FR-004-04`, `FR-004-05`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

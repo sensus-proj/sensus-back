@@ -572,4 +572,90 @@ public sealed class OpenAiTextModerationServiceTests
         result.IsApproved.Should().BeFalse();
         result.Decision.Should().Be("Quarantine");
     }
+
+    [Fact]
+    public async Task ModerateTextAsync_WhenTransient503Then200_RetriesOnceAndReturnsApproved()
+    {
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            id = "modr-text-retry",
+            model = "omni-moderation-latest",
+            results = new[]
+            {
+                new
+                {
+                    flagged = false,
+                    categories = new Dictionary<string, bool> { ["violence"] = false },
+                    category_scores = new Dictionary<string, double> { ["violence"] = 0.01 }
+                }
+            }
+        });
+
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return calls == 1
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("busy", Encoding.UTF8, "text/plain") }
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json") };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", TimeoutSeconds = 8 });
+        var sensiOptions = Options.Create(new SensiSettings { TimeoutSeconds = 8 });
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        var result = await service.ModerateTextAsync("Texto legítimo tras 503");
+
+        calls.Should().Be(2);
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+    }
+
+    [Fact]
+    public async Task ModerateTextAsync_WhenTransient503Twice_RetriesOnceAndReturnsQuarantine()
+    {
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("busy", Encoding.UTF8, "text/plain") };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", TimeoutSeconds = 8 });
+        var sensiOptions = Options.Create(new SensiSettings { TimeoutSeconds = 8 });
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        var result = await service.ModerateTextAsync("Texto ante fallo persistente");
+
+        calls.Should().Be(2);
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
+
+    [Fact]
+    public async Task ModerateTextAsync_WhenMalformedJson_ReturnsQuarantineWithoutRetry()
+    {
+        var calls = 0;
+        var handler = new DelegatingMockHandler(_ =>
+        {
+            calls++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{not-valid-json", Encoding.UTF8, "application/json")
+            };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var openAiOptions = Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", TimeoutSeconds = 8 });
+        var sensiOptions = Options.Create(new SensiSettings { TimeoutSeconds = 8 });
+        var service = new OpenAiTextModerationService(httpClient, openAiOptions, sensiOptions, _logger);
+
+        var result = await service.ModerateTextAsync("Texto con JSON malformado");
+
+        calls.Should().Be(1);
+        result.IsApproved.Should().BeFalse();
+        result.Decision.Should().Be("Quarantine");
+    }
 }

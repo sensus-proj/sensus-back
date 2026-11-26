@@ -6,11 +6,11 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 027 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 003, 013
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] La spec 027 está aprobada y sin preguntas bloqueantes
+- [x] Los requisitos tienen identificador y criterio medible (`CA-027-01` a `CA-027-08`)
+- [x] Las dependencias están resueltas: 003, 013
+- [x] El alcance y las exclusiones están declarados
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
@@ -19,7 +19,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] El envío no falla si no hay dispositivos
 - [x] El SDK del proveedor no sale de Infrastructure
 
-- [ ] Un teléfono Android recibe desde el backend el aviso y abre la pantalla correspondiente. (Bloqueada: acción externa y repo móvil — T027-07, T027-12 y T027-13, véase runbook en plan.md §11)
+- [ ] Un teléfono Android recibe desde el backend el aviso y abre la pantalla correspondiente (acción del usuario: cargar JSON FCM en SSM `/sensus/prod/push/fcm-service-account` y probar en 2 celulares; ver plan cierre §5.Z-6)
 
 - [x] Código en la capa correcta y test de arquitectura en verde
 - [x] Pruebas unitarias y de integración añadidas y en verde

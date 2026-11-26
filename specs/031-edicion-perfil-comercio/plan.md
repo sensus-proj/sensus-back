@@ -31,6 +31,17 @@ Permitir que el comerciante actualice los datos de su local y recalcule sus coor
 - El userId proviene del token
 - Sin exposición de datos de contacto internos
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Mitigación implementada |
+|---|---|
+| *Spoofing* | Identificador resuelto del JWT validado (`ICurrentUserService.UserId`), nunca del cuerpo |
+| *Tampering* | Recálculo servidor de coordenadas/ubicación GeoJSON, validación de categoría/CP/horarios y moderación obligatoria de texto |
+| *Repudiation* | Registro de auditoría append-only (`IModerationAuditRecorder`, `comercio_update`) y trazabilidad con `correlation-id` |
+| *Information Disclosure* | Respuestas `ProblemDetails` uniformes sin trazas ni datos de terceros; caché invalidada tras editar |
+| *Denial of Service* | Política `SensitiveWritePolicy` y límites explícitos de longitud y coordenadas |
+| *Elevation of Privilege* | Política `MerchantOnly` (consumidor o invitado recibe `403 Forbidden`) |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de ediciones y conflictos
@@ -58,6 +69,7 @@ Evaluación previa a la implementación.
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
+| VIII | PASS | Matriz STRIDE en §4, auditoría append-only y escaneos CI bloqueantes verdes (`ci.yml`, `dast-zap.yml`, corrida `4a00d24`) |
 
 > Sin excepciones registradas (Apéndice E de la constitución).
 

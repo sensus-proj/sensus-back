@@ -192,21 +192,30 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         };
 
         var requestUri = new Uri($"{baseUrl}/chat/completions");
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-        request.Content = JsonContent.Create(requestPayload);
+        HttpRequestMessage CreateRequest()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
+            req.Content = JsonContent.Create(requestPayload);
+            return req;
+        }
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(_settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 15));
+        var timeoutSeconds = _settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 8;
+        using var response = await ModerationHttpRetryHelper.SendWithRetryAsync(
+            _httpClient,
+            CreateRequest,
+            _settings.Moderation,
+            timeoutSeconds,
+            _logger,
+            cancellationToken);
 
-        using var response = await _httpClient.SendAsync(request, cts.Token);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Error al invocar OpenAI Chat Completions (HTTP {StatusCode}). Contenido enviado a cuarentena.", response.StatusCode);
             return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
-        var chatResponse = await response.Content.ReadFromJsonAsync<OpenAiChatCompletionResponse>(cancellationToken: cts.Token);
+        var chatResponse = await response.Content.ReadFromJsonAsync<OpenAiChatCompletionResponse>(cancellationToken: cancellationToken);
         var content = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content;
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -289,22 +298,29 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         };
 
         var requestUri = new Uri($"{baseUrl}/moderations");
+        HttpRequestMessage CreateRequest()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
+            req.Content = JsonContent.Create(requestPayload);
+            return req;
+        }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-        request.Content = JsonContent.Create(requestPayload);
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(_settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 15));
-
-        using var response = await _httpClient.SendAsync(request, cts.Token);
+        var timeoutSeconds = _settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 8;
+        using var response = await ModerationHttpRetryHelper.SendWithRetryAsync(
+            _httpClient,
+            CreateRequest,
+            _settings.Moderation,
+            timeoutSeconds,
+            _logger,
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Error al invocar OpenAI Moderations (HTTP {StatusCode}). Contenido enviado a cuarentena.", response.StatusCode);
             return new ImageModerationResult(false, QuarantineMessage, null, "Quarantine");
         }
 
-        var responseJson = await response.Content.ReadFromJsonAsync<OpenAiModerationResponse>(cancellationToken: cts.Token);
+        var responseJson = await response.Content.ReadFromJsonAsync<OpenAiModerationResponse>(cancellationToken: cancellationToken);
         var firstResult = responseJson?.Results?.FirstOrDefault();
 
         if (firstResult?.Flagged is not bool flagged

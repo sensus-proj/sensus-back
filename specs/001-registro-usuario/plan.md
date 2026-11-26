@@ -67,10 +67,11 @@ Evaluación del estado actual. Las brechas marcadas como FAIL se convierten en t
 | I | PASS | `FR-001-01` y 6 requisitos más, con criterios de aceptación medibles |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | FAIL | secreto JWT versionado en appsettings.json |
-| V | FAIL | no existen pruebas de integración |
+| IV | PASS | Secreto JWT retirado de `appsettings.json` (`"Secret": ""`) y cargado desde SSM Parameter Store (Spec 045); contraseña BCrypt |
+| V | PASS | Unitarias (`RegisterUserCommandHandlerTests`, `RegisterUserCommandValidatorTests`), integración (`AuthEndpointsTests`, `ProblemDetailsUniformityTests`) y Testcontainers (`MongoUserAndComercioRepositoryTests`) |
 | VI | PASS | Costo estimado declarado en §6 |
-| VII | PARCIAL | sin correlation-id en logs |
+| VII | PASS | Índice único en `users.correo`, logs con `correlation-id` sin PII y paginación/límites |
+| VIII | PASS | Matriz STRIDE en §4, mínimo privilegio y escaneos bloqueantes de CI en verde (`ci.yml`, `dast-zap.yml`, corrida `4a00d24`) |
 
 > **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
 

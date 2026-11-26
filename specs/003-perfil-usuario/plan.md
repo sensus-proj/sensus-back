@@ -22,7 +22,9 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 
 ## 3. Modelo de datos e índices
 
-- users; actualización por identificador del token
+- `users`: actualización por identificador del token.
+- `media_assets`: índice compuesto declarado `ix_media_assets_owner_secure_url` (`{ ownerId: 1, secureUrl: 1 }` en `MongoDbContext.cs`) para validar `IMediaAssetRepository.IsApprovedOwnedUrlAsync(ownerId, secureUrl)` en `O(log n)` sin recorridos completos de colección (`FR-003-10`).
+- Validación de borde (`UpdateProfileCommandValidator`): exige `https://res.cloudinary.com/<CloudName>/...` leyendo `CloudinaryAccountSettings` desde configuración (`Cloudinary:CloudName`).
 
 ## 4. Seguridad
 
@@ -65,9 +67,10 @@ Evaluación del estado actual. Las brechas marcadas como FAIL se convierten en t
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | FAIL | no existen pruebas de integración |
+| V | PASS | Unitarias (`UpdateProfileCommand*Tests` 20/20), integración (`ProfileEndpointsTests`), Testcontainers (`MongoMediaAssetRepositoryTests`) |
 | VI | PASS | Costo estimado declarado en §6 |
-| VII | PARCIAL | sin correlation-id en logs |
+| VII | PASS | Índice `ix_media_assets_owner_secure_url`, logs con `correlation-id` sin PII |
+| VIII | PASS | STRIDE en §4, retiro `410` de ruta sin moderar y escaneos CI bloqueantes verdes (`ci.yml`, `dast-zap.yml`, `4a00d24`) |
 
 > **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
 

@@ -817,7 +817,7 @@ vencida es una violación bloqueante (§4.5).
 | G-07 | Sin fijación de certificados (*pinning*) | 10 | Móvil | `CertificatePinner` con pin de respaldo | 2026-12-18 | Abierta |
 | G-08 | Sin verificación de integridad (Play Integrity) ni detección de dispositivo comprometido | 10 | Móvil | Integrar Play Integrity y política de degradación | 2027-01-15 | Abierta |
 | G-09 | Sin `FLAG_SECURE` ni biometría en acciones sensibles | 10 | Móvil | Pantallas de código QR, canje y cuenta | 2027-01-15 | Abierta |
-| G-10 | Sin AWS WAF (supera el nivel gratuito) | 13 | Backend | Control compensatorio: *throttling* de API Gateway y límites de tasa; solicitar aprobación de costo para WAF | 2026-12-11 | Abierta |
+| G-10 | Sin AWS WAF (supera el nivel gratuito) | 13 | Backend | Control compensatorio: *throttling* de API Gateway y límites de tasa; solicitar aprobación de costo para WAF | 2026-12-11 | Mitigada en código el 2026-11-26 (throttling de stage 50/100, Spec 045 FR-045-21; WAF pendiente de aprobación de costo) |
 | G-11 | Specs críticas sin modelo de amenazas (001–004, 029, 030, 033, 034) | 1 | Backend | Añadir sección STRIDE a cada `plan.md` | 2027-01-29 | Cerrada el 2026-11-26 (matrices STRIDE completas S/T/R/I/D/E en 001–004, 029, 030/060/061, 033 y 034) |
 | G-12 | Clave de API de Figma en `mcp_config.json` local del móvil (ignorado por Git) | 5 | Móvil | Rotar la clave y moverla a variable de entorno del usuario | 2026-11-23 | Abierta |
 | G-14 | La caché Valkey Serverless no usa autenticación de usuarios (RBAC o IAM); el aislamiento depende del grupo de seguridad y de TLS | 2, 5 | Backend | Habilitar autenticación IAM de ElastiCache y generar el token en `RedisCacheService` | 2027-01-29 | Abierta |

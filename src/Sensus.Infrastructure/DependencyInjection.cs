@@ -108,14 +108,18 @@ public static class DependencyInjection
             return new SesEmailSender(options, client, logger);
         });
 
-        // Almacenamiento y firma de fotos Cloudinary (SE-006)
+        // Almacenamiento y firma de fotos Cloudinary (SE-006 / FR-003-06)
         services.Configure<CloudinarySettings>(
             configuration.GetSection(CloudinarySettings.SectionName));
+        services.Configure<CloudinaryAccountSettings>(
+            configuration.GetSection(CloudinaryAccountSettings.SectionName));
         services.AddSingleton<IProfileImageStorage, CloudinaryImageStorage>();
 
         // Moderación inteligente de imágenes y texto con OpenAI
-        services.Configure<OpenAiSettings>(
-            configuration.GetSection(OpenAiSettings.SectionName));
+        services.AddSingleton<IValidateOptions<OpenAiSettings>, OpenAiSettingsValidator>();
+        services.AddOptions<OpenAiSettings>()
+            .Bind(configuration.GetSection(OpenAiSettings.SectionName))
+            .ValidateOnStart();
         services.AddSingleton<IValidateOptions<SensiSettings>, SensiSettingsValidator>();
         services.AddOptions<SensiSettings>()
             .Bind(configuration.GetSection(SensiSettings.SectionName))

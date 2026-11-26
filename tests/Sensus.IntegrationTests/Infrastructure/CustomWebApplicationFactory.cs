@@ -111,6 +111,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IOfferViewRepository>();
             services.AddSingleton(OfferViewRepository);
 
+            services.Configure<CloudinaryAccountSettings>(settings =>
+                settings.CloudName = "sensus");
+
             services.Configure<ClaimCodeSettings>(settings =>
                 settings.Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
 

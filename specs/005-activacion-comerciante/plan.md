@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Documenta estado actual con brechas |
-| Versión | 1.0.0 |
-| Constitution Check | FAIL |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado del plan | Aprobado (Completado) |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -30,6 +30,17 @@ Permitir que un usuario con cuenta unificada active el rol comercial creando el 
 - Autorización por token
 - El userId proviene del token
 - Sin datos de contacto internos en la respuesta
+
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Mitigación implementada |
+|---|---|
+| *Spoofing* | `UsuarioId` tomado exclusivamente del claim JWT validado en el servidor (`ICurrentUserService`) |
+| *Tampering* | Validación de catálogo, CP y coordenadas (`RegisterComercioCommandValidator`) más invariantes de `Comercio` |
+| *Repudiation* | Auditoría append-only de activación/moderación en `IModerationAuditRecorder` + logs estructurados con `correlation-id` |
+| *Information Disclosure* | DTOs `RegisterComercioResponseDto`/`ComercioDto` sin campos internos y respuestas `ProblemDetails` uniformes |
+| *Denial of Service* | Límite de tasa por usuario/ruta (`SensitiveWritePolicy`) y restricción única por `usuarioId` (`Conflict 409`) |
+| *Elevation of Privilege* | Exclusivo para usuarios registrados válidos; transición de rol controlada por entidad de dominio y caso de uso único |
 
 ## 5. Observabilidad y rendimiento
 
@@ -55,11 +66,12 @@ Evaluación del estado actual. Las brechas marcadas como FAIL se convierten en t
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | FAIL | no existen pruebas de integración |
+| V | PASS | Unitarias (`RegisterComercioCommandHandlerTests`, `RegisterComercioCommandValidatorTests`), integración (`MerchantProfileEndpointsTests` 15/15) y Testcontainers `2dsphere` + `explain` (`MongoUserAndComercioRepositoryTests` 2/2) |
 | VI | PASS | Costo estimado declarado en §6 |
-| VII | PARCIAL | sin correlation-id |
+| VII | PASS | Índice único en `usuarioId`, índice `2dsphere` en `ubicacion` y correlación HTTP |
+| VIII | PASS | Matriz STRIDE en §4, mínimo privilegio y escaneos CI bloqueantes verdes (`ci.yml`, `dast-zap.yml`, corrida `4a00d24`) |
 
-> **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
+> Todas las brechas previas de `005` quedaron cerradas con código, pruebas contra MongoDB real y evidencia trazable.
 
 ## 9. Riesgos de implementación
 

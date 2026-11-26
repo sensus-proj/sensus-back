@@ -69,10 +69,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 El backend está completado. El registro y la apertura de los avisos en Android, la entrega real de FCM y la medición del p95 quedan como verificaciones pendientes de integración. Los escaneos de CI forman parte del cierre formal.
 
-- [ ] En el entorno de pruebas con FCM habilitado, registrar un dispositivo de comprador y otro de comerciante. Con el JWT de comprador llamar a `POST /api/v1/offers/{id}/claim` sobre una oferta activa con stock. Comprobar HTTP 200 y la presencia del QR y su vencimiento en la respuesta.
-- [ ] Comprobar en ambos extremos que el evento y los identificadores coinciden con el apartado. Abrir los avisos en primer plano, en segundo plano y con la app cerrada durante la integración Android.
-- [ ] Repetir con push deshabilitado para un destinatario y comprobar cero avisos para esa cuenta.
+- [ ] En el entorno de pruebas con FCM habilitado, registrar un dispositivo de comprador y otro de comerciante. Con el JWT de comprador llamar a `POST /api/v1/offers/{id}/claim` sobre una oferta activa con stock. Comprobar HTTP 200 y la presencia del QR y su vencimiento en la respuesta (acción del usuario: probar push FCM real en 2 celulares; ver plan cierre §5.Z-6).
+- [ ] Comprobar en ambos extremos que el evento y los identificadores coinciden con el apartado. Abrir los avisos en primer plano, en segundo plano y con la app cerrada durante la integración Android (acción del usuario: probar push FCM real en 2 celulares; ver plan cierre §5.Z-6).
+- [ ] Repetir con push deshabilitado para un destinatario y comprobar cero avisos para esa cuenta (acción del usuario: probar push FCM real en 2 celulares; ver plan cierre §5.Z-6).
 - [x] Forzar indisponibilidad del adaptador en pruebas y comprobar que el apartado permanece persistido. Verificar que la reserva evita segundos intentos sobre el mismo dispositivo.
-- [ ] Ejecutar una carga controlada con ofertas y compradores de prueba que produzcan apartados válidos. Registrar el tamaño de la muestra y el p95 de las respuestas HTTP 200, con objetivo < 700 ms (NFR-033-01). Registrar la entrega de FCM por separado. La evidencia omite tokens de dispositivos y códigos QR.
+- [ ] Ejecutar una carga controlada con ofertas y compradores de prueba que produzcan apartados válidos. Registrar el tamaño de la muestra y el p95 de las respuestas HTTP 200, con objetivo < 700 ms (NFR-033-01). Registrar la entrega de FCM por separado. La evidencia omite tokens de dispositivos y códigos QR (acción del usuario: ejecutar carga diurna y FCM real; ver plan cierre §5.Z-6 y §5.Z-10).
 
 - [x] FR-033-11 — Comprador vigente recibe QR; comercio, comprador vencido o firma reemplazada reciben metadatos; tercero recibe 404, invitado 403 y anónimo 401. Verificar no-store.

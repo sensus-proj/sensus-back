@@ -6,7 +6,6 @@ using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Offers.Commands.ToggleOfferFavorite;
 using Sensus.Application.Offers.DTOs;
 using Sensus.Application.Users.Commands.DeleteAccount;
-using Sensus.Application.Users.Commands.GeneratePhotoSignature;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
 using Sensus.Application.Users.Commands.ReplaceMyInterests;
@@ -69,17 +68,13 @@ public static class UserEndpoints
 
         if (isV1) updateProfile.WithName("UpdateProfile");
 
-        // SE-006: Solicitar firma de subida para Cloudinary
-        RouteHandlerBuilder photoSignature = group.MapPost("/photo-signature", async (
-            ISender sender,
-            CancellationToken ct) =>
-        {
-            Result<CloudinarySignatureResponse> result = await sender.Send(new GeneratePhotoSignatureCommand(), ct);
-            return result.ToHttpResult();
-        })
+        // SE-006 / A2: endpoint heredado de subida directa retirado (410 Gone). Usar POST /api/v1/media/upload.
+        RouteHandlerBuilder photoSignature = group.MapPost("/photo-signature", () =>
+            Result.Failure(Error.Gone("Media.SignatureRetired", "Usa POST /api/v1/media/upload")).ToHttpResult())
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
-        .WithSummary("SE-006: Genera parámetros firmados para subida directa de fotos a Cloudinary")
-        .Produces<CloudinarySignatureResponse>(StatusCodes.Status200OK)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithSummary("Retirado (410 Gone): usa POST /api/v1/media/upload con moderación previa")
+        .ProducesProblem(StatusCodes.Status410Gone)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden);
 

@@ -3,10 +3,10 @@
 | Campo | Valor |
 |---|---|
 | Spec | [`spec.md`](spec.md) |
-| Estado del plan | Documenta estado actual con brechas |
-| Versión | 1.0.0 |
-| Constitution Check | FAIL |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado del plan | Aprobado (Completado) |
+| Versión | 1.1.0 |
+| Constitution Check | PASS |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
@@ -27,6 +27,17 @@ Permitir que un usuario comerciante consulte los datos de su propio comercio, in
 ## 4. Seguridad
 
 - El identificador se toma del token, nunca del cliente
+
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Mitigación implementada |
+|---|---|
+| *Spoofing* | Identidad tomada exclusivamente del JWT validado (`ICurrentUserService.UserId`) |
+| *Tampering* | Consulta de solo lectura (CQRS) sin aceptación de identificadores arbitrarios por query/ruta |
+| *Repudiation* | Registro con `correlation-id` de consultas y trazas HTTP |
+| *Information Disclosure* | Solo devuelve `ComercioDto` del propietario; `404` uniforme sin exponer existencia de terceros |
+| *Denial of Service* | Caché con TTL explícito (`MyComercio`: 30 s) e índice único por `usuarioId` |
+| *Elevation of Privilege* | Requiere autenticación válida y política de usuario/comerciante |
 
 ## 5. Observabilidad y rendimiento
 
@@ -50,11 +61,12 @@ Evaluación del estado actual. Las brechas marcadas como FAIL se convierten en t
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
 | IV | PASS | Reglas de seguridad aplicadas en §4 |
-| V | FAIL | no existen pruebas de integración |
+| V | PASS | Unitarias (`GetMyComercioQueryHandlerTests`) e integración (`MerchantProfileEndpointsTests` 200/404, `SecurityPipelineTests` 404 en `/api/v1/comercio/mi-comercio`) |
 | VI | PASS | Costo estimado declarado en §6 |
-| VII | PASS | Paginación, índices y observabilidad en §5 |
+| VII | PASS | Paginación/índice único por `usuarioId`, caché con TTL explícito y observabilidad en §5 |
+| VIII | PASS | Matriz STRIDE en §4 y escaneos CI bloqueantes verdes (`ci.yml`, `dast-zap.yml`, corrida `4a00d24`) |
 
-> **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
+> Todas las brechas previas de `006` quedaron cerradas con código y pruebas en verde.
 
 ## 9. Riesgos de implementación
 

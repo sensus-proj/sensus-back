@@ -28,7 +28,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] IaC actualizada y `cdk diff` revisado si aplica. No aplica: sin recursos AWS nuevos.
 - [x] Logs con correlation-id y sin PII. Solo se registran `postId`, intención y transición.
 - [x] Revisión de seguridad: sin secretos, autorización verificada (401, 403 invitado, 404, 429)
-- [ ] Constitution Check en PASS o brecha registrada. Principio VIII pendiente de los escaneos de CI.
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
@@ -39,7 +39,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **V. Verificación automatizada** — PASS (`MongoFeedSocialIntegrationTests` ejecutadas y en verde contra MongoDB 7.0 real)
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS. `NFR-039-01` (p95 < 300 ms) pendiente de prueba de carga.
-- [ ] **VIII. DevSecOps de nivel fintech** — STRIDE en `plan.md` §4; faltan los escaneos bloqueantes de CI
+- [x] **VIII. DevSecOps de nivel fintech** — PASS (STRIDE en `plan.md` §4; escaneos bloqueantes en `ci.yml` —gitleaks, Snyk, SonarCloud, cdk-nag, SBOM CycloneDX y atestación— verdes en corrida `4a00d24`, más `.github/workflows/dast-zap.yml`)
 
 ## E. Evidencia
 

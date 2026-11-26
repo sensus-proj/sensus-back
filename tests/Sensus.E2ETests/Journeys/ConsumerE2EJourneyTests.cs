@@ -3,8 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using Sensus.Application.Media.DTOs;
 using Sensus.Application.Users.Commands.DeleteAccount;
-using Sensus.Application.Users.Commands.GeneratePhotoSignature;
 using Sensus.Application.Users.Commands.Login;
 using Sensus.Application.Users.Commands.RegisterUser;
 using Sensus.Application.Users.Commands.RequestPasswordReset;
@@ -50,17 +50,29 @@ public class ConsumerE2EJourneyTests : IClassFixture<SensusE2EWebApplicationFact
         var profileDto = await profileRes.Content.ReadFromJsonAsync<UserDto>();
         profileDto!.NombreCompleto.Should().Be("Consumidor E2E");
 
-        // 3. SE-006: Firma para Cloudinary
-        using var sigReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/users/photo-signature")
-        {
-            Content = JsonContent.Create(new GeneratePhotoSignatureCommand())
-        };
+        // 3. Spec 003/022: Firma heredada retirada (410 Gone); foto se sube por POST /api/v1/media/upload moderado
+        using var sigReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/users/photo-signature");
         sigReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var sigRes = await _client.SendAsync(sigReq);
-        sigRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        sigRes.StatusCode.Should().Be(HttpStatusCode.Gone);
 
-        // 4. SE-006: Actualizar perfil con foto
-        var photoUrl = "https://res.cloudinary.com/sensus/image/upload/v12345/avatar.jpg";
+        using var uploadForm = new MultipartFormDataContent();
+        var fileBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01 }; // Firma JPEG JFIF válida
+        var fileContent = new ByteArrayContent(fileBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        uploadForm.Add(fileContent, "file", "avatar.jpg");
+        using var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/media/upload")
+        {
+            Content = uploadForm
+        };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var uploadRes = await _client.SendAsync(uploadReq);
+        uploadRes.StatusCode.Should().Be(HttpStatusCode.Created);
+        var mediaDto = await uploadRes.Content.ReadFromJsonAsync<UploadMediaResponseDto>();
+        mediaDto.Should().NotBeNull();
+        var photoUrl = mediaDto!.SecureUrl!;
+
+        // 4. SE-006: Actualizar perfil con foto aprobada del usuario
         using var updateReq = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/profile")
         {
             Content = JsonContent.Create(new UpdateProfileCommand("Consumidor Actualizado", photoUrl))

@@ -16,6 +16,11 @@ public interface IMediaAssetRepository
         Guid ownerId, string secureUrl, string moderatedTextFingerprint, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Verifica si existe un activo en estado Approved propiedad del usuario con la URL exacta indicada (FR-003-10).
+    /// </summary>
+    Task<bool> IsApprovedOwnedUrlAsync(Guid ownerId, string secureUrl, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Activos en cuarentena creados antes del instante indicado, ordenados del más antiguo al más reciente (FR-019-03).
     /// </summary>
     Task<IReadOnlyList<MediaAsset>> GetQuarantinedCreatedBeforeAsync(

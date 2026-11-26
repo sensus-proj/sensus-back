@@ -173,10 +173,7 @@ public class User : BaseEntity, IAggregateRoot
         }
 
         NombreCompleto = nombreCompleto.Trim();
-        if (fotoPerfilUrl is not null)
-        {
-            FotoPerfilUrl = fotoPerfilUrl.Trim();
-        }
+        FotoPerfilUrl = string.IsNullOrWhiteSpace(fotoPerfilUrl) ? null : fotoPerfilUrl.Trim();
 
         return Result.Success();
     }

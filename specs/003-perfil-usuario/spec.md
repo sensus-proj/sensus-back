@@ -9,8 +9,8 @@
 | Tipo | Retro-spec |
 | Dueño | Por asignar |
 | Dependencias | 002, 022 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -47,10 +47,11 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 | FR-003-03 | Responder 401 sin token o con token inválido | Must |
 | FR-003-04 | Actualizar nombre completo y avatar del propio usuario | Must |
 | FR-003-05 | Rechazar cambios de correo o roles desde este endpoint | Must |
-| FR-003-06 | Aceptar solo avatares subidos por el propio usuario y aprobados | Must |
-| FR-003-07 | Emitir parámetros firmados (`POST /users/photo-signature`) para subir la foto de perfil a Cloudinary, limitados a la carpeta `sensus/profiles/{userId}`; solo usuarios registrados | Must |
-| FR-003-08 | Moderar la foto de perfil antes de publicarla o guardarla en el perfil (Principio IV); hoy la app sube directo a Cloudinary con la firma y nada la modera | Must |
-| FR-003-09 | Limitar la tasa de emisión de firmas (`sensitive-write`) | Should |
+| FR-003-06 | Aceptar solo avatares HTTPS exactos en `res.cloudinary.com/<CloudName>/` subidos por el propio usuario y aprobados | Must |
+| FR-003-07 | Endpoint legado `POST /api/v1/users/photo-signature` retirado con `410 Gone` (`Media.SignatureRetired`, redirige a `POST /api/v1/media/upload`) | Must |
+| FR-003-08 | Moderar la foto de perfil mediante carga previa en Spec 022 antes de asociarla al perfil | Must |
+| FR-003-09 | Límite de tasa (`sensitive-write`) aplicado al endpoint retirado `photo-signature` y a las cargas en Spec 022 | Should |
+| FR-003-10 | Aceptar `fotoPerfilUrl` únicamente si coincide exactamente con la `SecureUrl` de un `MediaAsset` en estado `Approved` cuyo dueño es el usuario autenticado (`400 Profile.PhotoNotModerated` en otro caso); `null` o vacío borra la foto | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -93,21 +94,27 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 
 ### CA-003-06
 
-- **Dado** un usuario registrado
+- **Dado** un usuario registrado autenticado
 - **Cuando** llama a `POST /api/v1/users/photo-signature`
-- **Entonces** recibe `200` con `cloudName`, `apiKey`, `timestamp`, `folder = sensus/profiles/{userId}` y `signature`, sin el secreto de Cloudinary
+- **Entonces** recibe `410 Gone` (`Media.SignatureRetired`) indicando el uso de `POST /api/v1/media/upload`
 
 ### CA-003-07
 
 - **Dado** un invitado o una solicitud sin token
-- **Cuando** llama al endpoint
+- **Cuando** llama al endpoint `/api/v1/users/photo-signature`
 - **Entonces** recibe `403` o `401`
 
-### CA-003-08 (pendiente, FR-003-06 y FR-003-08)
+### CA-003-08 (FR-003-06 y FR-003-08)
 
-- **Dado** una `fotoPerfilUrl` de otro dominio (`https://malcloudinary.com/...`), de otra cuenta de Cloudinary o de otra carpeta
-- **Cuando** se actualiza el perfil
-- **Entonces** recibe `400`; y una imagen inapropiada nunca queda como foto de perfil
+- **Dado** una `fotoPerfilUrl` con host suplantado (`https://evilcloudinary.com/...`), HTTP o de otra cuenta de Cloudinary
+- **Cuando** se valida o actualiza el perfil
+- **Entonces** recibe `400` y una imagen no moderada jamás se asocia al perfil
+
+### CA-003-09 (FR-003-10)
+
+- **Dado** una `fotoPerfilUrl` de otro usuario o de un activo en cuarentena/rechazado
+- **Cuando** llama a `PUT /api/v1/users/profile`
+- **Entonces** responde `400` con código `Profile.PhotoNotModerated`; si envía `null` o vacío, borra `fotoPerfilUrl`; si corresponde a un `MediaAsset` `Approved` propio, actualiza el perfil (`200 OK`)
 
 ## 7. Contratos expuestos
 
@@ -115,7 +122,7 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 |---|---|---|
 | GET | `/api/v1/users/profile` | JWT |
 | PUT | `/api/v1/users/profile` | JWT |
-| POST | `/api/v1/users/photo-signature` | JWT de usuario registrado |
+| POST | `/api/v1/users/photo-signature` | JWT de usuario registrado (retirado: `410 Gone`) |
 
 ## 8. Dependencias y supuestos
 
@@ -133,7 +140,7 @@ Permitir que el usuario autenticado consulte y actualice su propio perfil —nom
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-003-01`, `FR-003-02`, `FR-003-03`, `FR-003-04`, `FR-003-05`, `FR-003-06`, `FR-003-07`, `FR-003-08`, `FR-003-09`
+- Requisitos de este spec: `FR-003-01`, `FR-003-02`, `FR-003-03`, `FR-003-04`, `FR-003-05`, `FR-003-06`, `FR-003-07`, `FR-003-08`, `FR-003-09`, `FR-003-10`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

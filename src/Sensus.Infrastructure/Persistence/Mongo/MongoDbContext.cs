@@ -694,7 +694,9 @@ public sealed class MongoDbContext
             var approvedImageKeys = Builders<MediaAssetDocument>.IndexKeys
                 .Ascending(asset => asset.OwnerId)
                 .Ascending(asset => asset.SecureUrl);
-            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(approvedImageKeys));
+            MediaAssets.Indexes.CreateOne(new CreateIndexModel<MediaAssetDocument>(
+                approvedImageKeys,
+                new CreateIndexOptions { Name = "ix_media_assets_owner_secure_url" }));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

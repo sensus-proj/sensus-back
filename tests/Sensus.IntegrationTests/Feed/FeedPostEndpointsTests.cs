@@ -399,4 +399,28 @@ public sealed class FeedPostEndpointsTests : IClassFixture<CustomWebApplicationF
 
         await _factory.FeedPostRepository.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task CreatePost_ReturnsBadRequest_WhenRetiredMediaIdAliasSentWithoutMediaAssetId()
+    {
+        (string token, User user) = CreateRegisteredToken();
+        MediaAsset asset = MediaAsset.Create(
+            user.Id,
+            "posts/owned-approved",
+            "https://res.cloudinary.com/sensus/image/upload/v1/owned-approved.jpg",
+            "image/jpeg",
+            MediaAssetStatus.Approved,
+            DateTime.UtcNow);
+        _factory.MediaAssetRepository.GetByIdAsync(asset.Id, Arg.Any<CancellationToken>()).Returns(asset);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Alias heredado", mediaId = asset.Id });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Feed.MediaIdRetired");
+        await _factory.FeedPostRepository.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
+    }
 }
