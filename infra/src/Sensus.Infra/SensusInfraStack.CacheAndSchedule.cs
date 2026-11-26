@@ -48,6 +48,12 @@ public sealed partial class SensusInfraStack
             Subnets = [new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED }]
         });
 
+        Validations.Of(vpc).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-VPC7",
+            Reason = "VPC Flow Logs omitidos para mantener costo cero en CloudWatch; el aislamiento de red usa Security Groups dedicados y sin tráfico público entrante."
+        });
+
         var apiSecurityGroup = new SecurityGroup(this, "SensusApiSecurityGroup", new SecurityGroupProps
         {
             Vpc = vpc,
@@ -233,7 +239,7 @@ public sealed partial class SensusInfraStack
         {
             FunctionName = $"sensus-night-switch-{envName}",
             Description = $"Pausa la infraestructura de Sensus de {stopAt} a {startAt} ({timeZone})",
-            Runtime = Runtime.PYTHON_3_12,
+            Runtime = Runtime.PYTHON_3_14,
             Architecture = Architecture.ARM_64,
             Handler = "index.handler",
             Code = Code.FromAsset(ResolveAssetDirectory("night-switch")),
@@ -268,6 +274,18 @@ public sealed partial class SensusInfraStack
             })
         });
         nightSwitch.GrantInvoke(schedulerRole);
+
+        Validations.Of(role).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-IAM5",
+            Reason = "ec2:Describe* exige recurso '*' en IAM; elastic-ip/*, natgateway/* y LogGroup:* están acotados mediante etiquetas s:night-switch/env o al LogGroup propio."
+        });
+
+        Validations.Of(schedulerRole).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-IAM5",
+            Reason = "Permiso GrantInvoke generado por CDK para EventBridge Scheduler limitado a las versiones/alias de SensusNightSwitchFunction."
+        });
 
         AddSchedule("SensusNightStopSchedule", $"sensus-night-stop-{envName}", stopAt, "stop", timeZone, nightSwitch, schedulerRole);
         AddSchedule("SensusMorningStartSchedule", $"sensus-morning-start-{envName}", startAt, "start", timeZone, nightSwitch, schedulerRole);

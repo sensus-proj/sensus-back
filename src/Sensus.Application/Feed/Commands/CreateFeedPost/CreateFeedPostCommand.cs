@@ -17,7 +17,8 @@ public sealed record CreateFeedPostCommand(
     byte[]? ImageBytes = null,
     string? ImageContentType = null,
     double? Latitude = null,
-    double? Longitude = null) : IRequest<Result<FeedPostDto>>;
+    double? Longitude = null,
+    Guid? MediaAssetId = null) : IRequest<Result<FeedPostDto>>, ISensitiveRequest;
 
 public sealed class CreateFeedPostCommandValidator : AbstractValidator<CreateFeedPostCommand>
 {
@@ -32,8 +33,13 @@ public sealed class CreateFeedPostCommandValidator : AbstractValidator<CreateFee
             .WithMessage($"El contenido no debe exceder {FeedPost.MaxContentLength} caracteres.");
 
         RuleFor(x => x.ImageUrl)
-            .Must(url => string.IsNullOrWhiteSpace(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
-            .WithMessage("La URL de la imagen debe ser una URL absoluta válida.");
+            .Must(string.IsNullOrWhiteSpace)
+            .WithMessage("No se permite enviar imageUrl externa; usa multipart/form-data o mediaAssetId de un activo aprobado.");
+
+        RuleFor(x => x)
+            .Must(x => x.ImageBytes is not { Length: > 0 } || !x.MediaAssetId.HasValue)
+            .WithName("mediaAssetId")
+            .WithMessage("No combines una imagen multipart y mediaAssetId en la misma solicitud.");
 
         // Spec 026: ubicación opcional compartida por el autor; ambas coordenadas o ninguna.
         RuleFor(x => x)
@@ -53,6 +59,8 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
     private readonly IImageModerationService? _imageModerationService;
     private readonly IMediaStorage? _mediaStorage;
     private readonly ICacheService? _cacheService;
+    private readonly IMediaAssetRepository? _mediaAssetRepository;
+    private readonly IModerationAuditRecorder? _auditRecorder;
     private readonly ILogger<CreateFeedPostCommandHandler> _logger;
 
     public CreateFeedPostCommandHandler(
@@ -64,9 +72,12 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         ITextModerationService? textModerationService = null,
         IImageModerationService? imageModerationService = null,
         IMediaStorage? mediaStorage = null,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        IMediaAssetRepository? mediaAssetRepository = null,
+        IModerationAuditRecorder? auditRecorder = null)
     {
         _cacheService = cacheService;
+        _mediaAssetRepository = mediaAssetRepository;
         _postRepository = postRepository;
         _userRepository = userRepository;
         _currentUserService = currentUserService;
@@ -75,6 +86,7 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         _textModerationService = textModerationService;
         _imageModerationService = imageModerationService;
         _mediaStorage = mediaStorage;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task<Result<FeedPostDto>> Handle(
@@ -89,16 +101,23 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
                 Error.Unauthorized("FeedPost.Unauthorized", "Debes iniciar sesión para publicar."));
         }
 
-        if (_textModerationService is null)
+        if (!string.IsNullOrWhiteSpace(request.ImageUrl))
         {
             return Result.Failure<FeedPostDto>(
-                Error.Failure("FeedPost.ModerationUnavailable", "La moderación no está disponible; la publicación no fue creada."));
+                Error.Validation(
+                    "FeedPost.ExternalImageUrlNotAllowed",
+                    "No se permite enviar imageUrl externa; usa multipart/form-data o mediaAssetId de un activo aprobado."));
         }
 
         string trimmedContent = (request.Content ?? string.Empty).Trim();
+        User? author = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        string authorDisplayName = !string.IsNullOrWhiteSpace(author?.NombreCompleto)
+            ? author.NombreCompleto
+            : FeedPost.DefaultAuthorDisplayName;
+        Guid postId = Guid.NewGuid();
 
-        // Moderación de texto preventiva (fail-closed, FR-024-02)
-        Result textModerationResult = await ContentModerationHelper.EnsureApprovedAsync(
+        // Moderación de texto preventiva (fail-closed, FR-024-02 / FR-024-09).
+        ModerationEvaluation textEvaluation = await ContentModerationHelper.EvaluateAsync(
             _textModerationService,
             trimmedContent,
             "feed_post",
@@ -106,34 +125,96 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             "La publicación infringe las normas comunitarias y no pudo publicarse.",
             cancellationToken);
 
-        if (textModerationResult.IsFailure)
+        if (!textEvaluation.IsApproved)
         {
-            return Result.Failure<FeedPostDto>(textModerationResult.Error);
-        }
+            ModerationAuditEntry textAudit = new(
+                postId,
+                ModerationTargetType.FeedPost,
+                textEvaluation.Verdict,
+                textEvaluation.Decision,
+                "feed_post_create",
+                textEvaluation.FlaggedCategories,
+                textEvaluation.CategoryScores);
 
-        string? resolvedImageUrl = request.ImageUrl;
-        string? imagePublicId = null;
-
-        // Moderación de imagen preventiva en la misma solicitud que el texto (fail-closed, FR-024-02).
-        if (request.ImageBytes is { Length: > 0 })
-        {
-            if (_imageModerationService is null)
+            if (textEvaluation.Verdict == ModerationVerdict.Quarantined)
             {
-                return Result.Failure<FeedPostDto>(
-                    Error.Failure("FeedPost.ImageModerationUnavailable", "La moderación de imágenes no está disponible; la publicación no fue creada."));
+                return await QuarantinePostAsync(
+                    postId,
+                    userId,
+                    authorDisplayName,
+                    author?.FotoPerfilUrl,
+                    trimmedContent,
+                    textAudit,
+                    request.Latitude,
+                    request.Longitude,
+                    cancellationToken);
             }
 
-            ImageModerationResult imageResult = await _imageModerationService.ModerateImageBytesAsync(
-                request.ImageBytes,
-                request.ImageContentType ?? "image/jpeg",
-                trimmedContent,
-                cancellationToken);
-
-            if (!imageResult.IsApproved)
+            if (_auditRecorder is not null)
             {
+                await _auditRecorder.RecordBestEffortAsync(textAudit, cancellationToken);
+            }
+
+            return Result.Failure<FeedPostDto>(
+                textEvaluation.RejectionError
+                ?? Error.Validation("FeedPost.ModerationRejected", "La publicación infringe las normas comunitarias y no pudo publicarse."));
+        }
+
+        string? resolvedImageUrl = null;
+        string? imagePublicId = null;
+        IReadOnlyDictionary<string, double>? publishCategoryScores = textEvaluation.CategoryScores;
+
+        // Moderación de imagen preventiva en la misma solicitud que el texto (fail-closed, FR-024-02 / FR-024-09).
+        if (request.ImageBytes is { Length: > 0 })
+        {
+            (bool IsApproved, string Decision, string? Message, IReadOnlyList<string> FlaggedCategories, IReadOnlyDictionary<string, double>? CategoryScores) imageEvaluation =
+                await EvaluateImageModerationAsync(
+                    request.ImageBytes,
+                    request.ImageContentType ?? "image/jpeg",
+                    trimmedContent,
+                    cancellationToken);
+
+            if (!imageEvaluation.IsApproved)
+            {
+                ModerationVerdict imageVerdict = ContentModerationHelper.ToVerdict(imageEvaluation.Decision);
+                ModerationAuditEntry imageAudit = new(
+                    postId,
+                    ModerationTargetType.FeedPost,
+                    imageVerdict,
+                    imageEvaluation.Decision,
+                    "feed_post_create",
+                    imageEvaluation.FlaggedCategories,
+                    imageEvaluation.CategoryScores);
+
+                // Nunca subimos bytes sin aprobar ni en cuarentena a Cloudinary.
+                if (imageVerdict == ModerationVerdict.Quarantined)
+                {
+                    return await QuarantinePostAsync(
+                        postId,
+                        userId,
+                        authorDisplayName,
+                        author?.FotoPerfilUrl,
+                        trimmedContent,
+                        imageAudit,
+                        request.Latitude,
+                        request.Longitude,
+                        cancellationToken);
+                }
+
+                if (_auditRecorder is not null)
+                {
+                    await _auditRecorder.RecordBestEffortAsync(imageAudit, cancellationToken);
+                }
+
                 return Result.Failure<FeedPostDto>(
-                    Error.Validation("FeedPost.ImageModerationRejected",
-                        imageResult.Message ?? "La imagen adjunta infringe las normas de moderación y no pudo publicarse."));
+                    Error.Validation(
+                        "FeedPost.ImageModerationRejected",
+                        imageEvaluation.Message ?? "La imagen adjunta infringe las normas de moderación y no pudo publicarse."));
+            }
+
+            if (imageEvaluation.CategoryScores is not null)
+            {
+                publishCategoryScores = imageEvaluation.CategoryScores;
             }
 
             if (_mediaStorage is null)
@@ -141,8 +222,58 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
                 return Result.Failure<FeedPostDto>(
                     Error.Failure("FeedPost.MediaStorageUnavailable", "El almacenamiento multimedia no está disponible; la publicación no fue creada."));
             }
+        }
+        else if (request.MediaAssetId is Guid mediaAssetId)
+        {
+            if (mediaAssetId == Guid.Empty || _mediaAssetRepository is null)
+            {
+                return Result.Failure<FeedPostDto>(
+                    Error.Validation(
+                        "FeedPost.MediaNotApproved",
+                        "El activo multimedia no existe, no está aprobado o no pertenece al autor."));
+            }
 
-            Result<MediaUploadResult> uploadResult = await _mediaStorage.UploadImageAsync(
+            MediaAsset? asset = await _mediaAssetRepository.GetByIdAsync(mediaAssetId, cancellationToken);
+            if (asset is null
+                || asset.OwnerId != userId
+                || asset.Status != MediaAssetStatus.Approved
+                || string.IsNullOrWhiteSpace(asset.SecureUrl))
+            {
+                return Result.Failure<FeedPostDto>(
+                    Error.Validation(
+                        "FeedPost.MediaNotApproved",
+                        "El activo multimedia no existe, no está aprobado o no pertenece al autor."));
+            }
+
+            resolvedImageUrl = asset.SecureUrl;
+            imagePublicId = asset.PublicId;
+        }
+
+        // Spec 021 (FR-021-01): sin evidencia persistida la publicación no se publica (fail-closed).
+        if (_auditRecorder is null)
+        {
+            return Result.Failure<FeedPostDto>(
+                Error.Unavailable("ModerationAudit.Unavailable", "No se pudo registrar la auditoría de moderación."));
+        }
+
+        ModerationAuditEntry publishAudit = new(
+            postId,
+            ModerationTargetType.FeedPost,
+            ModerationVerdict.Approved,
+            ContentModerationHelper.ApprovedDecision,
+            "feed_post_create",
+            [],
+            publishCategoryScores);
+
+        Result auditResult = await _auditRecorder.RecordAsync(publishAudit, cancellationToken);
+        if (auditResult.IsFailure)
+        {
+            return Result.Failure<FeedPostDto>(auditResult.Error);
+        }
+
+        if (request.ImageBytes is { Length: > 0 })
+        {
+            Result<MediaUploadResult> uploadResult = await _mediaStorage!.UploadImageAsync(
                 request.ImageBytes,
                 request.ImageContentType ?? "image/jpeg",
                 userId,
@@ -157,11 +288,6 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             imagePublicId = uploadResult.Value.PublicId;
         }
 
-        User? author = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        string authorDisplayName = !string.IsNullOrWhiteSpace(author?.NombreCompleto)
-            ? author.NombreCompleto
-            : FeedPost.DefaultAuthorDisplayName;
-
         Result<FeedPost> entityResult = FeedPost.Create(
             authorUserId: userId,
             authorDisplayName: authorDisplayName,
@@ -169,6 +295,7 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             imageUrl: resolvedImageUrl,
             createdAtUtc: _dateTimeProvider.UtcNow,
             authorPhotoUrl: author?.FotoPerfilUrl,
+            id: postId,
             status: FeedPostStatus.Published,
             imagePublicId: imagePublicId,
             latitude: request.Latitude,
@@ -189,6 +316,98 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         }
 
         _logger.LogInformation("Publicación {PostId} creada por usuario {UserId}", post.Id, userId);
+
+        return Result.Success(post.ToDto());
+    }
+
+    private async Task<(bool IsApproved, string Decision, string? Message, IReadOnlyList<string> FlaggedCategories, IReadOnlyDictionary<string, double>? CategoryScores)> EvaluateImageModerationAsync(
+        byte[] imageBytes,
+        string contentType,
+        string caption,
+        CancellationToken cancellationToken)
+    {
+        if (_imageModerationService is null)
+        {
+            return (false, ContentModerationHelper.QuarantineDecision, "La moderación de imágenes no está disponible; la publicación quedó en cuarentena.", [], null);
+        }
+
+        try
+        {
+            ImageModerationResult? result = await _imageModerationService.ModerateImageBytesAsync(
+                imageBytes,
+                contentType,
+                caption,
+                cancellationToken);
+
+            if (result is null)
+            {
+                return (false, ContentModerationHelper.QuarantineDecision, "La moderación de imágenes devolvió una respuesta nula; la publicación quedó en cuarentena.", [], null);
+            }
+
+            if (result.IsApproved)
+            {
+                string approvedDecision = string.IsNullOrWhiteSpace(result.Decision)
+                    ? ContentModerationHelper.ApprovedDecision
+                    : result.Decision;
+                return (true, approvedDecision, result.Message, result.FlaggedCategories ?? [], result.CategoryScores);
+            }
+
+            string decision = string.IsNullOrWhiteSpace(result.Decision)
+                ? ContentModerationHelper.QuarantineDecision
+                : result.Decision;
+            return (false, decision, result.Message, result.FlaggedCategories ?? [], result.CategoryScores);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return (false, ContentModerationHelper.QuarantineDecision, "La moderación de imágenes falló; la publicación quedó en cuarentena.", [], null);
+        }
+    }
+
+    private async Task<Result<FeedPostDto>> QuarantinePostAsync(
+        Guid postId,
+        Guid userId,
+        string authorDisplayName,
+        string? authorPhotoUrl,
+        string content,
+        ModerationAuditEntry auditEntry,
+        double? latitude,
+        double? longitude,
+        CancellationToken cancellationToken)
+    {
+        if (_auditRecorder is not null)
+        {
+            await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
+        }
+
+        Result<FeedPost> entityResult = FeedPost.Create(
+            authorUserId: userId,
+            authorDisplayName: authorDisplayName,
+            content: content,
+            imageUrl: null,
+            createdAtUtc: _dateTimeProvider.UtcNow,
+            authorPhotoUrl: authorPhotoUrl,
+            id: postId,
+            status: FeedPostStatus.Quarantined,
+            imagePublicId: null,
+            latitude: latitude,
+            longitude: longitude);
+
+        if (entityResult.IsFailure)
+        {
+            return Result.Failure<FeedPostDto>(entityResult.Error);
+        }
+
+        FeedPost post = entityResult.Value;
+        await _postRepository.AddAsync(post, cancellationToken);
+
+        _logger.LogWarning(
+            "Publicación {PostId} de usuario {UserId} enviada a cuarentena por indisponibilidad del moderador.",
+            post.Id,
+            userId);
 
         return Result.Success(post.ToDto());
     }

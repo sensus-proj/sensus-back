@@ -33,14 +33,14 @@ Al producirse la baja de cuenta (spec 060), el mismo handler delega en un caso d
 
 ## 4. Seguridad y modelo de amenazas (STRIDE, Principio VIII)
 
-| Amenaza | Categoría | Mitigación | Riesgo residual |
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
 |---|---|---|---|
-| Contenido público sigue enlazado al titular | Information disclosure | Anonimización en lote de autor, nombre y foto en dos colecciones | Bajo |
-| Apartados `Active` canjeables tras el cierre | Elevation of privilege / Fraude | Expiración explícita por comercio antes de archivar ofertas; el canje exige comercio activo | Bajo |
-| PII filtrada en la copia de auditoría | Information disclosure | Solo campos de `SanctionEvidence`; `subjectKey` es hash irreversible; sin correo, nombre ni foto | Bajo |
-| Auditoría eliminada antes de 90 días | Repudiation | TTL configurable a 90 días y sin endpoints de borrado | Bajo |
-| Repetición de la baja | Tampering | Actualizaciones idempotentes (`Guid.Empty` ya anonimizado) y auditoría con clave determinista por sanción | Bajo |
-| Carga excesiva por recorrido de colección | Denial of service | Índices por autor y por comercio+estado; sin `GetAll` en la ruta de baja | Bajo |
+| **S — Spoofing** | Disparo directo del cierre comercial con token de tercero | `CloseAccountContentCommandHandler` invocado únicamente vía `ISender` desde `DeleteAccountCommandHandler` autenticado (`DeleteAccountEndpointTests.cs`) | Bajo |
+| **T — Tampering** | Repetición de la baja o escritura parcial en colecciones | Actualizaciones idempotentes (`Guid.Empty` ya anonimizado) y auditoría con clave determinista por sanción (`CloseAccountContentCommandHandler.cs`) | Bajo |
+| **R — Repudiation** | Auditoría eliminada antes de 90 días o sin trazabilidad | TTL configurable a 90 días en `moderation_audit`, colección `sanctions` append-only y evento `SecurityAudit AccountContentAnonymized` con `CorrelationId` (`MongoDbContext.cs`) | Bajo |
+| **I — Information Disclosure** | Contenido público o auditoría filtrando PII tras la baja | Anonimización en lote en publicaciones/comentarios y copia con `subjectKey` SHA-256 irreversible sin correo, nombre ni foto (`CloseAccountContentCommandHandler.cs`) | Bajo |
+| **D — Denial of Service** | Carga excesiva por recorrido completo de colecciones al cerrar cuenta | Índices por autor y `ix_offer_claims_merchant_status`; sin `GetAll` en la ruta de baja (`MongoDbContext.cs`) | Bajo |
+| **E — Elevation of Privilege** | Canje de apartados `Active` tras cierre de comercio | Expiración explícita de apartados por comercio antes de archivar ofertas y validación de comercio activo al canjear (`RedeemClaimCommandHandler.cs`) | Bajo |
 
 ## 5. Observabilidad y rendimiento
 

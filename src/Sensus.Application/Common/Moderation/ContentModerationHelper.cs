@@ -35,9 +35,13 @@ public static class ContentModerationHelper
     /// <summary>Decisión que el motor usa para contenido rechazado.</summary>
     public const string RejectedDecision = "Rejected";
 
+    private const string ModerationUnavailableMessage =
+        "La moderación no está disponible; el contenido no fue publicado.";
+
     /// <summary>
     /// Evalúa el texto y devuelve el detalle completo de la decisión, sin descartar categorías ni puntajes.
     /// Ref: FR-021-01 - evidencia necesaria para auditar la decisión.
+    /// Ref: FR-017-09 - comportamiento fail-closed cuando no existe o falla el servicio de moderación.
     /// </summary>
     public static async Task<ModerationEvaluation> EvaluateAsync(
         ITextModerationService? moderationService,
@@ -64,13 +68,30 @@ public static class ContentModerationHelper
 
         if (moderationService is null)
         {
-            return Approved(ApprovedDecision, "Sin servicio de moderación configurado.");
+            return UnavailableQuarantine(errorCode);
         }
 
-        TextModerationResult? verdict = await moderationService.ModerateContentTextAsync(
-            text,
-            contentContext,
-            cancellationToken);
+        TextModerationResult? verdict;
+        try
+        {
+            verdict = await moderationService.ModerateContentTextAsync(
+                text,
+                contentContext,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return UnavailableQuarantine(errorCode);
+        }
+
+        if (verdict is null)
+        {
+            return UnavailableQuarantine(errorCode);
+        }
 
         if (verdict is { IsApproved: true })
         {
@@ -83,11 +104,11 @@ public static class ContentModerationHelper
                 null);
         }
 
-        string message = !string.IsNullOrWhiteSpace(verdict?.Message)
+        string message = !string.IsNullOrWhiteSpace(verdict.Message)
             ? verdict.Message
             : defaultRejectionMessage;
 
-        string decision = !string.IsNullOrWhiteSpace(verdict?.Decision)
+        string decision = !string.IsNullOrWhiteSpace(verdict.Decision)
             ? verdict.Decision
             : RejectedDecision;
 
@@ -95,8 +116,8 @@ public static class ContentModerationHelper
             false,
             decision,
             message,
-            verdict?.FlaggedCategories ?? [],
-            verdict?.CategoryScores,
+            verdict.FlaggedCategories ?? [],
+            verdict.CategoryScores,
             Error.Validation(errorCode, message));
     }
 
@@ -136,6 +157,14 @@ public static class ContentModerationHelper
 
     private static ModerationEvaluation Approved(string decision, string message) =>
         new(true, decision, message, [], null, null);
+
+    private static ModerationEvaluation UnavailableQuarantine(string errorCode) =>
+        Rejected(
+            QuarantineDecision,
+            ModerationUnavailableMessage,
+            [],
+            null,
+            Error.Failure($"{errorCode}.ModerationUnavailable", ModerationUnavailableMessage));
 
     private static ModerationEvaluation Rejected(
         string decision,

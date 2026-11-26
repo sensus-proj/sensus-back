@@ -22,7 +22,9 @@ public enum ModerationTargetType
     Offer = 2,
     StoreReview = 3,
     Comercio = 4,
-    User = 5
+    User = 5,
+    FeedPost = 6,
+    AdminMfa = 7
 }
 
 /// <summary>

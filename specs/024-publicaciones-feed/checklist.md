@@ -17,8 +17,8 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 - [x] Ninguna publicación se expone sin veredicto (*fail-closed*, `FR-024-02`)
 - [x] La moderación de texto e imagen ocurre en la misma solicitud, antes de subir la imagen y persistir el post (`FR-024-02`, `FR-024-04`)
-- [ ] Solo texto y texto con imagen se moderan con la entrada correspondiente; ambos caminos quedan en cuarentena ante fallos (`CA-024-01`, `CA-024-06` de `constitution.md` v3.0.0 — pendiente de verificar tras el merge)
-- [x] Ausencia del moderador de texto, de imagen o de almacenamiento multimedia produce 400 sin efectos secundarios (`CA-024-06`)
+- [x] Solo texto y texto con imagen se moderan con la entrada correspondiente; ambos caminos quedan en cuarentena (`202 Accepted`, `Status=Quarantined`, sin subida de imagen y con auditoría) ante fallos o indisponibilidad del moderador (`CA-024-01`, `CA-024-10`, `FR-024-09`)
+- [x] El rechazo explícito por políticas o la falta de almacenamiento/auditoría en publicación aprobada producen 400/503 fail-closed sin publicar ni subir imagen (`CA-024-06`)
 - [x] El autor proviene del token JWT (`ICurrentUserService`, `FR-024-03`)
 - [x] El borrado solo lo realiza el autor original o un administrador (403 a terceros, `FR-024-05`, `FR-024-06`)
 - [x] El borrado excluye inmediatamente el post del feed y de comentarios (`FR-024-07`)
@@ -68,3 +68,5 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 |---|---|---|---|
 | 2026-11-22 | Antigravity | Aprobado | Implementación completa de Spec 024 con pruebas unitarias, de integración, formato y compilación limpia con `-warnaserror`. |
 | 2026-11-23 | Revisión de specs | Aprobado | Ajuste de `FR-024-04` a 201/400 (moderación síncrona), purga de imagen al borrar, visibilidad por lista de permitidos, contrato multipart con lista de permitidos JPEG/PNG/WebP y 413. Build `-warnaserror`, `dotnet format`, 910 unitarias, 4 arquitectura y pruebas de integración afectadas en verde. 9 pruebas Testcontainers no ejecutables: daemon de Docker no disponible en el entorno; el resto de la suite de integración pasa (493/502). |
+| 2026-11-26 | Antigravity | T024-10 completada (`FR-024-08`) | JSON ya no acepta `imageUrl` externa arbitraria (400 `FeedPost.ExternalImageUrlNotAllowed`); solo `mediaAssetId` (o alias compatible `mediaId`) verificado en `IMediaAssetRepository` como `Approved` y propiedad del autor (`400 FeedPost.MediaNotApproved`). Móvil `movil_Rodrigo` actualizado (`FeedDtos.kt` + `FeedAvailabilityApiTest.kt`). Pruebas: `FeedPostsTests` **17/17 pasadas**, `FeedPostEndpointsTests` **14/14 pasadas**. |
+| 2026-11-26 | Antigravity | T024-09 / T024-11 completadas (`FR-024-02`, `FR-024-09`) | Cuarentena persistida (`FeedPostStatus.Quarantined`, HTTP `202 Accepted`) sin subida a Cloudinary ante indisponibilidad/timeout de moderación de texto o imagen, auditoría `ModerationTargetType.FeedPost` (`RecordAsync` obligatorio antes de publicar y `RecordBestEffortAsync` en cuarentena/rechazo) y purga de cuarentena vencida a los 30 días en `PurgeQuarantinedMediaCommandHandler`. Verificado: `53/53` unitarias (`FeedPostsTests` + `NearbyFeedTests` + `PurgeQuarantinedMediaCommandHandlerTests`) y `25/25` integración (`FeedPostEndpointsTests` + `MongoFeedSocialIntegrationTests`). |

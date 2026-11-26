@@ -9,5 +9,7 @@ public enum OfferStatus
     Published = 1,
     Paused = 2,
     Expired = 3,
-    Archived = 4
+    Archived = 4,
+    PendingModeration = 5,
+    Rejected = 6
 }

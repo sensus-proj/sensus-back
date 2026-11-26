@@ -149,6 +149,8 @@ public sealed class FeedPostsTests
         var currentUser = Substitute.For<ICurrentUserService>();
         var clock = Substitute.For<IDateTimeProvider>();
         var textModeration = Substitute.For<ITextModerationService>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
 
         Guid userId = Guid.NewGuid();
         currentUser.UserId.Returns(userId.ToString());
@@ -163,7 +165,8 @@ public sealed class FeedPostsTests
             currentUser,
             clock,
             NullLogger<CreateFeedPostCommandHandler>.Instance,
-            textModerationService: textModeration);
+            textModerationService: textModeration,
+            auditRecorder: auditRecorder);
 
         Result<FeedPostDto> result = await handler.Handle(
             new CreateFeedPostCommand("Mi primera publicación"),
@@ -234,28 +237,137 @@ public sealed class FeedPostsTests
     }
 
     [Fact]
-    public async Task CreateFeedPostHandler_FailsClosed_WhenTextModerationIsNotRegistered()
+    public async Task CreateFeedPostHandler_QuarantinesPost_WhenTextModerationIsNotRegistered()
     {
         var postRepo = Substitute.For<IFeedPostRepository>();
         var userRepo = Substitute.For<IUserRepository>();
         var currentUser = Substitute.For<ICurrentUserService>();
         var clock = Substitute.For<IDateTimeProvider>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        var imageModeration = Substitute.For<IImageModerationService>();
+        var mediaStorage = Substitute.For<IMediaStorage>();
 
-        currentUser.UserId.Returns(Guid.NewGuid().ToString());
+        Guid userId = Guid.NewGuid();
+        currentUser.UserId.Returns(userId.ToString());
+        clock.UtcNow.Returns(Now);
 
         var handler = new CreateFeedPostCommandHandler(
             postRepo,
             userRepo,
             currentUser,
             clock,
-            NullLogger<CreateFeedPostCommandHandler>.Instance);
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: null,
+            imageModerationService: imageModeration,
+            mediaStorage: mediaStorage,
+            auditRecorder: auditRecorder);
 
         Result<FeedPostDto> result = await handler.Handle(
-            new CreateFeedPostCommand("Contenido sin moderador"),
+            new CreateFeedPostCommand("Contenido sin moderador", null, [1, 2, 3], "image/jpeg"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be(FeedPostStatus.Quarantined.ToString());
+        result.Value.ImageUrl.Should().BeNull();
+        await postRepo.Received(1).AddAsync(
+            Arg.Is<FeedPost>(p =>
+                p.Status == FeedPostStatus.Quarantined
+                && p.ImageUrl == null
+                && p.ImagePublicId == null),
+            Arg.Any<CancellationToken>());
+        await imageModeration.DidNotReceive().ModerateImageBytesAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await mediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await auditRecorder.Received(1).RecordBestEffortAsync(
+            Arg.Is<ModerationAuditEntry>(e =>
+                e.TargetType == ModerationTargetType.FeedPost
+                && e.Verdict == ModerationVerdict.Quarantined),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateFeedPostHandler_QuarantinesPostWithoutUpload_WhenImageModerationUnavailableOrQuarantined()
+    {
+        var postRepo = Substitute.For<IFeedPostRepository>();
+        var userRepo = Substitute.For<IUserRepository>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var clock = Substitute.For<IDateTimeProvider>();
+        var textModeration = Substitute.For<ITextModerationService>();
+        var imageModeration = Substitute.For<IImageModerationService>();
+        var mediaStorage = Substitute.For<IMediaStorage>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+
+        Guid userId = Guid.NewGuid();
+        currentUser.UserId.Returns(userId.ToString());
+        clock.UtcNow.Returns(Now);
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, Decision: "Approved"));
+        imageModeration.ModerateImageBytesAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(false, "Timeout", null, "Quarantine"));
+
+        var handler = new CreateFeedPostCommandHandler(
+            postRepo,
+            userRepo,
+            currentUser,
+            clock,
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: textModeration,
+            imageModerationService: imageModeration,
+            mediaStorage: mediaStorage,
+            auditRecorder: auditRecorder);
+
+        Result<FeedPostDto> result = await handler.Handle(
+            new CreateFeedPostCommand("Publicación con imagen fallida", null, [1, 2, 3], "image/jpeg"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be(FeedPostStatus.Quarantined.ToString());
+        result.Value.ImageUrl.Should().BeNull();
+        await mediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await postRepo.Received(1).AddAsync(
+            Arg.Is<FeedPost>(p => p.Status == FeedPostStatus.Quarantined && p.ImageUrl == null && p.ImagePublicId == null),
+            Arg.Any<CancellationToken>());
+        await auditRecorder.Received(1).RecordBestEffortAsync(
+            Arg.Is<ModerationAuditEntry>(e =>
+                e.TargetType == ModerationTargetType.FeedPost
+                && e.Verdict == ModerationVerdict.Quarantined),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateFeedPostHandler_FailsClosed_WhenAuditRecorderFailsOnPublish()
+    {
+        var postRepo = Substitute.For<IFeedPostRepository>();
+        var userRepo = Substitute.For<IUserRepository>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var clock = Substitute.For<IDateTimeProvider>();
+        var textModeration = Substitute.For<ITextModerationService>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+
+        currentUser.UserId.Returns(Guid.NewGuid().ToString());
+        clock.UtcNow.Returns(Now);
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, Decision: "Approved"));
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure(Error.Unavailable("ModerationAudit.Unavailable", "Sin auditoría")));
+
+        var handler = new CreateFeedPostCommandHandler(
+            postRepo,
+            userRepo,
+            currentUser,
+            clock,
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: textModeration,
+            auditRecorder: auditRecorder);
+
+        Result<FeedPostDto> result = await handler.Handle(
+            new CreateFeedPostCommand("Texto aprobado sin auditoría"),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("FeedPost.ModerationUnavailable");
+        result.Error.Code.Should().Be("ModerationAudit.Unavailable");
         await postRepo.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
     }
 
@@ -269,6 +381,8 @@ public sealed class FeedPostsTests
         var textModeration = Substitute.For<ITextModerationService>();
         var imageModeration = Substitute.For<IImageModerationService>();
         var mediaStorage = Substitute.For<IMediaStorage>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
 
         Guid userId = Guid.NewGuid();
         currentUser.UserId.Returns(userId.ToString());
@@ -288,7 +402,8 @@ public sealed class FeedPostsTests
             NullLogger<CreateFeedPostCommandHandler>.Instance,
             textModerationService: textModeration,
             imageModerationService: imageModeration,
-            mediaStorage: mediaStorage);
+            mediaStorage: mediaStorage,
+            auditRecorder: auditRecorder);
 
         Result<FeedPostDto> result = await handler.Handle(
             new CreateFeedPostCommand("Publicación con imagen", null, [1, 2, 3], "image/jpeg"),
@@ -347,5 +462,122 @@ public sealed class FeedPostsTests
 
         result.IsSuccess.Should().BeTrue();
         await mediaStorage.Received(1).DeleteImageAsync("posts/public-id", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateFeedPost_RejectsExternalImageUrl()
+    {
+        var validator = new CreateFeedPostCommandValidator();
+        var command = new CreateFeedPostCommand("Publicación con URL externa", ImageUrl: "https://evil.example.com/img.jpg");
+
+        var validation = await validator.ValidateAsync(command, CancellationToken.None);
+        validation.IsValid.Should().BeFalse();
+
+        var postRepo = Substitute.For<IFeedPostRepository>();
+        var userRepo = Substitute.For<IUserRepository>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var clock = Substitute.For<IDateTimeProvider>();
+        var textModeration = Substitute.For<ITextModerationService>();
+        currentUser.UserId.Returns(Guid.NewGuid().ToString());
+        clock.UtcNow.Returns(Now);
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true));
+
+        var handler = new CreateFeedPostCommandHandler(
+            postRepo,
+            userRepo,
+            currentUser,
+            clock,
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: textModeration);
+
+        Result<FeedPostDto> result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("FeedPost.ExternalImageUrlNotAllowed");
+        await postRepo.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateFeedPostHandler_AcceptsApprovedOwnedMediaAsset()
+    {
+        Guid userId = Guid.NewGuid();
+        var asset = MediaAsset.Create(
+            userId, "posts/approved-id", "https://res.cloudinary.com/sensus/image/upload/v1/approved.jpg",
+            "image/jpeg", MediaAssetStatus.Approved, Now);
+
+        var postRepo = Substitute.For<IFeedPostRepository>();
+        var userRepo = Substitute.For<IUserRepository>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var clock = Substitute.For<IDateTimeProvider>();
+        var textModeration = Substitute.For<ITextModerationService>();
+        var mediaAssetRepo = Substitute.For<IMediaAssetRepository>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+        currentUser.UserId.Returns(userId.ToString());
+        clock.UtcNow.Returns(Now);
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true));
+        mediaAssetRepo.GetByIdAsync(asset.Id, Arg.Any<CancellationToken>()).Returns(asset);
+
+        var handler = new CreateFeedPostCommandHandler(
+            postRepo, userRepo, currentUser, clock,
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: textModeration,
+            mediaAssetRepository: mediaAssetRepo,
+            auditRecorder: auditRecorder);
+
+        Result<FeedPostDto> result = await handler.Handle(
+            new CreateFeedPostCommand("Publicación con asset aprobado", MediaAssetId: asset.Id),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ImageUrl.Should().Be(asset.SecureUrl);
+        await postRepo.Received(1).AddAsync(
+            Arg.Is<FeedPost>(p => p.ImagePublicId == "posts/approved-id" && p.ImageUrl == asset.SecureUrl),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(MediaAssetStatus.Quarantined, true)]
+    [InlineData(MediaAssetStatus.Rejected, true)]
+    [InlineData(MediaAssetStatus.Approved, false)]
+    public async Task CreateFeedPostHandler_RejectsUnapprovedOrForeignMediaAsset(
+        MediaAssetStatus status, bool sameOwner)
+    {
+        Guid userId = Guid.NewGuid();
+        Guid ownerId = sameOwner ? userId : Guid.NewGuid();
+        var asset = MediaAsset.Create(
+            ownerId, "posts/other-id", "https://res.cloudinary.com/sensus/image/upload/v1/other.jpg",
+            "image/jpeg", status, Now);
+
+        var postRepo = Substitute.For<IFeedPostRepository>();
+        var userRepo = Substitute.For<IUserRepository>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var clock = Substitute.For<IDateTimeProvider>();
+        var textModeration = Substitute.For<ITextModerationService>();
+        var mediaAssetRepo = Substitute.For<IMediaAssetRepository>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+        currentUser.UserId.Returns(userId.ToString());
+        clock.UtcNow.Returns(Now);
+        textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true));
+        mediaAssetRepo.GetByIdAsync(asset.Id, Arg.Any<CancellationToken>()).Returns(asset);
+
+        var handler = new CreateFeedPostCommandHandler(
+            postRepo, userRepo, currentUser, clock,
+            NullLogger<CreateFeedPostCommandHandler>.Instance,
+            textModerationService: textModeration,
+            mediaAssetRepository: mediaAssetRepo,
+            auditRecorder: auditRecorder);
+
+        Result<FeedPostDto> result = await handler.Handle(
+            new CreateFeedPostCommand("Publicación inválida", MediaAssetId: asset.Id),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("FeedPost.MediaNotApproved");
+        await postRepo.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
     }
 }

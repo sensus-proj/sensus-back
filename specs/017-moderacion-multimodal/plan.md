@@ -35,7 +35,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 - Timeout obligatorio
 - Sin endpoint público que permita saltarse el flujo
 
-Para `FR-017-08` se considera el texto como datos sin autoridad (suplantación y manipulación de instrucciones). Solo se acepta un veredicto conocido con categorías estructuradas y puntajes válidos (manipulación). Fallos, demoras y respuestas inválidas producen cuarentena (denegación de servicio). Los logs omiten el texto y las respuestas del proveedor (divulgación). El adaptador carece de permisos para publicar (elevación de privilegios). El flujo llamador conserva la evidencia de decisión (repudio).
+Para `FR-017-08` se considera el texto como datos sin autoridad (suplantación y manipulación de instrucciones). Solo se acepta un veredicto conocido con categorías estructuradas y puntajes válidos (manipulación). Fallos, demoras y respuestas inválidas producen cuarentena (denegación de servicio). Los logs omiten el texto y las respuestas del proveedor (divulgación). El adaptador carece de permisos para publicar (elevación de privilegios). El flujo llamador conserva la evidencia de decisión (repudio). Para `FR-017-09`, `ContentModerationHelper` falla cerrado (`Quarantine`, `Error.Failure("<errorCode>.ModerationUnavailable")`) cuando `ITextModerationService` es nulo, lanza excepción o devuelve nulo (costo 0 USD adicional).
 
 ## 5. Observabilidad y rendimiento
 
@@ -89,3 +89,4 @@ Evaluación previa a la implementación.
 12. `T017-12` Incorporar la entrada de solo texto y probar sus veredictos y fallos conforme a `FR-017-08` y ADR 0015
 13. `T017-13` Retirar la ruta independiente `POST /api/v1/media/moderate` conforme a `FR-017-07`. El flujo de carga conserva su moderación interna.
 14. `T017-14` Validar también las respuestas del adaptador de compatibilidad de imágenes. Una respuesta sin veredicto booleano, categorías o puntajes válidos se envía a cuarentena conforme a `FR-017-04`.
+15. `T017-15` Hacer fail-closed `ContentModerationHelper.EvaluateAsync` y `EnsureApprovedAsync` ante `ITextModerationService` nulo, excepción o retorno nulo conforme a `FR-017-09`.

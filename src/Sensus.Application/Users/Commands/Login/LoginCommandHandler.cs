@@ -1,8 +1,12 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Sanctions.Common;
+using Sensus.Application.Users.Common;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Common;
+using Sensus.Domain.Enums;
 using Sensus.Domain.Repositories;
 
 namespace Sensus.Application.Users.Commands.Login;
@@ -13,17 +17,23 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<A
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IRefreshTokenRepository? _refreshTokenRepository;
+    private readonly IOptions<RefreshTokenSettings>? _refreshTokenSettings;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IRefreshTokenRepository? refreshTokenRepository = null,
+        IOptions<RefreshTokenSettings>? refreshTokenSettings = null)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
         _dateTimeProvider = dateTimeProvider;
+        _refreshTokenRepository = refreshTokenRepository;
+        _refreshTokenSettings = refreshTokenSettings;
     }
 
     public async Task<Result<AuthResponseDto>> Handle(
@@ -69,18 +79,41 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<A
             return Result.Failure<AuthResponseDto>(user.ToLoginError());
         }
 
+        // Spec 062 (FR-062-04): cuentas Administrador con TOTP activo reciben un desafío intermedio
+        // sin permisos operativos hasta completar /api/v1/auth/mfa/verify.
+        if (user.HasRole(RoleType.Administrador) && user.Mfa is { IsEnabled: true })
+        {
+            var (challengeToken, challengeExpiresAt) = _jwtTokenGenerator.GenerateMfaChallengeToken(user);
+            return Result.Success(new AuthResponseDto(
+                string.Empty,
+                "Bearer",
+                challengeExpiresAt,
+                user.ToDto(),
+                RequiresMfa: true,
+                MfaChallengeToken: challengeToken));
+        }
+
         // Registrar último acceso
         user.RecordAccess(now);
         await _userRepository.UpdateAsync(user, cancellationToken);
 
-        // Generar token JWT con claims y roles
+        // Generar token JWT con claims y roles + refresh token rotatorio (G-06)
         var (token, expiresAt) = _jwtTokenGenerator.GenerateToken(user);
+        int refreshDays = _refreshTokenSettings?.Value.RefreshTokenDays ?? RefreshTokenSettings.DefaultRefreshTokenDays;
+        var (refreshToken, refreshExpiresAt, _) = await RefreshTokenIssuer.IssueAsync(
+            _refreshTokenRepository,
+            user.Id,
+            now,
+            refreshDays,
+            cancellationToken: cancellationToken);
 
         var response = new AuthResponseDto(
             token,
             "Bearer",
             expiresAt,
-            user.ToDto());
+            user.ToDto(),
+            refreshToken,
+            refreshExpiresAt);
 
         return Result.Success(response);
     }

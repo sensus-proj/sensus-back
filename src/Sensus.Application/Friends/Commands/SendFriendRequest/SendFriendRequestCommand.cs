@@ -1,4 +1,5 @@
 using MediatR;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Application.Friends.DTOs;
 using Sensus.Domain.Common;
 
@@ -6,4 +7,4 @@ namespace Sensus.Application.Friends.Commands.SendFriendRequest;
 
 public sealed record SendFriendRequestCommand(
     string InviteCode,
-    string? AddedVia = "QR") : IRequest<Result<SendFriendRequestResponseDto>>;
+    string? AddedVia = "QR") : IRequest<Result<SendFriendRequestResponseDto>>, ISensitiveRequest;

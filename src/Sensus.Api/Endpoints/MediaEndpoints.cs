@@ -97,7 +97,8 @@ public static class MediaEndpoints
             return Results.Json(dto, statusCode: statusCodeSuccess);
         })
         .DisableAntiforgery()
-        .WithSummary("Spec 022: Sube una imagen, valida tipo y tamaño, almacena en Cloudinary y modera antes de exponerla")
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithSummary("Spec 022: Valida tipo y tamaño, modera bytes y almacena de forma autenticada en Cloudinary tras aprobación")
         .Produces<UploadMediaResponseDto>(StatusCodes.Status201Created)
         .Produces<UploadMediaResponseDto>(StatusCodes.Status202Accepted)
         .ProducesProblem(StatusCodes.Status400BadRequest)

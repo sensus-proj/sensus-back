@@ -3,11 +3,14 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Users.Commands.CreateGuestSession;
+using Sensus.Application.Users.Commands.EnrollMfa;
 using Sensus.Application.Users.Commands.Login;
 using Sensus.Application.Users.Commands.Logout;
+using Sensus.Application.Users.Commands.RefreshToken;
 using Sensus.Application.Users.Commands.RegisterUser;
 using Sensus.Application.Users.Commands.RequestPasswordReset;
 using Sensus.Application.Users.Commands.ResetPassword;
+using Sensus.Application.Users.Commands.VerifyMfa;
 using Sensus.Application.Users.DTOs;
 using Sensus.Domain.Entities;
 
@@ -84,6 +87,25 @@ public static class AuthEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         if (isV1) logout.WithName("LogoutUser");
+
+        // G-06 / Spec 002: Rotación de refresh token con detección de reutilización
+        var refresh = group.MapPost("/refresh", async (
+            [FromBody] RefreshTokenCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .AllowAnonymous()
+        .RequireRateLimiting(SecurityExtensions.AuthStrictPolicy)
+        .WithSummary("G-06 / Spec 002: Rota el refresh token y emite un nuevo JWT de corta vigencia (<= 15 min)")
+        .Produces<AuthResponseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) refresh.WithName("RefreshToken");
 
         // SE-008: Modo Invitado (omite registro y otorga token de 2 km)
         var guest = group.MapPost("/guest", async (
@@ -171,5 +193,44 @@ public static class AuthEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         if (isV1) me.WithName("GetCurrentUser");
+
+        // Spec 062 (FR-062-03): Enrolamiento TOTP para cuentas Administrador.
+        var mfaEnroll = group.MapPost("/mfa/enroll", async (
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new EnrollMfaCommand(), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.AdminBasePolicy)
+        .RequireRateLimiting(SecurityExtensions.AuthStrictPolicy)
+        .WithSummary("Spec 062: Genera secreto TOTP y 8 códigos de recuperación de un solo uso para Administrador")
+        .Produces<EnrollMfaResponseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) mfaEnroll.WithName("EnrollAdminMfa");
+
+        // Spec 062 (FR-062-03): Verificación de código TOTP o de recuperación para emitir JWT step-up amr=mfa.
+        var mfaVerify = group.MapPost("/mfa/verify", async (
+            [FromBody] VerifyMfaCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.MfaVerifyPolicy)
+        .RequireRateLimiting(SecurityExtensions.AuthStrictPolicy)
+        .WithSummary("Spec 062: Verifica código TOTP o de recuperación y emite JWT con claim amr=mfa")
+        .Produces<AuthResponseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        if (isV1) mfaVerify.WithName("VerifyAdminMfa");
     }
 }

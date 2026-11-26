@@ -100,7 +100,11 @@ public sealed partial class SensusInfraStack : Stack
             Sid = "AllowSesSendTransactionalEmail",
             Effect = Effect.ALLOW,
             Actions = ["ses:SendEmail"],
-            Resources = [$"arn:aws:ses:{Region}:{Account}:identity/*"]
+            Resources =
+            [
+                $"arn:aws:ses:{Region}:{Account}:identity/*",
+                $"arn:aws:ses:{Region}:{Account}:configuration-set/sensus-transactional-{envName}"
+            ]
         }));
 
         // Lectura de parámetros y secretos desde AWS Systems Manager (SSM) Parameter Store (100 % gratuito, 0 USD)
@@ -377,6 +381,54 @@ public sealed partial class SensusInfraStack : Stack
         // Spec 051: de noche la API no acepta tráfico y las alarmas se silencian para no notificar fallos esperados.
         // La alarma de errores de la propia pausa (FR-051-08) recibe la acción aparte para que nunca se silencie.
         CreateNightlyPause(envName, cacheNetwork, apiFunction, operationalAlarms, alarmAction, scheduleTimeZone, nightStopAt, morningStartAt);
+
+        // Spec 029 (FR-029-14): Configuration Set de SES para rebotes, quejas y rechazos en CloudWatch.
+        CreateSesMonitoring(envName, alarmAction);
+
+        // Spec 045 (FR-045-20): roles OIDC para GitHub Actions en despliegue a producción y diff de CI.
+        CreateGitHubOidcRoles(envName);
+
+        Validations.Of(lambdaRole).Acknowledge(
+            new Acknowledgment
+            {
+                Id = "AwsSolutions-IAM4",
+                Reason = "AWSLambdaVPCAccessExecutionRole requerido por Lambda dentro de VPC para alcanzar Valkey (Spec 048 / EX-003)."
+            },
+            new Acknowledgment
+            {
+                Id = "AwsSolutions-IAM5",
+                Reason = "Comodines acotados a subruta /sensus/<env>/* en SSM, streams del propio LogGroup, identidades SES de la cuenta/región e interfaces ENI de VPC."
+            });
+
+        Validations.Of(budgetTable).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-DDB3",
+            Reason = "Contadores efímeros mensuales de presupuesto OpenAI (TTL nativo) dentro de Free Tier; PITR omitido para mantener costo 0 USD."
+        });
+
+        Validations.Of(alarmTopic).Acknowledge(
+            new Acknowledgment
+            {
+                Id = "AwsSolutions-SNS2",
+                Reason = "Tema SNS solo recibe notificaciones operativas y de presupuesto sin PII; cifrado KMS omitido para conservar costo 0 USD."
+            },
+            new Acknowledgment
+            {
+                Id = "AwsSolutions-SNS3",
+                Reason = "Política restringida a budgets.amazonaws.com por SourceAccount/SourceArn y alarmas CloudWatch de la misma cuenta."
+            });
+
+        Validations.Of(defaultStage).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-APIG1",
+            Reason = "Logs de acceso de API Gateway desactivados para mantenerse dentro de los 5 GB gratuitos de CloudWatch."
+        });
+
+        Validations.Of(defaultRoute).Acknowledge(new Acknowledgment
+        {
+            Id = "AwsSolutions-APIG4",
+            Reason = "HTTP API actúa como proxy ($default) delegando autenticación JWT Bearer y políticas por ruta a Sensus.Api."
+        });
 
         // Panel mínimo de operación (alcance de la Spec 015); CloudWatch incluye 3 paneles gratuitos.
         var dashboard = new Dashboard(this, "SensusOperationsDashboard", new DashboardProps

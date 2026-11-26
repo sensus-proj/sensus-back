@@ -23,6 +23,7 @@
 | T022-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-022-01` | T022-08 | Implementado |
 | T022-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-022-01` | T022-09 | Implementado |
 | T022-11 | Registrar evidencias del Constitution Check | Docs | `FR-022-01` | T022-10 | Implementado |
+| T022-12 | Moderar bytes ANTES de subir a Cloudinary en `UploadMediaCommandHandler`, firmar `type=authenticated` en `CloudinaryMediaStorage`, agregar pruebas `MediaEndpointsTests`/`CloudinaryMediaStorageTests`, documentar migración de activos públicos y eliminar bypass directo en móvil `movil_Rodrigo` | Application / Infrastructure / Api / Móvil / Pruebas | `FR-022-04`, `FR-022-06` | T022-09 | Completada |
 
 ## Notas de ejecución
 

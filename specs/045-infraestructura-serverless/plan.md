@@ -4,7 +4,7 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado (Implementado) |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Constitution Check | PASS |
 | Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
 
@@ -23,6 +23,21 @@ Implementar la infraestructura serverless del backend Sensus utilizando **AWS CD
 | Infrastructure | Sin cambios |
 | Api | Paquete `Amazon.Lambda.AspNetCoreServer.Hosting` y registro `builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi)` en `Program.cs` |
 | IaC (`infra/`) | Proyecto independiente `infra/src/Sensus.Infra/Sensus.Infra.csproj`, `SensusInfraStack.cs`, `Program.cs` y configuración `infra/cdk.json` |
+
+### 2.1 Prueba de humo y rollback tras desplegar (v1.1.0, `FR-045-16`, `FR-045-17`)
+
+**Motivo.** El 2026-11-25 el despliegue de `25c5ba2` terminó en verde mientras la API respondía 500 en todas las rutas: la Lambda fallaba al arrancar (`OptionsValidationException` por un parámetro ausente en SSM) y CloudFormation no invoca la función, así que nada lo detectó. La caída duró hasta que se probó a mano.
+
+**Flujo en `deploy-serverless.yml`:**
+
+1. *Capturar versión en producción*: `aws lambda get-function` obtiene `CodeSha256` y la URL temporal del paquete actual; se descarga y se copia a `s3://cdk-hnb659fds-assets-<cuenta>-<región>/rollback/sensus-api-<entorno>/<sha>.zip`. El paquete pesa unos 55 MB, por encima del límite de 50 MB de carga directa, por eso pasa por S3. Si la función no existe, se marca que no hay rollback.
+2. `cdk deploy` sin cambios.
+3. *Prueba de humo*: si la concurrencia reservada es `0` (pausa nocturna, Spec 051) se omite con aviso. Si no, `node .github/scripts/post-deploy-smoke.mjs --base-url <ApiGatewayUrl>` comprueba `/health/live` → 200, `/health/ready` → 200 y `/api/v1/offers/nearby` sin token → 401; hasta 6 intentos con 10 s de espera y 10 s de tiempo límite por solicitud. Solo registra rutas y códigos, nunca cuerpos.
+4. *Rollback* (solo si falló la prueba y hay paquete previo): `aws lambda update-function-code --s3-bucket … --s3-key …`, `aws lambda wait function-updated`, verificación de `CodeSha256` y nueva prueba de humo. El job termina en rojo siempre que la primera prueba falle.
+
+**Alcance del rollback.** Restaura solo el código de la Lambda. Si la causa es de infraestructura (variables, IAM, red), la segunda prueba seguirá fallando y el resumen lo indica. El siguiente `cdk deploy` vuelve a alinear la función con la plantilla, porque CloudFormation reaplica su propio paquete.
+
+**Seguridad y costo.** Usa las credenciales del job de despliegue; no agrega secretos. Los paquetes de rollback ocupan menos de 60 MB cada uno en el bucket de *assets* (dentro de los 5 GB gratuitos de S3); conviene una regla de expiración en el bucket de *bootstrap*, que no gestiona este stack. Costo: 0 USD.
 
 ## 3. Modelo de datos e índices
 
@@ -92,5 +107,21 @@ Evaluación previa y posterior a la implementación.
 ## 9. Riesgos de implementación
 
 - **Empaquetado .NET 10 para Lambda**: Dado que AWS Lambda utiliza `provided.al2023` para `.NET 10`, el comando de publicación debe generar el binario ejecutable llamado `bootstrap` (mediante `<AssemblyName>bootstrap</AssemblyName>` al publicar para Lambda o empaquetado con `dotnet lambda package`). El stack permite apuntar al directorio de artefactos publicados o a un placeholder válido durante `cdk synth` en CI.
+
+### 2.2 Aprobación de despliegue y autenticación OIDC (`FR-045-19`, `FR-045-20`, B1–B2)
+
+- **Environment `production` (`FR-045-19`)**: `.github/workflows/deploy-serverless.yml` asigna `environment: { name: production, url: https://zqqdwovx81.execute-api.us-east-2.amazonaws.com }`. En GitHub Settings → Environments → `production`, el responsable configura revisores obligatorios y rama permitida `main`.
+- **Roles OIDC (`FR-045-20`, `SensusInfraStack.GitHubOidc.cs`)**:
+  - `sensus-github-deploy-<env>`: asumible únicamente con audiencia `sts.amazonaws.com` y `sub` en `repo:sensus-proj/sensus-back:environment:production` o `repo:sensus-proj/sensus-back:ref:refs/heads/main`.
+    - Permisos mínimos justificados: `sts:AssumeRole` sobre `cdk-hnb659fds-*-<cuenta>-us-east-2` (despliegue CDK bootstrap), `s3:GetObject`/`PutObject`/`ListBucket` acotados a `rollback/*` (respaldo automático `FR-045-17`), `lambda:GetFunction`/`GetFunctionConcurrency`/`UpdateFunctionCode` sobre `sensus-api-<env>` (smoke check y rollback), `cloudformation:DescribeStacks` sobre `SensusBackendStack-<env>` (leer `ApiGatewayUrl`) y `sts:GetCallerIdentity`.
+  - `sensus-github-iac-readonly-<env>`: asumible por PR/ramas para `cdk diff` en `ci.yml` con `ReadOnlyAccess` + `AssumeRole` sobre `cdk-hnb659fds-lookup-role-<cuenta>-us-east-2`.
+- **Modelo de amenazas (STRIDE) del flujo OIDC**:
+  - *Spoofing*: `StringEquals aud == sts.amazonaws.com` + `StringLike sub` restringido a `repo:sensus-proj/sensus-back:environment:production` / `refs/heads/main` evita acceso desde forks o ramas arbitrarias.
+  - *Tampering / Elevation*: `MaxSessionDuration = 1h`; el rol de `ci.yml` (`iac`) es exclusivamente de solo lectura; el despliegue exige aprobación humana en `production`.
+  - *Information Disclosure*: los ARNs de salida (`GitHubDeployRoleArn`, `GitHubIacReadOnlyRoleArn`) no se imprimen en `$GITHUB_STEP_SUMMARY`.
+  - *Repudiation / DoS*: eventos auditados en CloudTrail con `RoleSessionName` de GitHub Actions y concurrencia `cancel-in-progress: false`.
+- **Transición segura**: los workflows usan OIDC automáticamente cuando existe `secrets.AWS_DEPLOY_ROLE_ARN` (o `AWS_IAC_ROLE_ARN`), conservando un fallback temporal a llaves mientras se despliegan los roles y se crean los secretos; la rama temporal con llaves se retira tras el primer despliegue OIDC exitoso.
+- **Decisión provisional del ejecutor — revisar con Rodrigo**: Como las credenciales AWS locales estaban expiradas (`aws login` necesario), no pudo consultarse `aws iam list-open-id-connect-providers`. Se soportó por defecto la creación del `OpenIdConnectProvider` y un contexto opcional `-c existingGithubOidcProviderArn=arn:...` para importarlo con `FromOpenIdConnectProviderArn` si ya existiera uno en la cuenta (alternativa descartada: crear incondicionalmente o importar a ciegas un ARN no verificado).
+- **Costo AWS**: **0.00 USD** (IAM OIDC y roles sin costo).
 
 ---

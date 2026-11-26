@@ -53,3 +53,4 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
 | 2026-11-21 | Beto (Sprint 5) | IMPLEMENTADO | Incorporada política `PaginationPolicy` (`1..100`), paginación en `GetPostCommentsQuery` y `GetStoreReviewsQuery` (T056-05 compatible con Android). |
+| 2026-11-26 | Claude | CERRADA | Estado de `spec.md` alineado a `tasks.md` (T010-01..T010-07 completadas) y al checklist sin casillas abiertas. Evidencia: `PaginationPolicy` (1..100, 20 por defecto) con `PaginationPolicyTests`; respuesta en línea de `/api/v1/offers/nearby` en producción con `items`, `totalCount`, `pageNumber`, `pageSize`, `totalPages`, `hasPreviousPage` y `hasNextPage` (2026-11-25). Los endpoints legacy de arreglo raíz siguen documentados por compatibilidad móvil (T010-04). |

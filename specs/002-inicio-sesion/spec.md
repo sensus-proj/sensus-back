@@ -44,7 +44,7 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 | ID | Requisito | Prioridad |
 |---|---|---|
 | FR-002-01 | Autenticar con correo y contraseña | Must |
-| FR-002-02 | Emitir JWT con sub, email, name, roles, jti y exp de 60 minutos | Must |
+| FR-002-02 | Emitir JWT con sub, email, name, roles, jti, security_stamp y exp máximo de 15 minutos, más refresh token rotatorio (`POST /api/v1/auth/refresh`) | Must |
 | FR-002-03 | Responder 401 con mensaje genérico ante credenciales inválidas | Must |
 | FR-002-04 | Actualizar la fecha de último acceso | Should |
 | FR-002-05 | Rechazar cuentas suspendidas o eliminadas | Must |
@@ -56,7 +56,7 @@ Permitir que un usuario registrado obtenga un token JWT a partir de sus credenci
 | ID | Requisito | Métrica objetivo |
 |---|---|---|
 | NFR-002-01 | Latencia de login | p95 < 600 ms |
-| NFR-002-02 | Vigencia del token | 60 minutos, configurable por entorno |
+| NFR-002-02 | Vigencia del token | ≤ 15 minutos (access JWT) y refresh rotatorio 30 días configurable |
 
 ## 6. Criterios de aceptación
 

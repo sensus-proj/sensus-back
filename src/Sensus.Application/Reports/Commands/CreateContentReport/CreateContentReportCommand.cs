@@ -16,7 +16,7 @@ public sealed record CreateContentReportCommand(
     string TargetType,
     Guid TargetId,
     string Reason,
-    string? Details) : IRequest<Result<ContentReportDto>>;
+    string? Details) : IRequest<Result<ContentReportDto>>, ISensitiveRequest;
 
 public sealed class CreateContentReportCommandValidator : AbstractValidator<CreateContentReportCommand>
 {

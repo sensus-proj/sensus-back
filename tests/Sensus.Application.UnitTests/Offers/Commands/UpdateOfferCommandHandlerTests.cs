@@ -22,6 +22,7 @@ public class UpdateOfferCommandHandlerTests
     private readonly ILogger<UpdateOfferCommandHandler> _logger;
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
     private readonly UpdateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -38,6 +39,8 @@ public class UpdateOfferCommandHandlerTests
 
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
@@ -50,7 +53,8 @@ public class UpdateOfferCommandHandlerTests
             _dateTimeProvider,
             _logger,
             _auditRecorder,
-            _cacheService);
+            _cacheService,
+            textModerationService: _textModerationService);
     }
 
     [Fact]
@@ -375,7 +379,8 @@ public class UpdateOfferCommandHandlerTests
             _logger,
             _auditRecorder,
             _cacheService,
-            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+            Options.Create(new OfferCategorySettings { RequireStrictValidation = true }),
+            textModerationService: _textModerationService);
 
         var result = await strictHandler.Handle(
             CreateValidCommand(offer.Id, expectedVersion: 1) with { Category = "" },

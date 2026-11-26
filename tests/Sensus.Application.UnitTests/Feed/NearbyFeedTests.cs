@@ -250,6 +250,8 @@ public sealed class NearbyFeedTests
         var currentUser = Substitute.For<ICurrentUserService>();
         var clock = Substitute.For<IDateTimeProvider>();
         var moderation = Substitute.For<ITextModerationService>();
+        var auditRecorder = Substitute.For<IModerationAuditRecorder>();
+        auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
 
         currentUser.UserId.Returns(Guid.NewGuid().ToString());
         clock.UtcNow.Returns(Now);
@@ -263,7 +265,8 @@ public sealed class NearbyFeedTests
             clock,
             NullLogger<CreateFeedPostCommandHandler>.Instance,
             textModerationService: moderation,
-            cacheService: cache);
+            cacheService: cache,
+            auditRecorder: auditRecorder);
 
         var command = withLocation
             ? new CreateFeedPostCommand("Hola barrio", Latitude: Lat, Longitude: Lng)

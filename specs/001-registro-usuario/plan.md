@@ -33,6 +33,17 @@ Permitir que una persona cree una cuenta única con correo, nombre completo y co
 - Secreto JWT fuera del repositorio
 - Límite de tasa estricto (spec 013)
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Registro automatizado o suplantación usando correo de tercero | Unicidad en índice `email` (`MongoDbContext.cs`), validación de formato en `RegisterUserCommandValidator.cs` y respuesta controlada `409`; `SecurityPipelineTests.cs` | Medio-bajo (sin verificación previa de buzón al registrar) |
+| **T — Tampering** | Envío de rol privilegiado, hash precalculado o términos falsos en el payload | `RegisterUserCommand` solo acepta nombre, correo, contraseña y aceptación explícita de términos (`RegisterUserCommandValidatorTests.cs`, `RegisterUserCommandHandlerTests.cs`) | Bajo |
+| **R — Repudiation** | Disputas sobre creación o fallo de registro | `CorrelationId` en trazas y `ProblemDetails` (`CorrelationIdMiddleware`, `ResultExtensions.ToHttpResult`), logs sin PII (`RegisterUserCommand` sin volcar contraseña) | Bajo |
+| **I — Information Disclosure** | Exposición de contraseña/hash en logs o respuestas | Hash BCrypt (`PasswordHasher.cs`), `UserDto` sin `PasswordHash` ni `SecurityStamp`, errores `ProblemDetails` sin detalles internos | Bajo |
+| **D — Denial of Service** | Creación masiva de cuentas para agotar almacenamiento o correo | Política de tasa estricta `AuthStrictPolicy` en `AuthEndpoints.cs` (`RateLimitingTests.cs`) y límites de longitud de campos en validador | Medio-bajo |
+| **E — Elevation of Privilege** | Autoprovisión como `Comerciante` o `Administrador` durante el alta | `User.Create` fija únicamente `RoleType.Consumidor`; el alta comercial exige flujo aparte (Spec 005) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Log de registro sin PII

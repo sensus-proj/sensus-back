@@ -4,7 +4,7 @@
 |---|---|
 | ID | 011 |
 | Slug | `contrato-openapi` |
-| Estado | Parcial |
+| Estado | Implementado |
 | Ola | 0 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
@@ -44,6 +44,7 @@ Publicar y validar un contrato OpenAPI que refleje exactamente los endpoints y m
 | FR-011-02 | Documentar todos los endpoints con esquemas y códigos de respuesta | Must |
 | FR-011-03 | Validar el documento en CI y fallar ante cambios incompatibles | Must |
 | FR-011-04 | Versionar el contrato junto con la API | Should |
+| FR-011-05 | Publicar Swagger UI y `/openapi/v1.json` solo en Development; en producción (incluida Lambda) ambas rutas responden 404 para no exponer el inventario completo de la API (OWASP API9, brecha G-15) | Must |
 
 ## 5. Requisitos no funcionales
 

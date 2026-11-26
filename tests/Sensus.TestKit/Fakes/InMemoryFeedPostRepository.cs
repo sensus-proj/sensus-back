@@ -79,4 +79,13 @@ public sealed class InMemoryFeedPostRepository : IFeedPostRepository
         int changed = _posts.Count(p => p.AuthorUserId == authorUserId && p.Anonymize(updatedAtUtc));
         return Task.FromResult(changed);
     }
+
+    public Task<int> PurgeQuarantinedBeforeAsync(
+        DateTime cutoffUtc,
+        CancellationToken cancellationToken = default)
+    {
+        int removed = _posts.RemoveAll(p =>
+            p.Status == FeedPostStatus.Quarantined && !p.IsDeleted && p.CreatedAtUtc < cutoffUtc);
+        return Task.FromResult(removed);
+    }
 }

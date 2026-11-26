@@ -19,6 +19,7 @@
 | T014-05 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-014-01` | T014-04 | Completada |
 | T014-06 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-014-01` | T014-05 | Completada |
 | T014-07 | Registrar evidencias del Constitution Check | Docs | `FR-014-01` | T014-06 | Completada |
+| T014-08 | Marcar comandos y consultas con contenido sensible o PII con `ISensitiveRequest` y añadir regla en `ArchitectureTests` | Application / Pruebas | `FR-014-05` | T014-07 | Completada |
 
 ## Notas de ejecución
 

@@ -38,6 +38,11 @@ public class User : BaseEntity, IAggregateRoot
     /// </summary>
     public UserSuspension? Suspension { get; private set; }
 
+    /// <summary>
+    /// Configuración TOTP de segundo factor para cuentas administrativas (Spec 062).
+    /// </summary>
+    public UserMfaState? Mfa { get; private set; }
+
     // Constructor privado para serialización / ORM
     private User() : base()
     {
@@ -261,7 +266,126 @@ public class User : BaseEntity, IAggregateRoot
     {
         Suspension = new UserSuspension(sanctionId, endsAtUtc);
     }
+
+    /// <summary>
+    /// Inicia el enrolamiento TOTP pendiente de confirmación para un administrador (FR-062-02).
+    /// </summary>
+    public Result BeginMfaEnrollment(string encryptedSecret, IReadOnlyList<string> recoveryCodeHashes)
+    {
+        if (Mfa is { IsEnabled: true })
+        {
+            return Result.Failure(Error.Conflict("Auth.MfaAlreadyEnabled", "El segundo factor ya está activo para esta cuenta."));
+        }
+
+        if (string.IsNullOrWhiteSpace(encryptedSecret) || recoveryCodeHashes.Count == 0)
+        {
+            return Result.Failure(Error.Validation("Auth.MfaInvalidState", "No se pudo inicializar el segundo factor."));
+        }
+
+        Mfa = new UserMfaState(
+            IsEnabled: false,
+            IsPendingConfirmation: true,
+            EncryptedSecret: encryptedSecret,
+            RecoveryCodeHashes: recoveryCodeHashes.ToArray(),
+            FailedAttempts: 0,
+            LockedUntilUtc: null,
+            EnrolledAtUtc: null,
+            LastVerifiedTimeStep: null);
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Indica si la verificación MFA de la cuenta se encuentra bloqueada temporalmente (NFR-062-01).
+    /// </summary>
+    public bool IsMfaLockedOut(DateTime nowUtc) =>
+        Mfa?.LockedUntilUtc is { } lockedUntil && lockedUntil > nowUtc;
+
+    /// <summary>
+    /// Verifica si el paso temporal TOTP ya fue utilizado en una verificación previa.
+    /// </summary>
+    public bool IsTotpTimeStepReplayed(long timeStep) =>
+        Mfa?.LastVerifiedTimeStep is { } lastStep && timeStep <= lastStep;
+
+    /// <summary>
+    /// Completa una verificación TOTP o de código de recuperación, activando el 2FA si estaba pendiente.
+    /// </summary>
+    public Result CompleteMfaVerification(long? verifiedTimeStep, DateTime nowUtc, string? consumedRecoveryHash = null)
+    {
+        if (Mfa is null || (!Mfa.IsEnabled && !Mfa.IsPendingConfirmation))
+        {
+            return Result.Failure(Error.Unauthorized("Auth.MfaNotEnrolled", "El segundo factor no está configurado."));
+        }
+
+        if (verifiedTimeStep is { } step && IsTotpTimeStepReplayed(step))
+        {
+            return Result.Failure(Error.Unauthorized("Auth.InvalidMfaCode", "El código de verificación ya fue utilizado o expiró."));
+        }
+
+        var remainingHashes = consumedRecoveryHash is null
+            ? Mfa.RecoveryCodeHashes
+            : Mfa.RecoveryCodeHashes.Where(h => !string.Equals(h, consumedRecoveryHash, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        Mfa = Mfa with
+        {
+            IsEnabled = true,
+            IsPendingConfirmation = false,
+            RecoveryCodeHashes = remainingHashes,
+            FailedAttempts = 0,
+            LockedUntilUtc = null,
+            EnrolledAtUtc = Mfa.EnrolledAtUtc ?? nowUtc,
+            LastVerifiedTimeStep = verifiedTimeStep ?? Mfa.LastVerifiedTimeStep
+        };
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Registra un intento fallido de verificación MFA y aplica bloqueo temporal al alcanzar el umbral (NFR-062-01).
+    /// </summary>
+    public bool RecordMfaFailure(DateTime nowUtc, int maxFailedAttempts, int lockoutMinutes)
+    {
+        if (Mfa is null)
+        {
+            return false;
+        }
+
+        var baseline = Mfa.LockedUntilUtc is { } prev && prev <= nowUtc ? 0 : Mfa.FailedAttempts;
+        var nextAttempts = baseline + 1;
+        DateTime? lockedUntil = nextAttempts >= maxFailedAttempts
+            ? nowUtc.AddMinutes(lockoutMinutes)
+            : Mfa.LockedUntilUtc;
+
+        Mfa = Mfa with
+        {
+            FailedAttempts = nextAttempts,
+            LockedUntilUtc = lockedUntil
+        };
+
+        return lockedUntil is not null && lockedUntil > nowUtc;
+    }
+
+    /// <summary>
+    /// Restaura el estado MFA desde persistencia sin emitir eventos.
+    /// </summary>
+    public void RestoreMfa(UserMfaState state)
+    {
+        Mfa = state;
+    }
 }
+
+/// <summary>
+/// Configuración y estado de segundo factor TOTP de una cuenta (Spec 062).
+/// </summary>
+public sealed record UserMfaState(
+    bool IsEnabled,
+    bool IsPendingConfirmation,
+    string EncryptedSecret,
+    IReadOnlyList<string> RecoveryCodeHashes,
+    int FailedAttempts,
+    DateTime? LockedUntilUtc,
+    DateTime? EnrolledAtUtc,
+    long? LastVerifiedTimeStep);
 
 /// <summary>
 /// Suspensión vigente de un usuario; <see cref="EndsAtUtc"/> nulo indica baneo permanente.

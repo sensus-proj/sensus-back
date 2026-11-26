@@ -24,6 +24,7 @@ public class CreateOfferCommandHandlerTests
     private readonly ICacheService _cacheService = Substitute.For<ICacheService>();
     private readonly IMediaAssetRepository _mediaAssets = Substitute.For<IMediaAssetRepository>();
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
+    private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
     private readonly CreateOfferCommandHandler _handler;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -39,6 +40,8 @@ public class CreateOfferCommandHandlerTests
 
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _dateTimeProvider.UtcNow.Returns(_now);
         _currentUserService.UserId.Returns(_userId.ToString());
@@ -51,7 +54,8 @@ public class CreateOfferCommandHandlerTests
             _logger,
             _auditRecorder,
             _cacheService,
-            mediaAssets: _mediaAssets);
+            mediaAssets: _mediaAssets,
+            textModerationService: _textModerationService);
     }
 
     [Fact]
@@ -167,7 +171,8 @@ public class CreateOfferCommandHandlerTests
             .Returns(Task.FromResult<Comercio?>(comercio));
         var notifier = Substitute.For<INearbyOfferNotifier>();
         var handler = new CreateOfferCommandHandler(
-            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _auditRecorder, _cacheService, notifier);
+            _offerRepository, _comercioRepository, _currentUserService, _dateTimeProvider, _logger, _auditRecorder, _cacheService, notifier,
+            textModerationService: _textModerationService);
         var command = new CreateOfferCommand(
             "Detergente", "Detergente líquido de 3 litros", 100m, 20, 10, _now, _now.AddDays(5), null);
 
@@ -196,7 +201,8 @@ public class CreateOfferCommandHandlerTests
             _logger,
             _auditRecorder,
             _cacheService,
-            categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }));
+            categorySettings: Options.Create(new OfferCategorySettings { RequireStrictValidation = true }),
+            textModerationService: _textModerationService);
 
         var missingResult = await strictHandler.Handle(
             new CreateOfferCommand("Pan dulce", "Recién horneado", 50m, 20, 5, _now.AddHours(1), _now.AddDays(2), Category: null),
@@ -215,5 +221,96 @@ public class CreateOfferCommandHandlerTests
             CancellationToken.None);
         validResult.IsSuccess.Should().BeTrue();
         validResult.Value.Category.Should().Be("Bakery");
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnConflict_WhenMerchantAlreadyHas20ActiveOffers()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+        _offerRepository.CountActiveByMerchantAsync(comercio.Id, _now, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(20L));
+
+        var command = new CreateOfferCommand(
+            "Oferta 21", "Descripción válida", 100m, 10, 5, _now.AddHours(1), _now.AddDays(2));
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Offer.ActiveLimitReached");
+        await _offerRepository.DidNotReceive().AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateOffer_WhenMerchantHas19ActiveOffers()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+        _offerRepository.CountActiveByMerchantAsync(comercio.Id, _now, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(19L));
+
+        var command = new CreateOfferCommand(
+            "Oferta 20", "Descripción válida", 100m, 10, 5, _now.AddHours(1), _now.AddDays(2));
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _offerRepository.Received(1).AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCreateDraft_EvenWhenMerchantHas20ActiveOffers()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+        _offerRepository.CountActiveByMerchantAsync(comercio.Id, _now, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(20L));
+
+        var command = new CreateOfferCommand(
+            "Borrador 21", "Descripción válida", 100m, 10, 5, _now.AddHours(1), _now.AddDays(2), SaveAsDraft: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be(OfferStatus.Draft.ToString());
+        await _offerRepository.Received(1).AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldPersistPendingModerationWithoutNotifying_WhenTextModerationUnavailable()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+        var notifier = Substitute.For<INearbyOfferNotifier>();
+        var handler = new CreateOfferCommandHandler(
+            _offerRepository,
+            _comercioRepository,
+            _currentUserService,
+            _dateTimeProvider,
+            _logger,
+            _auditRecorder,
+            _cacheService,
+            notifier,
+            textModerationService: null);
+
+        var command = new CreateOfferCommand(
+            "Oferta pendiente", "Descripción válida de prueba", 100m, 20, 5, _now.AddHours(1), _now.AddDays(2));
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be(OfferStatus.PendingModeration.ToString());
+        await _offerRepository.Received(1).AddAsync(
+            Arg.Is<Offer>(o => o.Status == OfferStatus.PendingModeration && o.NextModerationRetryAtUtc != null),
+            Arg.Any<CancellationToken>());
+        await _auditRecorder.Received(1).RecordBestEffortAsync(
+            Arg.Is<ModerationAuditEntry>(e => e.TargetType == ModerationTargetType.Offer && e.Verdict == ModerationVerdict.Quarantined),
+            Arg.Any<CancellationToken>());
+        await notifier.DidNotReceiveWithAnyArgs().NotifyAsync(default!, default, default);
+        await _cacheService.DidNotReceive().RemoveByPrefixAsync(OfferCacheKeys.NearbyPrefix, Arg.Any<CancellationToken>());
     }
 }

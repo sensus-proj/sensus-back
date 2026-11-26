@@ -18,7 +18,7 @@ public sealed record GetNearbyComerciosQuery(
     int? RadioMetros = null,
     double? RadiusKm = null,
     int Page = 1,
-    int PageSize = GetNearbyComerciosQueryValidator.DefaultPageSize) : IRequest<Result<PagedResult<ComercioDto>>>;
+    int PageSize = GetNearbyComerciosQueryValidator.DefaultPageSize) : IRequest<Result<PagedResult<ComercioDto>>>, ISensitiveRequest;
 
 public sealed class GetNearbyComerciosQueryHandler : IRequestHandler<GetNearbyComerciosQuery, Result<PagedResult<ComercioDto>>>
 {

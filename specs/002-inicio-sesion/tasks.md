@@ -21,6 +21,7 @@
 | T002-07 | Registrar evidencias del Constitution Check | Docs | `FR-002-01` | T002-06 | Pendiente |
 | T002-08 | Documentar `GET /auth/me` (retro-spec) y su contrato | Docs | `FR-002-06` | — | Hecho |
 | T002-09 | Sustituir el objeto anónimo de `/auth/me` por `CurrentUserDto` con prueba de mapeo | Api | `FR-002-07` | T002-08 | Pendiente |
+| T002-10 | Reducir vigencia JWT a ≤ 15 min (`JwtSettingsValidator`), implementar `RefreshToken` rotatorio en MongoDB (`ux_refresh_tokens_token_hash`, TTL `ttl_refresh_tokens_expires_at`), endpoint `POST /api/v1/auth/refresh` con detección de reutilización, revocación en `/auth/logout` e interceptor `TokenRefreshAuthenticator` en móvil `movil_Rodrigo` (`G-06`) | Domain / Application / Infrastructure / Api / Móvil / Pruebas | `FR-002-02` | — | Completada |
 
 ## Notas de ejecución
 

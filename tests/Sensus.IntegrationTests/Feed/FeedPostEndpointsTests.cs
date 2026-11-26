@@ -62,7 +62,7 @@ public sealed class FeedPostEndpointsTests : IClassFixture<CustomWebApplicationF
 
         HttpResponseMessage response = await _client.PostAsJsonAsync(
             "/api/v1/feed/posts",
-            new { content = "Probando la nueva función del feed social", imageUrl = "https://res.cloudinary.com/sensus/image/upload/v1/sample.jpg" });
+            new { content = "Probando la nueva función del feed social" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         FeedPostDto? post = await response.Content.ReadFromJsonAsync<FeedPostDto>();
@@ -106,6 +106,71 @@ public sealed class FeedPostEndpointsTests : IClassFixture<CustomWebApplicationF
             new { content = "Contenido sin token" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task CreatePost_ReturnsAcceptedAndQuarantinesWithoutUpload_WhenImageModerationQuarantines()
+    {
+        (string token, _) = CreateRegisteredToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _factory.ImageModerationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(false, "Proveedor no disponible", null, "Quarantine"));
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("Post con imagen en espera"), "content");
+        using var fileContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        form.Add(fileContent, "image", "foto.jpg");
+
+        HttpResponseMessage response = await _client.PostAsync("/api/v1/feed/posts", form);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        FeedPostDto? dto = await response.Content.ReadFromJsonAsync<FeedPostDto>();
+        dto.Should().NotBeNull();
+        dto!.Status.Should().Be(FeedPostStatus.Quarantined.ToString());
+        dto.ImageUrl.Should().BeNull();
+        await _factory.MediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _factory.FeedPostRepository.Received(1).AddAsync(
+            Arg.Is<FeedPost>(p => p.Status == FeedPostStatus.Quarantined && p.ImageUrl == null),
+            Arg.Any<CancellationToken>());
+        await _factory.ModerationAuditRepository.Received().AddAsync(
+            Arg.Is<ModerationAuditRecord>(r =>
+                r.TargetType == ModerationTargetType.FeedPost
+                && r.Verdict == ModerationVerdict.Quarantined),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreatePost_ReturnsBadRequestWithoutUpload_WhenImageModerationRejects()
+    {
+        (string token, _) = CreateRegisteredToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _factory.ImageModerationService.ModerateImageBytesAsync(
+                Arg.Any<byte[]>(),
+                Arg.Any<string>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ImageModerationResult(false, "Contenido prohibido", ["violence"], "Rejected"));
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("Post con imagen prohibida"), "content");
+        using var fileContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        form.Add(fileContent, "image", "foto.jpg");
+
+        HttpResponseMessage response = await _client.PostAsync("/api/v1/feed/posts", form);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await _factory.MediaStorage.DidNotReceive().UploadImageAsync(
+            Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _factory.FeedPostRepository.DidNotReceive().AddAsync(
+            Arg.Any<FeedPost>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -258,5 +323,80 @@ public sealed class FeedPostEndpointsTests : IClassFixture<CustomWebApplicationF
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         await _factory.MediaStorage.Received(1).DeleteImageAsync("posts/sample", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreatePost_ReturnsBadRequest_WhenExternalImageUrlSentInJson()
+    {
+        (string token, _) = CreateRegisteredToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Intento de inyectar URL externa", imageUrl = "https://evil.example.com/unmoderated.jpg" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await _factory.FeedPostRepository.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreatePost_ReturnsCreated_WhenApprovedOwnedMediaAssetIdSent()
+    {
+        (string token, User user) = CreateRegisteredToken();
+        MediaAsset asset = MediaAsset.Create(
+            user.Id,
+            "posts/owned-approved",
+            "https://res.cloudinary.com/sensus/image/upload/v1/owned-approved.jpg",
+            "image/jpeg",
+            MediaAssetStatus.Approved,
+            DateTime.UtcNow);
+        _factory.MediaAssetRepository.GetByIdAsync(asset.Id, Arg.Any<CancellationToken>()).Returns(asset);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Publicación con activo aprobado", mediaAssetId = asset.Id });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        FeedPostDto? post = await response.Content.ReadFromJsonAsync<FeedPostDto>();
+        post!.ImageUrl.Should().Be(asset.SecureUrl);
+        await _factory.FeedPostRepository.Received(1).AddAsync(
+            Arg.Is<FeedPost>(p => p.ImagePublicId == "posts/owned-approved" && p.ImageUrl == asset.SecureUrl),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreatePost_ReturnsBadRequest_WhenMediaAssetIsForeignOrNotApproved()
+    {
+        (string token, User user) = CreateRegisteredToken();
+        MediaAsset foreignAsset = MediaAsset.Create(
+            Guid.NewGuid(),
+            "posts/foreign",
+            "https://res.cloudinary.com/sensus/image/upload/v1/foreign.jpg",
+            "image/jpeg",
+            MediaAssetStatus.Approved,
+            DateTime.UtcNow);
+        MediaAsset quarantinedAsset = MediaAsset.Create(
+            user.Id,
+            "posts/quarantined",
+            "https://res.cloudinary.com/sensus/image/upload/v1/quarantined.jpg",
+            "image/jpeg",
+            MediaAssetStatus.Quarantined,
+            DateTime.UtcNow);
+        _factory.MediaAssetRepository.GetByIdAsync(foreignAsset.Id, Arg.Any<CancellationToken>()).Returns(foreignAsset);
+        _factory.MediaAssetRepository.GetByIdAsync(quarantinedAsset.Id, Arg.Any<CancellationToken>()).Returns(quarantinedAsset);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage foreignResp = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Intento con asset ajeno", mediaAssetId = foreignAsset.Id });
+        foreignResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        HttpResponseMessage quarantinedResp = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Intento con asset en cuarentena", mediaAssetId = quarantinedAsset.Id });
+        quarantinedResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await _factory.FeedPostRepository.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
     }
 }

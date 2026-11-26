@@ -17,6 +17,7 @@ public class RegisterComercioCommandHandlerTests
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IModerationAuditRecorder _auditRecorder;
+    private readonly ITextModerationService _textModerationService;
     private readonly RegisterComercioCommandHandler _handler;
 
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -32,6 +33,9 @@ public class RegisterComercioCommandHandlerTests
         _auditRecorder = Substitute.For<IModerationAuditRecorder>();
         _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
             .Returns(Sensus.Domain.Common.Result.Success());
+        _textModerationService = Substitute.For<ITextModerationService>();
+        _textModerationService.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
 
         _dateTimeProvider.UtcNow.Returns(new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc));
 
@@ -45,7 +49,8 @@ public class RegisterComercioCommandHandlerTests
             _geocodingService,
             _jwtTokenGenerator,
             _dateTimeProvider,
-            _auditRecorder);
+            _auditRecorder,
+            textModerationService: _textModerationService);
     }
 
     [Fact]

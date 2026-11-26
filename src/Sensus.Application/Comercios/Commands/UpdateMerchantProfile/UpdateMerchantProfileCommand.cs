@@ -1,5 +1,6 @@
 using MediatR;
 using Sensus.Application.Comercios.DTOs;
+using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Common;
 
 namespace Sensus.Application.Comercios.Commands.UpdateMerchantProfile;
@@ -17,4 +18,4 @@ public sealed record UpdateMerchantProfileCommand(
     double? Latitud = null,
     double? Longitud = null,
     string? FotoFachadaUrl = null,
-    bool? Activo = null) : IRequest<Result<ComercioDto>>;
+    bool? Activo = null) : IRequest<Result<ComercioDto>>, ISensitiveRequest;

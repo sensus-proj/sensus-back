@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 024 Publicaciones del feed"
-  version: 2.1.0
-  description: "Contrato OpenAPI para la creación y eliminación de publicaciones en el feed social (Spec 024). La moderación es síncrona y fail-closed: 201 solo tras veredicto favorable."
+  version: 2.3.0
+  description: "Contrato OpenAPI para la creación y eliminación de publicaciones en el feed social (Spec 024). La moderación es síncrona y fail-closed: 201 tras veredicto favorable, 202 en cuarentena ante indisponibilidad del moderador y 400 ante rechazo explícito."
 servers:
   - url: https://localhost:5001
 paths:
@@ -48,8 +48,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FeedPostResponse"
+        '202':
+          description: "Publicación aceptada en cuarentena por indisponibilidad o timeout del moderador (sin subida de imagen y oculta en el feed)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedPostResponse"
         '400':
-          description: "Solicitud inválida, contenido rechazado o moderador no disponible (fail-closed)"
+          description: "Solicitud inválida, contenido rechazado o falla al persistir auditoría/almacenamiento"
           content:
             application/problem+json:
               schema:
@@ -140,12 +146,12 @@ components:
           minLength: 1
           maxLength: 500
           description: "Alias de content"
-        imageUrl:
+        mediaAssetId:
           type: string
+          format: uuid
           nullable: true
-          format: uri
-          description: "URL o referencia opcional a una imagen ya moderada (flujo JSON)"
-          example: "https://res.cloudinary.com/sensus/image/upload/v1/posts/photo.jpg"
+          description: "Identificador de un MediaAsset previamente aprobado y propiedad del autor autenticado (flujo JSON). No se aceptan URLs externas arbitrarias (imageUrl responde 400)."
+          example: "9d5a3b0e-1f62-4e7a-9b81-2a3f6a7d9102"
 
     FeedPostResponse:
       type: object

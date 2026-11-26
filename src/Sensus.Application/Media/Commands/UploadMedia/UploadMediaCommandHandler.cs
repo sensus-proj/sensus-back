@@ -70,24 +70,34 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
                 Error.Validation("Media.DailyLimitExceeded", "Se ha alcanzado el límite de 20 cargas por usuario y día."));
         }
 
-        // Subir a Cloudinary de forma privada (hasta aprobación) (FR-022-04)
-        Result<MediaUploadResult> uploadResult = await _mediaStorage.UploadImageAsync(
-            request.ImageBytes,
-            request.ContentType,
-            parsedUserId,
-            cancellationToken);
-
-        if (uploadResult.IsFailure)
+        // H2 / constitution §2.4: moderar los bytes ANTES de subir a Cloudinary.
+        ImageModerationResult moderationResult;
+        try
         {
-            return Result.Failure<UploadMediaResponseDto>(uploadResult.Error);
+            ImageModerationResult? rawResult = await _moderationService.ModerateImageBytesAsync(
+                request.ImageBytes,
+                request.ContentType,
+                request.TextContext,
+                cancellationToken);
+            moderationResult = rawResult ?? new ImageModerationResult(
+                false,
+                "La moderación de imágenes devolvió una respuesta nula.",
+                null,
+                "Quarantine");
         }
-
-        // Moderar la imagen antes de exponerla públicamente (FR-022-06)
-        ImageModerationResult moderationResult = await _moderationService.ModerateImageBytesAsync(
-            request.ImageBytes,
-            request.ContentType,
-            request.TextContext,
-            cancellationToken);
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fallo al moderar imagen para el usuario {UserId}; se envía a cuarentena sin subir a Cloudinary.", parsedUserId);
+            moderationResult = new ImageModerationResult(
+                false,
+                "La moderación de imágenes no está disponible; contenido en cuarentena.",
+                null,
+                "Quarantine");
+        }
 
         MediaAssetStatus status = moderationResult is { IsApproved: true, Decision: "Approved" }
             ? MediaAssetStatus.Approved
@@ -95,12 +105,32 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
                 ? MediaAssetStatus.Quarantined
                 : MediaAssetStatus.Rejected;
 
-        // FR-019-02: el contenido rechazado se elimina del almacenamiento y no conserva URL; el que queda en
-        // cuarentena conserva la URL solo de forma interna para una eventual liberación (FR-019-04).
+        string publicId = $"unverified/{Guid.NewGuid():N}";
+        string? secureUrl = null;
+
+        if (status == MediaAssetStatus.Approved)
+        {
+            Result<MediaUploadResult> uploadResult = await _mediaStorage.UploadImageAsync(
+                request.ImageBytes,
+                request.ContentType,
+                parsedUserId,
+                cancellationToken);
+
+            if (uploadResult.IsFailure)
+            {
+                return Result.Failure<UploadMediaResponseDto>(uploadResult.Error);
+            }
+
+            publicId = uploadResult.Value.PublicId;
+            secureUrl = uploadResult.Value.SecureUrl;
+        }
+
+        // Solo las imágenes aprobadas se almacenan en Cloudinary y conservan URL; rechazadas y cuarentena
+        // nunca tocan almacenamiento multimedia externo.
         MediaAsset mediaAsset = MediaAsset.Create(
             parsedUserId,
-            uploadResult.Value.PublicId,
-            status == MediaAssetStatus.Rejected ? null : uploadResult.Value.SecureUrl,
+            publicId,
+            secureUrl,
             request.ContentType,
             status,
             _dateTimeProvider.UtcNow,
@@ -131,16 +161,22 @@ public sealed class UploadMediaCommandHandler : IRequestHandler<UploadMediaComma
         if (status == MediaAssetStatus.Rejected)
         {
             await _auditRecorder.RecordBestEffortAsync(auditEntry, cancellationToken);
-            await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
-            await _cdnCacheInvalidator.InvalidateAsync(uploadResult.Value.PublicId, cancellationToken);
+        }
+        else if (status == MediaAssetStatus.Quarantined)
+        {
+            Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
+            if (auditResult.IsFailure)
+            {
+                return Result.Failure<UploadMediaResponseDto>(auditResult.Error);
+            }
         }
         else
         {
             Result auditResult = await _auditRecorder.RecordAsync(auditEntry, cancellationToken);
             if (auditResult.IsFailure)
             {
-                await _mediaStorage.DeleteImageAsync(uploadResult.Value.PublicId, cancellationToken);
-                await _cdnCacheInvalidator.InvalidateAsync(uploadResult.Value.PublicId, cancellationToken);
+                await _mediaStorage.DeleteImageAsync(publicId, cancellationToken);
+                await _cdnCacheInvalidator.InvalidateAsync(publicId, cancellationToken);
                 return Result.Failure<UploadMediaResponseDto>(auditResult.Error);
             }
         }

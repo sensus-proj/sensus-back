@@ -15,7 +15,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## B. Específicos de este spec
 
 - [x] El contenido no publicado nunca aparece. Lista de permitidos `status = Published` y `isDeleted = false`.
-- [ ] La consulta usa el índice. Se fija con `hint`; la prueba del plan de ejecución está escrita y falta ejecutarla con Docker o en CI.
+- [x] La consulta usa el índice. Se fija con `hint`; `Nearby_QueryPlanUsesDeclaredIndexWithoutCollectionScan` verificada en MongoDB 7.0 real (`IXSCAN` sin `COLLSCAN`).
 - [x] El TTL de caché está documentado (`Redis:TtlByEntityMinutes:Feed`, 5 minutos; `plan.md` §3)
 - [x] Las publicaciones sin ubicación quedan fuera. Sin campo `location`, el `2dsphere` no las indexa y el filtro no las devuelve.
 - [x] La API acepta un radio de 5 km y devuelve 400 por encima del máximo (`CA-026-01`, `CA-026-05`)
@@ -23,7 +23,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde (5/5)
-- [ ] Pruebas unitarias y de integración añadidas y en verde. Unitarias y de endpoint en verde; las de persistencia con Testcontainers no se ejecutaron por falta de Docker local.
+- [x] Pruebas unitarias y de integración añadidas y en verde (incluidas pruebas de persistencia con Testcontainers contra MongoDB 7.0 real).
 - [x] Cobertura ≥ 80 % en Domain y Application (Domain 90,9 %, Application 89,2 % con pruebas unitarias)
 - [x] Contrato OpenAPI actualizado (`contracts/openapi.yaml` v1.1.0)
 - [x] IaC actualizada y `cdk diff` revisado si aplica. No aplica: el índice lo crea `MongoDbContext` y no hay recursos AWS nuevos.
@@ -37,7 +37,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
 - [x] **IV. Seguridad y privacidad** — PASS. El DTO no expone coordenadas ni estado.
-- [ ] **V. Verificación automatizada** — Pendiente de ejecutar las pruebas de persistencia en CI
+- [x] **V. Verificación automatizada** — PASS (`MongoFeedSocialIntegrationTests` ejecutadas y en verde contra MongoDB 7.0 real)
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS. `NFR-026-01` (p95 < 300 ms con caché) pendiente de prueba de carga.
 - [ ] **VIII. DevSecOps de nivel fintech** — STRIDE en `plan.md` §4; faltan los escaneos bloqueantes de CI
@@ -51,11 +51,12 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 | Tareas | [`tasks.md`](tasks.md) | ☑ |
 | Pruebas unitarias | `tests/Sensus.Application.UnitTests/Feed/NearbyFeedTests.cs` | ☑ |
 | Pruebas de integración (endpoint) | `tests/Sensus.IntegrationTests/Feed/NearbyFeedEndpointsTests.cs` | ☑ |
-| Pruebas de integración (MongoDB) | `tests/Sensus.IntegrationTests/Persistence/MongoFeedSocialIntegrationTests.cs` | ☐ |
+| Pruebas de integración (MongoDB) | `tests/Sensus.IntegrationTests/Persistence/MongoFeedSocialIntegrationTests.cs` | ☑ |
 | Contrato OpenAPI | `contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
+| 2026-11-26 | Ejecutor nocturno (D1) | `T026-08` cerrada | `MongoFeedSocialIntegrationTests` ejecutadas y en verde contra MongoDB 7.0 real (`Testcontainers`), validando índice `2dsphere` (`IXSCAN` sin `COLLSCAN`), radio y desempate estable. |
 | 2026-11-25 | Rocio Cruz | Backend completado | Build `-warnaserror` sin advertencias. Unitarias 1174/1174, arquitectura 5/5, E2E 3/3. Integración 643/677: las 34 fallas son `DockerUnavailableException` (Testcontainers), incluidas 5 de esta spec. `dotnet format --verify-no-changes` limpio. Se añadió la ubicación opcional a `POST /api/v1/feed/posts` (contrato de la 024). |

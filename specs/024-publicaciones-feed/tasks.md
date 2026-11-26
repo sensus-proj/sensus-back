@@ -5,8 +5,8 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | En progreso |
-| Versión | 2.1.0 |
+| Estado | Completada |
+| Versión | 2.3.0 |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
@@ -21,7 +21,9 @@
 | T024-06 | Implementar: pruebas unitarias de dominio y aplicación | Pruebas | `FR-024-01`, `FR-024-02`, `FR-024-04`, `FR-024-05` | T024-05 | Completada (`tests/Sensus.Application.UnitTests/Feed/FeedPostsTests.cs` — 12 superadas) |
 | T024-07 | Implementar: pruebas de integración del flujo completo, multipart, purga y persistencia real | Pruebas | `FR-024-01`, `FR-024-02`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07` | T024-06 | Completada (`tests/Sensus.IntegrationTests/Feed/FeedPostEndpointsTests.cs` — 11 superadas; `tests/Sensus.IntegrationTests/Persistence/MongoFeedPostVisibilityLookupTests.cs` — 7 superadas) |
 | T024-08 | Actualizar `checklist.md`, `specs/README.md`, `requirements.md` y `memory.md` | Docs | `FR-024-04` | T024-07 | Completada |
-| T024-09 | Verificar/integrar moderación de solo texto (sin imagen) y moderación conjunta (con imagen) antes de publicar o almacenar multimedia, con cuarentena ante fallos (`constitution.md` v3.0.0) | Application | `FR-024-02` | T024-03, T017-12 | Pendiente |
+| T024-09 | Verificar/integrar moderación de solo texto (sin imagen) y moderación conjunta (con imagen) antes de publicar o almacenar multimedia, con cuarentena ante fallos (`constitution.md` v3.0.0) | Application | `FR-024-02` | T024-03, T017-12 | Completada (`CreateFeedPostCommand.cs`, `ModerationTargetType.FeedPost`) |
+| T024-10 | Rechazar `imageUrl` externa en JSON y validar `mediaAssetId` aprobado del autor (`IMediaAssetRepository`), más actualización móvil `FeedDtos.kt` | Application / Api / Móvil | `FR-024-08` | T024-08 | Completada |
+| T024-11 | Persistir `FeedPostStatus.Quarantined` (202 Accepted) sin subir imagen ante indisponibilidad del moderador, registrar auditoría `FeedPost` y purgar cuarentena vencida (30 d) | Domain / Application / Infrastructure / Api / Pruebas | `FR-024-09` | T024-09 | Completada (`FeedPostsTests`, `FeedPostEndpointsTests`, `MongoFeedSocialIntegrationTests`, `PurgeQuarantinedMediaCommandHandler`) |
 
 ## Notas de ejecución
 

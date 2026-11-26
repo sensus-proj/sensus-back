@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: "Sensus API — Spec 062 Segundo factor TOTP Administrador"
+  version: 1.0.0
+  description: "Enrolamiento TOTP RFC 6238, verificación de desafío y step-up amr=mfa para Administrador."
+servers:
+  - url: https://localhost:5001
+paths:
+  /api/v1/auth/mfa/enroll:
+    post:
+      summary: "Genera secreto TOTP AES-GCM y 8 códigos de recuperación de un solo uso para Administrador"
+      operationId: enrollAdminMfa
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Parámetros de enrolamiento devueltos una sola vez
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [secret, otpauthUri, recoveryCodes]
+                properties:
+                  secret: { type: string }
+                  otpauthUri: { type: string }
+                  recoveryCodes: { type: array, items: { type: string } }
+        '401': { description: No autenticado }
+        '403': { description: No tiene rol Administrador }
+        '409': { description: 2FA ya activado }
+  /api/v1/auth/mfa/verify:
+    post:
+      summary: "Verifica código TOTP o código de recuperación, activa 2FA si estaba pendiente y emite JWT con amr=mfa"
+      operationId: verifyAdminMfa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, minLength: 6, maxLength: 6 }
+                recoveryCode: { type: string, maxLength: 32 }
+      responses:
+        '200': { description: Verificación exitosa con token step-up amr=mfa }
+        '400': { description: Solicitud inválida }
+        '401': { description: Código TOTP inválido o token ausente }
+        '403': { description: Usuario no es Administrador o cuenta bloqueada por intentos fallidos }
+        '429': { description: Límite de tasa excedido }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

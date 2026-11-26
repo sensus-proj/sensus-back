@@ -61,7 +61,19 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(JwtSettings.SectionName))
             .ValidateOnStart();
 
+        services.AddOptions<RefreshTokenSettings>()
+            .Bind(configuration.GetSection(RefreshTokenSettings.SectionName))
+            .Validate(s => s.RefreshTokenDays is >= 1 and <= 90, "JwtSettings:RefreshTokenDays debe estar entre 1 y 90 días.")
+            .ValidateOnStart();
+
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
+
+        // Segundo factor TOTP Administrador (Spec 062, G-05)
+        services.AddOptions<MfaSettings>()
+            .Bind(configuration.GetSection(MfaSettings.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<ITotpService, Rfc6238TotpService>();
 
         // Geocodificación (SE-003)
         services.AddScoped<IGeocodingService, NominatimGeocodingService>();
@@ -295,7 +307,22 @@ public static class DependencyInjection
         services.AddScoped<IFeedSnapshotStore, RedisFeedSnapshotStore>();
         services.AddSingleton<IFeedMetricsPublisher, StructuredFeedMetricsPublisher>();
 
-        // Servicio de migración de SQL a MongoDB Atlas y migración de categorías (FR-034-09)
+        // Servicio de migración de SQL a MongoDB Atlas y migración de categorías (FR-034-09) y límite activo (FR-034-05)
+        services.AddOptions<Sensus.Application.Common.Settings.OfferLimitSettings>()
+            .Bind(configuration.GetSection(Sensus.Application.Common.Settings.OfferLimitSettings.SectionName))
+            .Validate(
+                s => s.MaxActivePerMerchant is >= 1 and <= 1000,
+                "Offers:MaxActivePerMerchant must be between 1 and 1000.")
+            .ValidateOnStart();
+        services.AddOptions<Sensus.Application.Common.Settings.OfferModerationRetrySettings>()
+            .Bind(configuration.GetSection(Sensus.Application.Common.Settings.OfferModerationRetrySettings.SectionName))
+            .Validate(
+                s => s.MaxAttempts is >= 1 and <= 50
+                    && s.RetryDelaySeconds is >= 5 and <= 3600
+                    && s.CheckIntervalSeconds is >= 5 and <= 3600
+                    && s.BatchSize is >= 1 and <= 100,
+                "Moderation:OfferRetry settings are out of allowed range.")
+            .ValidateOnStart();
         services.Configure<Sensus.Application.Common.Settings.OfferCategorySettings>(
             configuration.GetSection(Sensus.Application.Common.Settings.OfferCategorySettings.SectionName));
         services.AddScoped<SqlToMongoMigrationService>();

@@ -29,6 +29,12 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// <summary>Versión de la entidad para control de concurrencia optimista (FR-035-05).</summary>
     public int Version { get; private set; } = 1;
 
+    /// <summary>Reintentos acumulados de moderación diferida (Spec 034, FR-034-07).</summary>
+    public int ModerationRetryCount { get; private set; }
+
+    /// <summary>Próximo instante UTC elegible para re-moderar si está en PendingModeration.</summary>
+    public DateTime? NextModerationRetryAtUtc { get; private set; }
+
     // Constructor privado para persistencia / deserialización
     private Offer() : base()
     {
@@ -182,7 +188,9 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         DateTime? lastModifiedAtUtc = null,
         int viewCount = 0,
         int version = 1,
-        string? category = null)
+        string? category = null,
+        int moderationRetryCount = 0,
+        DateTime? nextModerationRetryAtUtc = null)
     {
         Offer offer = new(
             id,
@@ -204,7 +212,9 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
         {
             LastModifiedAtUtc = lastModifiedAtUtc,
             ViewCount = viewCount,
-            Version = version
+            Version = version,
+            ModerationRetryCount = moderationRetryCount,
+            NextModerationRetryAtUtc = nextModerationRetryAtUtc
         };
 
         return offer;
@@ -388,9 +398,9 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// </summary>
     public Result Expire(DateTime nowUtc)
     {
-        if (Status == OfferStatus.Draft)
+        if (Status is OfferStatus.Draft or OfferStatus.PendingModeration or OfferStatus.Rejected)
         {
-            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "Un borrador debe moderarse antes de salir de ese estado."));
+            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "La oferta debe superar la moderación antes de cambiar de estado."));
         }
 
         if (Status == OfferStatus.Expired)
@@ -484,13 +494,90 @@ public class Offer : BaseAuditableEntity, IAggregateRoot
     /// </summary>
     public Result Archive(DateTime nowUtc)
     {
-        if (Status == OfferStatus.Draft)
+        if (Status is OfferStatus.Draft or OfferStatus.PendingModeration)
         {
-            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "Un borrador debe moderarse antes de salir de ese estado."));
+            return Result.Failure(Error.Conflict("Offer.DraftRequiresModeration", "La oferta debe moderarse antes de salir de ese estado."));
         }
 
         Status = OfferStatus.Archived;
         LastModifiedAtUtc = nowUtc;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Coloca una oferta recién creada en espera de re-moderación diferida (Spec 034, FR-034-07).
+    /// </summary>
+    public Result MarkPendingModeration(DateTime nowUtc, DateTime nextRetryAtUtc)
+    {
+        if (Status != OfferStatus.Published)
+        {
+            return Result.Failure(Error.Conflict("Offer.InvalidTransition", "Solo una oferta pendiente de publicación inicial puede pasar a PendingModeration."));
+        }
+
+        Status = OfferStatus.PendingModeration;
+        ModerationRetryCount = 0;
+        NextModerationRetryAtUtc = DateTime.SpecifyKind(nextRetryAtUtc, DateTimeKind.Utc);
+        LastModifiedAtUtc = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Publica o expira una oferta pendiente tras aprobarse en re-moderación (Spec 034, FR-034-07).
+    /// </summary>
+    public Result ApproveFromModeration(DateTime nowUtc)
+    {
+        if (Status != OfferStatus.PendingModeration)
+        {
+            return Result.Failure(Error.Conflict("Offer.InvalidTransition", "Solo una oferta en PendingModeration puede aprobarse."));
+        }
+
+        DateTime normalizedNow = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        Status = EndsAt <= normalizedNow ? OfferStatus.Expired : OfferStatus.Published;
+        NextModerationRetryAtUtc = null;
+        LastModifiedAtUtc = normalizedNow;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Rechaza definitivamente una oferta en PendingModeration (Spec 034, FR-034-07).
+    /// </summary>
+    public Result RejectFromModeration(DateTime nowUtc)
+    {
+        if (Status != OfferStatus.PendingModeration)
+        {
+            return Result.Failure(Error.Conflict("Offer.InvalidTransition", "Solo una oferta en PendingModeration puede rechazarse."));
+        }
+
+        Status = OfferStatus.Rejected;
+        NextModerationRetryAtUtc = null;
+        LastModifiedAtUtc = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Registra un intento fallido de re-moderación; al agotar el máximo, rechaza fail-closed (Spec 034, FR-034-07).
+    /// </summary>
+    public Result ScheduleModerationRetry(DateTime nowUtc, DateTime nextRetryAtUtc, int maxAttempts)
+    {
+        if (Status != OfferStatus.PendingModeration)
+        {
+            return Result.Failure(Error.Conflict("Offer.InvalidTransition", "Solo una oferta en PendingModeration admite reintento de moderación."));
+        }
+
+        DateTime normalizedNow = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        ModerationRetryCount++;
+        LastModifiedAtUtc = normalizedNow;
+
+        if (ModerationRetryCount >= Math.Max(1, maxAttempts))
+        {
+            Status = OfferStatus.Rejected;
+            NextModerationRetryAtUtc = null;
+        }
+        else
+        {
+            NextModerationRetryAtUtc = DateTime.SpecifyKind(nextRetryAtUtc, DateTimeKind.Utc);
+        }
+
         return Result.Success();
     }
 

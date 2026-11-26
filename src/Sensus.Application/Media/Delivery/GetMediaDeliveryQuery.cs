@@ -13,7 +13,7 @@ namespace Sensus.Application.Media.Delivery;
 /// Ref: FR-023-01 - entrega de contenido; FR-023-02 - validación de firma y TTL; CA-023-03 - 404 si retirado.
 /// </summary>
 public sealed record GetMediaDeliveryQuery(Guid MediaId, long ExpiresUnixSeconds, string? Signature)
-    : IRequest<Result<MediaDeliveryResponse>>;
+    : IRequest<Result<MediaDeliveryResponse>>, ISensitiveRequest;
 
 /// <summary>Ref: FR-023-02 - el identificador del activo es obligatorio.</summary>
 public sealed class GetMediaDeliveryQueryValidator : AbstractValidator<GetMediaDeliveryQuery>

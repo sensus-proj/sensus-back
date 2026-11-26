@@ -131,7 +131,7 @@ public static class FeedEndpoints
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         // Spec 024: Crear publicación en el feed social.
-        // multipart/form-data permite moderar imagen y texto en la misma solicitud; JSON admite una URL ya moderada.
+        // multipart/form-data permite moderar imagen y texto en la misma solicitud; JSON solo acepta mediaAssetId aprobado.
         group.MapPost("/posts", async (
             HttpContext http,
             ISender sender,
@@ -139,6 +139,7 @@ public static class FeedEndpoints
         {
             string content = string.Empty;
             string? imageUrl = null;
+            Guid? mediaAssetId = null;
             byte[]? imageBytes = null;
             string? imageContentType = null;
             double? latitude = null;
@@ -198,13 +199,22 @@ public static class FeedEndpoints
                 CreateFeedPostBody? body = await http.Request.ReadFromJsonAsync<CreateFeedPostBody>(cancellationToken: ct);
                 content = body?.Content ?? body?.Text ?? string.Empty;
                 imageUrl = body?.ImageUrl;
+                mediaAssetId = body?.MediaAssetId ?? body?.MediaId;
                 latitude = body?.Latitude;
                 longitude = body?.Longitude;
             }
 
             Result<FeedPostDto> result = await sender.Send(
-                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType, latitude, longitude),
+                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType, latitude, longitude, mediaAssetId),
                 ct);
+
+            if (result.IsSuccess && string.Equals(
+                result.Value.Status,
+                Sensus.Domain.Enums.FeedPostStatus.Quarantined.ToString(),
+                StringComparison.Ordinal))
+            {
+                return Results.Accepted($"/api/v1/feed/posts/{result.Value.Id}", result.Value);
+            }
 
             return result.ToCreatedAtResult($"/api/v1/feed/posts/{(result.IsSuccess ? result.Value.Id : string.Empty)}");
         })
@@ -213,6 +223,7 @@ public static class FeedEndpoints
         .WithName("CreateFeedPost")
         .WithSummary("Spec 024: Crea una publicación en el feed sujeta a moderación previa obligatoria fail-closed")
         .Produces<FeedPostDto>(StatusCodes.Status201Created)
+        .Produces<FeedPostDto>(StatusCodes.Status202Accepted)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -373,4 +384,6 @@ public sealed record CreateFeedPostBody(
     string? Text = null,
     string? ImageUrl = null,
     double? Latitude = null,
-    double? Longitude = null);
+    double? Longitude = null,
+    Guid? MediaAssetId = null,
+    Guid? MediaId = null);

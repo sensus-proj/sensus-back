@@ -35,6 +35,19 @@ Permitir que el titular elimine su cuenta con confirmación explícita, aplicand
 - Sin PII en logs
 - Purga verificable
 
+### Modelo de amenazas (STRIDE — Principio VIII)
+
+> Spec `Escindida` en las specs **060** y **061** (`constitution.md` §3, `D37`). Las matrices STRIDE completas residen en [`specs/060-baja-logica-cuenta-purga-diferida/plan.md`](../060-baja-logica-cuenta-purga-diferida/plan.md) §4 y [`specs/061-anonimizacion-contenido-cierre-comercial/plan.md`](../061-anonimizacion-contenido-cierre-comercial/plan.md) §4; aquí se consolidan los vectores de entrada compartidos en `DELETE /api/v1/users/account`.
+
+| Amenaza | Escenario | Control existente (con archivo/prueba) | Riesgo residual |
+|---|---|---|---|
+| **S — Spoofing** | Solicitud de eliminación suplantando sesión o reutilizando JWT tras la baja | Reautenticación con contraseña + rotación de `SecurityStamp` verificada en `OnTokenValidated` (`UserEndpoints.cs`, `DeleteAccountEndpointTests.cs`) | Bajo |
+| **T — Tampering** | Mutación parcial que borra cuenta dejando apartados o contenido activo | Flujo orquestado entre `DeleteAccountCommandHandler` (060) y `CloseAccountContentCommandHandler` (061) antes del borrado lógico | Bajo |
+| **R — Repudiation** | Disputas sobre solicitud o ejecución de baja | Eventos `SecurityAudit AccountDeletionRequested` / `AccountContentAnonymized` con `CorrelationId` y copia en `moderation_audit` | Bajo |
+| **I — Information Disclosure** | Exposición de PII en logs o respuesta de eliminación | Respuesta `204 NoContent` vacía; logs con hashes y conteos sin correo ni nombre (`DeleteAccountEndpointTests.cs`) | Bajo |
+| **D — Denial of Service** | Reintentos concurrentes o consultas sin índice en purga diferida | Operación idempotente + límite `SensitiveWritePolicy` e índices `ix_users_deleted_at` / `ix_offer_claims_merchant_status` | Bajo |
+| **E — Elevation of Privilege** | Invocación por sesión `Invitado` o canje posterior a la baja comercial | Política `RegisteredUserPolicy` (`403` para invitado) y expiración previa de apartados activos (`CloseAccountContentCommandHandler`) | Bajo |
+
 ## 5. Observabilidad y rendimiento
 
 - Métricas de eliminaciones y de purgas completadas
