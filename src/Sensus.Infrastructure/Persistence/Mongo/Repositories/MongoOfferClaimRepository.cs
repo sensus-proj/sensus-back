@@ -37,9 +37,7 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
 
     public async Task<int> GetActiveClaimCountAsync(Guid offerId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<OfferClaimDocument>.Filter.And(
-            Builders<OfferClaimDocument>.Filter.Eq(c => c.OfferId, offerId),
-            Builders<OfferClaimDocument>.Filter.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+        var filter = BuildActiveCountFilter(offerId);
 
         return (int)await _context.OfferClaims.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
     }
@@ -56,9 +54,10 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
 
         // FR-037-03 y NFR-037-02: una sola consulta con IN sobre el lote de la página; nunca una
         // consulta por oferta. La proyección evita traer hashes de código ni datos de usuario.
-        var filter = Builders<OfferClaimDocument>.Filter.In(c => c.OfferId, ids);
+        var filter = BuildOfferBatchFilter(ids);
         var projection = Builders<OfferClaimDocument>.Projection
             .Include(c => c.OfferId)
+            .Include(c => c.OfferIds)
             .Include(c => c.Status);
 
         List<OfferClaimCountProjection> claims = await _context.OfferClaims
@@ -66,19 +65,33 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
             .Project<OfferClaimCountProjection>(projection)
             .ToListAsync(cancellationToken);
 
-        return claims
-            .GroupBy(c => c.OfferId)
-            .ToDictionary(
-                group => group.Key,
-                group => new OfferClaimCounts(
-                    group.Count(c => string.Equals(
-                        c.Status,
-                        OfferClaimStatus.Active.ToString(),
-                        StringComparison.OrdinalIgnoreCase)),
-                    group.Count(c => string.Equals(
-                        c.Status,
-                        OfferClaimStatus.Redeemed.ToString(),
-                        StringComparison.OrdinalIgnoreCase))));
+        var idSet = ids.ToHashSet();
+        var counts = new Dictionary<Guid, (int Active, int Redeemed)>();
+        foreach (OfferClaimCountProjection claim in claims)
+        {
+            bool isActive = string.Equals(claim.Status, OfferClaimStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase);
+            bool isRedeemed = string.Equals(claim.Status, OfferClaimStatus.Redeemed.ToString(), StringComparison.OrdinalIgnoreCase);
+            if (!isActive && !isRedeemed)
+            {
+                continue;
+            }
+
+            IEnumerable<Guid> coveredIds = claim.OfferIds is { Count: > 0 }
+                ? claim.OfferIds
+                : [claim.OfferId];
+
+            foreach (Guid coveredId in coveredIds.Where(idSet.Contains).Distinct())
+            {
+                counts.TryGetValue(coveredId, out var current);
+                counts[coveredId] = (
+                    current.Active + (isActive ? 1 : 0),
+                    current.Redeemed + (isRedeemed ? 1 : 0));
+            }
+        }
+
+        return counts.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new OfferClaimCounts(kvp.Value.Active, kvp.Value.Redeemed));
     }
 
     public async Task<OfferClaim?> GetActiveByUserAndOfferAsync(
@@ -86,16 +99,77 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
         Guid offerId,
         CancellationToken cancellationToken = default)
     {
-        var filter = Builders<OfferClaimDocument>.Filter.And(
-            Builders<OfferClaimDocument>.Filter.Eq(c => c.UserId, userId),
-            Builders<OfferClaimDocument>.Filter.Eq(c => c.OfferId, offerId),
-            Builders<OfferClaimDocument>.Filter.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+        var filter = BuildActiveByUserAndOfferFilter(userId, offerId);
 
         OfferClaimDocument? document = await _context.OfferClaims
             .Find(filter)
             .FirstOrDefaultAsync(cancellationToken);
 
         return document?.ToDomain();
+    }
+
+    public async Task<OfferClaim?> GetActiveByUserAndAnyOfferAsync(
+        Guid userId,
+        IEnumerable<Guid> offerIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> ids = offerIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return null;
+        }
+
+        var filter = BuildActiveByUserAndAnyOfferFilter(userId, ids);
+
+        OfferClaimDocument? document = await _context.OfferClaims
+            .Find(filter)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return document?.ToDomain();
+    }
+
+    internal static FilterDefinition<OfferClaimDocument> BuildActiveCountFilter(Guid offerId)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        return filterBuilder.And(
+            BuildSingleOfferMatchFilter(offerId),
+            filterBuilder.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+    }
+
+    internal static FilterDefinition<OfferClaimDocument> BuildOfferBatchFilter(IReadOnlyCollection<Guid> ids)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        return filterBuilder.Or(
+            filterBuilder.In(c => c.OfferId, ids),
+            filterBuilder.AnyIn(c => c.OfferIds!, ids));
+    }
+
+    internal static FilterDefinition<OfferClaimDocument> BuildActiveByUserAndOfferFilter(Guid userId, Guid offerId)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        return filterBuilder.And(
+            filterBuilder.Eq(c => c.UserId, userId),
+            BuildSingleOfferMatchFilter(offerId),
+            filterBuilder.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+    }
+
+    internal static FilterDefinition<OfferClaimDocument> BuildActiveByUserAndAnyOfferFilter(
+        Guid userId,
+        IReadOnlyCollection<Guid> ids)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        return filterBuilder.And(
+            filterBuilder.Eq(c => c.UserId, userId),
+            BuildOfferBatchFilter(ids),
+            filterBuilder.Eq(c => c.Status, OfferClaimStatus.Active.ToString()));
+    }
+
+    private static FilterDefinition<OfferClaimDocument> BuildSingleOfferMatchFilter(Guid offerId)
+    {
+        var filterBuilder = Builders<OfferClaimDocument>.Filter;
+        return filterBuilder.Or(
+            filterBuilder.Eq(c => c.OfferId, offerId),
+            filterBuilder.AnyEq(c => c.OfferIds!, offerId));
     }
 
     public async Task<OfferClaim?> GetByCodeHashAsync(string codeHash, CancellationToken cancellationToken = default)
@@ -245,6 +319,11 @@ public sealed class MongoOfferClaimRepository : IOfferClaimRepository
         [BsonElement("offerId")]
         [BsonRepresentation(BsonType.String)]
         public Guid OfferId { get; set; }
+
+        [BsonElement("offerIds")]
+        [BsonRepresentation(BsonType.String)]
+        [BsonIgnoreIfNull]
+        public List<Guid>? OfferIds { get; set; }
 
         [BsonElement("status")]
         public string Status { get; set; } = string.Empty;

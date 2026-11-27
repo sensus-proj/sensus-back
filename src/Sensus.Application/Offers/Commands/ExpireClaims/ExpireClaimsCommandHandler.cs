@@ -41,9 +41,11 @@ public sealed class ExpireClaimsCommandHandler : IRequestHandler<ExpireClaimsCom
             cancellationToken);
 
         int returnedUnits = 0;
-        foreach (IGrouping<Guid, OfferClaim> group in expiredClaims.GroupBy(c => c.OfferId))
+        foreach (IGrouping<Guid, (Guid OfferId, int Quantity)> group in expiredClaims
+                     .SelectMany(c => c.EffectiveItems.Select(item => (item.OfferId, item.Quantity)))
+                     .GroupBy(item => item.OfferId))
         {
-            int units = group.Count();
+            int units = group.Sum(item => item.Quantity);
             bool returned = await _offerRepository.ReturnStockAsync(group.Key, units, cancellationToken);
             if (returned)
             {

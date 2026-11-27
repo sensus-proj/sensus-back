@@ -223,6 +223,40 @@ public sealed class MongoOfferRepository : IOfferRepository
         return result.ModifiedCount == 1;
     }
 
+    public async Task<bool> TryReserveStockAsync(
+        Guid offerId,
+        int quantity,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity <= 0)
+        {
+            return false;
+        }
+
+        if (quantity == 1)
+        {
+            return await TryReserveStockAsync(offerId, nowUtc, cancellationToken);
+        }
+
+        DateTime utcNow = DateTime.SpecifyKind(nowUtc.ToUniversalTime(), DateTimeKind.Utc);
+        var filter = Builders<OfferDocument>.Filter.And(
+            Builders<OfferDocument>.Filter.Eq(o => o.Id, offerId),
+            Builders<OfferDocument>.Filter.Eq(o => o.Status, OfferStatus.Published.ToString()),
+            Builders<OfferDocument>.Filter.Lte(o => o.StartsAt, utcNow),
+            Builders<OfferDocument>.Filter.Gt(o => o.EndsAt, utcNow),
+            Builders<OfferDocument>.Filter.Gte(o => o.Stock, quantity));
+
+        var update = Builders<OfferDocument>.Update.Inc(o => o.Stock, -quantity);
+
+        UpdateResult result = await _context.Offers.UpdateOneAsync(
+            filter,
+            update,
+            cancellationToken: cancellationToken);
+
+        return result.ModifiedCount == 1;
+    }
+
     /// <summary>
     /// Cuenta las ofertas publicadas y vigentes de un comercio usando el índice compuesto
     /// <c>ix_offers_merchant_status_ends_at</c> (Spec 034, FR-034-05).

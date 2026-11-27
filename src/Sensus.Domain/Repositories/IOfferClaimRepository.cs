@@ -32,6 +32,12 @@ public interface IOfferClaimRepository
         Guid offerId,
         CancellationToken cancellationToken = default);
 
+    Task<OfferClaim?> GetActiveByUserAndAnyOfferAsync(
+        Guid userId,
+        IEnumerable<Guid> offerIds,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<OfferClaim?>(null);
+
     Task<OfferClaim?> GetByCodeHashAsync(string codeHash, CancellationToken cancellationToken = default);
 
     /// <summary>

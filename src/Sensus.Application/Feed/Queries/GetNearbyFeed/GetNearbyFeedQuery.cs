@@ -66,16 +66,25 @@ public sealed class GetNearbyFeedQueryHandler
 {
     private readonly IFeedPostRepository _postRepository;
     private readonly ICacheService? _cacheService;
+    private readonly ICurrentUserService? _currentUserService;
+    private readonly IFeedPostLikeRepository? _likeRepository;
+    private readonly IFeedCommentRepository? _commentRepository;
     private readonly ILogger<GetNearbyFeedQueryHandler> _logger;
 
     public GetNearbyFeedQueryHandler(
         IFeedPostRepository postRepository,
         ILogger<GetNearbyFeedQueryHandler> logger,
-        ICacheService? cacheService = null)
+        ICacheService? cacheService = null,
+        ICurrentUserService? currentUserService = null,
+        IFeedPostLikeRepository? likeRepository = null,
+        IFeedCommentRepository? commentRepository = null)
     {
         _postRepository = postRepository;
         _logger = logger;
         _cacheService = cacheService;
+        _currentUserService = currentUserService;
+        _likeRepository = likeRepository;
+        _commentRepository = commentRepository;
     }
 
     public async Task<Result<PagedResult<NearbyFeedPostDto>>> Handle(
@@ -86,15 +95,14 @@ public sealed class GetNearbyFeedQueryHandler
         double longitude = Math.Round(request.Longitude, NearbyFeedPolicy.CoordinateDecimals);
         string cacheKey = FeedCacheKeys.Nearby(latitude, longitude, request.RadiusKm, request.Page, request.PageSize);
 
-        if (_cacheService is not null)
+        NearbyFeedCacheEntry? entry = _cacheService is not null
+            ? await _cacheService.GetAsync<NearbyFeedCacheEntry>(cacheKey, cancellationToken)
+            : null;
+
+        if (entry is not null)
         {
-            NearbyFeedCacheEntry? cached = await _cacheService.GetAsync<NearbyFeedCacheEntry>(cacheKey, cancellationToken);
-            if (cached is not null)
-            {
-                // Sin coordenadas en los registros (STRIDE: divulgación).
-                _logger.LogDebug("Feed cercano servido desde caché (página {Page})", request.Page);
-                return Result.Success(ToPage(cached, request));
-            }
+            _logger.LogDebug("Feed cercano servido desde caché (página {Page})", request.Page);
+            return Result.Success(await EnrichPageAsync(entry, request, cancellationToken));
         }
 
         (IReadOnlyList<FeedPost> posts, int totalCount) = await _postRepository.GetPublishedNearbyPagedAsync(
@@ -105,7 +113,7 @@ public sealed class GetNearbyFeedQueryHandler
             request.PageSize,
             cancellationToken);
 
-        var entry = new NearbyFeedCacheEntry(posts.Select(p => p.ToNearbyDto()).ToList(), totalCount);
+        entry = new NearbyFeedCacheEntry(posts.Select(p => p.ToNearbyDto()).ToList(), totalCount);
 
         if (_cacheService is not null)
         {
@@ -113,9 +121,46 @@ public sealed class GetNearbyFeedQueryHandler
         }
 
         _logger.LogDebug("Feed cercano consultado en base de datos (página {Page}, total {Total})", request.Page, totalCount);
-        return Result.Success(ToPage(entry, request));
+        return Result.Success(await EnrichPageAsync(entry, request, cancellationToken));
     }
 
-    private static PagedResult<NearbyFeedPostDto> ToPage(NearbyFeedCacheEntry entry, GetNearbyFeedQuery request) =>
-        new(entry.Items, entry.TotalCount, request.Page, request.PageSize);
+    private async Task<PagedResult<NearbyFeedPostDto>> EnrichPageAsync(
+        NearbyFeedCacheEntry entry,
+        GetNearbyFeedQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (entry.Items.Count == 0)
+        {
+            return new PagedResult<NearbyFeedPostDto>(entry.Items, entry.TotalCount, request.Page, request.PageSize);
+        }
+
+        IReadOnlyList<Guid> postIds = entry.Items.Select(p => p.Id).ToList();
+        Guid? viewerId = Guid.TryParse(_currentUserService?.UserId, out Guid parsedUserId) && parsedUserId != Guid.Empty
+            ? parsedUserId
+            : null;
+
+        IReadOnlyDictionary<Guid, int> likeCounts = _likeRepository is not null
+            ? await _likeRepository.CountByPostIdsAsync(postIds, cancellationToken)
+            : new Dictionary<Guid, int>();
+
+        IReadOnlyDictionary<Guid, int> commentCounts = _commentRepository is not null
+            ? await _commentRepository.CountByPostIdsAsync(postIds, cancellationToken)
+            : new Dictionary<Guid, int>();
+
+        IReadOnlySet<Guid> likedIds = viewerId.HasValue && _likeRepository is not null
+            ? await _likeRepository.GetLikedPostIdsByUserAsync(viewerId.Value, postIds, cancellationToken)
+            : new HashSet<Guid>();
+
+        IReadOnlyList<NearbyFeedPostDto> enriched = entry.Items
+            .Select(item => item with
+            {
+                LikesCount = likeCounts.TryGetValue(item.Id, out int likes) ? likes : item.LikesCount,
+                CommentsCount = commentCounts.TryGetValue(item.Id, out int comments) ? comments : item.CommentsCount,
+                IsLikedByMe = likedIds.Contains(item.Id),
+                IsMine = viewerId.HasValue && item.AuthorUserId == viewerId.Value
+            })
+            .ToList();
+
+        return new PagedResult<NearbyFeedPostDto>(enriched, entry.TotalCount, request.Page, request.PageSize);
+    }
 }

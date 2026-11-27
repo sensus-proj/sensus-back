@@ -22,6 +22,7 @@
 | T026-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-026-01` | T026-07 | Completada. `NearbyFeedEndpointsTests` y `MongoFeedSocialIntegrationTests` (filtro, radio, desempate, plan `2dsphere`) en verde contra MongoDB 7.0 real. |
 | T026-09 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-026-01` | T026-08 | Completada |
 | T026-10 | Registrar evidencias del Constitution Check | Docs | `FR-026-01` | T026-09 | Completada (`plan.md` §4 STRIDE; `ci.yml` gitleaks/Snyk/SonarCloud/cdk-nag/SBOM CycloneDX y `dast-zap.yml`, corrida verde `4a00d24`) |
+| T026-11 | Enriquecer `NearbyFeedPostDto` en lote con etiqueta de comercio (`merchantId`, `merchantName`) e interacciones (`likesCount`, `commentsCount`, `isLikedByMe`, `isMine`) | Application / Infrastructure / Pruebas | `FR-026-07` | T026-02 | Completada (`GetNearbyFeedQuery.cs`, `MongoFeedPostLikeRepository.cs`, `MongoFeedCommentRepository.cs`, `NearbyFeedTests`) |
 
 ## Notas de ejecución
 

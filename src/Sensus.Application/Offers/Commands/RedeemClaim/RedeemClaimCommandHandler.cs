@@ -89,7 +89,9 @@ public sealed class RedeemClaimCommandHandler : IRequestHandler<RedeemClaimComma
             claim.Id,
             claim.OfferId,
             claim.MerchantId,
-            claim.RedeemedAtUtc ?? now));
+            claim.RedeemedAtUtc ?? now,
+            claim.TotalUnits,
+            ClaimOffer.OfferClaimFlow.ToItemDtos(claim)));
     }
 
     private async Task<bool> ReleaseStockIfJustExpiredAsync(
@@ -102,7 +104,11 @@ public sealed class RedeemClaimCommandHandler : IRequestHandler<RedeemClaimComma
             return false;
         }
 
-        await _offerRepository.ReturnStockAsync(claim.OfferId, 1, cancellationToken);
+        foreach (var item in claim.EffectiveItems)
+        {
+            await _offerRepository.ReturnStockAsync(item.OfferId, item.Quantity, cancellationToken);
+        }
+
         return true;
     }
 }

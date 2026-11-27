@@ -25,6 +25,7 @@
 | T022-11 | Registrar evidencias del Constitution Check | Docs | `FR-022-01` | T022-10 | Implementado |
 | T022-12 | Moderar bytes ANTES de subir a Cloudinary en `UploadMediaCommandHandler`, firmar `type=authenticated` en `CloudinaryMediaStorage`, agregar pruebas `MediaEndpointsTests`/`CloudinaryMediaStorageTests`, documentar migración de activos públicos y eliminar bypass directo en móvil `movil_Rodrigo` | Application / Infrastructure / Api / Móvil / Pruebas | `FR-022-04`, `FR-022-06` | T022-09 | Completada |
 | T022-13 | Retirar `POST /api/v1/users/photo-signature` con `410 Gone`, eliminar `GeneratePhotoSignatureCommand` e incorporar `IsApprovedOwnedUrlAsync` con índice `ix_media_assets_owner_secure_url` | Domain / Application / Infrastructure / Api | `FR-022-08` | T022-12 | Completada (`UserEndpoints.cs`, `MongoMediaAssetRepository.cs`, `MongoMediaAssetRepositoryTests`, `ProfileEndpointsTests`) |
+| T022-14 | Aceptar `Approved` con `flagged_categories=[]` en ChatVision de imágenes limpias cuando `category_scores` viene vacío u omitido | Infrastructure / Pruebas | `FR-022-09` | T022-12 | Completada (`OpenAiImageModerationService.cs`, `OpenAiImageModerationServiceTests`) |
 
 ## Notas de ejecución
 

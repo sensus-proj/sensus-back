@@ -18,7 +18,8 @@ public sealed record CreateFeedPostCommand(
     string? ImageContentType = null,
     double? Latitude = null,
     double? Longitude = null,
-    Guid? MediaAssetId = null) : IRequest<Result<FeedPostDto>>, ISensitiveRequest;
+    Guid? MediaAssetId = null,
+    Guid? MerchantId = null) : IRequest<Result<FeedPostDto>>, ISensitiveRequest;
 
 public sealed class CreateFeedPostCommandValidator : AbstractValidator<CreateFeedPostCommand>
 {
@@ -61,6 +62,7 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
     private readonly ICacheService? _cacheService;
     private readonly IMediaAssetRepository? _mediaAssetRepository;
     private readonly IModerationAuditRecorder? _auditRecorder;
+    private readonly IComercioRepository? _comercioRepository;
     private readonly ILogger<CreateFeedPostCommandHandler> _logger;
 
     public CreateFeedPostCommandHandler(
@@ -74,7 +76,8 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         IMediaStorage? mediaStorage = null,
         ICacheService? cacheService = null,
         IMediaAssetRepository? mediaAssetRepository = null,
-        IModerationAuditRecorder? auditRecorder = null)
+        IModerationAuditRecorder? auditRecorder = null,
+        IComercioRepository? comercioRepository = null)
     {
         _cacheService = cacheService;
         _mediaAssetRepository = mediaAssetRepository;
@@ -87,6 +90,7 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         _imageModerationService = imageModerationService;
         _mediaStorage = mediaStorage;
         _auditRecorder = auditRecorder;
+        _comercioRepository = comercioRepository;
     }
 
     public async Task<Result<FeedPostDto>> Handle(
@@ -114,6 +118,26 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         string authorDisplayName = !string.IsNullOrWhiteSpace(author?.NombreCompleto)
             ? author.NombreCompleto
             : FeedPost.DefaultAuthorDisplayName;
+        Guid? resolvedMerchantId = null;
+        string? resolvedMerchantName = null;
+        if (request.MerchantId.HasValue)
+        {
+            if (request.MerchantId.Value == Guid.Empty || _comercioRepository is null)
+            {
+                return Result.Failure<FeedPostDto>(
+                    Error.Validation("FeedPost.InvalidMerchant", "El comercio etiquetado no es válido."));
+            }
+
+            Comercio? comercio = await _comercioRepository.GetByIdAsync(request.MerchantId.Value, cancellationToken);
+            if (comercio is null || !comercio.Activo)
+            {
+                return Result.Failure<FeedPostDto>(
+                    Error.Validation("FeedPost.MerchantNotFound", "El comercio etiquetado no existe o no está activo."));
+            }
+
+            resolvedMerchantId = comercio.Id;
+            resolvedMerchantName = comercio.NombreComercial;
+        }
         Guid postId = Guid.NewGuid();
 
         // Moderación de texto preventiva (fail-closed, FR-024-02 / FR-024-09).
@@ -147,6 +171,8 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
                     textAudit,
                     request.Latitude,
                     request.Longitude,
+                    resolvedMerchantId,
+                    resolvedMerchantName,
                     cancellationToken);
             }
 
@@ -198,6 +224,8 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
                         imageAudit,
                         request.Latitude,
                         request.Longitude,
+                        resolvedMerchantId,
+                        resolvedMerchantName,
                         cancellationToken);
                 }
 
@@ -299,7 +327,9 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             status: FeedPostStatus.Published,
             imagePublicId: imagePublicId,
             latitude: request.Latitude,
-            longitude: request.Longitude);
+            longitude: request.Longitude,
+            merchantId: resolvedMerchantId,
+            merchantName: resolvedMerchantName);
 
         if (entityResult.IsFailure)
         {
@@ -376,6 +406,8 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
         ModerationAuditEntry auditEntry,
         double? latitude,
         double? longitude,
+        Guid? merchantId,
+        string? merchantName,
         CancellationToken cancellationToken)
     {
         if (_auditRecorder is not null)
@@ -394,7 +426,9 @@ public sealed class CreateFeedPostCommandHandler : IRequestHandler<CreateFeedPos
             status: FeedPostStatus.Quarantined,
             imagePublicId: null,
             latitude: latitude,
-            longitude: longitude);
+            longitude: longitude,
+            merchantId: merchantId,
+            merchantName: merchantName);
 
         if (entityResult.IsFailure)
         {
