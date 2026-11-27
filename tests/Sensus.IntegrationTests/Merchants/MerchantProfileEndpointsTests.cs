@@ -449,4 +449,85 @@ public class MerchantProfileEndpointsTests : IClassFixture<CustomWebApplicationF
         limited.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         limited.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
+
+    [Fact]
+    public async Task ActivateMerchant_ShouldReturnConflict_WhenUserAlreadyHasComercio()
+    {
+        var user = User.Create("Comerciante Dup", "dup@comercio.com", "pw", true, DateTime.UtcNow).Value;
+        _factory.UserRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _factory.ComercioRepository.ExistsByUsuarioIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(true);
+
+        var token = CreateTokenForUser(user);
+        var command = new RegisterComercioCommand("Panadería", "Av. Hidalgo 45", "42800", null, 20.05, -99.34);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/merchants/activate")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task GetMyMerchant_ShouldReturnNotFound_WhenMerchantDoesNotExist()
+    {
+        var merchantUser = User.Create("Sin Comercio", "nocomer@comercio.com", "pw", true, DateTime.UtcNow).Value;
+        merchantUser.AddRole(RoleType.Comerciante);
+
+        _factory.UserRepository.GetByIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns(merchantUser);
+        _factory.ComercioRepository.GetByUsuarioIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns((Comercio?)null);
+
+        var token = CreateTokenForUser(merchantUser);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/merchants/me");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateMerchantProfile_ShouldReturnBadRequest_WhenCategoryIsInvalid()
+    {
+        var merchantUser = User.Create("Comerciante Cat", "badcat@comercio.com", "pw", true, DateTime.UtcNow).Value;
+        merchantUser.AddRole(RoleType.Comerciante);
+        _factory.UserRepository.GetByIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns(merchantUser);
+
+        var token = CreateTokenForUser(merchantUser);
+        var command = new UpdateMerchantProfileCommand("Tienda", "Calle Correcta 123", "06600", null, "CategoriaInexistente");
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/merchants/profile")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateMerchantProfile_ShouldReturnBadRequest_WhenCoordinatesOutOfRange()
+    {
+        var merchantUser = User.Create("Comerciante Coords", "badcoords.edit@comercio.com", "pw", true, DateTime.UtcNow).Value;
+        merchantUser.AddRole(RoleType.Comerciante);
+        _factory.UserRepository.GetByIdAsync(merchantUser.Id, Arg.Any<CancellationToken>()).Returns(merchantUser);
+
+        var token = CreateTokenForUser(merchantUser);
+        var command = new UpdateMerchantProfileCommand("Tienda", "Calle Correcta 123", "06600", null, null, 95.0, -99.13);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/merchants/profile")
+        {
+            Content = JsonContent.Create(command)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

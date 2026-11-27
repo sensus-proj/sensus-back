@@ -9,7 +9,7 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] Modelo de amenazas STRIDE en el plan
 - [x] Spec 054 (intereses) implementada o con su puerto disponible
 - [x] Spec 055 (interacciones) con su puerto disponible
-- [ ] Aviso de privacidad actualizado con la personalización del feed (landing y FT-23 — FT-23 se implementa en móvil Paso 8)
+- [ ] Aviso de privacidad actualizado con la personalización del feed (acción del usuario: actualizar aviso de privacidad en landing y FT-23 móvil; ver plan cierre §5.Z-13)
 
 ## B. Específicos de este spec
 
@@ -25,7 +25,7 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] Pruebas unitarias e integración en verde; cobertura ≥ 80 % en Domain y Application
 - [x] Test de arquitectura en verde
 - [x] Logs con `correlation-id` y sin PII
-- [ ] NFR-042-01 a NFR-042-07 verificados (NFR-042-03..07 verificados con fixture §7.1; NFR-042-01/02 de latencia p95 quedan en brecha `G-13`)
+- [ ] NFR-042-01 a NFR-042-07 verificados (NFR-042-03..07 verificados con fixture §7.1; NFR-042-01/02 de latencia p95 en G-13; acción del usuario: ejecutar load-smoke.mjs diurno a 5 rps sin /ai; ver plan cierre §5.Z-10)
 - [x] Constitution Check en PASS tras la implementación
 - [x] `memory.md` actualizado
 

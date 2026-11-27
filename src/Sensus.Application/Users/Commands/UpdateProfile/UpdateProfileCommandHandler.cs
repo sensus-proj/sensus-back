@@ -21,6 +21,7 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
     private readonly IProfileImageStorage? _imageStorage;
     private readonly ICacheService? _cacheService;
     private readonly ITextModerationService? _textModerationService;
+    private readonly IMediaAssetRepository? _mediaAssetRepository;
 
     public UpdateProfileCommandHandler(
         IUserRepository userRepository,
@@ -29,7 +30,8 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
         ICdnCacheInvalidator cdnCacheInvalidator,
         IProfileImageStorage? imageStorage = null,
         ICacheService? cacheService = null,
-        ITextModerationService? textModerationService = null)
+        ITextModerationService? textModerationService = null,
+        IMediaAssetRepository? mediaAssetRepository = null)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
@@ -38,6 +40,7 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
         _imageStorage = imageStorage;
         _cacheService = cacheService;
         _textModerationService = textModerationService;
+        _mediaAssetRepository = mediaAssetRepository;
     }
 
     public async Task<Result<UserDto>> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -86,8 +89,23 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
         }
 
         var previousPhotoUrl = user.FotoPerfilUrl;
+        string? normalizedPhotoUrl = string.IsNullOrWhiteSpace(request.FotoPerfilUrl)
+            ? null
+            : request.FotoPerfilUrl.Trim();
 
-        var updateResult = user.UpdateProfile(request.NombreCompleto, request.FotoPerfilUrl);
+        if (normalizedPhotoUrl is not null)
+        {
+            bool isApprovedOwned = _mediaAssetRepository is not null &&
+                await _mediaAssetRepository.IsApprovedOwnedUrlAsync(user.Id, normalizedPhotoUrl, cancellationToken);
+            if (!isApprovedOwned)
+            {
+                return Result.Failure<UserDto>(Error.Validation(
+                    "Profile.PhotoNotModerated",
+                    "La foto de perfil debe haber sido subida y aprobada mediante el servicio de multimedia."));
+            }
+        }
+
+        var updateResult = user.UpdateProfile(request.NombreCompleto, normalizedPhotoUrl);
         if (updateResult.IsFailure)
         {
             return Result.Failure<UserDto>(updateResult.Error);

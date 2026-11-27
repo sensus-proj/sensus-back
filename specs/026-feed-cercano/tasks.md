@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Backend completado |
+| Estado | Completado |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
@@ -21,7 +21,7 @@
 | T026-07 | Validar radio y paginación | Api | `FR-026-04` | T026-06 | Completada. Radio 0 < r ≤ 5 km, coordenadas finitas y en rango, página ≥ 1, tamaño 1–100. |
 | T026-08 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-026-01` | T026-07 | Completada. `NearbyFeedEndpointsTests` y `MongoFeedSocialIntegrationTests` (filtro, radio, desempate, plan `2dsphere`) en verde contra MongoDB 7.0 real. |
 | T026-09 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-026-01` | T026-08 | Completada |
-| T026-10 | Registrar evidencias del Constitution Check | Docs | `FR-026-01` | T026-09 | Parcial. Principio VIII pendiente de los escaneos bloqueantes de CI. |
+| T026-10 | Registrar evidencias del Constitution Check | Docs | `FR-026-01` | T026-09 | Completada (`plan.md` §4 STRIDE; `ci.yml` gitleaks/Snyk/SonarCloud/cdk-nag/SBOM CycloneDX y `dast-zap.yml`, corrida verde `4a00d24`) |
 
 ## Notas de ejecución
 

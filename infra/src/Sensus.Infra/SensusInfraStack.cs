@@ -46,6 +46,16 @@ public sealed partial class SensusInfraStack : Stack
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture,
             out var parsedBudget) ? parsedBudget : 40.0;
+        var apiThrottleRate = double.TryParse(
+            Node.TryGetContext("apiThrottleRate")?.ToString(),
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var parsedThrottleRate) && parsedThrottleRate > 0 ? parsedThrottleRate : 50.0;
+        var apiThrottleBurst = int.TryParse(
+            Node.TryGetContext("apiThrottleBurst")?.ToString(),
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var parsedThrottleBurst) && parsedThrottleBurst > 0 ? parsedThrottleBurst : 100;
 
         // 1. Grupo de Logs en Amazon CloudWatch con retención de 7 días (FR-045-05, NFR-045-03)
         // Garantiza mantenerse permanentemente dentro de los 5 GB gratuitos de CloudWatch.
@@ -199,7 +209,12 @@ public sealed partial class SensusInfraStack : Stack
         {
             ApiId = httpApi.Ref,
             StageName = "$default",
-            AutoDeploy = true
+            AutoDeploy = true,
+            DefaultRouteSettings = new CfnStage.RouteSettingsProperty
+            {
+                ThrottlingRateLimit = apiThrottleRate,
+                ThrottlingBurstLimit = apiThrottleBurst
+            }
         });
         defaultStage.Node.AddDependency(defaultRoute);
 

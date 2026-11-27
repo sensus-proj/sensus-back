@@ -18,7 +18,7 @@
 | T050-04 | Exponer endpoints `/api/v1/friends` y `/api/v1/offers/{offerId}/share` en `FriendEndpoints.cs` y registrar en `Program.cs` | Api | NFR-050-01, NFR-050-02 | T050-02, T050-03 | Hecha |
 | T050-05 | Añadir `FriendHandlersTests`, `SharedOffer` tests, `FriendEndpointsIntegrationTests` y fakes en `Sensus.TestKit` | Tests | NFR-050-03 | T050-02 | Hecha |
 | T050-06 | Agregar entidad `SharedOffer`, `ISharedOfferRepository`, enriquecimiento de `FotoPerfilUrl` y compartición 1..10 amigos | Domain / App / Infra / Api | FR-050-07 | T050-04 | Hecha |
-| T050-07 | Desplegar cambios en AWS API Gateway / Lambda y validar con MongoDB real | Infra / Ops | NFR-050-01 | T050-04 | Pendiente |
+| T050-07 | Desplegar cambios en AWS API Gateway / Lambda y validar con MongoDB real | Infra / Ops | NFR-050-01 | T050-04 | Pendiente (acción del usuario: validar amigos en vivo post-despliegue; ver plan cierre §5.Z-9) |
 
 ## Notas de ejecución
 

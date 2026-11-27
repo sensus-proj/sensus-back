@@ -358,6 +358,20 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Configurar Python para pruebas de night-switch (Spec 051)
+        if: steps.check_infra.outputs.exists == 'true'
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Probar pausa nocturna (Spec 051)
+        if: steps.check_infra.outputs.exists == 'true'
+        run: python -m unittest discover -s infra/assets/night-switch -p "test_*.py"
+
+      - name: Probar stack CDK (Spec 045)
+        if: steps.check_infra.outputs.exists == 'true'
+        run: dotnet test infra/tests/Sensus.Infra.Tests/Sensus.Infra.Tests.csproj
+
       - name: Instalar AWS CDK
         if: steps.check_infra.outputs.exists == 'true'
         run: npm install -g --ignore-scripts aws-cdk@2.1148.0

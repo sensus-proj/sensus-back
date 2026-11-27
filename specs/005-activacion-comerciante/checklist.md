@@ -6,53 +6,54 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 005 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 001, 002
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] La spec 005 está aprobada y sin preguntas bloqueantes
+- [x] Los requisitos tienen identificador y criterio medible
+- [x] Las dependencias están resueltas: 001, 002
+- [x] El alcance y las exclusiones están declarados
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
-- [ ] Se valida el catálogo de categorías
-- [ ] Las coordenadas se validan en el servidor
-- [ ] El usuario recibe el rol Merchant
-- [ ] El índice único impide duplicados
+- [x] Se valida el catálogo de categorías (`RegisterComercioCommandValidator`)
+- [x] Las coordenadas se validan en el servidor (`MerchantProfileEndpointsTests.ActivateMerchant_ShouldReturnBadRequest_WhenCoordinatesOutOfRange`)
+- [x] El usuario recibe el rol Merchant (`RegisterComercioCommandHandler`, `ActivateMerchant_ShouldReturnCreated_WithClientCoordinates`)
+- [x] El índice único impide duplicados (`MongoUserAndComercioRepositoryTests`)
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Código en la capa correcta y test de arquitectura en verde (`Sensus.ArchitectureTests` 6/6)
+- [x] Pruebas unitarias y de integración añadidas y en verde (`RegisterComercio*`, `MerchantProfileEndpointsTests`, `MongoUserAndComercioRepositoryTests`)
+- [x] Cobertura ≥ 80 % en Domain y Application (`90.05 %` / `88.64 %`)
+- [x] Contrato OpenAPI actualizado
+- [x] IaC actualizada y `cdk diff` revisado si aplica (no aplica)
+- [x] Logs con correlation-id y sin PII
+- [x] Revisión de seguridad: sin secretos, autorización verificada
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — FAIL
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PARCIAL
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS
+- [x] **V. Verificación automatizada** — PASS (`MerchantProfileEndpointsTests`, `MongoUserAndComercioRepositoryTests`, `SecurityPipelineTests`)
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS (índice `2dsphere` verificado con `explain` y `correlation-id`)
+- [x] **VIII. Nivel fintech y ciclo seguro** — PASS (STRIDE en `plan.md` §4 y escaneos CI bloqueantes verdes `ci.yml`/`dast-zap.yml`, `4a00d24`)
 
 ## E. Evidencia
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/Comercios/` (`RegisterComercio*`) | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/Merchants/MerchantProfileEndpointsTests.cs`, `tests/Sensus.IntegrationTests/Persistence/MongoUserAndComercioRepositoryTests.cs` | ☑ |
+| Contrato OpenAPI | `specs/005-activacion-comerciante/contracts/openapi.yaml` | ☑ |
 
 ## F. Registro
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-11-26 | Antigravity (Bloque B1) | Completada | Cerrada evidencia de `T005-01`..`T005-08`: ruta legacy retirada verificada (404), conflicto `409 Conflict` probado y Testcontainers MongoDB verificando índices únicos + `2dsphere` con `explain` `GEO_NEAR_2DSPHERE`. |

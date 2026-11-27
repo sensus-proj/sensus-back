@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 003 Perfil del usuario autenticado"
-  version: 1.0.0
-  description: "Borrador del contrato del spec 003. Completar esquemas antes de implementar."
+  version: 1.2.0
+  description: "Contrato de GET/PUT /api/v1/users/profile (validación estricta de foto aprobada en Spec 022) y retiro de POST /api/v1/users/photo-signature (410 Gone)."
 servers:
   - url: https://localhost:5001
 paths:
@@ -23,23 +23,13 @@ paths:
         '401': { description: No autenticado }
   /api/v1/users/photo-signature:
     post:
-      summary: Parámetros firmados para subir la foto de perfil a Cloudinary
+      deprecated: true
+      summary: "Retirado (410 Gone): usar POST /api/v1/media/upload con moderación previa"
       operationId: generatePhotoSignature
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
-          description: Parámetros firmados (sin el secreto de Cloudinary)
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [cloudName, apiKey, timestamp, folder, signature]
-                properties:
-                  cloudName: { type: string }
-                  apiKey: { type: string }
-                  timestamp: { type: integer, format: int64 }
-                  folder: { type: string, example: 'sensus/profiles/{userId}' }
-                  signature: { type: string }
+        '410':
+          description: Endpoint heredado retirado (`Media.SignatureRetired`; usar `POST /api/v1/media/upload`)
         '401':
           description: Sin token
         '403':

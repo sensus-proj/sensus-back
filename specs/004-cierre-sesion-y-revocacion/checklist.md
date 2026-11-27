@@ -56,5 +56,6 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 |---|---|---|---|
 | 2026-11-04 | Rodrigo / Antigravity | PASS | Implementación completa de POST /api/v1/auth/logout con rotación de SecurityStamp, 100 pruebas unitarias y 34 de integración en verde. |
 | 2026-11-15 | Equipo Sensus | PASS con desviación | FR-004-02 queda Parcial: la revocación usa rotación de SecurityStamp (revoca todas las sesiones del usuario), no la lista de jti con TTL que describen `spec.md` §4 y `plan.md`. Falta enmendar spec y plan o implementar la lista de jti. Los tokens sin claim de SecurityStamp no se rechazan. |
+| 2026-11-26 | Antigravity (Bloque A7) | `T004-11` (`FR-004-05`) completada | Pruebas de integración en `tests/Sensus.IntegrationTests/Authentication/LogoutDeviceEndpointsTests.cs` (7 casos en verde): sin `deviceId`, dispositivo propio (conserva hermanos activos), dispositivo de otra cuenta (204 sin modificar), inexistente (204), e inválido vacío/espacios/>100 chars (400 `Device.InvalidDeviceId` manteniendo JWT activo en `/auth/me`). |
 
-- [ ] FR-004-05 — Probar logout sin dispositivo, propio, ajeno, inexistente e identificador inválido. Verificar que no se desactivan otros dispositivos.
+- [x] FR-004-05 — Probar logout sin dispositivo, propio, ajeno, inexistente e identificador inválido. Verificar que no se desactivan otros dispositivos (`LogoutDeviceEndpointsTests`: 7/7 en verde).

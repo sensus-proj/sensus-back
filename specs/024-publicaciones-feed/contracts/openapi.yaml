@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: "Sensus API — Spec 024 Publicaciones del feed"
-  version: 2.3.0
+  version: 2.4.0
   description: "Contrato OpenAPI para la creación y eliminación de publicaciones en el feed social (Spec 024). La moderación es síncrona y fail-closed: 201 tras veredicto favorable, 202 en cuarentena ante indisponibilidad del moderador y 400 ante rechazo explícito."
 servers:
   - url: https://localhost:5001
@@ -150,7 +150,7 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: "Identificador de un MediaAsset previamente aprobado y propiedad del autor autenticado (flujo JSON). No se aceptan URLs externas arbitrarias (imageUrl responde 400)."
+          description: "Identificador de un MediaAsset previamente aprobado y propiedad del autor autenticado (flujo JSON). No se aceptan URLs externas arbitrarias (`imageUrl` responde 400) ni el alias retirado `mediaId` (responde 400 `Feed.MediaIdRetired`)."
           example: "9d5a3b0e-1f62-4e7a-9b81-2a3f6a7d9102"
 
     FeedPostResponse:

@@ -6,11 +6,11 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 034 está aprobada y sin preguntas bloqueantes
+- [x] La spec 034 está aprobada y sin preguntas bloqueantes
 - [x] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 005, 017, 022
+- [x] Las dependencias están resueltas: 005, 017, 022
 - [x] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
@@ -39,25 +39,26 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **I. Especificación y trazabilidad** — PASS
 - [x] **II. Clean Architecture** — PASS
 - [x] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — Falta moderar el flujo de ofertas sin imagen y resolver la cuarentena previa a Cloudinary. Las ofertas con imagen verifican aprobación, titular y huella del contexto.
-- [ ] **V. Verificación automatizada** — El contrato actual tiene pruebas HTTP. Faltan los casos de moderación pendiente, límite activo y publicación segura.
+- [x] **IV. Seguridad y privacidad** — PASS (`UploadMediaCommandHandler` modera antes de Cloudinary; `CreateOfferCommandHandler` valida imagen aprobada/titular/huella + modera texto fail-closed y registra `IModerationAuditRecorder` antes de publicar)
+- [x] **V. Verificación automatizada** — PASS (`CreateOfferCommandHandlerTests`, `ProcessPendingOfferModerationCommandHandlerTests` y `OfferLimitSettingsTests`: 37/37 unitarias; `CreateOfferEndpointsTests` 8/8; `MongoOfferActiveCountIntegrationTests` Testcontainers 1/1)
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
+- [x] **VIII. Nivel fintech y ciclo seguro** — PASS (STRIDE en `plan.md` §4 y escaneos CI bloqueantes verdes `ci.yml`/`dast-zap.yml`, `4a00d24`)
 
 ## E. Evidencia
 
 | Artefacto | Ubicación | Estado |
 |---|---|---|
-| Spec | [`spec.md`](spec.md) | ☐ |
-| Plan | [`plan.md`](plan.md) | ☐ |
-| Tareas | [`tasks.md`](tasks.md) | ☐ |
-| Pruebas unitarias | `tests/Sensus.Application.UnitTests/` | ☐ |
-| Pruebas de integración | `tests/Sensus.IntegrationTests/` | ☐ |
-| Contrato OpenAPI | `contracts/openapi.yaml` | ☐ |
+| Spec | [`spec.md`](spec.md) | ☑ |
+| Plan | [`plan.md`](plan.md) | ☑ |
+| Tareas | [`tasks.md`](tasks.md) | ☑ |
+| Pruebas unitarias | `tests/Sensus.Application.UnitTests/Offers/` (`37/37` Create + PendingModeration) | ☑ |
+| Pruebas de integración | `tests/Sensus.IntegrationTests/Offers/CreateOfferEndpointsTests.cs` (`8/8`) y `MongoOfferActiveCountIntegrationTests.cs` | ☑ |
+| Contrato OpenAPI | `contracts/openapi.yaml` (`v1.3.0`) | ☑ |
 
 ## F. Registro
 
-- [ ] Para habilitar las alertas de `FR-044-08`, persistir evidencia de moderación conjunta vinculada a la versión y contenido de la oferta. La ruta de creación actual puede guardar `Published` sin esa evidencia; ningún aviso debe usar el estado como sustituto del veredicto (`FR-034-03`, `NFR-034-02`).
+- [x] Para habilitar las alertas de `FR-044-08`, persistir evidencia de moderación conjunta vinculada a la versión y contenido de la oferta (`CreateOfferCommandHandler` registra `IModerationAuditRecorder` antes de publicar/notificar; `PendingModeration` privado y `202` si falla; reintento y auditoría previa al aviso en `ProcessPendingOfferModerationCommand`).
 
 | Fecha | Responsable | Resultado | Observaciones |
 |---|---|---|---|

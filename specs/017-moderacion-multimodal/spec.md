@@ -4,12 +4,12 @@
 |---|---|
 | ID | 017 |
 | Slug | `moderacion-multimodal` |
-| Estado | Parcial |
+| Estado | Completado |
 | Ola | 4 |
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 009, 022 |
-| Versión | 1.3.0 |
+| Versión | 1.4.0 |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
@@ -54,6 +54,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 | FR-017-07 | Exponer el resultado al flujo que lo invoca, sin endpoint público de moderación | Must |
 | FR-017-08 | Moderar las publicaciones de la Spec 024 sin imagen enviando solo el texto a `gpt-4o-mini` con la política de Sensus y el mismo tratamiento fail-closed de `FR-017-04` | Must |
 | FR-017-09 | Si no hay servicio de moderación de texto disponible, o este falla o devuelve una respuesta nula, la evaluación devuelve cuarentena/rechazo (fail-closed) y el contenido no se publica | Must |
+| FR-017-10 | Reintentar de forma acotada ante fallos transitorios de red o HTTP (`HttpRequestException`, 429, 500, 502, 503, 504) respetando `Retry-After` hasta 2 s (`OpenAiSettings:Moderation:MaxRetries` por defecto 1, máx. 2; `RetryDelayMilliseconds` por defecto 500, máx. 2000), sin reintentar JSON malformado, cancelación ni timeout, manteniendo fail-closed a cuarentena al agotar intentos | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -61,6 +62,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 |---|---|---|
 | NFR-017-01 | Latencia de moderación | p95 < 3 s |
 | NFR-017-02 | Disponibilidad del flujo | Fail-closed al 100 % |
+| NFR-017-03 | Presupuesto temporal total de moderación con reintentos | `TimeoutSeconds * (1 + MaxRetries) + MaxRetries * (RetryDelayMilliseconds / 1000)` ≤ 20 s validado al arrancar (< 29 s Lambda) |
 
 ## 6. Criterios de aceptación
 
@@ -106,6 +108,12 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 - **Cuando** se evalúa texto no vacío mediante el asistente de moderación
 - **Entonces** `IsApproved == false`, la decisión es `Quarantine`, `Verdict == ModerationVerdict.Quarantined` y `RejectionError` no es nulo; el texto vacío o nulo continúa aprobado sin requerir llamada externa
 
+### CA-017-08 — Reintento transitorio acotado y validación de presupuesto (FR-017-10, NFR-017-03)
+
+- **Dado** un fallo transitorio HTTP (503 o 429 con `Retry-After`) seguido de HTTP 200
+- **Cuando** se modera texto o imagen
+- **Entonces** se ejecuta un solo reintento (2 llamadas) y retorna `Approved`; ante dos 503 retorna `Quarantine` (2 llamadas); ante JSON malformado retorna `Quarantine` sin reintento (1 llamada); y una configuración con presupuesto > 20 s o límites fuera de rango falla al arrancar con `OptionsValidationException`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -130,7 +138,7 @@ Validar imagen y texto antes de publicar ofertas, publicaciones o comentarios, u
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-017-01`, `FR-017-02`, `FR-017-03`, `FR-017-04`, `FR-017-05`, `FR-017-06`, `FR-017-07`, `FR-017-08`, `FR-017-09`
+- Requisitos de este spec: `FR-017-01`, `FR-017-02`, `FR-017-03`, `FR-017-04`, `FR-017-05`, `FR-017-06`, `FR-017-07`, `FR-017-08`, `FR-017-09`, `FR-017-10`, `NFR-017-01`, `NFR-017-02`, `NFR-017-03`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

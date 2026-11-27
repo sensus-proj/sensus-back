@@ -37,11 +37,20 @@ public class SecurityPipelineTests : IClassFixture<CustomWebApplicationFactory>
     [Theory]
     [InlineData("/api/v1/comercios/nearby?lat=19.4&lng=-99.1")]
     [InlineData("/api/v1/comercio/mi-comercio")]
+    [InlineData("/api/v1/comercio/registro")]
     [InlineData("/api/merchants/profile")]
     [InlineData("/api/auth/me")]
     public async Task RetiredLegacyRoutes_ShouldReturnNotFound(string route)
     {
         var response = await _client.GetAsync(route);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task RetiredLegacyPostComercioRegistro_ShouldReturnNotFound()
+    {
+        var response = await _client.PostAsync("/api/v1/comercio/registro", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

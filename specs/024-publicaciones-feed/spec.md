@@ -52,6 +52,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 | FR-024-07 | Excluir del feed las publicaciones eliminadas de inmediato | Must |
 | FR-024-08 | En JSON no se acepta `imageUrl` arbitraria: solo `mediaAssetId` de un `MediaAsset` aprobado y propiedad del autor; cualquier otra URL responde 400 | Must |
 | FR-024-09 | Ante indisponibilidad o timeout del moderador de texto o imagen, persistir la publicación en estado `Quarantined` (sin subir imagen a Cloudinary), registrar auditoría en Spec 021 y responder `202 Accepted` con purga a 30 días; fallar cerrado si falla la auditoría al publicar | Must |
+| FR-024-10 | Retirar el alias heredado `mediaId` en el cuerpo JSON de `POST /api/v1/feed/posts`: si se envía `mediaId` sin `mediaAssetId`, responder `400 Bad Request` (`Feed.MediaIdRetired`) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -126,6 +127,12 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 - **Cuando** un usuario autenticado envía `POST /api/v1/feed/posts` (solo texto o multipart con imagen)
 - **Entonces** la API responde `202 Accepted` con `status=Quarantined` y `imageUrl=null`, no invoca `IMediaStorage.UploadImageAsync`, excluye el post del feed cercano/público, registra auditoría `ModerationTargetType.FeedPost` y la purga de retención elimina posts en cuarentena mayores a 30 días (`FR-024-09`)
 
+### CA-024-11 — Retiro del alias `mediaId` (`FR-024-10`)
+
+- **Dado** un cuerpo JSON enviado a `POST /api/v1/feed/posts` con `mediaId` y sin `mediaAssetId`
+- **Cuando** el endpoint procesa la solicitud
+- **Entonces** responde `400 Bad Request` con código `Feed.MediaIdRetired` ("Usa mediaAssetId") sin persistir ni publicar la entrada
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización | Contenido | Respuestas |
@@ -155,7 +162,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`, `FR-024-08`, `FR-024-09`
+- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`, `FR-024-08`, `FR-024-09`, `FR-024-10`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

@@ -43,15 +43,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  userId: { type: string }
-                  nombreCompleto: { type: string }
-                  correo: { type: [string, 'null'] }
-                  roles: { type: array, items: { type: string } }
+                $ref: '#/components/schemas/CurrentUserDto'
         '401':
           description: Sin token, token revocado o usuario sancionado
 components:
+  schemas:
+    CurrentUserDto:
+      type: object
+      required: [roles]
+      properties:
+        userId: { type: [string, 'null'] }
+        nombreCompleto: { type: [string, 'null'] }
+        correo: { type: [string, 'null'] }
+        roles:
+          type: array
+          items: { type: string }
   securitySchemes:
     bearerAuth:
       type: http

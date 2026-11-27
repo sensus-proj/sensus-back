@@ -22,6 +22,10 @@ public sealed class CurrentUserService : ICurrentUserService
         User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
         User?.FindFirstValue("sub");
 
+    public string? FullName =>
+        User?.FindFirstValue(ClaimTypes.Name) ??
+        User?.FindFirstValue("name");
+
     public string? Email =>
         User?.FindFirstValue(ClaimTypes.Email) ??
         User?.FindFirstValue("email");

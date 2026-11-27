@@ -6,6 +6,7 @@ namespace Sensus.Application.Common.Interfaces;
 public interface ICurrentUserService
 {
     string? UserId { get; }
+    string? FullName => null;
     string? Email { get; }
     IReadOnlyList<string> Roles { get; }
     bool IsAuthenticated { get; }

@@ -1,11 +1,14 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
+using Sensus.Application.Common.Settings;
 using Sensus.Application.Users.Commands.UpdateProfile;
 
 namespace Sensus.Application.UnitTests.Users.Commands;
 
 public class UpdateProfileCommandValidatorTests
 {
-    private readonly UpdateProfileCommandValidator _validator = new();
+    private readonly UpdateProfileCommandValidator _validator = new(
+        Options.Create(new CloudinaryAccountSettings { CloudName = "sensus" }));
 
     [Fact]
     public void Validate_ShouldPass_WhenCommandIsValid()
@@ -65,6 +68,9 @@ public class UpdateProfileCommandValidatorTests
     [Theory]
     [InlineData("http://res.cloudinary.com/sensus/profile.jpg")] // Insecure HTTP
     [InlineData("https://malicious-site.com/avatar.jpg")] // Non-cloudinary domain
+    [InlineData("https://evilcloudinary.com/sensus/avatar.jpg")] // Suffix spoofed domain
+    [InlineData("https://api.cloudinary.com/sensus/avatar.jpg")] // Subdomain other than res.cloudinary.com
+    [InlineData("https://res.cloudinary.com/otra-cuenta/image/upload/v1/avatar.jpg")] // Another Cloudinary account
     [InlineData("not-a-url")]
     public void Validate_ShouldFail_WhenFotoPerfilUrlIsNotSecureCloudinary(string invalidUrl)
     {
@@ -74,5 +80,17 @@ public class UpdateProfileCommandValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateProfileCommand.FotoPerfilUrl));
+    }
+
+    [Fact]
+    public void Validate_ShouldFailClosed_WhenCloudNameIsNotConfigured()
+    {
+        var misconfiguredValidator = new UpdateProfileCommandValidator(
+            Options.Create(new CloudinaryAccountSettings { CloudName = string.Empty }));
+        var command = new UpdateProfileCommand("Rodrigo Sánchez", "https://res.cloudinary.com/sensus/image/upload/v1/avatar.jpg");
+
+        var result = misconfiguredValidator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
     }
 }

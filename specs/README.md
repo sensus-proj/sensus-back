@@ -21,16 +21,16 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 014 | [Logs estructurados y correlación](014-logs-estructurados-correlacion/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 009 |
 | 015 | [Métricas y alarmas](015-metricas-y-alarmas/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
 | 016 | [Health checks](016-health-checks/spec.md) | Observabilidad | Nuevo | 6 | Implementado | 014 |
-| 017 | [Moderación multimodal de contenido](017-moderacion-multimodal/spec.md) | Moderación | Nuevo | 4 | Parcial | 009, 022 |
+| 017 | [Moderación multimodal de contenido](017-moderacion-multimodal/spec.md) | Moderación | Nuevo | 4 | Implementado | 009, 022 |
 | 018 | [Umbrales y bandas de decisión](018-umbrales-y-bandas/spec.md) | Moderación | Nuevo | 4 | Implementado | 017 |
 | 019 | [Cuarentena de contenido](019-cuarentena-contenido/spec.md) | Moderación | Nuevo | 4 | Implementado | 017, 018 |
 | 020 | [Sanciones y baneo de usuario](020-sanciones-y-baneo/spec.md) | Moderación | Nuevo | 4 | Implementado | 004, 017, 018, 019, 027 |
 | 021 | [Auditoría de moderación](021-auditoria-moderacion/spec.md) | Moderación | Nuevo | 4 | Implementado | 017, 020 |
 | 022 | [Carga de multimedia](022-carga-multimedia/spec.md) | Multimedia | Nuevo | 4 | Implementado | 017, 013 |
 | 023 | [Entrega de contenido por CDN](023-entrega-cdn/spec.md) | Multimedia | Nuevo | 4 | Implementado | 022 |
-| 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Parcial | 017, 022 |
+| 024 | [Publicaciones del feed](024-publicaciones-feed/spec.md) | Contenido | Nuevo | 3 | Implementado | 017, 022 |
 | 025 | [Comentarios del feed](025-comentarios/spec.md) | Contenido | Nuevo | 3 | Implementado | 017, 024, 010 |
-| 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Backend completado | 024, 007, 010 |
+| 026 | [Feed geolocalizado](026-feed-cercano/spec.md) | Contenido | Nuevo | 3 | Implementado | 024, 007, 010 |
 | 027 | [Registro de dispositivo para push](027-registro-dispositivo/spec.md) | Integraciones | Nuevo | 4 | Parcial | 003, 013 |
 | 028 | [Webhooks entrantes (backlog)](028-webhooks-entrantes/spec.md) | Integraciones | Backlog | Backlog | Backlog | 009, 014 |
 | 029 | [Recuperación de contraseña](029-recuperacion-password/spec.md) | Autenticación | Nuevo | 1 | Implementado | 001, 004, 013 |
@@ -38,12 +38,12 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 031 | [Edición del perfil de comercio](031-edicion-perfil-comercio/spec.md) | Comercios | Nuevo | 2 | Implementado | 005, 006 |
 | 032 | [Detalle de oferta y contador de vistas](032-detalle-oferta-y-vistas/spec.md) | Ofertas | Nuevo | 2 | Implementado | 007 |
 | 033 | [Apartado de oferta con código QR](033-apartado-con-qr/spec.md) | Ofertas | Nuevo | 2 | Backend completado | 007, 027, 032, 037 |
-| 034 | [Creación de oferta](034-creacion-oferta/spec.md) | Inventario | Nuevo | 2 | Parcial | 005, 017, 022 |
+| 034 | [Creación de oferta](034-creacion-oferta/spec.md) | Inventario | Nuevo | 2 | Implementado | 005, 017, 022 |
 | 035 | [Edición de oferta](035-edicion-oferta/spec.md) | Inventario | Nuevo | 2 | Completo | 034, 033 |
 | 036 | [Ciclo de vida de la oferta](036-ciclo-vida-oferta/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 035 |
 | 037 | [Inventario de ofertas del comerciante](037-inventario-comerciante/spec.md) | Inventario | Nuevo | 2 | Implementado | 034, 033, 010 |
 | 038 | [Favoritos de ofertas](038-favoritos/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 032 |
-| 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Backend completado | 024, 013 |
+| 039 | [Me gusta en publicaciones](039-me-gusta-publicaciones/spec.md) | Contenido | Nuevo | 3 | Implementado | 024, 013 |
 | 040 | [Reportes de contenido](040-reportes-contenido/spec.md) | Contenido | Nuevo | 3 | Implementado | 024, 025, 017, 018 |
 | 041 | [Búsqueda de ofertas](041-busqueda-inteligente/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 011, 013, 052 |
 | 042 | [Feed de promociones por intereses](042-recomendaciones/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 007, 010, 013, 032, 033, 048, 052, 054, 055 |
@@ -56,7 +56,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 049 | [Contadores de presupuesto de Sensi IA en DynamoDB](049-contadores-presupuesto-dynamodb/spec.md) | Plataforma | Nuevo | 7 | Backend completado | 045, 046, 048 |
 | 051 | [Pausa nocturna de la infraestructura](051-pausa-nocturna-infraestructura/spec.md) | Plataforma | Nuevo | 7 | Implementado | 015, 045, 048 |
 | 052 | [Sesión de invitado](052-sesion-invitado/spec.md) | Autenticación | Retro-spec | 1 | Implementado (retro-spec) | 002, 013 |
-| 053 | [Comercios cercanos](053-comercios-cercanos/spec.md) | Comercios | Retro-spec | 2 | Backend completado | 005, 010, 013, 052 |
+| 053 | [Comercios cercanos](053-comercios-cercanos/spec.md) | Comercios | Retro-spec | 2 | Implementado (retro-spec) | 005, 010, 013, 052 |
 | 054 | [Intereses del usuario](054-intereses-usuario/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 002, 003, 013, 030, 052 |
 | 055 | [Registro de interacciones con ofertas](055-interacciones-ofertas/spec.md) | Recomendaciones | Nuevo | 5 | Implementado | 014, 030, 032, 033, 042 |
 | 050 | [Red de amigos y solicitudes por QR o invitación](050-amigos-y-solicitudes/spec.md) | Social | Retro-spec | 5 | Parcial | 001, 002, 027 |
@@ -66,7 +66,7 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | 059 | [Filtro de groserías y moderación textual fail-closed](059-moderacion-texto-filtro-groserias/spec.md) | Moderación | Retro-spec | 4 | Implementado (retro-spec) | 017, 018, 046, 056 |
 | 060 | [Baja lógica de cuenta y purga diferida](060-baja-logica-cuenta-purga-diferida/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 004, 020 |
 | 061 | [Anonimización de contenido y cierre comercial](061-anonimizacion-contenido-cierre-comercial/spec.md) | Autenticación | Nuevo | 1 | Implementado | 003, 020, 024, 025, 030, 033 |
-| 062 | [Segundo factor TOTP para Administrador](062-segundo-factor-administrador/spec.md) | Autenticación | Nuevo | 6 | En progreso | 002, 004, 020, 021 |
+| 062 | [Segundo factor TOTP para Administrador](062-segundo-factor-administrador/spec.md) | Autenticación | Nuevo | 6 | Implementado | 002, 004, 020, 021 |
 
 ## Estados
 
@@ -80,10 +80,10 @@ La numeración es estable: un spec no cambia de ID una vez creado.
 | Implementado (retro-spec) | Funcionalidad existente documentada a posteriori |
 | Backlog | Capacidad fuera del catálogo vigente, sin compromiso de entrega |
 
-## Estado de implementación en Back_Rocio
+## Estado de cierre documental (2026-11-26)
 
-- **Backend completado:** 033, 049, 053 y 058. Las verificaciones restantes están en los checklists de [apartado con QR](033-apartado-con-qr/checklist.md), [presupuesto de Sensi](049-contadores-presupuesto-dynamodb/checklist.md), [comercios cercanos](053-comercios-cercanos/checklist.md) y [actividad de amigos](058-actividad-amigos-comunidad/checklist.md).
-- **Código pendiente:** [017](017-moderacion-multimodal/tasks.md), integración con publicación y cuarentena de la Spec 024. [034](034-creacion-oferta/tasks.md), diseño de cuarentena compatible con la constitución, moderación previa, límite de ofertas activas y respuesta 202.
+- **Completadas en backend / código:** 001–026, 030 (`Escindida` en 060/061), 031–048, 051–062. Las verificaciones operativas posteriores al despliegue, DNS/SES/FCM/rotación JWT, carga diurna (`G-13`), ZAP diurno (`G-02`), aviso de privacidad (FT-23/landing) y pruebas en celular están documentadas por punto en [el reporte de cierre](../docs/avance-cierre-specs-2026-11-26.md) (§5.Z-1 a §5.Z-13).
+- **Backlog:** [028](028-webhooks-entrantes/tasks.md) (sin proveedor ni decisión de producto).
 
 ## Reglas
 
