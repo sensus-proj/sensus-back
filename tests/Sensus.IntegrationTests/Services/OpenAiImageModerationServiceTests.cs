@@ -540,6 +540,32 @@ public sealed class OpenAiImageModerationServiceTests
         result.Message.Should().Be("Imagen aprobada.");
     }
 
+    [Theory]
+    [InlineData("""{"decision":"Approved","reason":"Imagen de producto válida.","flagged_categories":[]}""")]
+    [InlineData("""{"decision":"Approved","reason":"Imagen segura.","flagged_categories":[],"category_scores":{}}""")]
+    public async Task ModerateImageBytesAsync_WithGpt4oMini_WhenApprovedWithoutCategoryScores_ReturnsApproved(string chatContent)
+    {
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            choices = new[] { new { message = new { content = chatContent } } }
+        });
+        var handler = new DelegatingMockHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new OpenAiImageModerationService(
+            httpClient,
+            Options.Create(new OpenAiSettings { ApiKey = "sk-valid-key", Model = "gpt-4o-mini" }),
+            _logger);
+
+        var result = await service.ModerateImageBytesAsync([1, 2, 3], "image/jpeg", "Panadería artesanal");
+
+        result.IsApproved.Should().BeTrue();
+        result.Decision.Should().Be("Approved");
+        result.Message.Should().Be("Imagen aprobada.");
+    }
+
     [Fact]
     public async Task ModerateImageBytesAsync_WithGpt4oMini_WhenSuspicious_ReturnsQuarantine()
     {

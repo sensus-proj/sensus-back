@@ -54,4 +54,45 @@ public sealed class MongoFeedPostLikeRepository : IFeedPostLikeRepository
 
         return FeedPostLike.ClampCount(count);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> ids = postIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        List<FeedPostLikeDocument> docs = await _context.FeedPostLikes
+            .Find(Builders<FeedPostLikeDocument>.Filter.In(l => l.PostId, ids))
+            .ToListAsync(cancellationToken);
+
+        return docs
+            .GroupBy(d => d.PostId)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetLikedPostIdsByUserAsync(
+        Guid userId,
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> ids = postIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (userId == Guid.Empty || ids.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        FilterDefinition<FeedPostLikeDocument> filter = Builders<FeedPostLikeDocument>.Filter.And(
+            Builders<FeedPostLikeDocument>.Filter.Eq(l => l.UserId, userId),
+            Builders<FeedPostLikeDocument>.Filter.In(l => l.PostId, ids));
+
+        List<FeedPostLikeDocument> docs = await _context.FeedPostLikes
+            .Find(filter)
+            .ToListAsync(cancellationToken);
+
+        return docs.Select(d => d.PostId).ToHashSet();
+    }
 }

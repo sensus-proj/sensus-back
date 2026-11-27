@@ -484,4 +484,57 @@ public class OfferClaimEndpointsTests : IClassFixture<CustomWebApplicationFactor
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
+
+    [Fact]
+    public async Task ClaimOffer_WithQuantityFour_AndCartClaims_ShouldReturnSingleQr()
+    {
+        Offer first = BuildActiveOffer();
+        Offer second = Offer.Create(
+            first.MerchantId,
+            "Galletas de avena",
+            "Paquete de galletas artesanales horneadas",
+            50m,
+            20,
+            10,
+            DateTime.UtcNow.AddHours(-1),
+            DateTime.UtcNow.AddDays(1),
+            null,
+            20.05,
+            -99.34,
+            DateTime.UtcNow).Value;
+
+        _factory.OfferRepository.GetByIdAsync(first.Id, Arg.Any<CancellationToken>()).Returns(first);
+        _factory.OfferRepository.GetByIdAsync(second.Id, Arg.Any<CancellationToken>()).Returns(second);
+        _factory.OfferRepository.TryReserveStockAsync(first.Id, 4, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _factory.OfferRepository.TryReserveStockAsync(second.Id, 2, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _factory.OfferClaimRepository
+            .GetActiveByUserAndAnyOfferAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns((OfferClaim?)null);
+        _factory.OfferClaimRepository.TryAddAsync(Arg.Any<OfferClaim>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        using var cartRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/offers/claims")
+        {
+            Content = JsonContent.Create(new
+            {
+                items = new[]
+                {
+                    new { offerId = first.Id, quantity = 4 },
+                    new { offerId = second.Id, quantity = 2 }
+                }
+            })
+        };
+        cartRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateConsumerToken());
+
+        HttpResponseMessage response = await _client.SendAsync(cartRequest);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ClaimOfferResultDto? dto = await response.Content.ReadFromJsonAsync<ClaimOfferResultDto>();
+        dto.Should().NotBeNull();
+        dto!.TotalUnits.Should().Be(6);
+        dto.Items.Should().HaveCount(2);
+        dto.QrPayload.Should().StartWith("v1.");
+    }
 }

@@ -47,6 +47,7 @@ Entregar un feed paginado de publicaciones visibles cercanas a la ubicación del
 | FR-026-04 | Limitar el radio a 5 km inclusive y rechazar valores fuera de rango | Must |
 | FR-026-05 | Excluir publicaciones sin ubicación del feed cercano | Must |
 | FR-026-06 | Usar caché de corta duración para páginas recurrentes | Should |
+| FR-026-07 | Exponer en `NearbyFeedPostDto` la etiqueta del comercio (`merchantId`, `merchantName`) y conteos/estado de interacción (`likesCount`, `commentsCount`, `isLikedByMe`, `isMine`) sin exponer coordenadas ni estado de moderación | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -138,7 +139,7 @@ El diseño de caché debe preservar la exclusión inmediata de publicaciones eli
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-026-01`, `FR-026-02`, `FR-026-03`, `FR-026-04`, `FR-026-05`, `FR-026-06`
+- Requisitos de este spec: `FR-026-01`, `FR-026-02`, `FR-026-03`, `FR-026-04`, `FR-026-05`, `FR-026-06`, `FR-026-07`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

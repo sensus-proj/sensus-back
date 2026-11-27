@@ -290,4 +290,43 @@ public sealed class NearbyFeedTests
         validator.Validate(new CreateFeedPostCommand("Hola", Latitude: Lat)).IsValid.Should().BeFalse();
         validator.Validate(new CreateFeedPostCommand("Hola", Latitude: 95, Longitude: Lng)).IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task NearbyFeed_EnrichesLikesCommentsIsLikedByMeIsMineAndMerchantTag()
+    {
+        Guid viewerId = Guid.NewGuid();
+        Guid merchantId = Guid.NewGuid();
+        FeedPost ownPost = FeedPost.Create(
+            viewerId, "Ana", "Rico pan en la esquina", null, Now,
+            latitude: Lat, longitude: Lng, merchantId: merchantId, merchantName: "Panadería El Sol").Value;
+
+        var repo = Substitute.For<IFeedPostRepository>();
+        repo.GetPublishedNearbyPagedAsync(Arg.Any<double>(), Arg.Any<double>(), Arg.Any<double>(), 1, 20, Arg.Any<CancellationToken>())
+            .Returns(([ownPost], 1));
+
+        var currentUser = Substitute.For<ICurrentUserService>();
+        currentUser.UserId.Returns(viewerId.ToString());
+        var likes = Substitute.For<IFeedPostLikeRepository>();
+        likes.CountByPostIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, int> { [ownPost.Id] = 7 });
+        likes.GetLikedPostIdsByUserAsync(viewerId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<Guid> { ownPost.Id });
+        var comments = Substitute.For<IFeedCommentRepository>();
+        comments.CountByPostIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, int> { [ownPost.Id] = 3 });
+
+        var handler = new GetNearbyFeedQueryHandler(
+            repo, NullLogger<GetNearbyFeedQueryHandler>.Instance, null, currentUser, likes, comments);
+
+        var result = await handler.Handle(new GetNearbyFeedQuery(Lat, Lng), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var item = result.Value.Items.Should().ContainSingle().Subject;
+        item.MerchantId.Should().Be(merchantId);
+        item.MerchantName.Should().Be("Panadería El Sol");
+        item.LikesCount.Should().Be(7);
+        item.CommentsCount.Should().Be(3);
+        item.IsLikedByMe.Should().BeTrue();
+        item.IsMine.Should().BeTrue();
+    }
 }

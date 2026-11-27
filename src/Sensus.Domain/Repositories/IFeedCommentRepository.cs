@@ -17,6 +17,11 @@ public interface IFeedCommentRepository
 
     Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());
+
     /// <summary>
     /// Anonimiza en lote los comentarios de un autor al dar de baja la cuenta (Spec 061, FR-061-02).
     /// Devuelve el número de documentos modificados; los ya anonimizados se ignoran.

@@ -53,6 +53,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 | FR-024-08 | En JSON no se acepta `imageUrl` arbitraria: solo `mediaAssetId` de un `MediaAsset` aprobado y propiedad del autor; cualquier otra URL responde 400 | Must |
 | FR-024-09 | Ante indisponibilidad o timeout del moderador de texto o imagen, persistir la publicación en estado `Quarantined` (sin subir imagen a Cloudinary), registrar auditoría en Spec 021 y responder `202 Accepted` con purga a 30 días; fallar cerrado si falla la auditoría al publicar | Must |
 | FR-024-10 | Retirar el alias heredado `mediaId` en el cuerpo JSON de `POST /api/v1/feed/posts`: si se envía `mediaId` sin `mediaAssetId`, responder `400 Bad Request` (`Feed.MediaIdRetired`) | Must |
+| FR-024-11 | Permitir etiquetar opcionalmente un comercio activo mediante `merchantId` (JSON o multipart) en `POST /api/v1/feed/posts`, verificando su existencia/estado activo y exponiendo `merchantId` y `merchantName` en el DTO | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -162,7 +163,7 @@ Permitir crear y eliminar publicaciones con texto e imagen opcional, sujetas a m
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`, `FR-024-08`, `FR-024-09`, `FR-024-10`
+- Requisitos de este spec: `FR-024-01`, `FR-024-02`, `FR-024-03`, `FR-024-04`, `FR-024-05`, `FR-024-06`, `FR-024-07`, `FR-024-08`, `FR-024-09`, `FR-024-10`, `FR-024-11`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

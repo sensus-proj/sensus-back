@@ -423,4 +423,35 @@ public sealed class FeedPostEndpointsTests : IClassFixture<CustomWebApplicationF
         body.Should().Contain("Feed.MediaIdRetired");
         await _factory.FeedPostRepository.DidNotReceive().AddAsync(Arg.Any<FeedPost>(), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task CreatePost_TagsActiveMerchant_AndRejectsMissingMerchant()
+    {
+        (string token, _) = CreateRegisteredToken();
+        var comercio = Sensus.Domain.Entities.Comercio.Create(
+            Guid.NewGuid(),
+            "Panadería La Espiga",
+            "Av. Hidalgo 45",
+            "42800",
+            20.0536,
+            -99.3436,
+            DateTime.UtcNow).Value;
+        _factory.ComercioRepository.GetByIdAsync(comercio.Id, Arg.Any<CancellationToken>()).Returns(comercio);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage createdResp = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Excelente pan en la esquina", merchantId = comercio.Id });
+
+        createdResp.StatusCode.Should().Be(HttpStatusCode.Created);
+        FeedPostDto? created = await createdResp.Content.ReadFromJsonAsync<FeedPostDto>();
+        created.Should().NotBeNull();
+        created!.MerchantId.Should().Be(comercio.Id);
+        created.MerchantName.Should().Be("Panadería La Espiga");
+
+        HttpResponseMessage missingResp = await _client.PostAsJsonAsync(
+            "/api/v1/feed/posts",
+            new { content = "Tienda inexistente", merchantId = Guid.NewGuid() });
+        missingResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

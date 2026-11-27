@@ -25,6 +25,7 @@
 | T024-10 | Rechazar `imageUrl` externa en JSON y validar `mediaAssetId` aprobado del autor (`IMediaAssetRepository`), más actualización móvil `FeedDtos.kt` | Application / Api / Móvil | `FR-024-08` | T024-08 | Completada |
 | T024-11 | Persistir `FeedPostStatus.Quarantined` (202 Accepted) sin subir imagen ante indisponibilidad del moderador, registrar auditoría `FeedPost` y purgar cuarentena vencida (30 d) | Domain / Application / Infrastructure / Api / Pruebas | `FR-024-09` | T024-09 | Completada (`FeedPostsTests`, `FeedPostEndpointsTests`, `MongoFeedSocialIntegrationTests`, `PurgeQuarantinedMediaCommandHandler`) |
 | T024-12 | Retirar alias `mediaId` en `FeedEndpoints` con `400 Bad Request` (`Feed.MediaIdRetired`) | Api / Pruebas | `FR-024-10` | T024-10 | Completada (`FeedEndpoints.cs`, `FeedPostEndpointsTests`) |
+| T024-13 | Soportar etiqueta opcional de comercio activo (`merchantId`, `merchantName`) en JSON/multipart de `POST /api/v1/feed/posts` | Domain / Application / Infrastructure / Api / Pruebas | `FR-024-11` | T024-05 | Completada (`FeedPost.cs`, `FeedPostDocument.cs`, `CreateFeedPostCommand.cs`, `FeedEndpoints.cs`, `FeedPostEndpointsTests`) |
 
 ## Notas de ejecución
 

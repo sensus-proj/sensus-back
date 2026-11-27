@@ -207,7 +207,13 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         }
 
         var parsed = JsonSerializer.Deserialize<ChatVisionModerationResult>(content, JsonOptions);
-        if (parsed?.FlaggedCategories is not { } flagged || parsed.CategoryScores is not { Count: > 0 } scores
+        var isApprovedImageWithoutScores = dataUrl is not null
+            && string.Equals(parsed?.Decision?.Trim(), "Approved", StringComparison.OrdinalIgnoreCase)
+            && parsed?.FlaggedCategories is { Count: 0 }
+            && parsed.CategoryScores is null or { Count: 0 };
+        var scores = parsed?.CategoryScores ?? (isApprovedImageWithoutScores ? new Dictionary<string, double>() : null);
+        if (parsed?.FlaggedCategories is not { } flagged || scores is null
+            || (!isApprovedImageWithoutScores && scores.Count == 0)
             || flagged.Any(string.IsNullOrWhiteSpace) || scores.Any(score => string.IsNullOrWhiteSpace(score.Key)
                 || !double.IsFinite(score.Value) || score.Value is < 0 or > 1))
         {

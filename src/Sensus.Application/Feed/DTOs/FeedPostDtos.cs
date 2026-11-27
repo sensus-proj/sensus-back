@@ -11,7 +11,13 @@ public sealed record FeedPostDto(
     string? ImageUrl,
     string Status,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    Guid? MerchantId = null,
+    string? MerchantName = null,
+    int LikesCount = 0,
+    bool IsLikedByMe = false,
+    int CommentsCount = 0,
+    bool IsMine = false);
 
 public static class FeedPostMappingExtensions
 {
@@ -25,5 +31,8 @@ public static class FeedPostMappingExtensions
             post.ImageUrl,
             post.Status.ToString(),
             post.CreatedAtUtc,
-            post.UpdatedAtUtc);
+            post.UpdatedAtUtc,
+            post.MerchantId,
+            post.MerchantName,
+            IsMine: true);
 }

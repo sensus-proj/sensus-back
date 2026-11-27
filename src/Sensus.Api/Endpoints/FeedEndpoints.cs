@@ -140,6 +140,7 @@ public static class FeedEndpoints
             string content = string.Empty;
             string? imageUrl = null;
             Guid? mediaAssetId = null;
+            Guid? merchantId = null;
             byte[]? imageBytes = null;
             string? imageContentType = null;
             double? latitude = null;
@@ -156,6 +157,19 @@ public static class FeedEndpoints
                     return Result.Failure(Error.Validation(
                         "FeedPost.InvalidLocation",
                         "La latitud y la longitud deben ser números válidos.")).ToHttpResult();
+                }
+
+                string rawMerchantId = form["merchantId"].ToString();
+                if (!string.IsNullOrWhiteSpace(rawMerchantId))
+                {
+                    if (!Guid.TryParse(rawMerchantId.Trim(), out Guid parsedMerchantId) || parsedMerchantId == Guid.Empty)
+                    {
+                        return Result.Failure(Error.Validation(
+                            "FeedPost.InvalidMerchant",
+                            "El identificador del comercio etiquetado no es válido.")).ToHttpResult();
+                    }
+
+                    merchantId = parsedMerchantId;
                 }
 
                 content = form["content"].ToString();
@@ -205,12 +219,13 @@ public static class FeedEndpoints
                 content = body?.Content ?? body?.Text ?? string.Empty;
                 imageUrl = body?.ImageUrl;
                 mediaAssetId = body?.MediaAssetId;
+                merchantId = body?.MerchantId;
                 latitude = body?.Latitude;
                 longitude = body?.Longitude;
             }
 
             Result<FeedPostDto> result = await sender.Send(
-                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType, latitude, longitude, mediaAssetId),
+                new CreateFeedPostCommand(content, imageUrl, imageBytes, imageContentType, latitude, longitude, mediaAssetId, merchantId),
                 ct);
 
             if (result.IsSuccess && string.Equals(
@@ -391,4 +406,5 @@ public sealed record CreateFeedPostBody(
     double? Latitude = null,
     double? Longitude = null,
     Guid? MediaAssetId = null,
-    Guid? MediaId = null);
+    Guid? MediaId = null,
+    Guid? MerchantId = null);

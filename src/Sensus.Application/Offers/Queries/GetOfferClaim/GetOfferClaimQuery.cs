@@ -53,6 +53,13 @@ public sealed class GetOfferClaimQueryHandler(
         }
 
         var status = !active && claim.Status == OfferClaimStatus.Active ? OfferClaimStatus.Expired : claim.Status;
-        return Result.Success(new OfferClaimDetailDto(claim.Id, claim.OfferId, status.ToString(), claim.ExpiresAtUtc, qrPayload));
+        return Result.Success(new OfferClaimDetailDto(
+            claim.Id,
+            claim.OfferId,
+            status.ToString(),
+            claim.ExpiresAtUtc,
+            qrPayload,
+            claim.TotalUnits,
+            Commands.ClaimOffer.OfferClaimFlow.ToItemDtos(claim)));
     }
 }

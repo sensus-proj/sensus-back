@@ -57,6 +57,15 @@ public sealed class FeedPostDocument
     [BsonIgnoreIfNull]
     public GeoJsonPoint<GeoJson2DGeographicCoordinates>? Location { get; set; }
 
+    [BsonElement("merchantId")]
+    [BsonRepresentation(BsonType.String)]
+    [BsonIgnoreIfNull]
+    public Guid? MerchantId { get; set; }
+
+    [BsonElement("merchantName")]
+    [BsonIgnoreIfNull]
+    public string? MerchantName { get; set; }
+
     public FeedPost ToDomain()
     {
         Enum.TryParse(Status, ignoreCase: true, out FeedPostStatus postStatus);
@@ -75,7 +84,9 @@ public sealed class FeedPostDocument
             updatedAtUtc: UpdatedAtUtc,
             deletedAtUtc: DeletedAtUtc,
             latitude: Location?.Coordinates.Latitude,
-            longitude: Location?.Coordinates.Longitude);
+            longitude: Location?.Coordinates.Longitude,
+            merchantId: MerchantId,
+            merchantName: MerchantName);
     }
 
     public static FeedPostDocument FromDomain(FeedPost post) =>
@@ -96,6 +107,8 @@ public sealed class FeedPostDocument
             Location = post.HasLocation
                 ? new GeoJsonPoint<GeoJson2DGeographicCoordinates>(
                     new GeoJson2DGeographicCoordinates(post.Longitude!.Value, post.Latitude!.Value))
-                : null
+                : null,
+            MerchantId = post.MerchantId,
+            MerchantName = post.MerchantName
         };
 }

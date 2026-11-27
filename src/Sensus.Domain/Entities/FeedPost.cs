@@ -32,6 +32,10 @@ public sealed class FeedPost : BaseEntity
 
     public double? Longitude { get; private set; }
 
+    public Guid? MerchantId { get; private set; }
+
+    public string? MerchantName { get; private set; }
+
     public bool HasLocation => Latitude.HasValue && Longitude.HasValue;
 
     private FeedPost()
@@ -52,10 +56,14 @@ public sealed class FeedPost : BaseEntity
         DateTime? updatedAtUtc,
         DateTime? deletedAtUtc,
         double? latitude = null,
-        double? longitude = null) : base(id)
+        double? longitude = null,
+        Guid? merchantId = null,
+        string? merchantName = null) : base(id)
     {
         Latitude = latitude;
         Longitude = longitude;
+        MerchantId = merchantId is { } mid && mid != Guid.Empty ? mid : null;
+        MerchantName = string.IsNullOrWhiteSpace(merchantName) ? null : merchantName.Trim();
         AuthorUserId = authorUserId;
         AuthorDisplayName = authorDisplayName;
         AuthorPhotoUrl = authorPhotoUrl;
@@ -80,7 +88,9 @@ public sealed class FeedPost : BaseEntity
         FeedPostStatus status = FeedPostStatus.Published,
         string? imagePublicId = null,
         double? latitude = null,
-        double? longitude = null)
+        double? longitude = null,
+        Guid? merchantId = null,
+        string? merchantName = null)
     {
         if (authorUserId == Guid.Empty)
         {
@@ -125,7 +135,9 @@ public sealed class FeedPost : BaseEntity
             updatedAtUtc: null,
             deletedAtUtc: null,
             latitude: latitude,
-            longitude: longitude);
+            longitude: longitude,
+            merchantId: merchantId,
+            merchantName: merchantName);
 
         return Result.Success(post);
     }
@@ -173,7 +185,9 @@ public sealed class FeedPost : BaseEntity
         DateTime? deletedAtUtc,
         string? imagePublicId = null,
         double? latitude = null,
-        double? longitude = null)
+        double? longitude = null,
+        Guid? merchantId = null,
+        string? merchantName = null)
     {
         return new FeedPost(
             id,
@@ -189,7 +203,9 @@ public sealed class FeedPost : BaseEntity
             updatedAtUtc,
             deletedAtUtc,
             latitude,
-            longitude);
+            longitude,
+            merchantId,
+            merchantName);
     }
 
     /// <summary>

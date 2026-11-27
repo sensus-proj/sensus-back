@@ -40,3 +40,4 @@
 - Los identificadores de requisito remiten a `spec.md` §4 y §5.
 
 - [x] T033-14 — Implementar y verificar lectura autorizada desde el aviso (FR-033-11).
+- [x] T033-15 — Implementar apartado multi-producto (mismo comercio) y multi-cantidad (`N` unidades) en un solo QR vía `POST /api/v1/offers/claims` y `quantity` en `POST /api/v1/offers/{id}/claim`, con rollback atómico y devolución exacta en expiración (`FR-033-13`).

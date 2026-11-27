@@ -52,6 +52,19 @@ public interface IOfferRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reserva atómica de <paramref name="quantity"/> unidades de stock solo si la oferta sigue
+    /// publicada, vigente y con stock suficiente (&gt;= <paramref name="quantity"/>).
+    /// </summary>
+    Task<bool> TryReserveStockAsync(
+        Guid offerId,
+        int quantity,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        quantity == 1
+            ? TryReserveStockAsync(offerId, nowUtc, cancellationToken)
+            : Task.FromResult(false);
+
+    /// <summary>
     /// Devuelve unidades al inventario tras expirar o no completar un apartado (FR-033-05).
     /// </summary>
     Task<bool> ReturnStockAsync(
