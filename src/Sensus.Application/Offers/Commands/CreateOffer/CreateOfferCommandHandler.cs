@@ -112,8 +112,8 @@ public sealed class CreateOfferCommandHandler : IRequestHandler<CreateOfferComma
         }
 
         if (!request.SaveAsDraft && !string.IsNullOrWhiteSpace(offer.ImageUrl)
-            && (_mediaAssets is null || !await _mediaAssets.HasApprovedImageAsync(
-                userId, offer.ImageUrl, ModeratedTextFingerprint.Create($"{offer.Title}\n{offer.Description}"), cancellationToken)))
+            && !await OfferMediaApprovalHelper.HasApprovedImageAsync(
+                _mediaAssets, userId, offer.ImageUrl, offer.Title, offer.Description, cancellationToken))
         {
             return Result.Failure<OfferDto>(Error.Validation(
                 "Offer.ImageNotApproved", "La imagen debe estar aprobada para el título y la descripción de esta oferta."));

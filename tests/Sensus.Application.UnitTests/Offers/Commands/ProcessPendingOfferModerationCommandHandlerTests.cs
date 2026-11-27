@@ -99,6 +99,69 @@ public sealed class ProcessPendingOfferModerationCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldPublishOfferWithImage_WhenFingerprintUsesMobileDashSeparator()
+    {
+        var userId = Guid.NewGuid();
+        var comercio = Comercio.Create(userId, "Tienda Prueba", "Calle 1", "03100", 19.43, -99.13).Value;
+        const string imageUrl = "https://res.cloudinary.com/demo/image/upload/oferta.jpg";
+        var offer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            comercio.Id,
+            "Oferta pendiente con foto",
+            "Descripción válida para moderar",
+            100m,
+            20,
+            80m,
+            5,
+            Now.AddHours(-1),
+            Now.AddDays(2),
+            OfferStatus.PendingModeration,
+            imageUrl,
+            19.43,
+            -99.13,
+            Now.AddHours(-1),
+            moderationRetryCount: 0,
+            nextModerationRetryAtUtc: Now.AddSeconds(-10));
+
+        var mediaAssets = Substitute.For<IMediaAssetRepository>();
+        string dashFingerprint = Sensus.Application.Common.Moderation.ModeratedTextFingerprint.Create(
+            $"{offer.Title} - {offer.Description}");
+        mediaAssets.HasApprovedImageAsync(userId, imageUrl, dashFingerprint, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        _offerRepository.GetPendingModerationDueAsync(Now, 20, Arg.Any<CancellationToken>()).Returns([offer]);
+        _comercioRepository.GetByIdAsync(comercio.Id, Arg.Any<CancellationToken>()).Returns(comercio);
+        _textModeration.ModerateContentTextAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TextModerationResult(true, "Aprobado", null, "Approved"));
+        _clock.UtcNow.Returns(Now);
+        _auditRecorder.RecordAsync(Arg.Any<ModerationAuditEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+
+        var handler = new ProcessPendingOfferModerationCommandHandler(
+            _offerRepository,
+            _comercioRepository,
+            _clock,
+            _auditRecorder,
+            NullLogger<ProcessPendingOfferModerationCommandHandler>.Instance,
+            _textModeration,
+            cacheService: _cache,
+            nearbyOfferNotifier: _notifier,
+            mediaAssets: mediaAssets,
+            retrySettings: Options.Create(new OfferModerationRetrySettings
+            {
+                MaxAttempts = 5,
+                RetryDelaySeconds = 60,
+                BatchSize = 20
+            }));
+
+        var result = await handler.Handle(new ProcessPendingOfferModerationCommand(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.PublishedCount.Should().Be(1);
+        offer.Status.Should().Be(OfferStatus.Published);
+    }
+
+    [Fact]
     public async Task Handle_ShouldRejectWithoutNotifying_WhenModerationRecoversAndRejects()
     {
         var (offer, _) = CreatePending();

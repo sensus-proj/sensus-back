@@ -140,6 +140,34 @@ public class CreateOfferCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldAcceptApprovedImage_WhenFingerprintUsesMobileDashSeparator()
+    {
+        var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;
+        _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Comercio?>(comercio));
+
+        var command = new CreateOfferCommand(
+            "Combo Pizza Grande",
+            "Incluye refresco de 2L",
+            200m,
+            25,
+            10,
+            _now.AddHours(1),
+            _now.AddDays(5),
+            "https://res.cloudinary.com/demo/image/upload/pizza.jpg");
+
+        var mobileFingerprint = Sensus.Application.Common.Moderation.ModeratedTextFingerprint.Create(
+            $"{command.Title} - {command.Description}");
+        _mediaAssets.HasApprovedImageAsync(_userId, command.ImageUrl!, mobileFingerprint, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _offerRepository.Received(1).AddAsync(Arg.Any<Offer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Handle_ShouldReturnFailure_WhenOfferCreateFailsDomainValidation()
     {
         var comercio = Comercio.Create(_userId, "Comercio Test", "Calle 123", "06000", 19.4, -99.1).Value;

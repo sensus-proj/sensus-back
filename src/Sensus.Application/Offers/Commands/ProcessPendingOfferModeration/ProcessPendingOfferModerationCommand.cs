@@ -212,9 +212,9 @@ public sealed class ProcessPendingOfferModerationCommandHandler
         if (!string.IsNullOrWhiteSpace(offer.ImageUrl) && _mediaAssets is not null)
         {
             Comercio? merchant = await _comercioRepository.GetByIdAsync(offer.MerchantId, cancellationToken);
-            string fingerprint = ModeratedTextFingerprint.Create($"{offer.Title}\n{offer.Description}");
             if (merchant is null
-                || !await _mediaAssets.HasApprovedImageAsync(merchant.UsuarioId, offer.ImageUrl, fingerprint, cancellationToken))
+                || !await OfferMediaApprovalHelper.HasApprovedImageAsync(
+                    _mediaAssets, merchant.UsuarioId, offer.ImageUrl, offer.Title, offer.Description, cancellationToken))
             {
                 await RejectWithAuditAsync(offer, now, "ImageNotApproved", "offer_remoderation_image_invalid", cancellationToken);
                 return true;
