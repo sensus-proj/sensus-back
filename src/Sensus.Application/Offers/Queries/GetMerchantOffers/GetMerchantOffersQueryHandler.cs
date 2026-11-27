@@ -37,19 +37,17 @@ public sealed class GetMerchantOffersQueryHandler
         GetMerchantOffersQuery request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) ||
-            !Guid.TryParse(_currentUserService.UserId, out var userId))
+        var access = await MerchantOfferAccessHelper.ResolveMerchantAsync(
+            _currentUserService,
+            _comercioRepository,
+            "Debe iniciar sesión para ver sus ofertas.",
+            cancellationToken);
+        if (access.IsFailure)
         {
-            return Result.Failure<PagedResult<MerchantOfferDto>>(
-                Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para ver sus ofertas."));
+            return Result.Failure<PagedResult<MerchantOfferDto>>(access.Error);
         }
 
-        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null)
-        {
-            return Result.Failure<PagedResult<MerchantOfferDto>>(
-                Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
-        }
+        (Guid userId, Comercio comercio) = access.Value;
 
         OfferStatus? status = null;
         if (!string.IsNullOrWhiteSpace(request.StatusFilter))
