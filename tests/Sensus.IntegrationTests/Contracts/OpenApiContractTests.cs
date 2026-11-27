@@ -32,6 +32,7 @@ public sealed class OpenApiContractTests : IClassFixture<CustomWebApplicationFac
         paths.TryGetProperty("/api/v1/feed/posts", out _).Should().BeTrue();
         paths.TryGetProperty("/api/v1/feed/posts/{id}", out _).Should().BeTrue();
         paths.TryGetProperty("/api/v1/feed/posts/{id}/comments", out _).Should().BeTrue();
+        paths.TryGetProperty("/api/v1/users/favorites", out _).Should().BeTrue();
         paths.TryGetProperty("/api/v1/users/favorites/{id}", out _).Should().BeTrue();
         paths.TryGetProperty("/api/v1/reports", out _).Should().BeTrue();
         paths.TryGetProperty("/api/v1/friends", out _).Should().BeTrue();

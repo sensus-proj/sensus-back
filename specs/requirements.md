@@ -329,6 +329,7 @@ Todos los requisitos del proyecto, trazables a su spec. Formato: `FR-<spec>-<nn>
 | `FR-038-04` | 038 | FR | Garantizar un solo favorito por usuario y oferta | Must | Implementado |
 | `FR-038-05` | 038 | FR | Exponer la afinidad de categoría al ranking de la spec 042, invalidando `feed:affinity:{userId}` al alternar | Should | Implementado |
 | `FR-038-06` | 038 | FR | Limitar la operación a 120 alternancias por usuario y hora (`FavoritesPolicy`) | Should | Implementado |
+| `FR-038-07` | 038 | FR | Consultar paginadamente las ofertas favoritas visibles del usuario autenticado (`GET /api/v1/users/favorites`) | Must | Implementado |
 | `NFR-038-01` | 038 | NFR | Latencia de la operación | p95 < 300 ms | Implementado |
 | `NFR-038-02` | 038 | NFR | Consistencia | Cero conteos negativos | Implementado |
 | `FR-039-01` | 039 | FR | Alternar el me gusta del usuario autenticado sobre una publicación | Must | Implementado |

@@ -4,22 +4,22 @@
 |---|---|
 | Spec | [`spec.md`](spec.md) |
 | Estado del plan | Aprobado |
-| Versión | 2.1.0 |
+| Versión | 2.2.0 |
 | Constitution Check | PASS |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## 1. Resumen técnico
 
-Permitir que un usuario autenticado marque o desmarque (*toggle*) una oferta visible como favorita mediante `POST /api/v1/users/favorites/{id}`, garantizando unicidad con un índice compuesto, calculando el conteo desde la colección y alimentando la afinidad por categoría que consume el ranking de la spec 042.
+Permitir que un usuario autenticado marque o desmarque (*toggle*) una oferta visible como favorita mediante `POST /api/v1/users/favorites/{id}` y consulte sus favoritos vigentes paginados mediante `GET /api/v1/users/favorites`, garantizando unicidad con un índice compuesto, calculando el conteo desde la colección y alimentando la afinidad por categoría que consume el ranking de la spec 042.
 
 ## 2. Cambios por capa
 
 | Capa | Cambio |
 |---|---|
-| Domain | Entidad `OfferFavorite` con invariantes y contrato `IOfferFavoriteRepository`. No se añade `Offer.FavoriteCount` (no existe en el dominio). |
-| Application | `ToggleOfferFavoriteCommand`, DTO `FavoriteToggleResultDto` y handler que valida la visibilidad de la oferta (404 si archivada), distingue 401 de 403 para invitados e invalida `OfferCacheKeys.Detail(offerId)` y `FeedCacheKeys.Affinity(userId)` |
-| Infrastructure | `OfferFavoriteDocument`, `MongoOfferFavoriteRepository`, índices en `MongoDbContext` (`userId`/`offerId` único, `offerId`, `userId` + `createdAtUtc`) y `MongoUserAffinityReader` con señal de favoritos (peso 2.0) |
-| Api | Endpoint `POST /api/v1/users/favorites/{id:guid}` en `UserEndpoints.cs` con `FavoritesPolicy` (120/hora) y `RegisteredUserPolicy` |
+| Domain | Entidad `OfferFavorite`, proyección `FavoriteOfferEntry`/`FavoriteOffersPage` y contrato `IOfferFavoriteRepository` (con `GetPagedByUserIdAsync`). No se añade `Offer.FavoriteCount`. |
+| Application | `ToggleOfferFavoriteCommand` + `GetUserFavoritesQuery` / `GetUserFavoritesQueryValidator` (`20` por defecto, `100` máx.) + `FavoriteToggleResultDto` / `FavoriteOfferDto`, validando 401/403 e invalidando caché en mutación |
+| Infrastructure | `OfferFavoriteDocument`, `MongoOfferFavoriteRepository` (`ToggleFavoriteAsync` + `GetPagedByUserIdAsync` indexado por `ix_offer_favorites_user` y clave primaria `_id` en `offers`/`comercios`), y `MongoUserAffinityReader` |
+| Api | `POST /api/v1/users/favorites/{id:guid}` (`FavoritesPolicy`) y `GET /api/v1/users/favorites` (`ReadHeavyPolicy`) con `RegisteredUserPolicy` en `UserEndpoints.cs` |
 
 ## 3. Modelo de datos e índices
 

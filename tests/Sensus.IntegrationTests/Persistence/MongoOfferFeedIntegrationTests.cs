@@ -193,4 +193,56 @@ public sealed class MongoOfferFeedIntegrationTests : IAsyncLifetime
 
         affinities.Should().ContainKey("Food").WhoseValue.Should().Be(1.0);
     }
+
+    [Fact]
+    public async Task RealMongo_GetPagedByUserIdAsync_OrdersDescExcludesExpiredAndPaginates()
+    {
+        if (_context is null)
+        {
+            return;
+        }
+
+        Guid userId = Guid.NewGuid();
+        Guid merchantId = Guid.NewGuid();
+        Offer newestVisible = Offer.Create(
+            merchantId,
+            "Oferta más reciente",
+            "Vigente",
+            80m,
+            25,
+            4,
+            Now.AddDays(-1),
+            Now.AddDays(3),
+            nowUtc: Now,
+            category: "Food").Value;
+        Offer expiredOffer = Offer.Reconstitute(
+            Guid.NewGuid(),
+            merchantId,
+            "Oferta expirada",
+            "Expirada",
+            50m,
+            10,
+            45m,
+            2,
+            Now.AddDays(-5),
+            Now.AddDays(-1),
+            OfferStatus.Published,
+            null,
+            null,
+            null,
+            Now.AddDays(-5),
+            category: "Food");
+
+        await _context.Offers.InsertManyAsync([OfferDocument.FromDomain(newestVisible), OfferDocument.FromDomain(expiredOffer)]);
+        await _context.OfferFavorites.InsertManyAsync([
+            OfferFavoriteDocument.FromDomain(OfferFavorite.Create(userId, newestVisible.Id, Now).Value),
+            OfferFavoriteDocument.FromDomain(OfferFavorite.Create(userId, expiredOffer.Id, Now.AddMinutes(-5)).Value)
+        ]);
+
+        var repo = new MongoOfferFavoriteRepository(_context);
+        FavoriteOffersPage page = await repo.GetPagedByUserIdAsync(userId, 1, 20, Now);
+
+        page.TotalCount.Should().Be(1);
+        page.Items.Should().ContainSingle(x => x.Offer.Id == newestVisible.Id);
+    }
 }

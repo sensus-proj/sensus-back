@@ -3,8 +3,10 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Offers.Commands.ToggleOfferFavorite;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Queries.GetUserFavorites;
 using Sensus.Application.Users.Commands.DeleteAccount;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
@@ -79,6 +81,30 @@ public static class UserEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden);
 
         if (isV1) photoSignature.WithName("GeneratePhotoSignature");
+
+        // Spec 038 (FR-038-07): Consulta paginada de favoritos vigentes del usuario autenticado
+        RouteHandlerBuilder getFavorites = group.MapGet("/favorites", async (
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new GetUserFavoritesQuery(
+                page ?? 1,
+                pageSize ?? GetUserFavoritesQueryValidator.DefaultPageSize);
+
+            Result<PagedResult<FavoriteOfferDto>> result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithSummary("Spec 038: Lista paginada de ofertas favoritas vigentes del usuario autenticado")
+        .Produces<PagedResult<FavoriteOfferDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        if (isV1) getFavorites.WithName("GetUserFavorites");
 
         // Spec 038: Alternar favorito de una oferta visible (señal de afinidad para la spec 042)
         RouteHandlerBuilder toggleFavorite = group.MapPost("/favorites/{id:guid}", async (

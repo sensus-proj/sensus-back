@@ -1,3 +1,5 @@
+using Sensus.Domain.Models;
+
 namespace Sensus.Domain.Repositories;
 
 /// <summary>
@@ -19,4 +21,12 @@ public interface IOfferFavoriteRepository
         Guid userId,
         IEnumerable<Guid> offerIds,
         CancellationToken cancellationToken = default);
+
+    Task<FavoriteOffersPage> GetPagedByUserIdAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new FavoriteOffersPage([], 0));
 }

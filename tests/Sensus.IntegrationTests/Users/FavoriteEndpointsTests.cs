@@ -6,6 +6,7 @@ using NSubstitute;
 using Sensus.Application.Common.Interfaces;
 using Sensus.Domain.Entities;
 using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 using Sensus.IntegrationTests.Infrastructure;
 
 namespace Sensus.IntegrationTests.Users;
@@ -105,6 +106,52 @@ public sealed class FavoriteEndpointsTests : IClassFixture<CustomWebApplicationF
             content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetFavorites_ReturnsOkPagedResult_ForRegisteredUser()
+    {
+        (string token, User user) = CreateRegisteredToken();
+        Offer offer = ActiveOffer();
+        var entry = new FavoriteOfferEntry(offer, "Cafetería Centro", MerchantCategory.Cafeterias, Now.AddMinutes(-10));
+        _factory.OfferFavoriteRepository
+            .GetPagedByUserIdAsync(user.Id, 1, 20, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(new FavoriteOffersPage([entry], 1));
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/users/favorites?page=1&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"totalCount\":1");
+        body.Should().Contain("\"pageNumber\":1");
+        body.Should().Contain("\"pageSize\":20");
+        body.Should().Contain("\"merchantName\":\"Cafetería Centro\"");
+        body.Should().Contain("\"title\":\"Oferta activa\"");
+    }
+
+    [Fact]
+    public async Task GetFavorites_ReturnsBadRequest_WhenPageSizeExceedsMaximum()
+    {
+        (string token, _) = CreateRegisteredToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/users/favorites?page=1&pageSize=101");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetFavorites_ReturnsUnauthorizedAndForbidden_AccordingToSession()
+    {
+        _client.DefaultRequestHeaders.Authorization = null;
+        HttpResponseMessage unauthResponse = await _client.GetAsync("/api/v1/users/favorites?page=1&pageSize=20");
+        unauthResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        string guestToken = _factory.Services.GetRequiredService<IJwtTokenGenerator>().GenerateGuestToken().Token;
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
+        HttpResponseMessage guestResponse = await _client.GetAsync("/api/v1/users/favorites?page=1&pageSize=20");
+        guestResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     private (string Token, User User) CreateRegisteredToken()
