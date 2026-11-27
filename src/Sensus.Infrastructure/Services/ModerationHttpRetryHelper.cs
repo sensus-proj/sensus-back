@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Sensus.Infrastructure.Services;
@@ -11,6 +12,32 @@ namespace Sensus.Infrastructure.Services;
 internal static class ModerationHttpRetryHelper
 {
     private const int MaxRetryAfterMilliseconds = 2000;
+
+    internal static Task<HttpResponseMessage> PostJsonWithRetryAsync<TPayload>(
+        HttpClient httpClient,
+        string endpointUrl,
+        string resolvedApiKey,
+        TPayload payload,
+        ModerationRetrySettings? retrySettings,
+        int timeoutSeconds,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var requestUri = new Uri(endpointUrl);
+        return SendWithRetryAsync(
+            httpClient,
+            () =>
+            {
+                var req = new HttpRequestMessage(HttpMethod.Post, requestUri);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
+                req.Content = JsonContent.Create(payload);
+                return req;
+            },
+            retrySettings,
+            timeoutSeconds,
+            logger,
+            cancellationToken);
+    }
 
     internal static async Task<HttpResponseMessage> SendWithRetryAsync(
         HttpClient httpClient,

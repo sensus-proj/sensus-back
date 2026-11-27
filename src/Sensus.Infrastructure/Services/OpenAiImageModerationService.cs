@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -191,23 +190,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             temperature = 0.0
         };
 
-        var requestUri = new Uri($"{baseUrl}/chat/completions");
-        HttpRequestMessage CreateRequest()
-        {
-            var req = new HttpRequestMessage(HttpMethod.Post, requestUri);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-            req.Content = JsonContent.Create(requestPayload);
-            return req;
-        }
-
-        var timeoutSeconds = _settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 8;
-        using var response = await ModerationHttpRetryHelper.SendWithRetryAsync(
-            _httpClient,
-            CreateRequest,
-            _settings.Moderation,
-            timeoutSeconds,
-            _logger,
-            cancellationToken);
+        using var response = await PostModerationRequestAsync(baseUrl, "chat/completions", resolvedApiKey, requestPayload, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -297,23 +280,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             input = inputList
         };
 
-        var requestUri = new Uri($"{baseUrl}/moderations");
-        HttpRequestMessage CreateRequest()
-        {
-            var req = new HttpRequestMessage(HttpMethod.Post, requestUri);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-            req.Content = JsonContent.Create(requestPayload);
-            return req;
-        }
-
-        var timeoutSeconds = _settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 8;
-        using var response = await ModerationHttpRetryHelper.SendWithRetryAsync(
-            _httpClient,
-            CreateRequest,
-            _settings.Moderation,
-            timeoutSeconds,
-            _logger,
-            cancellationToken);
+        using var response = await PostModerationRequestAsync(baseUrl, "moderations", resolvedApiKey, requestPayload, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Error al invocar OpenAI Moderations (HTTP {StatusCode}). Contenido enviado a cuarentena.", response.StatusCode);
@@ -400,6 +367,22 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             CategoryScores: categoryScores,
             AppliedThresholdSummary: appliedThresholds);
     }
+
+    private Task<HttpResponseMessage> PostModerationRequestAsync<TPayload>(
+        string baseUrl,
+        string pathSegment,
+        string resolvedApiKey,
+        TPayload requestPayload,
+        CancellationToken cancellationToken) =>
+        ModerationHttpRetryHelper.PostJsonWithRetryAsync(
+            _httpClient,
+            $"{baseUrl}/{pathSegment}",
+            resolvedApiKey,
+            requestPayload,
+            _settings.Moderation,
+            _settings.TimeoutSeconds > 0 ? _settings.TimeoutSeconds : 8,
+            _logger,
+            cancellationToken);
 
     private CategoryThreshold GetThresholdForCategory(string category)
     {
