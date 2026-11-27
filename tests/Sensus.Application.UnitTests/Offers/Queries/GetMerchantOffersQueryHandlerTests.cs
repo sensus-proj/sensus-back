@@ -85,17 +85,19 @@ public class GetMerchantOffersQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnForbidden_WhenMerchantIsNotActive()
+    public async Task Handle_ShouldReturnPagedOffers_WhenMerchantStoreIsClosed()
     {
-        var comercio = Comercio.Create(_userId, "Comercio Inactivo", "Calle 123", "06000", 19.4, -99.1).Value;
+        var comercio = Comercio.Create(_userId, "Comercio Cerrado", "Calle 123", "06000", 19.4, -99.1).Value;
         comercio.Deactivate();
         _comercioRepository.GetByUsuarioIdAsync(_userId, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Comercio?>(comercio));
+        List<Offer> offers = [BuildOffer(comercio.Id, "Oferta Cerrada", _now.AddHours(-1))];
+        SetupPagedOffers(comercio.Id, null, 1, 20, offers, 1);
 
         var result = await _handler.Handle(new GetMerchantOffersQuery(), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Offer.NoActiveMerchant");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().ContainSingle(o => o.Title == "Oferta Cerrada");
     }
 
     [Fact]

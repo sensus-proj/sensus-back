@@ -45,7 +45,7 @@ public sealed class GetMerchantOffersQueryHandler
         }
 
         Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null || !comercio.Activo)
+        if (comercio is null)
         {
             return Result.Failure<PagedResult<MerchantOfferDto>>(
                 Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));

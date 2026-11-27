@@ -96,6 +96,25 @@ public sealed class MerchantInventoryEndpointTests : IClassFixture<CustomWebAppl
     }
 
     [Fact]
+    public async Task GetMyOffers_ShouldReturnInventory_WhenMerchantStoreIsClosed()
+    {
+        (_, Comercio comercio, string token) = CreateAuthenticatedMerchant();
+        comercio.Deactivate();
+        var active = BuildOffer(comercio.Id, "Oferta en tienda cerrada", OfferStatus.Published);
+        var paused = BuildOffer(comercio.Id, "Oferta pausada", OfferStatus.Paused);
+        SetupPage(comercio.Id, null, 1, 20, [active, paused], 2);
+        SetupClaimCounts(active.Id, OfferClaimCounts.Empty);
+
+        using var request = AuthorizedGet(token, "/api/v1/merchants/my-offers");
+        HttpResponseMessage response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        PagedResult<MerchantOfferDto>? body = await response.Content.ReadFromJsonAsync<PagedResult<MerchantOfferDto>>();
+        body.Should().NotBeNull();
+        body!.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task GetMyOffers_ShouldReturnBadRequest_WhenPageSizeExceedsMaximum()
     {
         (_, _, string token) = CreateAuthenticatedMerchant();

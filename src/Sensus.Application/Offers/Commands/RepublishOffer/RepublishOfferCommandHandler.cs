@@ -57,7 +57,7 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
         }
 
         Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null || !comercio!.Activo)
+        if (comercio is null)
         {
             return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
         }
