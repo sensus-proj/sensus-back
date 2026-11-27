@@ -51,7 +51,7 @@ Resolver la evasión de lenguaje vulgar en español e inglés (`"pito"`, `"puta"
 - **CA-059-01:** Publicar una oferta o comentario con `"pito"`, `"puta"`, `"p3nd3j0"` o `"pppputaaa"` es rechazado con `400 Bad Request` en `< 5 ms` sin depender de red externa.
 - **CA-059-02:** Cuando OpenAI devuelve HTTP 500, timeout o JSON corrupto, o no existe `ApiKey`, `OpenAiTextModerationService` retorna `IsApproved = false` (`Decision = "Quarantine"`).
 - **CA-059-03:** Cambiar `OpenAiSettings:DefaultLowThreshold` o `CategoryThresholds` en `IOptions<OpenAiSettings>` altera la banda de decisión en `OpenAiTextModerationService` sin recompilar ni existir `0.35`/`0.75` fijos en `GetThresholdForCategory`.
-- **CA-059-04:** Nombres comerciales o productos legítimos (`"Cafetería Central"`, `"Tamales de pollo"`, `"Computadora portátil"`) son aprobados sin falsos positivos.
+- **CA-059-04:** Nombres comerciales o productos legítimos (`"Cafetería Central"`, `"Tamales de pollo"`, `"Computadora portátil"`, `"Cono de helado artesanal"`, `"Conos de pizza al 2x1"`) son aprobados sin falsos positivos, preservando la detección de `"coño"` al conservar `ñ` durante la normalización (`NormalizeBasic`).
 
 ## 6. Dependencias y riesgos
 
