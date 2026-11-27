@@ -92,6 +92,36 @@ public class ExpireClaimsCommandHandlerTests
         await _cacheService.DidNotReceiveWithAnyArgs().RemoveByPrefixAsync(default!, default);
     }
 
+    [Fact]
+    public async Task Handle_ShouldReturnExactQuantityForMultiUnitExpiredClaims()
+    {
+        Guid secondOfferId = Guid.NewGuid();
+        OfferClaim multiClaim = OfferClaim.Reconstitute(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            OfferId,
+            Guid.NewGuid(),
+            "hash",
+            OfferClaimStatus.Expired,
+            Now,
+            null,
+            Now.AddHours(-25),
+            [new OfferClaimItem(OfferId, 4), new OfferClaimItem(secondOfferId, 2)]);
+
+        _offerClaimRepository.ExpireClaimsAsync(Now, Arg.Any<CancellationToken>())
+            .Returns(new List<OfferClaim> { multiClaim });
+        _offerRepository.ReturnStockAsync(OfferId, 4, Arg.Any<CancellationToken>()).Returns(true);
+        _offerRepository.ReturnStockAsync(secondOfferId, 2, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _handler.Handle(new ExpireClaimsCommand(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ExpiredCount.Should().Be(1);
+        result.Value.ReturnedUnits.Should().Be(6);
+        await _offerRepository.Received(1).ReturnStockAsync(OfferId, 4, Arg.Any<CancellationToken>());
+        await _offerRepository.Received(1).ReturnStockAsync(secondOfferId, 2, Arg.Any<CancellationToken>());
+    }
+
     private static OfferClaim BuildExpiredClaim()
     {
         return OfferClaim.Reconstitute(

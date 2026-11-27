@@ -56,6 +56,7 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 | FR-033-09 | Tras confirmar el apartado, avisar al comprador y a la cuenta propietaria del comercio en sus dispositivos activos, respetando `pushEnabled` | Must |
 | FR-033-10 | Entregar al comprador `claimId`, `offerId` y `expiresAtUtc` en el push para mostrar el límite de recogida | Must |
 | FR-033-12 | Restringir `POST /offers/claims/expire-check` a `Administrador`, con límite de tasa `sensitive-write` (era público hasta el 2026-11-19, OWASP API5) | Must |
+| FR-033-13 | Permitir apartar múltiples unidades (`quantity >= 1`) en `POST /api/v1/offers/{id}/claim` y múltiples productos de un mismo comercio con cantidades (`items`) mediante `POST /api/v1/offers/claims` generando un único código QR, validando mismo comercio, revirtiendo stock atómicamente ante faltante y devolviendo las cantidades exactas al expirar | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -113,6 +114,8 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 | Método | Ruta | Autorización |
 |---|---|---|
 | POST | `/api/v1/offers/{id}/claim` | JWT |
+| POST | `/api/v1/offers/claims` | JWT |
+| GET | `/api/v1/offers/claims/{claimId}` | JWT |
 | POST | `/api/v1/offers/claims/{code}/redeem` | JWT |
 
 ## 8. Dependencias y supuestos
@@ -132,7 +135,7 @@ Permitir que un usuario aparte una unidad de una oferta y reciba un código QR d
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`, `FR-033-09`, `FR-033-10`, `FR-033-12`
+- Requisitos de este spec: `FR-033-01`, `FR-033-02`, `FR-033-03`, `FR-033-04`, `FR-033-05`, `FR-033-06`, `FR-033-07`, `FR-033-08`, `FR-033-09`, `FR-033-10`, `FR-033-11`, `FR-033-12`, `FR-033-13`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

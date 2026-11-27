@@ -221,21 +221,56 @@ public static class OfferEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        // Spec 033: Apartado de una unidad con código firmado de un solo uso
+        // Spec 033: Apartado de una o más unidades con código firmado de un solo uso
         offersGroup.MapPost("/{id:guid}/claim", async (
             Guid id,
+            HttpContext httpContext,
             ISender sender,
             CancellationToken ct) =>
         {
-            var command = new ClaimOfferCommand(id);
+            int quantity = 1;
+            if (httpContext.Request.ContentLength is > 0 && httpContext.Request.HasJsonContentType())
+            {
+                ClaimOfferBody? body = await httpContext.Request.ReadFromJsonAsync<ClaimOfferBody>(ct);
+                if (body is not null)
+                {
+                    quantity = body.Quantity;
+                }
+            }
+
+            var command = new ClaimOfferCommand(id, quantity);
             var result = await sender.Send(command, ct);
             return result.ToHttpResult();
         })
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
         .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
         .WithName("ClaimOffer")
-        .WithSummary("Spec 033: Aparta una unidad de la oferta y devuelve el código firmado y su payload QR")
+        .WithSummary("Spec 033: Aparta una o más unidades de la oferta y devuelve un código QR único")
         .Produces<ClaimOfferResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Spec 033: Apartado de carrito (múltiples productos del mismo comercio, N unidades) -> 1 QR
+        offersGroup.MapPost("/claims", async (
+            CreateCartClaimBody request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            IReadOnlyList<CartClaimItemInput> items = (request.Items ?? [])
+                .Select(i => new CartClaimItemInput(i.OfferId, i.Quantity))
+                .ToList();
+            var result = await sender.Send(new CreateCartClaimCommand(items), ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithName("CreateCartClaim")
+        .WithSummary("Spec 033: Aparta varios productos del mismo comercio con sus cantidades en un solo QR")
+        .Produces<ClaimOfferResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status409Conflict)
@@ -427,3 +462,9 @@ public sealed record UpdateOfferBody(
     string? Category = null);
 
 public sealed record ChangeOfferStatusBody(string NewStatus);
+
+public sealed record ClaimOfferBody(int Quantity = 1);
+
+public sealed record CartClaimItemBody(Guid OfferId, int Quantity = 1);
+
+public sealed record CreateCartClaimBody(IReadOnlyList<CartClaimItemBody>? Items);

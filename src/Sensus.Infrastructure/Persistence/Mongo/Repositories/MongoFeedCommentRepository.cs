@@ -51,6 +51,25 @@ public sealed class MongoFeedCommentRepository : IFeedCommentRepository
         return (int)count;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> ids = postIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        List<FeedCommentDocument> docs = await _context.FeedComments
+            .Find(Builders<FeedCommentDocument>.Filter.In(c => c.PostId, ids))
+            .ToListAsync(cancellationToken);
+
+        return docs
+            .GroupBy(d => d.PostId)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
     public async Task<int> AnonymizeByAuthorAsync(
         Guid authorUserId,
         CancellationToken cancellationToken = default)

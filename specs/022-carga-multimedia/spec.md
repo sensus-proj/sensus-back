@@ -52,6 +52,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 | FR-022-06 | Moderar la imagen antes de permitir su uso público | Must |
 | FR-022-07 | Limitar la carga a 20 archivos por usuario y día | Should |
 | FR-022-08 | Retirar el camino heredado de firma directa sin moderación (`POST /api/v1/users/photo-signature` responde `410 Gone`) exigiendo uso exclusivo de `/api/v1/media/upload` | Must |
+| FR-022-09 | Aceptar respuestas `Approved` con `flagged_categories=[]` cuando el modelo de visión omite `category_scores` en imágenes limpias, manteniendo *fail-closed* ante cualquier veredicto distinto de `Approved`, categorías señaladas o puntajes inválidos | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -122,7 +123,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-022-01`, `FR-022-02`, `FR-022-03`, `FR-022-04`, `FR-022-05`, `FR-022-06`, `FR-022-07`, `FR-022-08`
+- Requisitos de este spec: `FR-022-01`, `FR-022-02`, `FR-022-03`, `FR-022-04`, `FR-022-05`, `FR-022-06`, `FR-022-07`, `FR-022-08`, `FR-022-09`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

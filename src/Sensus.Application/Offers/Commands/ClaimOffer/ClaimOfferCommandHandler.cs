@@ -40,101 +40,19 @@ public sealed class ClaimOfferCommandHandler : IRequestHandler<ClaimOfferCommand
         _interactionRecorder = interactionRecorder;
     }
 
-    public async Task<Result<ClaimOfferResultDto>> Handle(
+    public Task<Result<ClaimOfferResultDto>> Handle(
         ClaimOfferCommand request,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) ||
-            !Guid.TryParse(_currentUserService.UserId, out Guid userId))
-        {
-            return Result.Failure<ClaimOfferResultDto>(
-                Error.Unauthorized("OfferClaim.Unauthorized", "Debe iniciar sesión para apartar una oferta."));
-        }
-
-        DateTime now = _dateTimeProvider.UtcNow;
-
-        Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null || !offer.IsActive(now))
-        {
-            return Result.Failure<ClaimOfferResultDto>(
-                Error.Conflict("OfferClaim.OfferNotAvailable", "La oferta no está disponible para apartar."));
-        }
-
-        OfferClaim? existingClaim = await _offerClaimRepository.GetActiveByUserAndOfferAsync(
-            userId,
-            offer.Id,
+        CancellationToken cancellationToken) =>
+        OfferClaimFlow.ExecuteAsync(
+            [new CartClaimItemInput(request.OfferId, request.Quantity)],
+            _offerRepository,
+            _offerClaimRepository,
+            _currentUserService,
+            _claimCodeService,
+            _dateTimeProvider,
+            _cacheService,
+            _claimPushNotifier,
+            _interactionRecorder,
+            null,
             cancellationToken);
-
-        if (existingClaim is not null)
-        {
-            return Result.Failure<ClaimOfferResultDto>(
-                Error.Conflict("OfferClaim.AlreadyActive", "Ya tiene un apartado activo para esta oferta."));
-        }
-
-        bool reserved = await _offerRepository.TryReserveStockAsync(offer.Id, now, cancellationToken);
-        if (!reserved)
-        {
-            return Result.Failure<ClaimOfferResultDto>(
-                Error.Conflict("OfferClaim.NoStock", "La oferta ya no tiene stock disponible."));
-        }
-
-        Result<OfferClaim> claimResult = OfferClaim.Create(userId, offer.Id, offer.MerchantId, now);
-        if (claimResult.IsFailure)
-        {
-            await _offerRepository.ReturnStockAsync(offer.Id, 1, cancellationToken);
-            return Result.Failure<ClaimOfferResultDto>(claimResult.Error);
-        }
-
-        OfferClaim claim = claimResult.Value;
-        ClaimCode generatedCode = _claimCodeService.Generate(claim.Id, offer.Id, claim.ExpiresAtUtc);
-        Result hashResult = claim.AssignCodeHash(generatedCode.Hash);
-        if (hashResult.IsFailure)
-        {
-            await _offerRepository.ReturnStockAsync(offer.Id, 1, cancellationToken);
-            return Result.Failure<ClaimOfferResultDto>(hashResult.Error);
-        }
-
-        bool added = await _offerClaimRepository.TryAddAsync(claim, cancellationToken);
-        if (!added)
-        {
-            // Compensación: otro apartado activo ganó la carrera; se devuelve la unidad reservada.
-            await _offerRepository.ReturnStockAsync(offer.Id, 1, cancellationToken);
-            return Result.Failure<ClaimOfferResultDto>(
-                Error.Conflict("OfferClaim.AlreadyActive", "Ya tiene un apartado activo para esta oferta."));
-        }
-
-        await _cacheService.InvalidateAsync(offer.Id, cancellationToken);
-
-        if (_claimPushNotifier is not null)
-        {
-            await _claimPushNotifier.NotifyAsync(claim, cancellationToken);
-        }
-
-        // Spec 055 (FR-055-03, FR-055-09): registrar interacción claim sin bloquear el apartado.
-        if (!_currentUserService.IsGuest && _interactionRecorder is not null)
-        {
-            Result<OfferInteractionItem> itemResult = OfferInteractionItem.Create(
-                offer.Id,
-                position: 1,
-                FeedSlot.Direct,
-                offer.Category,
-                DistanceBucket.Unknown);
-
-            if (itemResult.IsSuccess)
-            {
-                await _interactionRecorder.RecordSingleAsync(
-                    userId,
-                    OfferInteractionType.Claim,
-                    itemResult.Value,
-                    cancellationToken: cancellationToken);
-            }
-        }
-
-        return Result.Success(new ClaimOfferResultDto(
-            claim.Id,
-            claim.OfferId,
-            generatedCode.Code,
-            generatedCode.QrPayload,
-            claim.ExpiresAtUtc));
-    }
 }

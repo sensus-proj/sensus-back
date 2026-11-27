@@ -23,4 +23,15 @@ public interface IFeedPostLikeRepository
     /// Conteo de me gusta de una publicación, derivado de los registros únicos (nunca negativo).
     /// </summary>
     Task<int> CountByPostIdAsync(Guid postId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<Guid, int>> CountByPostIdsAsync(
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());
+
+    Task<IReadOnlySet<Guid>> GetLikedPostIdsByUserAsync(
+        Guid userId,
+        IEnumerable<Guid> postIds,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
 }
