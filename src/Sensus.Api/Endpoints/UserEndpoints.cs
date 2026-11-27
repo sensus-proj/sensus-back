@@ -3,10 +3,11 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Sensus.Api.Extensions;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Models;
 using Sensus.Application.Offers.Commands.ToggleOfferFavorite;
 using Sensus.Application.Offers.DTOs;
+using Sensus.Application.Offers.Queries.GetUserFavorites;
 using Sensus.Application.Users.Commands.DeleteAccount;
-using Sensus.Application.Users.Commands.GeneratePhotoSignature;
 using Sensus.Application.Users.Commands.NotificationLocation;
 using Sensus.Application.Users.Commands.RegisterDevice;
 using Sensus.Application.Users.Commands.ReplaceMyInterests;
@@ -69,21 +70,41 @@ public static class UserEndpoints
 
         if (isV1) updateProfile.WithName("UpdateProfile");
 
-        // SE-006: Solicitar firma de subida para Cloudinary
-        RouteHandlerBuilder photoSignature = group.MapPost("/photo-signature", async (
-            ISender sender,
-            CancellationToken ct) =>
-        {
-            Result<CloudinarySignatureResponse> result = await sender.Send(new GeneratePhotoSignatureCommand(), ct);
-            return result.ToHttpResult();
-        })
+        // SE-006 / A2: endpoint heredado de subida directa retirado (410 Gone). Usar POST /api/v1/media/upload.
+        RouteHandlerBuilder photoSignature = group.MapPost("/photo-signature", () =>
+            Result.Failure(Error.Gone("Media.SignatureRetired", "Usa POST /api/v1/media/upload")).ToHttpResult())
         .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
-        .WithSummary("SE-006: Genera parámetros firmados para subida directa de fotos a Cloudinary")
-        .Produces<CloudinarySignatureResponse>(StatusCodes.Status200OK)
+        .RequireRateLimiting(SecurityExtensions.SensitiveWritePolicy)
+        .WithSummary("Retirado (410 Gone): usa POST /api/v1/media/upload con moderación previa")
+        .ProducesProblem(StatusCodes.Status410Gone)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden);
 
         if (isV1) photoSignature.WithName("GeneratePhotoSignature");
+
+        // Spec 038 (FR-038-07): Consulta paginada de favoritos vigentes del usuario autenticado
+        RouteHandlerBuilder getFavorites = group.MapGet("/favorites", async (
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new GetUserFavoritesQuery(
+                page ?? 1,
+                pageSize ?? GetUserFavoritesQueryValidator.DefaultPageSize);
+
+            Result<PagedResult<FavoriteOfferDto>> result = await sender.Send(query, ct);
+            return result.ToHttpResult();
+        })
+        .RequireAuthorization(SecurityExtensions.RegisteredUserPolicy)
+        .RequireRateLimiting(SecurityExtensions.ReadHeavyPolicy)
+        .WithSummary("Spec 038: Lista paginada de ofertas favoritas vigentes del usuario autenticado")
+        .Produces<PagedResult<FavoriteOfferDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        if (isV1) getFavorites.WithName("GetUserFavorites");
 
         // Spec 038: Alternar favorito de una oferta visible (señal de afinidad para la spec 042)
         RouteHandlerBuilder toggleFavorite = group.MapPost("/favorites/{id:guid}", async (

@@ -6,38 +6,38 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 028 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 009, 014
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [ ] La spec 028 está aprobada y sin preguntas bloqueantes (backlog)
+- [ ] Los requisitos tienen identificador y criterio medible (backlog)
+- [ ] Las dependencias están resueltas: 009, 014 (backlog)
+- [ ] El alcance y las exclusiones están declarados (backlog)
+- [ ] El impacto en seguridad, costo y rendimiento fue evaluado (backlog)
 
 ## B. Específicos de este spec
 
-- [ ] La spec permanece en backlog hasta que exista un proveedor
-- [ ] No se implementa sin decisión de producto
-- [ ] No aparece en el catálogo de endpoints vigente
+- [ ] La spec permanece en backlog hasta que exista un proveedor (backlog)
+- [ ] No se implementa sin decisión de producto (backlog)
+- [ ] No aparece en el catálogo de endpoints vigente (backlog)
 
 ## C. Antes de entregar (Definition of Done)
 
-- [ ] Código en la capa correcta y test de arquitectura en verde
-- [ ] Pruebas unitarias y de integración añadidas y en verde
-- [ ] Cobertura ≥ 80 % en Domain y Application
-- [ ] Contrato OpenAPI actualizado
-- [ ] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
-- [ ] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [ ] Código en la capa correcta y test de arquitectura en verde (backlog)
+- [ ] Pruebas unitarias y de integración añadidas y en verde (backlog)
+- [ ] Cobertura ≥ 80 % en Domain y Application (backlog)
+- [ ] Contrato OpenAPI actualizado (backlog)
+- [ ] IaC actualizada y `cdk diff` revisado si aplica (backlog)
+- [ ] Logs con correlation-id y sin PII (backlog)
+- [ ] Revisión de seguridad: sin secretos, autorización verificada (backlog)
+- [ ] Constitution Check en PASS o brecha registrada (backlog)
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [ ] **I. Especificación y trazabilidad** — PASS (backlog)
+- [ ] **II. Clean Architecture** — PASS (backlog)
+- [ ] **III. CQRS y contratos** — PASS (backlog)
+- [ ] **IV. Seguridad y privacidad** — PASS (backlog)
+- [ ] **V. Verificación automatizada** — PASS (backlog)
+- [ ] **VI. Costo cero e IaC** — PASS (backlog)
+- [ ] **VII. Rendimiento y observabilidad** — PASS (backlog)
 
 ## E. Evidencia
 

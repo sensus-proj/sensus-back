@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -83,12 +82,9 @@ public sealed class OpenAiTextModerationService : ITextModerationService
                 ? "https://api.openai.com/v1"
                 : _openAiSettings.BaseUrl.TrimEnd('/');
 
-            var timeoutSeconds = _sensiSettings.TimeoutSeconds > 0
-                ? _sensiSettings.TimeoutSeconds
-                : (_openAiSettings.TimeoutSeconds > 0 ? _openAiSettings.TimeoutSeconds : 15);
-
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+            var timeoutSeconds = _openAiSettings.TimeoutSeconds > 0
+                ? _openAiSettings.TimeoutSeconds
+                : (_sensiSettings.TimeoutSeconds > 0 ? _sensiSettings.TimeoutSeconds : 8);
 
             if (model.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase))
             {
@@ -98,7 +94,8 @@ public sealed class OpenAiTextModerationService : ITextModerationService
                     resolvedApiKey,
                     baseUrl,
                     model,
-                    cts.Token);
+                    timeoutSeconds,
+                    cancellationToken);
             }
 
             return await ModerateWithOmniModerationAsync(
@@ -106,7 +103,8 @@ public sealed class OpenAiTextModerationService : ITextModerationService
                 resolvedApiKey,
                 baseUrl,
                 model,
-                cts.Token);
+                timeoutSeconds,
+                cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -134,6 +132,7 @@ public sealed class OpenAiTextModerationService : ITextModerationService
         string resolvedApiKey,
         string baseUrl,
         string model,
+        int timeoutSeconds,
         CancellationToken cancellationToken)
     {
         const string systemPrompt = @"Eres el sistema de moderación estricta de texto de Sensus (marketplace local de productos y comercios). Evalúa si el texto proporcionado es apto o contiene lenguaje prohibido.
@@ -171,12 +170,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             temperature = 0.0
         };
 
-        var requestUri = new Uri($"{baseUrl}/chat/completions");
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-        request.Content = JsonContent.Create(requestPayload);
-
-        var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await PostModerationRequestAsync(baseUrl, "chat/completions", resolvedApiKey, requestPayload, timeoutSeconds, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -238,6 +232,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
         string resolvedApiKey,
         string baseUrl,
         string model,
+        int timeoutSeconds,
         CancellationToken cancellationToken)
     {
         var requestPayload = new
@@ -246,12 +241,7 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
             input = text
         };
 
-        var requestUri = new Uri($"{baseUrl}/moderations");
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedApiKey);
-        request.Content = JsonContent.Create(requestPayload);
-
-        var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await PostModerationRequestAsync(baseUrl, "moderations", resolvedApiKey, requestPayload, timeoutSeconds, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -336,6 +326,23 @@ Responde OBLIGATORIAMENTE un JSON válido con esta estructura exacta:
     }
 
     // FR-059-04: Todos los umbrales se resuelven exclusivamente desde IOptions<OpenAiSettings>.
+    private Task<HttpResponseMessage> PostModerationRequestAsync<TPayload>(
+        string baseUrl,
+        string pathSegment,
+        string resolvedApiKey,
+        TPayload requestPayload,
+        int timeoutSeconds,
+        CancellationToken cancellationToken) =>
+        ModerationHttpRetryHelper.PostJsonWithRetryAsync(
+            _httpClient,
+            $"{baseUrl}/{pathSegment}",
+            resolvedApiKey,
+            requestPayload,
+            _openAiSettings.Moderation,
+            timeoutSeconds,
+            _logger,
+            cancellationToken);
+
     private CategoryThreshold GetThresholdForCategory(string category)
     {
         if (_openAiSettings.Sensi?.TextModerationThresholds != null &&

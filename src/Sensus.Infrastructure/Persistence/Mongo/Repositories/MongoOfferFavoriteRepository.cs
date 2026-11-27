@@ -1,5 +1,7 @@
 using MongoDB.Driver;
 using Sensus.Domain.Entities;
+using Sensus.Domain.Enums;
+using Sensus.Domain.Models;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo.Documents;
 
@@ -87,5 +89,89 @@ public sealed class MongoOfferFavoriteRepository : IOfferFavoriteRepository
             .ToListAsync(cancellationToken);
 
         return docs.Select(d => d.OfferId).ToHashSet();
+    }
+
+    public async Task<FavoriteOffersPage> GetPagedByUserIdAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        DateTime normalizedNow = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
+        int safePage = Math.Max(1, pageNumber);
+        int safeSize = Math.Clamp(pageSize, 1, 100);
+
+        List<OfferFavoriteDocument> favoriteDocs = await _context.OfferFavorites
+            .Find(Builders<OfferFavoriteDocument>.Filter.Eq(x => x.UserId, userId))
+            .SortByDescending(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        if (favoriteDocs.Count == 0)
+        {
+            return new FavoriteOffersPage([], 0);
+        }
+
+        List<Guid> favoriteOfferIds = favoriteDocs.Select(f => f.OfferId).Distinct().ToList();
+        FilterDefinition<OfferDocument> offerFilter = Builders<OfferDocument>.Filter.And(
+            Builders<OfferDocument>.Filter.In(o => o.Id, favoriteOfferIds),
+            Builders<OfferDocument>.Filter.Eq(o => o.Status, OfferStatus.Published.ToString()),
+            Builders<OfferDocument>.Filter.Gt(o => o.EndsAt, normalizedNow));
+
+        List<OfferDocument> visibleOfferDocs = await _context.Offers
+            .Find(offerFilter)
+            .ToListAsync(cancellationToken);
+
+        if (visibleOfferDocs.Count == 0)
+        {
+            return new FavoriteOffersPage([], 0);
+        }
+
+        List<Guid> merchantIds = visibleOfferDocs.Select(o => o.MerchantId).Distinct().ToList();
+        List<ComercioDocument> merchantDocs = await _context.Comercios
+            .Find(Builders<ComercioDocument>.Filter.In(c => c.Id, merchantIds))
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, OfferDocument> offersById = visibleOfferDocs.ToDictionary(o => o.Id);
+        Dictionary<Guid, ComercioDocument> merchantsById = merchantDocs.ToDictionary(m => m.Id);
+
+        List<FavoriteOfferEntry> visibleEntries = [];
+        foreach (OfferFavoriteDocument fav in favoriteDocs)
+        {
+            if (!offersById.TryGetValue(fav.OfferId, out OfferDocument? offerDoc))
+            {
+                continue;
+            }
+
+            if (merchantsById.TryGetValue(offerDoc.MerchantId, out ComercioDocument? merchantDoc))
+            {
+                if (!merchantDoc.Activo)
+                {
+                    continue;
+                }
+
+                visibleEntries.Add(new FavoriteOfferEntry(
+                    offerDoc.ToDomain(),
+                    merchantDoc.NombreComercial,
+                    merchantDoc.Categoria,
+                    fav.CreatedAtUtc));
+            }
+            else
+            {
+                visibleEntries.Add(new FavoriteOfferEntry(
+                    offerDoc.ToDomain(),
+                    offerDoc.MerchantName ?? string.Empty,
+                    MerchantCategoryCatalog.Default,
+                    fav.CreatedAtUtc));
+            }
+        }
+
+        int totalCount = visibleEntries.Count;
+        List<FavoriteOfferEntry> pagedItems = visibleEntries
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
+            .ToList();
+
+        return new FavoriteOffersPage(pagedItems, totalCount);
     }
 }

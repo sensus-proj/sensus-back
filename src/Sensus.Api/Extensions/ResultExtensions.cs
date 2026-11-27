@@ -91,6 +91,7 @@ public static class ResultExtensions
         ErrorType.Unprocessable => StatusCodes.Status422UnprocessableEntity,
         ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
         ErrorType.PayloadTooLarge => StatusCodes.Status413PayloadTooLarge,
+        ErrorType.Gone => StatusCodes.Status410Gone,
         _ => StatusCodes.Status400BadRequest
     };
 
@@ -124,6 +125,7 @@ public static class ResultExtensions
             StatusCodes.Status403Forbidden => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
             StatusCodes.Status404NotFound => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
             StatusCodes.Status409Conflict => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
+            StatusCodes.Status410Gone => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.9",
             StatusCodes.Status413PayloadTooLarge => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.11",
             StatusCodes.Status422UnprocessableEntity => "https://datatracker.ietf.org/doc/html/rfc4918#section-11.2",
             StatusCodes.Status503ServiceUnavailable => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.4",
@@ -137,6 +139,7 @@ public static class ResultExtensions
             StatusCodes.Status403Forbidden => "Forbidden",
             StatusCodes.Status404NotFound => "Not Found",
             StatusCodes.Status409Conflict => "Conflict",
+            StatusCodes.Status410Gone => "Gone",
             StatusCodes.Status413PayloadTooLarge => "Payload Too Large",
             StatusCodes.Status422UnprocessableEntity => "Unprocessable Entity",
             StatusCodes.Status503ServiceUnavailable => "Service Unavailable",

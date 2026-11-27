@@ -12,9 +12,9 @@
 
 | ID | Tarea | Capa | Requisito | Depende | Estado |
 |---|---|---|---|---|---|
-| T028-01 | Confirmar si la capacidad entra en el alcance del curso | Producto | `FR-028-01` | — | Pendiente |
-| T028-02 | Implementar idempotencia por eventId | Application | `FR-028-03` | T028-01 | Pendiente |
-| T028-03 | Reevaluar el backlog cuando exista un proveedor o una decisión de producto | Docs | `FR-028-01` | T028-02 | Pendiente |
+| T028-01 | Confirmar si la capacidad entra en el alcance del curso | Producto | `FR-028-01` | — | Pendiente (backlog, specs/README.md) |
+| T028-02 | Implementar idempotencia por eventId | Application | `FR-028-03` | T028-01 | Pendiente (backlog, specs/README.md) |
+| T028-03 | Reevaluar el backlog cuando exista un proveedor o una decisión de producto | Docs | `FR-028-01` | T028-02 | Pendiente (backlog, specs/README.md) |
 
 ## Notas de ejecución
 

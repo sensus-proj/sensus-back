@@ -64,9 +64,14 @@ Evaluación previa a la implementación.
 | V | PASS | Estrategia de pruebas definida en §7 |
 | VI | PASS | Costo estimado declarado en §6 |
 | VII | PASS | Paginación, índices y observabilidad en §5 |
-| VIII | Brecha | El modelo de amenazas del adaptador figura en §4. Queda por verificar la cadena de publicación y registrar evidencia de los controles y escaneos requeridos. |
+| VIII | PASS | Matriz STRIDE en §4, presupuesto acotado (`OpenAiSettingsValidator`, ≤ 20 s) y escaneos CI bloqueantes verificados (`ci.yml`, run `4a00d24`) |
 
 > Aplica EX-002 (Apéndice E de la constitución).
+
+### 2.1 Reintento transitorio y presupuesto de latencia (`FR-017-10`, `NFR-017-03`, `T017-03`)
+
+- **Implementación sin dependencias externas:** `ModerationHttpRetryHelper` ejecuta el bucle de envío en `OpenAiTextModerationService` y `OpenAiImageModerationService`, recreando `HttpRequestMessage` por intento con timeout individual y cancelación ligada al cliente. Reintenta únicamente ante `HttpRequestException`, 429, 500, 502, 503 y 504 (máximo `MaxRetries`, defecto 1, límite 2), respetando `Retry-After` ≤ 2 s o `RetryDelayMilliseconds` (defecto 500 ms, límite 2000 ms). No reintenta JSON malformado ni cancelación/timeout.
+- **Validación al arrancar (`OpenAiSettingsValidator`):** verifica `TimeoutSeconds` en [1, 20], `MaxRetries` en [0, 2], `RetryDelayMilliseconds` en [0, 2000] y `TimeoutSeconds * (1 + MaxRetries) + MaxRetries * (RetryDelayMilliseconds / 1000.0) <= 20 s` (techo debajo del timeout de 29 s de Lambda). `appsettings.json` ajusta `OpenAiSettings:TimeoutSeconds` a `8` (`8 * 2 + 0.5 = 16.5 s`). Costo adicional: 0 USD.
 
 ## 9. Riesgos de implementación
 

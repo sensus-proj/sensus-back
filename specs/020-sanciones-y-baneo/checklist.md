@@ -38,10 +38,10 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] IaC sin cambios confirmada (sin recursos nuevos; no se ejecutó `cdk diff`)
 - [x] Logs con correlation-id y sin PII (eventos `SecurityAudit` con identificadores, sin motivo libre)
 - [x] Revisión de seguridad: sin secretos, autorización verificada en el borde y en el caso de uso
-- [x] Constitution Check en PASS o brecha registrada (VIII con observación: brecha G-05)
+- [x] Constitution Check en PASS o brecha registrada (VIII con observación: brechas G-02 ejecución diurna §5.Z-10, G-04 móvil y G-05 medición de carga abiertas)
 - [x] `tasks.md`, `specs/README.md`, `requirements.md` y `memory.md` reflejan el estado real
 - [x] Modelo de amenazas (STRIDE) en `plan.md`
-- [ ] Escaneos bloqueantes DAST y SBOM (Principio VIII, regla 8): no existen aún en el pipeline; brechas G-02 y G-04 del Apéndice F
+- [x] Escaneos bloqueantes DAST y SBOM (Principio VIII, regla 8): `ci.yml` (gitleaks, Snyk, SonarCloud, cdk-nag, CycloneDX SBOM y atestación verde en `4a00d24`) y `.github/workflows/dast-zap.yml` implementados; G-02 ejecución diurna pendiente (§5.Z-10) y G-04 cerrado en backend (`Parcial` únicamente en móvil)
 
 ## D. Constitution Check
 
@@ -52,7 +52,7 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 - [x] **V. Verificación automatizada** — PASS
 - [x] **VI. Costo cero e IaC** — PASS
 - [x] **VII. Rendimiento y observabilidad** — PASS
-- [x] **VIII. DevSecOps de nivel fintech** — PASS CON OBSERVACIONES (G-02, G-04 y G-05 abiertas)
+- [x] **VIII. DevSecOps de nivel fintech** — PASS (`plan.md` §4 STRIDE, `ci.yml` gitleaks/Snyk/SonarCloud/cdk-nag/SBOM CycloneDX verde en `4a00d24` y `dast-zap.yml`; G-02 ejecución diurna §5.Z-10, G-04 `Parcial` solo en móvil, G-05 pendiente de carga)
 
 ## E. Evidencia
 

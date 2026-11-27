@@ -6,8 +6,8 @@
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
 | Estado | Completada |
-| Versión | 2.1.0 |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Versión | 2.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 
@@ -22,6 +22,10 @@
 | T038-07 | Implementar: pruebas de integración en IntegrationTests | Pruebas | `FR-038-01`, `FR-038-03`, `FR-038-06` | T038-06 | Completada (`tests/Sensus.IntegrationTests/Users/FavoriteEndpointsTests.cs` — 5 superadas; `OpenApiContractTests.cs`) |
 | T038-08 | Integrar la señal de favoritos en `MongoUserAffinityReader` (spec 042) | Infrastructure | `FR-038-05`, `FR-042-04` | T038-04 | Completada (`MongoUserAffinityReader.cs` — peso 2.0; `IUserAffinityReader.cs`) |
 | T038-09 | Actualizar `checklist.md`, `specs/README.md`, `requirements.md` y `memory.md` | Docs | `FR-038-05` | T038-08 | Completada |
+| T038-10 | Ampliar `openapi.yaml`, `IOfferFavoriteRepository` y `FavoriteOffersPage` para consulta paginada (`FR-038-07`) | Domain/Api | `FR-038-07` | T038-09 | Completada (`specs/038-favoritos/contracts/openapi.yaml`, `FavoriteOffersPage.cs`, `IOfferFavoriteRepository.cs`) |
+| T038-11 | Implementar `GetUserFavoritesQuery`, `GetUserFavoritesQueryValidator` y `FavoriteOfferDto` | Application | `FR-038-07` | T038-10 | Completada (`GetUserFavoritesQuery.cs`, `GetUserFavoritesQueryValidator.cs`, `FavoriteOfferDto.cs`) |
+| T038-12 | Implementar `MongoOfferFavoriteRepository.GetPagedByUserIdAsync` indexado y `GET /api/v1/users/favorites` | Infrastructure/Api | `FR-038-07` | T038-11 | Completada (`MongoOfferFavoriteRepository.cs`, `UserEndpoints.cs`) |
+| T038-13 | Añadir pruebas unitarias, integración y OpenAPI de `GetUserFavorites` y actualizar `requirements.md`/`specs/038-favoritos/checklist.md` | Pruebas/Docs | `FR-038-07` | T038-12 | Completada (`GetUserFavoritesQueryHandlerTests.cs` — 5; `FavoriteEndpointsTests.cs` — 9; `OpenApiContractTests.cs`) |
 
 ## Notas de ejecución
 

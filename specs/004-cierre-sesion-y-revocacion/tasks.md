@@ -22,11 +22,10 @@
 | T004-08 | Pruebas de idempotencia de logout repetido (204 continuo) | Pruebas | `FR-004-04` | T004-07 | Completado |
 | T004-09 | Actualizar checklist y contratos OpenAPI | Docs | `FR-004-01` | T004-08 | Completado |
 | T004-10 | Registrar evidencias del Constitution Check | Docs | `FR-004-01` | T004-09 | Completado |
+| T004-11 | Añadir parámetro opcional `deviceId`, desactivar el dispositivo propio y verificar contrato y persistencia | Api / Pruebas | `FR-004-05` | T004-05 | Completada (`LogoutCommandHandler` + `LogoutDeviceEndpointsTests` 7/7) |
 
 ## Notas de ejecución
 
 - Cada tarea se cierra actualizando `checklist.md` y `plan.md`.
 - Verificado con 100 pruebas unitarias y 34 pruebas de integración en verde.
 - Los identificadores de requisito remiten a `spec.md` §4 y §5.
-
-- [ ] T004-11 — FR-004-05. Añadir parámetro opcional, desactivar el dispositivo propio y verificar el contrato y persistencia.

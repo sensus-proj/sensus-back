@@ -6,37 +6,38 @@ Usar antes, durante y al cierre de la implementación. Ninguna tarea se cierra c
 
 ## A. Antes de empezar (Definition of Ready)
 
-- [ ] La spec 016 está aprobada y sin preguntas bloqueantes
-- [ ] Los requisitos tienen identificador y criterio medible
-- [ ] Las dependencias están resueltas: 014
-- [ ] El alcance y las exclusiones están declarados
-- [ ] El impacto en seguridad, costo y rendimiento fue evaluado
+- [x] La spec 016 está aprobada y sin preguntas bloqueantes
+- [x] Los requisitos tienen identificador y criterio medible
+- [x] Las dependencias están resueltas: 014
+- [x] El alcance y las exclusiones están declarados
+- [x] El impacto en seguridad, costo y rendimiento fue evaluado
 
 ## B. Específicos de este spec
 
 - [x] Las respuestas no revelan detalles internos
-- [x] Readiness falla si MongoDB no responde
+- [x] Readiness falla si MongoDB no responde (`SecurityPipelineTests.ReadinessEndpoint_ShouldReturnServiceUnavailable_WhenMongoIsNotAvailable`)
 
 ## C. Antes de entregar (Definition of Done)
 
 - [x] Código en la capa correcta y test de arquitectura en verde
-- [x] Pruebas unitarias y de integración añadidas y en verde
-- [x] Cobertura ≥ 80 % en Domain y Application
+- [x] Pruebas unitarias y de integración añadidas y en verde (`SecurityPipelineTests` + `post-deploy-smoke.test.mjs` 8/8)
+- [x] Cobertura ≥ 80 % en Domain y Application (`90.05 %` / `88.64 %`)
 - [x] Contrato OpenAPI actualizado
 - [x] IaC actualizada y `cdk diff` revisado si aplica
-- [ ] Logs con correlation-id y sin PII
+- [x] Logs con correlation-id y sin PII (`CorrelationIdMiddleware` Spec 014)
 - [x] Revisión de seguridad: sin secretos, autorización verificada
-- [ ] Constitution Check en PASS o brecha registrada
+- [x] Constitution Check en PASS o brecha registrada
 
 ## D. Constitution Check
 
-- [ ] **I. Especificación y trazabilidad** — PASS
-- [ ] **II. Clean Architecture** — PASS
-- [ ] **III. CQRS y contratos** — PASS
-- [ ] **IV. Seguridad y privacidad** — PASS
-- [ ] **V. Verificación automatizada** — PASS
-- [ ] **VI. Costo cero e IaC** — PASS
-- [ ] **VII. Rendimiento y observabilidad** — PASS
+- [x] **I. Especificación y trazabilidad** — PASS
+- [x] **II. Clean Architecture** — PASS
+- [x] **III. CQRS y contratos** — PASS
+- [x] **IV. Seguridad y privacidad** — PASS
+- [x] **V. Verificación automatizada** — PASS
+- [x] **VI. Costo cero e IaC** — PASS
+- [x] **VII. Rendimiento y observabilidad** — PASS
+- [x] **VIII. Nivel fintech y ciclo seguro** — PASS (`post-deploy-smoke.mjs` + `SecurityPipelineTests` + CI `4a00d24`)
 
 ## E. Evidencia
 

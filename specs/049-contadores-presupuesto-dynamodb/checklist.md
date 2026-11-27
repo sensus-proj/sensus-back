@@ -25,9 +25,9 @@ El backend está completado. Quedan las comprobaciones en AWS y los escaneos de 
 
 - [x] Build con `-warnaserror` y `dotnet format` limpios
 - [x] Pruebas en verde y cobertura ≥ 80 % en Domain y Application
-- [ ] `cdk synth` y `cdk diff` revisados — `synth` revisado; `diff` pendiente (requiere credenciales de AWS)
+- [ ] `cdk synth` y `cdk diff` revisados — `synth` revisado (acción del usuario: ejecutar `cdk diff` con credenciales AWS; ver plan cierre §5.Z-11)
 - [x] Síntesis local de este árbol verificada. La plantilla incluye DynamoDB con clave `pk`, TTL `expiresAt`, `PAY_PER_REQUEST` y permisos `GetItem` y `UpdateItem` limitados a la tabla.
-- [ ] Turno de Sensi en el entorno desplegado con incremento real observado en DynamoDB y p95 desde Lambda
+- [ ] Turno de Sensi en el entorno desplegado con incremento real observado en DynamoDB y p95 desde Lambda (acción del usuario: ejecutar turno real de Sensi y revisar tabla DynamoDB; ver plan cierre §5.Z-8)
 - [x] `tasks.md` refleja el estado real
 - [x] `memory.md` actualizado
 

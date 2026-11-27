@@ -5,7 +5,7 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Backend completado |
+| Estado | Completado |
 | Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
@@ -22,7 +22,7 @@
 | T039-08 | Probar la alternancia y el 404 | Api | `FR-039-03` | T039-07 | Completada. `FeedPostLikeEndpointsTests` (200, 400, 401, 403, 404, 429). |
 | T039-09 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-039-01` | T039-08 | Completada. `MongoFeedSocialIntegrationTests` (unicidad, idempotencia, concurrencia `CA-039-04`) ejecutadas y en verde contra MongoDB 7.0 real con Testcontainers. |
 | T039-10 | Actualizar `specs/README.md`, `requirements.md` y el checklist del spec | Docs | `FR-039-01` | T039-09 | Completada |
-| T039-11 | Registrar evidencias del Constitution Check | Docs | `FR-039-01` | T039-10 | Parcial. Principio VIII pendiente de los escaneos bloqueantes de CI. |
+| T039-11 | Registrar evidencias del Constitution Check | Docs | `FR-039-01` | T039-10 | Completada (`plan.md` §4 STRIDE; `ci.yml` gitleaks/Snyk/SonarCloud/cdk-nag/SBOM CycloneDX y `dast-zap.yml`, corrida verde `4a00d24`) |
 
 ## Notas de ejecución
 

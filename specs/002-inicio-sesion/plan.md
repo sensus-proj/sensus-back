@@ -65,10 +65,11 @@ Evaluación del estado actual. Las brechas marcadas como FAIL se convierten en t
 | I | PASS | `FR-002-01` y 4 requisitos más, con criterios de aceptación medibles |
 | II | PASS | Cambios acotados a las capas declaradas en §2 |
 | III | PASS | DTOs, comandos y consultas separados; sin exponer entidades de dominio |
-| IV | FAIL | secreto JWT versionado en appsettings.json |
-| V | FAIL | no existen pruebas de integración |
+| IV | PASS | Secreto JWT retirado de `appsettings.json` (`"Secret": ""`) y leído de SSM (Spec 045); vigencia ≤ 15 min y refresh rotatorio (`T002-10`) |
+| V | PASS | Unitarias (`LoginCommand*Tests`, `GetCurrentUserQueryHandlerTests` 3/3), integración (`AuthEndpointsTests`, `AuthMeEndpointTests` 3/3, `RefreshTokenEndpointsTests`, `SanctionEndpointsTests`) |
 | VI | PASS | Costo estimado declarado en §6 |
-| VII | PARCIAL | sin correlation-id en logs |
+| VII | PASS | Logs estructurados con `correlation-id` sin credenciales, TTL e índices de `refresh_tokens` |
+| VIII | PASS | Matriz STRIDE en §4, JWT ≤ 15 min + rotación refresh y escaneos CI bloqueantes en verde (`ci.yml`, `dast-zap.yml`, `4a00d24`) |
 
 > **Brechas abiertas:** las decisiones `FAIL` no bloquean la documentación de un retro-spec, pero MUST resolverse antes de implementar cualquier funcionalidad que dependa de ella.
 

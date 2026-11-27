@@ -24,6 +24,7 @@
 | T024-09 | Verificar/integrar moderación de solo texto (sin imagen) y moderación conjunta (con imagen) antes de publicar o almacenar multimedia, con cuarentena ante fallos (`constitution.md` v3.0.0) | Application | `FR-024-02` | T024-03, T017-12 | Completada (`CreateFeedPostCommand.cs`, `ModerationTargetType.FeedPost`) |
 | T024-10 | Rechazar `imageUrl` externa en JSON y validar `mediaAssetId` aprobado del autor (`IMediaAssetRepository`), más actualización móvil `FeedDtos.kt` | Application / Api / Móvil | `FR-024-08` | T024-08 | Completada |
 | T024-11 | Persistir `FeedPostStatus.Quarantined` (202 Accepted) sin subir imagen ante indisponibilidad del moderador, registrar auditoría `FeedPost` y purgar cuarentena vencida (30 d) | Domain / Application / Infrastructure / Api / Pruebas | `FR-024-09` | T024-09 | Completada (`FeedPostsTests`, `FeedPostEndpointsTests`, `MongoFeedSocialIntegrationTests`, `PurgeQuarantinedMediaCommandHandler`) |
+| T024-12 | Retirar alias `mediaId` en `FeedEndpoints` con `400 Bad Request` (`Feed.MediaIdRetired`) | Api / Pruebas | `FR-024-10` | T024-10 | Completada (`FeedEndpoints.cs`, `FeedPostEndpointsTests`) |
 
 ## Notas de ejecución
 

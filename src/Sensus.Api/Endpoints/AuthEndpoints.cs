@@ -12,6 +12,7 @@ using Sensus.Application.Users.Commands.RequestPasswordReset;
 using Sensus.Application.Users.Commands.ResetPassword;
 using Sensus.Application.Users.Commands.VerifyMfa;
 using Sensus.Application.Users.DTOs;
+using Sensus.Application.Users.Queries.GetCurrentUser;
 using Sensus.Domain.Entities;
 
 namespace Sensus.Api.Endpoints;
@@ -164,32 +165,15 @@ public static class AuthEndpoints
 
         if (isV1) confirm.WithName("ConfirmPasswordRecovery");
 
-        // Verificación de sesión / Perfil actual autenticado
-        var me = group.MapGet("/me", (ClaimsPrincipal user) =>
+        // Verificación de sesión / Perfil actual autenticado (FR-002-06, FR-002-07)
+        var me = group.MapGet("/me", async (ISender sender, CancellationToken ct) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                         user.FindFirstValue("sub");
-            var email = user.FindFirstValue(ClaimTypes.Email) ??
-                         user.FindFirstValue("email");
-            var name = user.FindFirstValue(ClaimTypes.Name) ??
-                       user.FindFirstValue("name");
-            var roles = user.FindAll(ClaimTypes.Role)
-                .Concat(user.FindAll("role"))
-                .Select(c => c.Value)
-                .Distinct()
-                .ToList();
-
-            return Results.Ok(new
-            {
-                UserId = userId,
-                NombreCompleto = name,
-                Correo = email,
-                Roles = roles
-            });
+            var result = await sender.Send(new GetCurrentUserQuery(), ct);
+            return result.ToHttpResult();
         })
         .RequireAuthorization()
         .WithSummary("Obtiene los datos del usuario autenticado a partir del token JWT")
-        .Produces(StatusCodes.Status200OK)
+        .Produces<CurrentUserDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         if (isV1) me.WithName("GetCurrentUser");

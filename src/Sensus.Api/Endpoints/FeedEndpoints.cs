@@ -197,9 +197,14 @@ public static class FeedEndpoints
             else
             {
                 CreateFeedPostBody? body = await http.Request.ReadFromJsonAsync<CreateFeedPostBody>(cancellationToken: ct);
+                if (body?.MediaAssetId is null && body?.MediaId is not null)
+                {
+                    return Result.Failure(Error.Validation("Feed.MediaIdRetired", "Usa mediaAssetId")).ToHttpResult();
+                }
+
                 content = body?.Content ?? body?.Text ?? string.Empty;
                 imageUrl = body?.ImageUrl;
-                mediaAssetId = body?.MediaAssetId ?? body?.MediaId;
+                mediaAssetId = body?.MediaAssetId;
                 latitude = body?.Latitude;
                 longitude = body?.Longitude;
             }

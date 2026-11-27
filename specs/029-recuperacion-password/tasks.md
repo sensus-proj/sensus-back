@@ -34,7 +34,7 @@
 | T029-20 | Retirada del alias en el contrato OpenAPI: sin ruta, 404 documentado y versión 2.0.0 | Docs | `FR-029-09` | T029-14 | Hecho |
 | T029-21 | Cierre de EX-004 y baja de la credencial Somee (retiro y documentación operativa) | Docs | `FR-029-11`, `FR-029-12` | T029-17 | Hecho |
 | T029-22 | Permiso `ses:SendEmail` del rol de la Lambda en `SensusInfraStack.cs` (`AllowSesSendTransactionalEmail`), restringido a identidades de la cuenta y región | Infra | `FR-029-13` | T029-21 | Hecho |
-| T029-23 | Operativo: identidad del remitente verificada en SES us-east-2, parámetros SSM `SesEmailSettings/From` y `/Region` creados (2026-11-25) y solicitud de acceso de producción de SES | Operación | `FR-029-13` | T029-22 | Parcial (falta salir del sandbox de SES) |
+| T029-23 | Operativo: identidad del remitente verificada en SES us-east-2, parámetros SSM `SesEmailSettings/From` y `/Region` creados (2026-11-25) y solicitud de acceso de producción de SES | Operación | `FR-029-13` | T029-22 | Parcial (acción del usuario: esperar salida de sandbox SES y probar recuperación desde app; ver plan cierre §5.Z-4) |
 | T029-24 | Monitoreo SES en `SensusInfraStack.Email.cs` (`CfnConfigurationSet` + evento CloudWatch + alarma SNS + permiso `ses:SendEmail` sobre `configuration-set`) y verificación de `ConfigurationSetName` en `SesEmailSender` | Infra / Operación | `FR-029-14` | T029-22 | Hecho en código/CDK (falta crear `/sensus/prod/SesEmailSettings/ConfigurationSetName` en SSM tras desplegar CDK) |
 
 ## Notas de ejecución

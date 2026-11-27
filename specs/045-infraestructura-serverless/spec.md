@@ -70,6 +70,7 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 | FR-045-18 | Fijar por SHA completo toda acción de terceros en los workflows de despliegue (`deploy-serverless.yml` y el heredado `deploy.yml`) y declarar `permissions: contents: read` para el `GITHUB_TOKEN`, igual que en `ci.yml` (SLSA 2, cadena de suministro) | Must |
 | FR-045-19 | El job de despliegue a producción usa el *environment* de GitHub `production`, que exige aprobación manual de un revisor antes de ejecutarse (`deploy-serverless.yml`) | Must |
 | FR-045-20 | CI/CD se autentica en AWS con OIDC de GitHub y roles de mínimo privilegio (`sensus-github-deploy-<env>` y `sensus-github-iac-readonly-<env>`); elimina llaves de acceso de larga duración tras la transición segura | Must |
+| FR-045-21 | Configurar *throttling* por defecto en el stage `$default` del HTTP API (`DefaultRouteSettings`: `ThrottlingRateLimit` leído de contexto `apiThrottleRate`, por defecto `50`; `ThrottlingBurstLimit` leído de `apiThrottleBurst`, por defecto `100`) como control compensatorio de borde (no sustituye los límites por usuario de la Spec 013) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -132,6 +133,11 @@ El Principio VI de la constitución (`constitution.md`) y el ADR 0005 exigen que
 - **Dado**: la Lambda con concurrencia reservada `0` (22:30–07:00)
 - **Cuando**: termina `cdk deploy`
 - **Entonces**: la prueba de humo se omite con un aviso visible y no se ejecuta rollback
+
+### CA-045-11: Throttling por defecto en HTTP API Stage (FR-045-21)
+- **Dado**: `SensusInfraStack` sintetizado sin sobrescritura de contexto
+- **Cuando**: se inspecciona el recurso `AWS::ApiGatewayV2::Stage` (`$default`)
+- **Entonces**: declara `DefaultRouteSettings.ThrottlingRateLimit = 50` y `ThrottlingBurstLimit = 100` (sobreescribibles por `apiThrottleRate` y `apiThrottleBurst`), manteniendo PASS en `cdk-nag` (`AwsSolutionsChecks`)
 
 ## 7. Contratos
 

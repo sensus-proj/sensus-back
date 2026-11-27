@@ -8,7 +8,7 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] Requisitos y criterios de aceptación medibles
 - [x] Modelo de amenazas STRIDE en el plan
 - [x] Riesgo de almacenamiento estimado con controles (plan §6); clúster confirmado Atlas M0
-- [ ] Aviso de privacidad actualizado con el registro de interacciones (landing y FT-23 — FT-23 se implementa en móvil Paso 8)
+- [ ] Aviso de privacidad actualizado con el registro de interacciones (acción del usuario: actualizar aviso de privacidad en landing y FT-23 móvil; ver plan cierre §5.Z-13)
 
 ## B. Específicos de este spec
 
@@ -22,7 +22,7 @@ Alineado a `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0.
 - [x] Pruebas unitarias e integración en verde; cobertura ≥ 80 % en Domain y Application
 - [x] Test de arquitectura en verde
 - [x] 0 PII en la colección y en logs (NFR-055-02)
-- [ ] IaC del parámetro SSM con `cdk diff` revisado (`Sensus.Infra.csproj` compila 0 errores/warnings y `npx cdk synth --quiet` pasa en local; pendiente `cdk diff` con credenciales AWS en CI)
+- [ ] IaC del parámetro SSM con `cdk diff` revisado (`Sensus.Infra.csproj` compila 0 errores/warnings y `cdk synth` pasa; acción del usuario: ejecutar `cdk diff` con credenciales AWS; ver plan cierre §5.Z-11)
 - [x] Constitution Check en PASS tras la implementación
 - [x] `memory.md` actualizado
 

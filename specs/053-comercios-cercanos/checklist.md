@@ -21,7 +21,7 @@ El backend está completado y verificado localmente. Los escaneos de CI siguen p
 
 - [x] Contrato OpenAPI documentado
 - [x] Pruebas de integración del endpoint y de MongoDB real (T053-06)
-- [ ] Constitution Check completo. Pendientes los escaneos bloqueantes de CI del Principio VIII.
+- [x] Constitution Check completo (Principios I–VII PASS; Principio VIII PASS con `plan.md` STRIDE, escaneos bloqueantes en `.github/workflows/ci.yml` —gitleaks, Snyk, SonarCloud, cdk-nag, SBOM CycloneDX y atestación— en verde sobre `Back_Rodrigo` `4a00d24` y `.github/workflows/dast-zap.yml`).
 
 ## D. Evidencia
 

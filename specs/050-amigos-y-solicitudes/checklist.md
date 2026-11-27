@@ -20,7 +20,7 @@ Alineado a `constitution.md` v2.2.0 · `AGENTS.md` v2.2.0.
 - [x] `dotnet format sensus-back.sln --verify-no-changes` limpio
 - [x] `Sensus.ArchitectureTests`, `Sensus.Application.UnitTests`, `FriendEndpointsIntegrationTests` y `MongoSocialRepositoriesTests` añadidas
 - [x] `tasks.md` refleja el estado real (pendiente despliegue AWS)
-- [ ] Ejecución en vivo contra clúster MongoDB real (`MONGO_CONNECTION_STRING`) y verificación tras despliegue en AWS
+- [ ] Ejecución en vivo contra clúster MongoDB real (`MONGO_CONNECTION_STRING`) y verificación tras despliegue en AWS (acción del usuario: validar amigos en vivo tras despliegue; ver plan cierre §5.Z-9)
 
 ## D. Evidencia
 

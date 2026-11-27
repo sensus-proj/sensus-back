@@ -14,6 +14,7 @@ public class UpdateProfileCommandHandlerTests
     private readonly IModerationAuditRecorder _auditRecorder = Substitute.For<IModerationAuditRecorder>();
     private readonly ICdnCacheInvalidator _cdnCacheInvalidator = Substitute.For<ICdnCacheInvalidator>();
     private readonly ITextModerationService _textModerationService = Substitute.For<ITextModerationService>();
+    private readonly IMediaAssetRepository _mediaAssetRepository = Substitute.For<IMediaAssetRepository>();
     private readonly UpdateProfileCommandHandler _handler;
 
     public UpdateProfileCommandHandlerTests()
@@ -28,38 +29,53 @@ public class UpdateProfileCommandHandlerTests
             _currentUserService,
             _auditRecorder,
             _cdnCacheInvalidator,
-            textModerationService: _textModerationService);
+            textModerationService: _textModerationService,
+            mediaAssetRepository: _mediaAssetRepository);
     }
 
-    [Fact]
-    public async Task Handle_ShouldUpdateProfileSuccessfully_WhenCallerIsAuthorized()
+    private User CreateExistingUser(Guid userId)
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        _currentUserService.UserId.Returns(userId.ToString());
-
         var existingUser = User.Create(
             "Old Name",
             "user@sensus.com",
             "hashed-pw",
             true,
             DateTime.UtcNow).Value;
-
         typeof(User).GetProperty("Id")?.SetValue(existingUser, userId);
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(existingUser);
+        return existingUser;
+    }
 
-        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(existingUser);
+    [Fact]
+    public async Task Handle_ShouldUpdateProfileSuccessfully_WhenPhotoIsApprovedAndOwned()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+        var existingUser = CreateExistingUser(userId);
+        const string photoUrl = "https://res.cloudinary.com/sensus/image/upload/avatar.jpg";
+        _mediaAssetRepository.IsApprovedOwnedUrlAsync(userId, photoUrl, Arg.Any<CancellationToken>()).Returns(true);
 
-        var command = new UpdateProfileCommand("New Name", "https://res.cloudinary.com/sensus/image/upload/avatar.jpg");
+        var result = await _handler.Handle(new UpdateProfileCommand("New Name", photoUrl), CancellationToken.None);
 
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.NombreCompleto.Should().Be("New Name");
-        result.Value.FotoPerfilUrl.Should().Be("https://res.cloudinary.com/sensus/image/upload/avatar.jpg");
+        result.Value.FotoPerfilUrl.Should().Be(photoUrl);
         await _userRepository.Received(1).UpdateAsync(existingUser, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ShouldClearPhoto_WhenFotoPerfilUrlIsNullOrEmpty()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+        var existingUser = CreateExistingUser(userId);
+        existingUser.UpdateProfile("Old Name", "https://res.cloudinary.com/sensus/image/upload/old.jpg");
+
+        var result = await _handler.Handle(new UpdateProfileCommand("New Name", null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.FotoPerfilUrl.Should().BeNull();
+        await _mediaAssetRepository.DidNotReceive().IsApprovedOwnedUrlAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -67,9 +83,7 @@ public class UpdateProfileCommandHandlerTests
     {
         _currentUserService.UserId.Returns((string?)null);
 
-        var command = new UpdateProfileCommand("New Name", null);
-
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(new UpdateProfileCommand("New Name", null), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Auth.Unauthorized");
@@ -80,14 +94,27 @@ public class UpdateProfileCommandHandlerTests
     {
         var userId = Guid.NewGuid();
         _currentUserService.UserId.Returns(userId.ToString());
-        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns((User?)null);
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns((User?)null);
 
-        var command = new UpdateProfileCommand("New Name", null);
-
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(new UpdateProfileCommand("New Name", null), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("User.NotFound");
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnValidationError_WhenPhotoBelongsToAnotherUserOrQuarantined()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId.ToString());
+        CreateExistingUser(userId);
+        const string foreignOrQuarantinedUrl = "https://res.cloudinary.com/sensus/image/upload/foreign.jpg";
+        _mediaAssetRepository.IsApprovedOwnedUrlAsync(userId, foreignOrQuarantinedUrl, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _handler.Handle(new UpdateProfileCommand("Name", foreignOrQuarantinedUrl), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Profile.PhotoNotModerated");
+        await _userRepository.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
     }
 }

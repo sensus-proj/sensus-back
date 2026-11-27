@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sensus.Application.Common.Interfaces;
+using Sensus.Application.Common.Moderation;
 using Sensus.Application.Common.Settings;
+using Sensus.Domain.Common;
 using Sensus.Domain.Repositories;
 using Sensus.Infrastructure.Persistence.Mongo;
 using Sensus.TestKit.Fakes;
@@ -40,6 +42,7 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
     public InMemoryContentReportRepository ContentReportRepository { get; } = new();
     public InMemoryReportTargetService ReportTargetService { get; } = new();
     public InMemoryOfferStatusHistoryRepository OfferStatusHistoryRepository { get; } = new();
+    public InMemoryMediaAssetRepository MediaAssetRepository { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -149,6 +152,24 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IOfferStatusHistoryRepository>();
             services.AddSingleton<IOfferStatusHistoryRepository>(OfferStatusHistoryRepository);
 
+            services.Configure<CloudinaryAccountSettings>(settings =>
+                settings.CloudName = "sensus");
+
+            services.RemoveAll<IMediaAssetRepository>();
+            services.AddSingleton<IMediaAssetRepository>(MediaAssetRepository);
+
+            services.RemoveAll<IImageModerationService>();
+            services.AddSingleton<IImageModerationService>(new FakeApprovingImageModerationService());
+
+            services.RemoveAll<IMediaStorage>();
+            services.AddSingleton<IMediaStorage>(new FakeE2EMediaStorage());
+
+            services.RemoveAll<IModerationEvidenceStore>();
+            services.AddSingleton<IModerationEvidenceStore>(new FakeE2EModerationEvidenceStore());
+
+            services.RemoveAll<ICdnCacheInvalidator>();
+            services.AddSingleton<ICdnCacheInvalidator>(new FakeE2ECdnCacheInvalidator());
+
             services.RemoveAll<ITextModerationService>();
             services.AddSingleton<ITextModerationService>(new FakeApprovingTextModerationService());
         });
@@ -164,5 +185,42 @@ public class SensusE2EWebApplicationFactory : WebApplicationFactory<Program>
             string contentContext,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new TextModerationResult(true, "Texto aprobado.", [], "Approved"));
+    }
+
+    private sealed class FakeApprovingImageModerationService : IImageModerationService
+    {
+        public Task<ImageModerationResult> ModerateImageBytesAsync(
+            byte[] imageBytes,
+            string contentType,
+            string? textContext,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ImageModerationResult(true, "Imagen aprobada.", [], "Approved"));
+    }
+
+    private sealed class FakeE2EMediaStorage : IMediaStorage
+    {
+        public Task<Result<MediaUploadResult>> UploadImageAsync(
+            byte[] content,
+            string contentType,
+            Guid ownerId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Result.Success(new MediaUploadResult(
+                $"sensus/media/{ownerId:D}/e2e-avatar",
+                $"https://res.cloudinary.com/sensus/image/authenticated/v1/sensus/media/{ownerId:D}/e2e-avatar.jpg")));
+
+        public Task<bool> DeleteImageAsync(string publicId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+    }
+
+    private sealed class FakeE2EModerationEvidenceStore : IModerationEvidenceStore
+    {
+        public Task AppendAsync(ModerationEvidence evidence, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class FakeE2ECdnCacheInvalidator : ICdnCacheInvalidator
+    {
+        public Task<bool> InvalidateAsync(string publicId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 }

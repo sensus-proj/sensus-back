@@ -33,6 +33,7 @@
 | T045-19 | Fijar `checkout`, `setup-dotnet`, `setup-node` y `appleboy/ssh-action` por SHA y añadir `permissions: contents: read` en ambos workflows de despliegue | CI | `FR-045-18` | T045-18 | Hecho |
 | T045-20 | Agregar `environment: production` en `deploy-serverless.yml` y documentar configuración de revisores en GitHub | CI | `FR-045-19` | T045-19 | Hecho en YAML (requiere crear environment `production` en GitHub) |
 | T045-21 | Implementar proveedor/roles OIDC en `SensusInfraStack.GitHubOidc.cs` y transición OIDC en `deploy-serverless.yml` y `ci.yml` | IaC / CI | `FR-045-20` | T045-20 | Hecho en código/CDK (pendiente `cdk deploy` y carga de `AWS_DEPLOY_ROLE_ARN`) |
+| T045-22 | Configurar `DefaultRouteSettings` (`ThrottlingRateLimit=50`, `ThrottlingBurstLimit=100`, contexto CDK) en `$default` de HTTP API y verificar síntesis/cdk-nag (`CA-045-11`, G-10) | IaC | `FR-045-21` | T045-06 | Completada (`SensusInfraStack.cs` compilado `-warnaserror`; `SensusInfraStackTests` 2/2 con `Template.FromStack` y `AwsSolutionsChecks`) |
 
 ## Notas de ejecución
 

@@ -9,8 +9,8 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 032; consumida como señal de afinidad por 042 |
-| Versión | 2.1.0 |
-| Alineado a | `constitution.md` v2.4.0 · `AGENTS.md` v2.4.0 |
+| Versión | 2.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -23,6 +23,7 @@ Permitir que un usuario marque o desmarque una oferta como favorita, devolviendo
 **Incluye**
 
 - Alternancia de favorito por usuario y oferta (`POST /api/v1/users/favorites/{id}`)
+- Consulta paginada de favoritos visibles del usuario autenticado (`GET /api/v1/users/favorites`, 20 por defecto, 100 máximo)
 - Conteo de favoritos por oferta calculado desde la colección
 - Restricción a ofertas visibles
 - Diferenciación entre 401 (sin token) y 403 (invitado)
@@ -31,7 +32,6 @@ Permitir que un usuario marque o desmarque una oferta como favorita, devolviendo
 
 **No incluye**
 
-- Listado de favoritos (fuera del catálogo)
 - Notificaciones por favorito
 - Colecciones nombradas
 - Contador atómico `Offer.FavoriteCount` (inexistente en el dominio)
@@ -51,6 +51,7 @@ Permitir que un usuario marque o desmarque una oferta como favorita, devolviendo
 | FR-038-04 | Garantizar un solo favorito por usuario y oferta | Must |
 | FR-038-05 | Exponer la afinidad de categoría al ranking de la spec 042, invalidando `feed:affinity:{userId}` al alternar | Should |
 | FR-038-06 | Limitar la operación a 120 alternancias por usuario y hora | Should |
+| FR-038-07 | Consultar paginadamente las ofertas favoritas visibles del usuario autenticado ordenadas por fecha de guardado descendente (`GET /api/v1/users/favorites`, 20 por defecto, 100 máximo) | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -88,13 +89,20 @@ Permitir que un usuario marque o desmarque una oferta como favorita, devolviendo
 ### CA-038-05 — Invitado
 
 - **Dado** un token de invitado
-- **Cuando** POST /api/v1/users/favorites/{id}
+- **Cuando** POST /api/v1/users/favorites/{id} o GET /api/v1/users/favorites
 - **Entonces** 403 `Favorite.GuestForbidden`; sin token, 401 `Favorite.Unauthorized`
+
+### CA-038-06 — Listado paginado
+
+- **Dado** un usuario registrado con ofertas favoritas vigentes y una favorita archivada o expirada
+- **Cuando** `GET /api/v1/users/favorites?page=1&pageSize=20`
+- **Entonces** 200 con `PagedResult<FavoriteOfferDto>` ordenado por `favoritedAtUtc` descendente, excluyendo ofertas archivadas o expiradas y validando `page >= 1` y `1 <= pageSize <= 100` (400 en rango inválido)
 
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización | Límite de tasa |
 |---|---|---|---|
+| GET | `/api/v1/users/favorites` | JWT (`RegisteredUserPolicy`) | `ReadHeavyPolicy` (lectura paginada) |
 | POST | `/api/v1/users/favorites/{id}` | JWT (`RegisteredUserPolicy`) | `FavoritesPolicy` — 120/hora por usuario |
 
 ## 8. Dependencias y supuestos
@@ -119,11 +127,11 @@ Permitir que un usuario marque o desmarque una oferta como favorita, devolviendo
 
 ## 11. Preguntas abiertas
 
-- ¿El cliente necesita leer sus favoritos? El catálogo solo expone la alternancia.
+- Resuelta (2026-11-26, Bloque F cierre móvil/backend `FT-17`): se incorpora `GET /api/v1/users/favorites` paginado (20 por defecto, 100 máximo) bajo `FR-038-07`.
 
 ## 12. Trazabilidad
 
-- Requisitos de este spec: `FR-038-01`, `FR-038-02`, `FR-038-03`, `FR-038-04`, `FR-038-05`, `FR-038-06`
+- Requisitos de este spec: `FR-038-01`, `FR-038-02`, `FR-038-03`, `FR-038-04`, `FR-038-05`, `FR-038-06`, `FR-038-07`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)

@@ -5,8 +5,8 @@
 | Spec | [`spec.md`](spec.md) |
 | Plan | [`plan.md`](plan.md) |
 | Checklist | [`checklist.md`](checklist.md) |
-| Estado | Parcial |
-| Alineado a | `constitution.md` v1.2.0 · `AGENTS.md` v1.2.0 |
+| Estado | Completado |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ## Tareas
 
@@ -18,7 +18,7 @@
 | T034-04 | Implementar: Persistencia, referencias a media y encolado de moderación | Infrastructure | `FR-034-01` | T034-03 | Completada (`ix_offers_pending_moderation_retry` y `GetPendingModerationDueAsync`) |
 | T034-05 | Implementar: Endpoint POST /api/v1/offers | Api | `FR-034-01` | T034-04 | Completada |
 | T034-06 | Modelar Offer y sus invariantes | Domain | `FR-034-02` | T034-05 | Completada |
-| T034-07 | Encadenar moderación y publicación | Application | `FR-034-03` | T034-06 | Bloqueada por diseño de cuarentena compatible con la constitución vigente |
+| T034-07 | Encadenar moderación y publicación | Application | `FR-034-03` | T034-06 | Completada (`CreateOfferCommandHandler` modera texto e imagen previa y registra `IModerationAuditRecorder` antes de publicar; si falla responde `202 PendingModeration` y reintenta en `ProcessPendingOfferModerationCommand`: `37/37` unitarias y `8/8` `CreateOfferEndpointsTests`) |
 | T034-08 | Implementar el límite de ofertas activas | Infrastructure | `FR-034-05` | T034-02 | Completada (`T034-18` amplía cobertura con `Offers:MaxActivePerMerchant=20`, índice `ix_offers_merchant_status_ends_at`, creación/reanudación/republicación y Testcontainers) |
 | T034-09 | Probar el 202 de moderación pendiente | Api | `FR-034-07` | T034-08 | Completada (`CreateOfferEndpointsTests`) |
 | T034-10 | Implementar las pruebas de integración del flujo completo | Pruebas | `FR-034-01` | T034-09 | Completada |

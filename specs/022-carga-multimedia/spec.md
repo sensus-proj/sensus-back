@@ -9,8 +9,8 @@
 | Tipo | Nuevo |
 | Dueño | Por asignar |
 | Dependencias | 017, 013 |
-| Versión | 1.1.0 |
-| Alineado a | `constitution.md` v1.3.0 · `AGENTS.md` v1.3.0 |
+| Versión | 1.2.0 |
+| Alineado a | `constitution.md` v3.0.0 · `AGENTS.md` v3.0.0 |
 
 ---
 
@@ -51,6 +51,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 | FR-022-05 | Registrar propietario, estado y public_id de Cloudinary | Must |
 | FR-022-06 | Moderar la imagen antes de permitir su uso público | Must |
 | FR-022-07 | Limitar la carga a 20 archivos por usuario y día | Should |
+| FR-022-08 | Retirar el camino heredado de firma directa sin moderación (`POST /api/v1/users/photo-signature` responde `410 Gone`) exigiendo uso exclusivo de `/api/v1/media/upload` | Must |
 
 ## 5. Requisitos no funcionales
 
@@ -92,6 +93,12 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 - **Cuando** POST /api/v1/media/upload
 - **Entonces** 429
 
+### CA-022-06
+
+- **Dado** un cliente autenticado heredado que solicita firma directa en `POST /api/v1/users/photo-signature`
+- **Cuando** envía la petición
+- **Entonces** recibe `410 Gone` (`Media.SignatureRetired`) e instrucción de usar `POST /api/v1/media/upload`
+
 ## 7. Contratos expuestos
 
 | Método | Ruta | Autorización |
@@ -115,7 +122,7 @@ Permitir la carga de imágenes a través de la API con validación estricta de t
 
 ## 11. Trazabilidad
 
-- Requisitos de este spec: `FR-022-01`, `FR-022-02`, `FR-022-03`, `FR-022-04`, `FR-022-05`, `FR-022-06`, `FR-022-07`
+- Requisitos de este spec: `FR-022-01`, `FR-022-02`, `FR-022-03`, `FR-022-04`, `FR-022-05`, `FR-022-06`, `FR-022-07`, `FR-022-08`
 - Plan: [`plan.md`](plan.md)
 - Tareas: [`tasks.md`](tasks.md)
 - Checklist: [`checklist.md`](checklist.md)
