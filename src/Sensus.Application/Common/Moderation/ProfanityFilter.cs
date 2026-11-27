@@ -32,7 +32,7 @@ public static partial class ProfanityFilter
         "zorra", "zorras", "perra", "perras",
         "pinche", "pinches",
         "cagada", "cagadas", "cagado", "cagados", "cagar", "cagon", "cagona",
-        "coño", "cono", "conos", "cojones", "cojon",
+        "coño", "cojones", "cojon",
         "pija", "pijas", "pijazo", "chupapija",
         "panocha", "panochas", "concha", "conchatumadre",
         "huevon", "huevona", "huevones", "webon", "webona", "webones",
@@ -168,28 +168,37 @@ public static partial class ProfanityFilter
 
     private static string NormalizeBasic(string input)
     {
-        string decomposed = input.Normalize(NormalizationForm.FormD);
-        var sb = new StringBuilder(decomposed.Length);
-        foreach (char ch in decomposed)
+        string composed = input.Normalize(NormalizationForm.FormC);
+        var sb = new StringBuilder(composed.Length);
+        foreach (char ch in composed)
         {
-            UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(ch);
-            if (category == UnicodeCategory.NonSpacingMark)
+            char lower = char.ToLowerInvariant(ch);
+            if (lower == 'ñ')
             {
+                sb.Append('ñ');
                 continue;
             }
 
-            char lower = char.ToLowerInvariant(ch);
-            char mapped = lower switch
+            string decomposed = lower.ToString().Normalize(NormalizationForm.FormD);
+            foreach (char d in decomposed)
             {
-                '0' => 'o',
-                '1' or '!' or '|' => 'i',
-                '3' => 'e',
-                '4' or '@' => 'a',
-                '5' or '$' => 's',
-                '7' => 't',
-                _ => lower,
-            };
-            sb.Append(mapped);
+                if (CharUnicodeInfo.GetUnicodeCategory(d) == UnicodeCategory.NonSpacingMark)
+                {
+                    continue;
+                }
+
+                char mapped = d switch
+                {
+                    '0' => 'o',
+                    '1' or '!' or '|' => 'i',
+                    '3' => 'e',
+                    '4' or '@' => 'a',
+                    '5' or '$' => 's',
+                    '7' => 't',
+                    _ => d,
+                };
+                sb.Append(mapped);
+            }
         }
 
         return sb.ToString();

@@ -175,6 +175,35 @@ public sealed class CreateOfferEndpointsTests(CustomWebApplicationFactory factor
         await notifier.DidNotReceiveWithAnyArgs().NotifyAsync(default!, default, default);
     }
 
+    [Fact]
+    public async Task CreateOffer_Returns201Created_WhenImageApprovedWithMobileDashContextFingerprint()
+    {
+        factory.FakeClock.Set(Now);
+        var (token, userId) = CreateUserToken(true);
+        var merchant = Comercio.Create(userId, "Heladería Centro", "Calle Cuatro 4", "03100", 19.43, -99.13).Value;
+        factory.ComercioRepository.GetByUsuarioIdAsync(userId, Arg.Any<CancellationToken>()).Returns(merchant);
+
+        const string imageUrl = "https://res.cloudinary.com/nchjiueb/image/upload/v1/conos.jpg";
+        var offerWithImage = ValidOffer with
+        {
+            Title = "Conos de helado 2x1",
+            Description = "Promoción de conos artesanales",
+            ImageUrl = imageUrl
+        };
+        var mobileFingerprint = Sensus.Application.Common.Moderation.ModeratedTextFingerprint.Create(
+            $"{offerWithImage.Title} - {offerWithImage.Description}");
+        factory.MediaAssetRepository.HasApprovedImageAsync(
+                userId, imageUrl, mobileFingerprint, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await client.PostAsJsonAsync("/api/v1/offers", offerWithImage);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     private (string Token, Guid UserId) CreateUserToken(bool merchant)
     {
         var user = User.Create("Persona de prueba", $"offer-{Guid.NewGuid():N}@example.test", "hash", true, Now).Value;

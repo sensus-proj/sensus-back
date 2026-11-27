@@ -29,6 +29,8 @@ public sealed class SocialFeaturesAndProfanityTests
     [InlineData("p1t0")]
     [InlineData("pUt4")]
     [InlineData("Tienda El Pendejo")]
+    [InlineData("coño")]
+    [InlineData("c0ñ0")]
     public void ProfanityFilter_ShouldDetectOffensiveWords(string input)
     {
         ProfanityFilter.ContainsProfanity(input).Should().BeTrue();
@@ -40,6 +42,8 @@ public sealed class SocialFeaturesAndProfanityTests
     [InlineData("Pistón hidráulico nuevo")]
     [InlineData("Peras dulces de temporada")]
     [InlineData("Panadería La Esperanza")]
+    [InlineData("Cono de helado artesanal")]
+    [InlineData("Conos de pizza al 2x1")]
     public void ProfanityFilter_ShouldAllowCleanSpanishText(string input)
     {
         ProfanityFilter.ContainsProfanity(input).Should().BeFalse();
