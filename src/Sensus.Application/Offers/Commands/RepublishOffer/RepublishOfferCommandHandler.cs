@@ -51,27 +51,20 @@ public sealed class RepublishOfferCommandHandler : IRequestHandler<RepublishOffe
 
     public async Task<Result<OfferDto>> Handle(RepublishOfferCommand request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+        var access = await MerchantOfferAccessHelper.ResolveOwnedOfferAsync(
+            _currentUserService,
+            _comercioRepository,
+            _offerRepository,
+            request.OfferId,
+            "Debe iniciar sesión para republicar ofertas.",
+            "No tiene autorización para republicar una oferta de otro comercio.",
+            cancellationToken);
+        if (access.IsFailure)
         {
-            return Result.Failure<OfferDto>(Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para republicar ofertas."));
+            return Result.Failure<OfferDto>(access.Error);
         }
 
-        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null || !comercio!.Activo)
-        {
-            return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
-        }
-
-        Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null)
-        {
-            return Result.Failure<OfferDto>(Error.NotFound("Offer.NotFound", "La oferta especificada no existe."));
-        }
-
-        if (offer.MerchantId != comercio.Id)
-        {
-            return Result.Failure<OfferDto>(Error.Forbidden("Offer.Forbidden", "No tiene autorización para republicar una oferta de otro comercio."));
-        }
+        (Guid userId, Comercio comercio, Offer offer) = access.Value;
 
         DateTime now = _dateTimeProvider.UtcNow;
         OfferStatus previousStatus = offer.Status;

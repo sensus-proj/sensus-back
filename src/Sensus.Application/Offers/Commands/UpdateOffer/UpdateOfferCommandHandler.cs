@@ -51,27 +51,20 @@ public sealed class UpdateOfferCommandHandler : IRequestHandler<UpdateOfferComma
 
     public async Task<Result<OfferDto>> Handle(UpdateOfferCommand request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+        var access = await MerchantOfferAccessHelper.ResolveOwnedOfferAsync(
+            _currentUserService,
+            _comercioRepository,
+            _offerRepository,
+            request.OfferId,
+            "Debe iniciar sesión para editar ofertas.",
+            "No tiene autorización para editar una oferta de otro comercio.",
+            cancellationToken);
+        if (access.IsFailure)
         {
-            return Result.Failure<OfferDto>(Error.Unauthorized("Offer.Unauthorized", "Debe iniciar sesión para editar ofertas."));
+            return Result.Failure<OfferDto>(access.Error);
         }
 
-        Comercio? comercio = await _comercioRepository.GetByUsuarioIdAsync(userId, cancellationToken);
-        if (comercio is null || !comercio.Activo)
-        {
-            return Result.Failure<OfferDto>(Error.Forbidden("Offer.NoActiveMerchant", "El usuario no tiene un comercio activo registrado."));
-        }
-
-        Offer? offer = await _offerRepository.GetByIdAsync(request.OfferId, cancellationToken);
-        if (offer is null)
-        {
-            return Result.Failure<OfferDto>(Error.NotFound("Offer.NotFound", "La oferta especificada no existe."));
-        }
-
-        if (offer.MerchantId != comercio.Id)
-        {
-            return Result.Failure<OfferDto>(Error.Forbidden("Offer.Forbidden", "No tiene autorización para editar una oferta de otro comercio."));
-        }
+        (_, Comercio comercio, Offer offer) = access.Value;
 
         int activeClaimsCount = await _offerClaimRepository.GetActiveClaimCountAsync(offer.Id, cancellationToken);
 
